@@ -16,11 +16,11 @@
     </Border>
     <Border Grid.Row="1" Background="{DynamicResource AppPanelBrush}"
             BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
-            Padding="14,10">
+            Padding="16,12">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-        <StackPanel VerticalAlignment="Center" Spacing="2">
+        <StackPanel VerticalAlignment="Center" Spacing="4">
           <TextBlock x:Name="PreviewDetails" Classes="muted" TextWrapping="Wrap" />
-      <TextBlock Classes="faint" FontSize="12" Text="{DynamicResource Loc.ArtworkPreview.Instructions}" />
+      <TextBlock Classes="faint" FontSize="{DynamicResource AppFontSizeCaption}" Text="{DynamicResource Loc.ArtworkPreview.Instructions}" />
         </StackPanel>
       <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.ArtworkPreview.Close}" Click="OnClose"
               AutomationProperties.Name="{DynamicResource Loc.ArtworkPreview.CloseAutomation}" />

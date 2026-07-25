@@ -3,23 +3,63 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls"
              xmlns:vm="using:MusicLibraryManager.Presentation">
-  <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+  <UserControl.Styles>
+    <Style Selector="ListBox.health-result-navigation ListBoxItem.health-navigation-group">
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="Padding" Value="12,8,12,4" />
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="TabControl.health-result-content /template/ TabStrip">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+  </UserControl.Styles>
+  <controls:AdaptivePage RowDefinitions="Auto,Auto,*" RowSpacing="16">
     <controls:PageHeader Title="{DynamicResource Loc.Health.Title}"
         Subtitle="{DynamicResource Loc.Health.Subtitle}">
-      <controls:PageHeader.Actions>
-        <StackPanel Orientation="Horizontal" Spacing="8">
+      <controls:PageHeader.SecondaryActions>
+        <StackPanel x:Name="HealthWorkflowActions"
+                    Orientation="Horizontal"
+                    Spacing="8">
           <Button Classes="app"
                   Content="{DynamicResource Loc.Common.Cancel}"
                   Command="{Binding CancelCommand}"
                   IsVisible="{Binding IsBusy}" />
         </StackPanel>
-      </controls:PageHeader.Actions>
+      </controls:PageHeader.SecondaryActions>
     </controls:PageHeader>
 
-    <Border Grid.Row="1" Classes="card" Padding="14">
+    <Border x:Name="HealthSetupCard"
+            Grid.Row="1"
+            Classes="card"
+            IsVisible="False">
+      <Grid ColumnDefinitions="*,Auto"
+            ColumnSpacing="16">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="section-title"
+                     Text="{DynamicResource Loc.Home.Empty.Title}" />
+          <TextBlock Classes="muted"
+                     Text="{DynamicResource Loc.Home.Empty.Description}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+        <Button x:Name="HealthSetupAction"
+                Grid.Column="1"
+                Classes="app primary"
+                VerticalAlignment="Center"
+                Content="{DynamicResource Loc.Home.Empty.Action}"
+                AutomationProperties.Name="{DynamicResource Loc.Home.Empty.Action}"
+                Click="OnOpenSettings" />
+      </Grid>
+    </Border>
+
+    <Border x:Name="HealthActionCard"
+            Grid.Row="1"
+            Classes="card"
+            Padding="16">
       <StackPanel Spacing="12">
-        <Grid ColumnDefinitions="1.25*,1*" ColumnSpacing="24">
-          <StackPanel Spacing="7">
+        <Grid x:Name="HealthActionLayout"
+              ColumnDefinitions="1.25*,1*"
+              ColumnSpacing="24">
+          <StackPanel Spacing="8">
             <TextBlock Text="{DynamicResource Loc.Health.Audit.Title}" FontWeight="SemiBold" />
             <TextBlock Classes="muted" Text="{DynamicResource Loc.Health.Audit.Description}" TextWrapping="Wrap" />
             <Button x:Name="RunHealthAuditButton"
@@ -47,12 +87,12 @@
               </Button.Flyout>
             </Button>
           </StackPanel>
-          <StackPanel Grid.Column="1" Spacing="7">
+          <StackPanel Grid.Column="1" Spacing="8">
             <TextBlock Text="{DynamicResource Loc.Health.Repair.Title}" FontWeight="SemiBold" />
             <TextBlock Classes="muted" Text="{DynamicResource Loc.Health.Repair.Description}" TextWrapping="Wrap" />
             <WrapPanel>
               <Button x:Name="PrepareHealthRepairsButton"
-                      Classes="app overflow" Margin="0,0,10,7"
+                      Classes="app overflow" Margin="0,0,12,8"
                       Content="{DynamicResource Loc.Health.Repair.Prepare}"
                       AutomationProperties.Name="{DynamicResource Loc.Health.Repair.PrepareAutomation}">
                 <Button.Flyout>
@@ -74,14 +114,6 @@
                   </MenuFlyout>
                 </Button.Flyout>
               </Button>
-              <StackPanel Orientation="Horizontal" Margin="0,0,0,7" Spacing="6">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Health.Artist.Threshold}" VerticalAlignment="Center" />
-                <TextBox x:Name="ArtistThresholdInput" Classes="app" Width="70"
-                         Text="{Binding ArtistThresholdText, Mode=TwoWay}"
-                         PlaceholderText="0"
-                         ToolTip.Tip="{DynamicResource Loc.Health.Artist.ThresholdTooltip}"
-                         AutomationProperties.Name="{DynamicResource Loc.Health.Artist.ThresholdAutomation}" />
-              </StackPanel>
             </WrapPanel>
           </StackPanel>
         </Grid>
@@ -100,7 +132,7 @@
                 AutomationProperties.LiveSetting="Polite">
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
             <TextBlock Classes="status-icon" Text="{Binding StatusIcon}" />
-            <StackPanel Grid.Column="1" Spacing="3">
+            <StackPanel Grid.Column="1" Spacing="4">
               <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
               <controls:LocalizedFormatTextBlock
                   Classes="muted"
@@ -114,14 +146,15 @@
       </StackPanel>
     </Border>
 
-    <controls:PersistedSplitView Grid.Row="2" InitialLeftWidth="260" MinLeftWidth="190" MaxLeftWidth="430"
+    <controls:PersistedSplitView x:Name="HealthResultsHost"
+                              Grid.Row="2" InitialLeftWidth="260" MinLeftWidth="190" MaxLeftWidth="430"
                               MinRightWidth="560" PersistenceKey="health-history" Label="{DynamicResource Loc.Health.Split.History}">
       <controls:PersistedSplitView.Left>
         <Border Classes="card" Padding="12">
-          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
             <TextBlock Classes="section-title" Text="{DynamicResource Loc.Health.History.Title}" />
             <ListBox Grid.Row="1" ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
-              <ListBox.ItemTemplate><DataTemplate><Border Classes="history-item" Padding="10,8" Margin="0,0,0,5"><StackPanel Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding DisplayLabel}" TextWrapping="Wrap" /></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
+              <ListBox.ItemTemplate><DataTemplate><Border Classes="history-item" Padding="12,8" Margin="0,0,0,8"><StackPanel Spacing="4"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding DisplayLabel}" TextWrapping="Wrap" /></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
             </ListBox>
             <TextBlock Grid.Row="1" IsVisible="{Binding !HasRuns}" Classes="muted"
                        Text="{DynamicResource Loc.Health.History.Empty}"
@@ -135,11 +168,127 @@
       <controls:PersistedSplitView.Right>
         <Border Classes="card" Padding="0" ClipToBounds="True">
           <Grid>
-          <TabControl SelectedIndex="{Binding ActiveResultIndex, Mode=TwoWay}" IsVisible="{Binding HasRuns}"
+          <Grid x:Name="HealthResultNavigationLayout"
+                ColumnDefinitions="Auto,*"
+                RowDefinitions="Auto,*"
+                IsVisible="{Binding HasRuns}">
+            <Border x:Name="HealthResultPickerHost"
+                    Grid.ColumnSpan="2"
+                    Padding="12,8"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    Background="{DynamicResource AppPanelBrush}"
+                    IsVisible="False">
+              <Grid ColumnDefinitions="Auto,*"
+                    ColumnSpacing="12">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Health.Title}"
+                           VerticalAlignment="Center" />
+                <ComboBox x:Name="HealthResultPicker"
+                          Grid.Column="1"
+                          Classes="app"
+                          MinWidth="220"
+                          MaxWidth="360"
+                          HorizontalAlignment="Left"
+                          SelectionChanged="OnHealthResultPickerChanged"
+                          AutomationProperties.Name="{DynamicResource Loc.Health.Title}">
+                  <ComboBoxItem Tag="0"
+                                Content="{DynamicResource Loc.Health.Tab.Findings}" />
+                  <ComboBoxItem Tag="1"
+                                Content="{DynamicResource Loc.Health.Tab.Duplicates}" />
+                  <ComboBoxItem Tag="2"
+                                Content="{DynamicResource Loc.Health.Tab.SimilarArtists}" />
+                  <ComboBoxItem Tag="5"
+                                Content="{DynamicResource Loc.Health.Tab.Conflicts}" />
+                  <ComboBoxItem Tag="6"
+                                Content="{DynamicResource Loc.Health.Tab.AlbumMatrix}" />
+                  <ComboBoxItem Tag="3"
+                                Content="{DynamicResource Loc.Health.Tab.MetadataRepairs}" />
+                  <ComboBoxItem Tag="4"
+                                Content="{DynamicResource Loc.Health.Tab.FileRepairs}" />
+                  <ComboBoxItem Tag="7"
+                                Content="{DynamicResource Loc.Health.Tab.ItunesRepairs}" />
+                  <ComboBoxItem Tag="8"
+                                Content="{DynamicResource Loc.Health.Tab.ArtworkRepairs}" />
+                </ComboBox>
+              </Grid>
+            </Border>
+
+            <Border x:Name="HealthResultNavigationRail"
+                    Grid.Row="1"
+                    Width="190"
+                    Padding="8"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="0,0,1,0"
+                    Background="{DynamicResource AppPanelBrush}">
+              <ListBox x:Name="HealthResultNavigation"
+                         Classes="secondary-nav health-result-navigation"
+                         SelectionChanged="OnHealthResultNavigationChanged"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         AutomationProperties.Name="{DynamicResource Loc.Health.Title}">
+                  <ListBoxItem Classes="health-navigation-group"
+                               IsEnabled="False"
+                               Focusable="False"
+                               IsHitTestVisible="False">
+                    <TextBlock Classes="field-label muted"
+                               Text="{DynamicResource Loc.Health.Audit.Title}" />
+                  </ListBoxItem>
+                  <ListBoxItem Tag="0"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Tab.Findings}">
+                    <TextBlock Text="{DynamicResource Loc.Health.Tab.Findings}" />
+                  </ListBoxItem>
+                  <ListBoxItem Tag="1"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Tab.Duplicates}">
+                    <TextBlock Text="{DynamicResource Loc.Health.Tab.Duplicates}" />
+                  </ListBoxItem>
+                  <ListBoxItem Tag="2"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Tab.SimilarArtists}">
+                    <TextBlock Text="{DynamicResource Loc.Health.Tab.SimilarArtists}" />
+                  </ListBoxItem>
+                  <ListBoxItem Tag="5"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Tab.Conflicts}">
+                    <TextBlock Text="{DynamicResource Loc.Health.Tab.Conflicts}" />
+                  </ListBoxItem>
+                  <ListBoxItem Tag="6"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Tab.AlbumMatrix}">
+                    <TextBlock Text="{DynamicResource Loc.Health.Tab.AlbumMatrix}" />
+                  </ListBoxItem>
+                  <ListBoxItem Classes="health-navigation-group"
+                               IsEnabled="False"
+                               Focusable="False"
+                               IsHitTestVisible="False">
+                    <TextBlock Classes="field-label muted"
+                               Text="{DynamicResource Loc.Health.Repair.Title}" />
+                  </ListBoxItem>
+                  <ListBoxItem Tag="3"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Tab.MetadataRepairs}">
+                    <TextBlock Text="{DynamicResource Loc.Health.Tab.MetadataRepairs}" />
+                  </ListBoxItem>
+                  <ListBoxItem Tag="4"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Tab.FileRepairs}">
+                    <TextBlock Text="{DynamicResource Loc.Health.Tab.FileRepairs}" />
+                  </ListBoxItem>
+                  <ListBoxItem Tag="7"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Tab.ItunesRepairs}">
+                    <TextBlock Text="{DynamicResource Loc.Health.Tab.ItunesRepairs}" />
+                  </ListBoxItem>
+                  <ListBoxItem Tag="8"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Tab.ArtworkRepairs}">
+                    <TextBlock Text="{DynamicResource Loc.Health.Tab.ArtworkRepairs}" />
+                  </ListBoxItem>
+              </ListBox>
+            </Border>
+
+          <TabControl x:Name="HealthResultsTabs"
+                      Grid.Row="1"
+                      Grid.Column="1"
+                      Classes="health-result-content"
+                      SelectedIndex="{Binding ActiveResultIndex, Mode=OneWay}"
                       ContextRequested="OnHealthResultContextRequested">
             <TabItem Header="{DynamicResource Loc.Health.Tab.Findings}">
               <Grid RowDefinitions="Auto,*">
-              <Border Grid.Row="0" Classes="status-banner warning" Margin="10,8,10,4"
+              <Border Grid.Row="0" Classes="status-banner warning" Margin="12,8,12,4"
                       IsVisible="{Binding HasDeferredArtwork}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                   <StackPanel>
@@ -158,79 +307,161 @@
               <controls:PersistedSplitView Grid.Row="1" InitialLeftWidth="330" MinLeftWidth="230" MaxLeftWidth="620" MinRightWidth="280" PersistenceKey="health-findings" Label="{DynamicResource Loc.Health.Split.Findings}">
                 <controls:PersistedSplitView.Left>
                   <Grid RowDefinitions="Auto,*">
-                    <Grid>
-                      <Button x:Name="FindingRootButton" Padding="10,8,130,8" Background="Transparent" BorderThickness="0"
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8">
+                      <Button x:Name="FindingRootButton"
+                              Padding="12,8"
+                              Background="Transparent"
+                              BorderThickness="0"
                               HorizontalAlignment="Stretch"
                               HorizontalContentAlignment="Stretch" Click="OnSelectFindingRoot"
                               AutomationProperties.Name="{DynamicResource Loc.Health.Findings.SelectAllAutomation}">
                         <Grid HorizontalAlignment="Stretch">
                           <Border IsVisible="{Binding IsFindingRootSelected}" Background="{DynamicResource AppSelectionBrush}" CornerRadius="6" />
-                          <Grid Margin="7,2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                          <Grid Margin="8,4" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                             <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Findings.All}" />
                             <TextBlock Grid.Column="1" VerticalAlignment="Center" Classes="tree-count" Text="{Binding FindingCount}" />
                           </Grid>
                         </Grid>
                       </Button>
-                      <ComboBox x:Name="FindingRootDisposition" MinWidth="104" Margin="0,0,17,0"
-                                HorizontalAlignment="Right" VerticalAlignment="Center"
-                                AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllFindings}" />
+                      <StackPanel Grid.Column="1"
+                                  Classes="field"
+                                  VerticalAlignment="Center">
+                        <TextBlock Classes="field-label"
+                                   Text="{DynamicResource Loc.Column.Disposition}" />
+                        <ComboBox x:Name="FindingRootDisposition"
+                                  Classes="app"
+                                  MinWidth="104"
+                                  HorizontalAlignment="Right"
+                                  AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllFindings}" />
+                      </StackPanel>
                     </Grid>
                     <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding FindingGroups}" SelectedItem="{Binding SelectedFindingNode, Mode=TwoWay}">
                       <TreeView.DataTemplates>
-                        <TreeDataTemplate DataType="{x:Type vm:AnalysisProblemGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Problem}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
-                        <TreeDataTemplate DataType="{x:Type vm:AnalysisArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
-                        <TreeDataTemplate DataType="{x:Type vm:AnalysisAlbumGroupViewModel}" ItemsSource="{Binding Findings}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
+                    <TreeDataTemplate DataType="{x:Type vm:AnalysisProblemGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Problem}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                    <TreeDataTemplate DataType="{x:Type vm:AnalysisArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                    <TreeDataTemplate DataType="{x:Type vm:AnalysisAlbumGroupViewModel}" ItemsSource="{Binding Findings}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
                         <DataTemplate DataType="{x:Type vm:AnalysisFindingViewModel}"><TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" /></DataTemplate>
                       </TreeView.DataTemplates>
                     </TreeView>
                   </Grid>
                 </controls:PersistedSplitView.Left>
                 <controls:PersistedSplitView.Right>
-                  <Grid>
-                    <controls:AppDataGrid x:Name="FindingGrid" ItemsSource="{Binding DisplayedFindings}" />
-                    <TextBlock IsVisible="{Binding !DisplayedFindings.Count}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Classes="muted" Text="{Binding FindingsEmptyText}" TextWrapping="Wrap" TextAlignment="Center" Margin="18" />
+                  <Grid RowDefinitions="Auto,*">
+                    <Border Classes="quiet-toolbar"
+                            IsVisible="{Binding !!SelectedFindingNode}">
+                      <StackPanel Orientation="Horizontal"
+                                  HorizontalAlignment="Right"
+                                  Spacing="8">
+                        <TextBlock Classes="field-label"
+                                   Text="{DynamicResource Loc.Column.Disposition}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Classes="app"
+                                  MinWidth="112"
+                                  DataContext="{Binding SelectedFindingNode}"
+                                  ItemsSource="{Binding DispositionChoices}"
+                                  SelectedValue="{Binding Disposition, Mode=TwoWay}"
+                                  SelectedValueBinding="{Binding Value}"
+                                  AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllFindings}" />
+                      </StackPanel>
+                    </Border>
+                    <controls:AppDataGrid x:Name="FindingGrid"
+                                          Grid.Row="1"
+                                          ItemsSource="{Binding DisplayedFindings}"
+                                          SelectedItem="{Binding SelectedFindingNode, Mode=TwoWay}" />
+                    <TextBlock Grid.Row="1" IsVisible="{Binding !DisplayedFindings.Count}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Classes="muted" Text="{Binding FindingsEmptyText}" TextWrapping="Wrap" TextAlignment="Center" Margin="16" />
                   </Grid>
                 </controls:PersistedSplitView.Right>
               </controls:PersistedSplitView>
               </Grid>
             </TabItem>
 
-            <TabItem Header="{DynamicResource Loc.Health.Tab.Duplicates}" IsVisible="{Binding HasDuplicateSection}">
+            <TabItem Header="{DynamicResource Loc.Health.Tab.Duplicates}">
               <Grid>
-                <ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              IsVisible="{Binding HasDuplicateResults}">
-                  <ItemsControl x:Name="DuplicateResultsList" ItemsSource="{Binding Duplicates}">
-                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate><DataTemplate>
-                    <Border Classes="result-card" Margin="0,0,0,8">
-                      <StackPanel Spacing="5">
-                        <TextBlock Text="{Binding Key}" FontWeight="SemiBold" />
-                        <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled">
-                          <ItemsControl ItemsSource="{Binding Tracks}">
-                          <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate><DataTemplate>
-                            <TextBlock Classes="muted" Text="{Binding Path}" TextTrimming="CharacterEllipsis" />
-                          </DataTemplate></ItemsControl.ItemTemplate>
-                          </ItemsControl>
-                        </ScrollViewer>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate></ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
+                <Grid x:Name="DuplicateMasterDetailLayout"
+                      Margin="12"
+                      ColumnDefinitions="280,*"
+                      ColumnSpacing="12"
+                      IsVisible="{Binding HasDuplicateResults}">
+                  <Border Classes="section-frame"
+                          Padding="0"
+                          ClipToBounds="True">
+                    <ListBox x:Name="DuplicateResultsList"
+                             ItemsSource="{Binding Duplicates}"
+                             SelectedItem="{Binding SelectedDuplicate, Mode=TwoWay}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             AutomationProperties.Name="{DynamicResource Loc.Health.Tab.Duplicates}">
+                      <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                      </ListBox.ItemsPanel>
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid Margin="8"
+                                ColumnDefinitions="*,Auto"
+                                ColumnSpacing="8">
+                            <TextBlock Text="{Binding Key}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="tree-count"
+                                       Text="{Binding Tracks.Count}" />
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Border>
+                  <Border Grid.Column="1"
+                          Classes="section-frame"
+                          Padding="0"
+                          ClipToBounds="True">
+                    <Grid RowDefinitions="Auto,*">
+                      <TextBlock Margin="12,12,12,8"
+                                 Classes="section-title"
+                                 Text="{Binding SelectedDuplicate.Key}"
+                                 TextTrimming="CharacterEllipsis" />
+                      <ListBox x:Name="DuplicateTrackList"
+                               Grid.Row="1"
+                               ItemsSource="{Binding SelectedDuplicate.Tracks}"
+                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                               ScrollViewer.VerticalScrollBarVisibility="Auto"
+                               AutomationProperties.Name="{DynamicResource Loc.Column.Files}">
+                        <ListBox.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                          </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                          <DataTemplate>
+                            <StackPanel Margin="8,8"
+                                        Spacing="4">
+                              <TextBlock Text="{Binding Title}"
+                                         FontWeight="SemiBold"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Classes="muted caption"
+                                         Text="{Binding Path}"
+                                         TextTrimming="CharacterEllipsis"
+                                         ToolTip.Tip="{Binding Path}" />
+                            </StackPanel>
+                          </DataTemplate>
+                        </ListBox.ItemTemplate>
+                      </ListBox>
+                    </Grid>
+                  </Border>
+                </Grid>
                 <TextBlock Classes="muted" IsVisible="{Binding !HasDuplicateResults}" Text="{DynamicResource Loc.Health.Duplicates.Empty}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" />
               </Grid>
             </TabItem>
 
-            <TabItem Header="{DynamicResource Loc.Health.Tab.SimilarArtists}" IsVisible="{Binding HasArtistSection}">
+            <TabItem Header="{DynamicResource Loc.Health.Tab.SimilarArtists}">
               <Grid RowDefinitions="Auto,*">
-                <Border Grid.Row="0" Classes="status-banner warning" Margin="10,8,10,4"
+                <Border Grid.Row="0" Classes="status-banner warning" Margin="12,8,12,4"
                         IsVisible="{Binding HasArtistResults}">
-                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                  <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="12">
                     <StackPanel VerticalAlignment="Center">
                       <TextBlock FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Artist.ReviewTitle}" />
                       <TextBlock Classes="muted" TextWrapping="Wrap"
@@ -241,141 +472,222 @@
                           UseCountVariant="True"
                           Value="{Binding ActiveArtistTrackCount}" />
                     </StackPanel>
-                    <ComboBox x:Name="ArtistRootDisposition" Grid.Column="1" MinWidth="112"
-                              VerticalAlignment="Center" AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllArtists}" />
-                    <Button Grid.Column="2" Classes="app primary" Content="{DynamicResource Loc.Health.Action.ApplyActiveMerges}"
+                    <StackPanel Grid.Column="1"
+                                Classes="field"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <TextBlock Classes="field-label"
+                                 Text="{DynamicResource Loc.Health.Artist.Threshold}"
+                                 VerticalAlignment="Center" />
+                      <TextBox x:Name="ArtistThresholdInput"
+                               Classes="app"
+                               Width="70"
+                               Text="{Binding ArtistThresholdText, Mode=TwoWay}"
+                               ToolTip.Tip="{DynamicResource Loc.Health.Artist.ThresholdTooltip}"
+                               AutomationProperties.Name="{DynamicResource Loc.Health.Artist.ThresholdAutomation}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2"
+                                Classes="field"
+                                VerticalAlignment="Center">
+                      <TextBlock Classes="field-label"
+                                 Text="{DynamicResource Loc.Column.Disposition}" />
+                      <ComboBox x:Name="ArtistRootDisposition"
+                                Classes="app"
+                                MinWidth="112"
+                                AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllArtists}" />
+                    </StackPanel>
+                    <Button Grid.Column="3" Classes="app primary" Content="{DynamicResource Loc.Health.Action.ApplyActiveMerges}"
                             Command="{Binding ApplySimilarArtistsCommand}" VerticalAlignment="Center" />
                   </Grid>
                 </Border>
-                <ScrollViewer x:Name="SimilarArtistResultsScroll" Grid.Row="1" Margin="10"
-                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                              IsVisible="{Binding HasArtistResults}">
-                  <ItemsControl x:Name="SimilarArtistResultsList" ItemsSource="{Binding ArtistGroups}">
-                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Border Classes="result-card" Margin="0,0,0,10">
-                          <StackPanel Spacing="9">
-                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
-                              <TextBlock Classes="muted" Text="{DynamicResource Loc.Health.Artist.CanonicalName}" VerticalAlignment="Center" />
-                              <TextBox Grid.Column="1" Classes="app" MinWidth="240" Text="{Binding CanonicalName, Mode=TwoWay}"
-                                       IsEnabled="{Binding CanEditCanonical}"
-                                       AutomationProperties.Name="{DynamicResource Loc.Health.Artist.CanonicalNameAutomation}" />
-                              <controls:LocalizedFormatTextBlock
-                                  Grid.Column="2"
-                                  Classes="muted"
-                                  VerticalAlignment="Center"
-                                  ResourceKey="Health.Artist.ClusterTrackCount"
-                                  UseCountVariant="True"
-                                  Value="{Binding TrackCount}" />
-                              <ComboBox Grid.Column="3" MinWidth="112"
-                                        ItemsSource="{Binding DispositionChoices}"
-                                        SelectedValue="{Binding Disposition, Mode=TwoWay}"
-                                        SelectedValueBinding="{Binding Value}"
-                                        AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.ArtistCluster}" />
-                            </Grid>
-                            <ScrollViewer MaxHeight="620" VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled">
-                              <ItemsControl ItemsSource="{Binding Variants}">
-                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                  <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
-                                          CornerRadius="6" Margin="0,0,0,6" Padding="9">
-                                    <Grid>
-                                    <Expander>
-                                      <Expander.Header>
-                                        <Grid Margin="0,0,130,0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-                                          <StackPanel MinWidth="180" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                            <controls:LocalizedFormatTextBlock
-                                                Classes="muted"
-                                                FontSize="12"
-                                                ResourceKey="Health.Artist.FileCount"
-                                                UseCountVariant="True"
-                                                Value="{Binding TrackCount}" />
-                                          </StackPanel>
-                                          <TextBlock Grid.Column="1" Text="{DynamicResource Loc.Health.Artist.CanonicalTarget}" FontWeight="SemiBold"
-                                                     Foreground="{DynamicResource AppSuccessBrush}"
-                                                     IsVisible="{Binding IsCanonical}" VerticalAlignment="Center" />
-                                          <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
-                                            <TextBlock Classes="muted" Text="{Binding ResultText}" />
-                                            <controls:LocalizedFormatTextBlock
-                                                Classes="muted"
-                                                ResourceKey="Common.DiagnosticDetailFormat"
-                                                Value="{Binding ResultDiagnosticDetail}"
-                                                IsVisible="{Binding HasResultDiagnosticDetail}"
-                                                TextWrapping="Wrap" />
-                                          </StackPanel>
-                                        </Grid>
-                                      </Expander.Header>
-                                      <Grid Margin="0,9,0,0" ColumnDefinitions="1*,1.5*" ColumnSpacing="18">
-                                        <StackPanel Spacing="4">
+                <Grid x:Name="SimilarArtistMasterDetailLayout"
+                      Grid.Row="1"
+                      Margin="12"
+                      ColumnDefinitions="280,*"
+                      ColumnSpacing="12"
+                      IsVisible="{Binding HasArtistResults}">
+                  <Border Classes="section-frame"
+                          Padding="0"
+                          ClipToBounds="True">
+                    <ListBox x:Name="SimilarArtistResultsList"
+                             ItemsSource="{Binding ArtistGroups}"
+                             SelectedItem="{Binding SelectedArtistGroup, Mode=TwoWay}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             AutomationProperties.Name="{DynamicResource Loc.Health.Tab.SimilarArtists}">
+                      <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                      </ListBox.ItemsPanel>
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid Margin="8"
+                                ColumnDefinitions="*,Auto"
+                                ColumnSpacing="8">
+                            <TextBlock Text="{Binding CanonicalName}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <controls:LocalizedFormatTextBlock
+                                Grid.Column="1"
+                                Classes="tree-count"
+                                ResourceKey="Health.Artist.ClusterTrackCount"
+                                UseCountVariant="True"
+                                Value="{Binding TrackCount}" />
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Border>
+                  <Border Grid.Column="1"
+                          Classes="section-frame"
+                          Padding="0"
+                          ClipToBounds="True">
+                    <ScrollViewer x:Name="SimilarArtistDetailsScroll"
+                                  DataContext="{Binding SelectedArtistGroup}"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                      <StackPanel Margin="12"
+                                  Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                              ColumnSpacing="12">
+                          <TextBlock Classes="field-label"
+                                     Text="{DynamicResource Loc.Health.Artist.CanonicalName}"
+                                     VerticalAlignment="Center" />
+                          <TextBox Grid.Column="1"
+                                   Classes="app"
+                                   MinWidth="180"
+                                   Text="{Binding CanonicalName, Mode=TwoWay}"
+                                   IsEnabled="{Binding CanEditCanonical}"
+                                   AutomationProperties.Name="{DynamicResource Loc.Health.Artist.CanonicalNameAutomation}" />
+                          <TextBlock Grid.Column="2"
+                                     Classes="field-label"
+                                     Text="{DynamicResource Loc.Column.Disposition}"
+                                     VerticalAlignment="Center" />
+                          <ComboBox Grid.Column="3"
+                                    Classes="app"
+                                    MinWidth="112"
+                                    ItemsSource="{Binding DispositionChoices}"
+                                    SelectedValue="{Binding Disposition, Mode=TwoWay}"
+                                    SelectedValueBinding="{Binding Value}"
+                                    AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.ArtistCluster}" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Variants}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                              <Border BorderBrush="{DynamicResource AppBorderBrush}"
+                                      BorderThickness="1"
+                                      CornerRadius="6"
+                                      Margin="0,0,0,8"
+                                      Padding="12">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="8">
+                                  <Expander Grid.Column="0">
+                                    <Expander.Header>
+                                      <Grid ColumnDefinitions="*,Auto,Auto"
+                                            ColumnSpacing="12">
+                                        <StackPanel MinWidth="180"
+                                                    VerticalAlignment="Center">
+                                          <TextBlock Text="{Binding Name}"
+                                                     FontWeight="SemiBold" />
                                           <controls:LocalizedFormatTextBlock
-                                              Classes="muted"
-                                              FontWeight="SemiBold"
-                                              ResourceKey="Health.Artist.FolderCount"
-                                              UseCountVariant="True"
-                                              Value="{Binding FolderCount}" />
-                                          <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto"
-                                                        HorizontalScrollBarVisibility="Disabled">
-                                            <ItemsControl ItemsSource="{Binding Folders}">
-                                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate><DataTemplate>
-                                              <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis"
-                                                         ToolTip.Tip="{Binding Path}" />
-                                            </DataTemplate></ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                          </ScrollViewer>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Spacing="4">
-                                          <controls:LocalizedFormatTextBlock
-                                              Classes="muted"
-                                              FontWeight="SemiBold"
-                                              ResourceKey="Health.Artist.FilesCount"
+                                              Classes="muted caption"
+                                              ResourceKey="Health.Artist.FileCount"
                                               UseCountVariant="True"
                                               Value="{Binding TrackCount}" />
-                                          <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto"
-                                                        HorizontalScrollBarVisibility="Disabled">
-                                            <ItemsControl ItemsSource="{Binding Files}">
-                                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate><DataTemplate>
-                                              <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis"
-                                                         ToolTip.Tip="{Binding Path}" />
-                                            </DataTemplate></ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                          </ScrollViewer>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{DynamicResource Loc.Health.Artist.CanonicalTarget}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AppSuccessBrush}"
+                                                   IsVisible="{Binding IsCanonical}"
+                                                   VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="2"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="4">
+                                          <TextBlock Classes="muted"
+                                                     Text="{Binding ResultText}" />
+                                          <controls:LocalizedFormatTextBlock
+                                              Classes="muted"
+                                              ResourceKey="Common.DiagnosticDetailFormat"
+                                              Value="{Binding ResultDiagnosticDetail}"
+                                              IsVisible="{Binding HasResultDiagnosticDetail}"
+                                              TextWrapping="Wrap" />
                                         </StackPanel>
                                       </Grid>
-                                    </Expander>
-                                    <ComboBox MinWidth="112" Margin="0,1,0,0"
-                                              HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    </Expander.Header>
+                                    <Grid Margin="0,12,0,0"
+                                          ColumnDefinitions="1*,1.5*"
+                                          ColumnSpacing="16">
+                                      <StackPanel Spacing="4">
+                                        <controls:LocalizedFormatTextBlock
+                                            Classes="muted"
+                                            FontWeight="SemiBold"
+                                            ResourceKey="Health.Artist.FolderCount"
+                                            UseCountVariant="True"
+                                            Value="{Binding FolderCount}" />
+                                        <ItemsControl ItemsSource="{Binding Folders}">
+                                          <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                              <TextBlock Text="{Binding Path}"
+                                                         TextTrimming="CharacterEllipsis"
+                                                         ToolTip.Tip="{Binding Path}" />
+                                            </DataTemplate>
+                                          </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                      </StackPanel>
+                                      <StackPanel Grid.Column="1"
+                                                  Spacing="4">
+                                        <controls:LocalizedFormatTextBlock
+                                            Classes="muted"
+                                            FontWeight="SemiBold"
+                                            ResourceKey="Health.Artist.FilesCount"
+                                            UseCountVariant="True"
+                                            Value="{Binding TrackCount}" />
+                                        <ItemsControl ItemsSource="{Binding Files}">
+                                          <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                              <TextBlock Text="{Binding Path}"
+                                                         TextTrimming="CharacterEllipsis"
+                                                         ToolTip.Tip="{Binding Path}" />
+                                            </DataTemplate>
+                                          </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                      </StackPanel>
+                                    </Grid>
+                                  </Expander>
+                                  <StackPanel Grid.Column="1"
+                                              Classes="field"
+                                              VerticalAlignment="Top">
+                                    <TextBlock Classes="field-label"
+                                               Text="{DynamicResource Loc.Column.Disposition}" />
+                                    <ComboBox Classes="app"
+                                              MinWidth="112"
                                               ItemsSource="{Binding DispositionChoices}"
                                               SelectedValue="{Binding Disposition, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Value}"
                                               IsEnabled="{Binding CanChangeDisposition}"
                                               AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.ArtistVariant}" />
-                                    </Grid>
-                                  </Border>
-                                </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                              </ItemsControl>
-                            </ScrollViewer>
-                          </StackPanel>
-                        </Border>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
+                                  </StackPanel>
+                                </Grid>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </ScrollViewer>
+                  </Border>
+                </Grid>
                 <TextBlock Grid.Row="1" Classes="muted" IsVisible="{Binding !HasArtistResults}"
                            Text="{DynamicResource Loc.Health.Artist.Empty}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" />
               </Grid>
             </TabItem>
 
-            <TabItem Header="{DynamicResource Loc.Health.Tab.MetadataRepairs}" IsVisible="{Binding HasRepairSection}">
+            <TabItem Header="{DynamicResource Loc.Health.Tab.MetadataRepairs}">
               <Grid RowDefinitions="Auto,*">
-                <Border Classes="status-banner info" Margin="10,8,10,4">
+                <Border Classes="status-banner info" Margin="12,8,12,4">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <controls:LocalizedFormatTextBlock
                         Classes="summary-label"
@@ -390,25 +702,44 @@
               <controls:PersistedSplitView Grid.Row="1" InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="280" PersistenceKey="health-metadata-repairs" Label="{DynamicResource Loc.Health.Split.MetadataRepairs}">
                 <controls:PersistedSplitView.Left>
                   <Grid RowDefinitions="Auto,*">
-                  <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Repairs.AllMetadata}" /><ComboBox x:Name="RepairRootDisposition" Grid.Column="1" MinWidth="112" AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllMetadataRepairs}" /></Grid>
+                <Grid Margin="12,8,12,4" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Repairs.AllMetadata}" /><StackPanel Grid.Column="1" Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Column.Disposition}" /><ComboBox x:Name="RepairRootDisposition" Classes="app" MinWidth="112" AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllMetadataRepairs}" /></StackPanel></Grid>
                   <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding RepairGroups}" SelectedItem="{Binding SelectedRepairNode, Mode=TwoWay}">
                     <TreeView.DataTemplates>
-                      <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
-                      <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
-                      <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairAlbumGroupViewModel}" ItemsSource="{Binding Items}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
+                  <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                  <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                  <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairAlbumGroupViewModel}" ItemsSource="{Binding Items}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
                       <DataTemplate DataType="{x:Type vm:AnalysisRepairItemViewModel}"><TextBlock Text="{Binding DisplayPath}" TextTrimming="CharacterEllipsis" /></DataTemplate>
                     </TreeView.DataTemplates>
                   </TreeView>
                   </Grid>
                 </controls:PersistedSplitView.Left>
-                <controls:PersistedSplitView.Right><controls:AppDataGrid x:Name="RepairGrid" FrozenColumnCount="1" ItemsSource="{Binding DisplayedRepairItems}" /></controls:PersistedSplitView.Right>
+                <controls:PersistedSplitView.Right>
+                  <Grid RowDefinitions="Auto,*">
+                    <Border Classes="quiet-toolbar"
+                            IsVisible="{Binding !!SelectedRepairNode}">
+                      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <TextBlock Classes="field-label" Text="{DynamicResource Loc.Column.Disposition}" VerticalAlignment="Center" />
+                        <ComboBox Classes="app" MinWidth="112"
+                                  DataContext="{Binding SelectedRepairNode}"
+                                  ItemsSource="{Binding DispositionChoices}"
+                                  SelectedValue="{Binding Disposition, Mode=TwoWay}"
+                                  SelectedValueBinding="{Binding Value}"
+                                  AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllMetadataRepairs}" />
+                      </StackPanel>
+                    </Border>
+                    <controls:AppDataGrid x:Name="RepairGrid"
+                                          Grid.Row="1"
+                                          ItemsSource="{Binding DisplayedRepairItems}"
+                                          SelectedItem="{Binding SelectedRepairNode, Mode=TwoWay}" />
+                  </Grid>
+                </controls:PersistedSplitView.Right>
               </controls:PersistedSplitView>
               </Grid>
             </TabItem>
 
-            <TabItem Header="{DynamicResource Loc.Health.Tab.FileRepairs}" IsVisible="{Binding HasRepresentationSection}">
+            <TabItem Header="{DynamicResource Loc.Health.Tab.FileRepairs}">
               <Grid RowDefinitions="Auto,*">
-                <Border Classes="status-banner warning" Margin="10,8,10,4">
+                <Border Classes="status-banner warning" Margin="12,8,12,4">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <controls:LocalizedFormatTextBlock
                         Classes="summary-label"
@@ -423,29 +754,48 @@
               <controls:PersistedSplitView Grid.Row="1" InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="280" PersistenceKey="health-file-repairs" Label="{DynamicResource Loc.Health.Split.FileRepairs}">
                 <controls:PersistedSplitView.Left>
                   <Grid RowDefinitions="Auto,*">
-                  <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Repairs.AllFile}" /><ComboBox x:Name="RepresentationRootDisposition" Grid.Column="1" MinWidth="112" AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllFileRepairs}" /></Grid>
+                <Grid Margin="12,8,12,4" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Repairs.AllFile}" /><StackPanel Grid.Column="1" Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Column.Disposition}" /><ComboBox x:Name="RepresentationRootDisposition" Classes="app" MinWidth="112" AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllFileRepairs}" /></StackPanel></Grid>
                   <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding RepresentationActionGroups}" SelectedItem="{Binding SelectedRepresentationNode, Mode=TwoWay}">
                     <TreeView.DataTemplates>
-                      <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
-                      <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
-                      <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairAlbumGroupViewModel}" ItemsSource="{Binding Items}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
+                  <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                  <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                  <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairAlbumGroupViewModel}" ItemsSource="{Binding Items}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
                       <DataTemplate DataType="{x:Type vm:RepresentationRepairActionItemViewModel}"><TextBlock Text="{Binding SourcePath}" TextTrimming="CharacterEllipsis" /></DataTemplate>
                     </TreeView.DataTemplates>
                   </TreeView>
                   </Grid>
                 </controls:PersistedSplitView.Left>
-                <controls:PersistedSplitView.Right><controls:AppDataGrid x:Name="RepresentationGrid" FrozenColumnCount="1" ItemsSource="{Binding DisplayedRepresentationItems}" /></controls:PersistedSplitView.Right>
+                <controls:PersistedSplitView.Right>
+                  <Grid RowDefinitions="Auto,*">
+                    <Border Classes="quiet-toolbar"
+                            IsVisible="{Binding !!SelectedRepresentationNode}">
+                      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <TextBlock Classes="field-label" Text="{DynamicResource Loc.Column.Disposition}" VerticalAlignment="Center" />
+                        <ComboBox Classes="app" MinWidth="112"
+                                  DataContext="{Binding SelectedRepresentationNode}"
+                                  ItemsSource="{Binding DispositionChoices}"
+                                  SelectedValue="{Binding Disposition, Mode=TwoWay}"
+                                  SelectedValueBinding="{Binding Value}"
+                                  AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllFileRepairs}" />
+                      </StackPanel>
+                    </Border>
+                    <controls:AppDataGrid x:Name="RepresentationGrid"
+                                          Grid.Row="1"
+                                          ItemsSource="{Binding DisplayedRepresentationItems}"
+                                          SelectedItem="{Binding SelectedRepresentationNode, Mode=TwoWay}" />
+                  </Grid>
+                </controls:PersistedSplitView.Right>
               </controls:PersistedSplitView>
               </Grid>
             </TabItem>
 
-            <TabItem Header="{DynamicResource Loc.Health.Tab.Conflicts}" IsVisible="{Binding HasConflictSection}"><Grid><controls:AppDataGrid x:Name="ConflictGrid" Margin="12" ItemsSource="{Binding ConflictGroups}" IsVisible="{Binding HasConflictResults}" /><TextBlock Classes="muted" IsVisible="{Binding !HasConflictResults}" Text="{DynamicResource Loc.Health.Conflicts.Empty}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Grid></TabItem>
-            <TabItem Header="{DynamicResource Loc.Health.Tab.AlbumMatrix}" IsVisible="{Binding HasMatrixSection}">
+            <TabItem Header="{DynamicResource Loc.Health.Tab.Conflicts}"><Grid><controls:AppDataGrid x:Name="ConflictGrid" Margin="12" ItemsSource="{Binding ConflictGroups}" IsVisible="{Binding HasConflictResults}" /><TextBlock Classes="muted" IsVisible="{Binding !HasConflictResults}" Text="{DynamicResource Loc.Health.Conflicts.Empty}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Grid></TabItem>
+            <TabItem Header="{DynamicResource Loc.Health.Tab.AlbumMatrix}">
               <Grid RowDefinitions="Auto,*">
-                <Border Grid.Row="0" Classes="status-banner info" Margin="12,10,12,0">
+                <Border Grid.Row="0" Classes="status-banner info" Margin="12,12,12,0">
                   <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                    <TextBlock Classes="status-icon" Text="i" />
-                    <StackPanel Grid.Column="1" Spacing="3">
+                    <controls:AppVectorIcon Kind="Information" />
+                    <StackPanel Grid.Column="1" Spacing="4">
                       <TextBlock x:Name="AlbumMatrixExplanation" FontWeight="SemiBold"
                                  Text="{DynamicResource Loc.Health.AlbumMatrix.ReadOnly}" />
                       <TextBlock TextWrapping="Wrap"
@@ -453,97 +803,71 @@
                     </StackPanel>
                   </Grid>
                 </Border>
-                <ScrollViewer x:Name="AlbumMatrixResultsScroll" Grid.Row="1" Margin="12"
-                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                              IsVisible="{Binding HasMatrixResults}">
-                  <ItemsControl x:Name="AlbumMatrixResultsList" ItemsSource="{Binding Matrices}">
-                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Border Classes="result-card" Margin="0,0,0,10">
-                          <Expander IsExpanded="False">
-                            <Expander.Header>
-                              <StackPanel Spacing="3">
-                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-                                <TextBlock Classes="muted" Text="{Binding Summary}" FontSize="12" />
-                              </StackPanel>
-                            </Expander.Header>
-                            <StackPanel Margin="0,9,0,0" Spacing="8">
-                              <TextBlock Classes="muted" Text="{Binding Root}" TextTrimming="CharacterEllipsis"
-                                         ToolTip.Tip="{Binding Root}" />
-                              <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                                <StackPanel MinWidth="1500">
-                                  <Border Background="{DynamicResource AppPanelBrush}" BorderBrush="{DynamicResource AppBorderBrush}"
-                                          BorderThickness="0,0,0,1">
-                                    <Grid ColumnDefinitions="245,55,65,75,70,180,180,210,90,*">
-                                      <TextBlock Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.Track}" />
-                                      <TextBlock Grid.Column="1" Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.Disc}" />
-                                      <TextBlock Grid.Column="2" Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.TrackNumber}" />
-                                      <TextBlock Grid.Column="3" Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.TrackTotal}" />
-                                      <TextBlock Grid.Column="4" Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.DiscTotal}" />
-                                      <TextBlock Grid.Column="5" Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.Artist}" />
-                                      <TextBlock Grid.Column="6" Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.AlbumArtist}" />
-                                      <TextBlock Grid.Column="7" Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.Album}" />
-                                      <TextBlock Grid.Column="8" Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.Date}" />
-                                      <TextBlock Grid.Column="9" Margin="7,8" FontWeight="SemiBold" Classes="muted" Text="{DynamicResource Loc.Health.AlbumMatrix.FlagReason}" />
-                                    </Grid>
-                                  </Border>
-                                  <ScrollViewer MaxHeight="520" VerticalScrollBarVisibility="Auto"
-                                                HorizontalScrollBarVisibility="Disabled">
-                                    <ItemsControl ItemsSource="{Binding Rows}">
-                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                      <DataTemplate>
-                                        <Border Classes="matrix-row">
-                                          <Grid ColumnDefinitions="245,55,65,75,70,180,180,210,90,*">
-                                            <Border Classes="matrix-cell" Classes.warning="{Binding Title.IsInconsistent}"
-                                                    ToolTip.Tip="{Binding TitleToolTip}">
-                                              <StackPanel>
-                                                <TextBlock Text="{Binding Title.Display}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Classes="faint" FontSize="11" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
-                                              </StackPanel>
-                                            </Border>
-                                            <Border Grid.Column="1" Classes="matrix-cell" Classes.warning="{Binding DiscNumber.IsInconsistent}"
-                                                    ToolTip.Tip="{Binding DiscNumber.Reason}"><TextBlock Text="{Binding DiscNumber.Display}" /></Border>
-                                            <Border Grid.Column="2" Classes="matrix-cell" Classes.warning="{Binding TrackNumber.IsInconsistent}"
-                                                    ToolTip.Tip="{Binding TrackNumber.Reason}"><TextBlock Text="{Binding TrackNumber.Display}" /></Border>
-                                            <Border Grid.Column="3" Classes="matrix-cell" Classes.warning="{Binding TrackTotal.IsInconsistent}"
-                                                    ToolTip.Tip="{Binding TrackTotal.Reason}"><TextBlock Text="{Binding TrackTotal.Display}" /></Border>
-                                            <Border Grid.Column="4" Classes="matrix-cell" Classes.warning="{Binding DiscTotal.IsInconsistent}"
-                                                    ToolTip.Tip="{Binding DiscTotal.Reason}"><TextBlock Text="{Binding DiscTotal.Display}" /></Border>
-                                            <Border Grid.Column="5" Classes="matrix-cell" Classes.warning="{Binding Artist.IsInconsistent}"
-                                                    ToolTip.Tip="{Binding Artist.Reason}"><TextBlock Text="{Binding Artist.Display}" TextTrimming="CharacterEllipsis" /></Border>
-                                            <Border Grid.Column="6" Classes="matrix-cell" Classes.warning="{Binding AlbumArtist.IsInconsistent}"
-                                                    ToolTip.Tip="{Binding AlbumArtist.Reason}"><TextBlock Text="{Binding AlbumArtist.Display}" TextTrimming="CharacterEllipsis" /></Border>
-                                            <Border Grid.Column="7" Classes="matrix-cell" Classes.warning="{Binding Album.IsInconsistent}"
-                                                    ToolTip.Tip="{Binding Album.Reason}"><TextBlock Text="{Binding Album.Display}" TextTrimming="CharacterEllipsis" /></Border>
-                                            <Border Grid.Column="8" Classes="matrix-cell" Classes.warning="{Binding ReleaseDate.IsInconsistent}"
-                                                    ToolTip.Tip="{Binding ReleaseDate.Reason}"><TextBlock Text="{Binding ReleaseDate.Display}" TextTrimming="CharacterEllipsis" /></Border>
-                                            <Border Grid.Column="9" Classes="matrix-cell" Classes.warning="{Binding HasIssues}"
-                                                    ToolTip.Tip="{Binding IssueSummary}"><TextBlock Text="{Binding IssueSummary}" TextWrapping="Wrap" /></Border>
-                                          </Grid>
-                                        </Border>
-                                      </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                  </ScrollViewer>
-                                </StackPanel>
-                              </ScrollViewer>
-                            </StackPanel>
-                          </Expander>
-                        </Border>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
+                <Grid x:Name="AlbumMatrixMasterDetailLayout"
+                      Grid.Row="1"
+                      Margin="12"
+                      ColumnDefinitions="280,*"
+                      ColumnSpacing="12"
+                      IsVisible="{Binding HasMatrixResults}">
+                  <Border Classes="section-frame"
+                          Padding="0"
+                          ClipToBounds="True">
+                    <ListBox x:Name="AlbumMatrixResultsList"
+                             ItemsSource="{Binding Matrices}"
+                             SelectedItem="{Binding SelectedMatrix, Mode=TwoWay}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             AutomationProperties.Name="{DynamicResource Loc.Health.Tab.AlbumMatrix}">
+                      <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                      </ListBox.ItemsPanel>
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <StackPanel Margin="8"
+                                      Spacing="4">
+                            <TextBlock Text="{Binding DisplayName}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="muted caption"
+                                       Text="{Binding Summary}"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Border>
+                  <Border Grid.Column="1"
+                          Classes="section-frame"
+                          Padding="0"
+                          ClipToBounds="True">
+                    <Grid RowDefinitions="Auto,*">
+                      <StackPanel Margin="12,12,12,8"
+                                  Spacing="4">
+                        <TextBlock Classes="section-title"
+                                   Text="{Binding SelectedMatrix.DisplayName}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="muted caption"
+                                   Text="{Binding SelectedMatrix.Root}"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding SelectedMatrix.Root}" />
+                      </StackPanel>
+                      <controls:AppDataGrid x:Name="AlbumMatrixRowsGrid"
+                                            Grid.Row="1"
+                                            ItemsSource="{Binding SelectedMatrix.Rows}"
+                                            AutomationProperties.Name="{DynamicResource Loc.Health.Tab.AlbumMatrix}" />
+                    </Grid>
+                  </Border>
+                </Grid>
                 <TextBlock Grid.Row="1" Classes="muted" IsVisible="{Binding !HasMatrixResults}"
                            Text="{DynamicResource Loc.Health.AlbumMatrix.Empty}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Grid>
             </TabItem>
-            <TabItem Header="{DynamicResource Loc.Health.Tab.ItunesRepairs}" IsVisible="{Binding HasItlRepairSection}">
+            <TabItem Header="{DynamicResource Loc.Health.Tab.ItunesRepairs}">
               <Grid RowDefinitions="Auto,*">
-                <Border Classes="status-banner warning" Margin="10,8,10,4">
+                <Border Classes="status-banner warning" Margin="12,8,12,4">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <controls:LocalizedFormatTextBlock
                         Classes="summary-label"
@@ -558,24 +882,43 @@
               <controls:PersistedSplitView Grid.Row="1" InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="280" PersistenceKey="health-itl-metadata-repairs" Label="{DynamicResource Loc.Health.Split.ItunesRepairs}">
                 <controls:PersistedSplitView.Left>
                   <Grid RowDefinitions="Auto,*">
-                    <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Repairs.AllItunes}" /><ComboBox x:Name="ItlRepairRootDisposition" Grid.Column="1" MinWidth="112" AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllItunesRepairs}" /></Grid>
+                <Grid Margin="12,8,12,4" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Repairs.AllItunes}" /><StackPanel Grid.Column="1" Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Column.Disposition}" /><ComboBox x:Name="ItlRepairRootDisposition" Classes="app" MinWidth="112" AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllItunesRepairs}" /></StackPanel></Grid>
                     <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding ItlRepairGroups}" SelectedItem="{Binding SelectedItlRepairNode, Mode=TwoWay}">
                       <TreeView.DataTemplates>
-                        <TreeDataTemplate DataType="{x:Type vm:ItlMetadataRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
-                        <TreeDataTemplate DataType="{x:Type vm:ItlMetadataRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
-                        <TreeDataTemplate DataType="{x:Type vm:ItlMetadataRepairAlbumGroupViewModel}" ItemsSource="{Binding Items}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding DispositionChoices}" SelectedValue="{Binding Disposition, Mode=TwoWay}" SelectedValueBinding="{Binding Value}" PointerPressed="OnEmbeddedInteractivePointerPressed" /></Grid></TreeDataTemplate>
+                  <TreeDataTemplate DataType="{x:Type vm:ItlMetadataRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                  <TreeDataTemplate DataType="{x:Type vm:ItlMetadataRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                  <TreeDataTemplate DataType="{x:Type vm:ItlMetadataRepairAlbumGroupViewModel}" ItemsSource="{Binding Items}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
                         <DataTemplate DataType="{x:Type vm:ItlMetadataRepairItemViewModel}"><TextBlock Text="{Binding DisplayPath}" TextTrimming="CharacterEllipsis" /></DataTemplate>
                       </TreeView.DataTemplates>
                     </TreeView>
                   </Grid>
                 </controls:PersistedSplitView.Left>
-                <controls:PersistedSplitView.Right><controls:AppDataGrid x:Name="ItlRepairGrid" FrozenColumnCount="1" ItemsSource="{Binding DisplayedItlRepairItems}" /></controls:PersistedSplitView.Right>
+                <controls:PersistedSplitView.Right>
+                  <Grid RowDefinitions="Auto,*">
+                    <Border Classes="quiet-toolbar"
+                            IsVisible="{Binding !!SelectedItlRepairNode}">
+                      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <TextBlock Classes="field-label" Text="{DynamicResource Loc.Column.Disposition}" VerticalAlignment="Center" />
+                        <ComboBox Classes="app" MinWidth="112"
+                                  DataContext="{Binding SelectedItlRepairNode}"
+                                  ItemsSource="{Binding DispositionChoices}"
+                                  SelectedValue="{Binding Disposition, Mode=TwoWay}"
+                                  SelectedValueBinding="{Binding Value}"
+                                  AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllItunesRepairs}" />
+                      </StackPanel>
+                    </Border>
+                    <controls:AppDataGrid x:Name="ItlRepairGrid"
+                                          Grid.Row="1"
+                                          ItemsSource="{Binding DisplayedItlRepairItems}"
+                                          SelectedItem="{Binding SelectedItlRepairNode, Mode=TwoWay}" />
+                  </Grid>
+                </controls:PersistedSplitView.Right>
               </controls:PersistedSplitView>
               </Grid>
             </TabItem>
-            <TabItem Header="{DynamicResource Loc.Health.Tab.ArtworkRepairs}" IsVisible="{Binding HasArtworkRepairSection}">
+            <TabItem Header="{DynamicResource Loc.Health.Tab.ArtworkRepairs}">
               <Grid RowDefinitions="Auto,*">
-                <Border Grid.Row="0" Classes="status-banner warning" Margin="10,8,10,4">
+                <Border Grid.Row="0" Classes="status-banner warning" Margin="12,8,12,4">
                   <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
                     <StackPanel VerticalAlignment="Center">
                       <TextBlock FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Artwork.ReviewTitle}" />
@@ -587,8 +930,16 @@
                           UseCountVariant="True"
                           Value="{Binding ActiveArtworkRepairCount}" />
                     </StackPanel>
-                    <ComboBox x:Name="ArtworkRepairRootDisposition" Grid.Column="1" MinWidth="112"
-                              VerticalAlignment="Center" AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllArtworkRepairs}" />
+                    <StackPanel Grid.Column="1"
+                                Classes="field"
+                                VerticalAlignment="Center">
+                      <TextBlock Classes="field-label"
+                                 Text="{DynamicResource Loc.Column.Disposition}" />
+                      <ComboBox x:Name="ArtworkRepairRootDisposition"
+                                Classes="app"
+                                MinWidth="112"
+                                AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.AllArtworkRepairs}" />
+                    </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                       <Button Classes="app" Content="{DynamicResource Loc.Health.Action.ForceScanDeferred}"
                               IsVisible="{Binding HasDeferredArtwork}"
@@ -604,42 +955,48 @@
                                              Label="{DynamicResource Loc.Health.Split.ArtworkRepairs}">
                   <controls:PersistedSplitView.Left>
                     <Grid RowDefinitions="Auto,*">
-                      <TextBlock Margin="12,10,12,4" FontWeight="SemiBold" Text="{DynamicResource Loc.Health.Artwork.Plan}" />
+                      <Grid Margin="12,8,12,4"
+                            ColumnDefinitions="*,Auto"
+                            ColumnSpacing="8">
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="{DynamicResource Loc.Health.Artwork.Plan}"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    IsVisible="{Binding !!SelectedArtworkRepairNode}">
+                          <TextBlock Classes="field-label"
+                                     Text="{DynamicResource Loc.Column.Disposition}"
+                                     VerticalAlignment="Center" />
+                          <ComboBox Classes="app"
+                                    MinWidth="112"
+                                    DataContext="{Binding SelectedArtworkRepairNode}"
+                                    ItemsSource="{Binding DispositionChoices}"
+                                    SelectedValue="{Binding Disposition, Mode=TwoWay}"
+                                    SelectedValueBinding="{Binding Value}"
+                                    AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.ArtworkRepair}" />
+                        </StackPanel>
+                      </Grid>
                        <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding ArtworkRepairGroups}"
                                 SelectedItem="{Binding SelectedArtworkRepairNode, Mode=TwoWay}"
                                 ContextRequested="OnArtworkRepairTreeContextRequested">
                          <TreeView.DataTemplates>
                           <TreeDataTemplate DataType="{x:Type vm:ArtworkRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}">
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                               <TextBlock Text="{Binding Category}" />
                               <TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" />
-                              <ComboBox Grid.Column="2" MinWidth="104"
-                                        ItemsSource="{Binding DispositionChoices}"
-                                        SelectedValue="{Binding Disposition, Mode=TwoWay}"
-                                        SelectedValueBinding="{Binding Value}"
-                                        PointerPressed="OnEmbeddedInteractivePointerPressed" />
                             </Grid>
                           </TreeDataTemplate>
                           <TreeDataTemplate DataType="{x:Type vm:ArtworkRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}">
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                               <TextBlock Text="{Binding Artist}" />
                               <TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" />
-                              <ComboBox Grid.Column="2" MinWidth="104"
-                                        ItemsSource="{Binding DispositionChoices}"
-                                        SelectedValue="{Binding Disposition, Mode=TwoWay}"
-                                        SelectedValueBinding="{Binding Value}"
-                                        PointerPressed="OnEmbeddedInteractivePointerPressed" />
                             </Grid>
                           </TreeDataTemplate>
                           <TreeDataTemplate DataType="{x:Type vm:ArtworkRepairAlbumGroupViewModel}" ItemsSource="{Binding Items}">
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                               <TextBlock Text="{Binding Album}" />
                               <TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" />
-                              <ComboBox Grid.Column="2" MinWidth="104"
-                                        ItemsSource="{Binding DispositionChoices}"
-                                        SelectedValue="{Binding Disposition, Mode=TwoWay}"
-                                        SelectedValueBinding="{Binding Value}"
-                                        PointerPressed="OnEmbeddedInteractivePointerPressed" />
                             </Grid>
                           </TreeDataTemplate>
                           <DataTemplate DataType="{x:Type vm:ArtworkRepairItemViewModel}">
@@ -651,102 +1008,160 @@
                   </controls:PersistedSplitView.Left>
                   <controls:PersistedSplitView.Right>
                     <Grid>
-                      <ScrollViewer x:Name="ArtworkRepairResultsScroll" Margin="10"
-                                    VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                    IsVisible="{Binding HasArtworkRepairResults}">
-                        <ItemsControl x:Name="ArtworkRepairResultsList"
-                                      ItemsSource="{Binding DisplayedArtworkRepairItems}">
-                          <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                              <Border Classes="result-card" Margin="0,0,0,10">
-                                <StackPanel Spacing="9">
-                                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                    <StackPanel>
-                                      <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-                                      <TextBlock Classes="muted" Text="{Binding TargetSummary}" />
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="1" MinWidth="112"
-                                              ItemsSource="{Binding DispositionChoices}"
-                                              SelectedValue="{Binding Disposition, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Value}"
-                                              IsEnabled="{Binding CanChangeDisposition}"
-                                              AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.ArtworkRepair}" />
-                                  </Grid>
-                                  <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
-                                  <TextBlock Foreground="{DynamicResource AppWarningBrush}" Text="{Binding BlockingReason}"
-                                             TextWrapping="Wrap" IsVisible="{Binding !!BlockingReason}" />
-                                  <ListBox ItemsSource="{Binding Candidates}"
-                                           SelectedItem="{Binding SelectedCandidate, Mode=TwoWay}"
-                                           IsVisible="{Binding ShowGallery}" Background="Transparent"
-                                           BorderThickness="0"
-                                           AutomationProperties.Name="{DynamicResource Loc.Health.Artwork.ChooseCanonicalAutomation}">
-                                    <ListBox.ItemsPanel>
-                                      <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                    </ListBox.ItemsPanel>
-                                    <ListBox.ItemTemplate>
-                                      <DataTemplate>
-                                        <StackPanel Width="180" Margin="4" Spacing="4">
-                                          <Border Background="{DynamicResource AppPanelBrush}" CornerRadius="6" Padding="5">
-                                            <Image Source="{Binding ImageSource}" Width="168" Height="168" Stretch="Uniform"
-                                                   Tag="{Binding}" AttachedToVisualTree="OnArtworkCandidateAttached" />
-                                          </Border>
-                                          <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                          <TextBlock Classes="muted" FontSize="11" Text="{Binding Details}"
-                                                     TextWrapping="Wrap" MaxLines="2" />
-                                           <TextBlock Foreground="{DynamicResource AppWarningBrush}"
-                                                      FontSize="11"
-                                                      Text="{Binding ThumbnailError}"
-                                                      TextWrapping="Wrap"
-                                                      MaxLines="2"
-                                                      IsVisible="{Binding !!ThumbnailError}"
-                                                      AutomationProperties.LiveSetting="Polite" />
-                                           <controls:LocalizedFormatTextBlock
-                                               Classes="muted"
-                                               FontSize="11"
-                                               ResourceKey="Common.DiagnosticDetailFormat"
-                                               Value="{Binding ThumbnailDiagnosticDetail}"
-                                               IsVisible="{Binding HasThumbnailDiagnosticDetail}"
-                                               TextWrapping="Wrap"
-                                               MaxLines="2" />
-                                        </StackPanel>
-                                      </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                  </ListBox>
-                                  <Expander>
-                                    <Expander.Header>
+                      <Grid x:Name="ArtworkRepairMasterDetailLayout"
+                            Margin="12"
+                            ColumnDefinitions="260,*"
+                            ColumnSpacing="12"
+                            IsVisible="{Binding HasArtworkRepairResults}">
+                        <Border Classes="section-frame"
+                                Padding="0"
+                                ClipToBounds="True">
+                          <ListBox x:Name="ArtworkRepairResultsList"
+                                   ItemsSource="{Binding DisplayedArtworkRepairItems}"
+                                   SelectedItem="{Binding SelectedArtworkRepairItem, Mode=TwoWay}"
+                                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                   AutomationProperties.Name="{DynamicResource Loc.Health.Tab.ArtworkRepairs}">
+                            <ListBox.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                              </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                              <DataTemplate>
+                                <StackPanel Margin="8"
+                                            Spacing="4">
+                                  <TextBlock Text="{Binding Title}"
+                                             FontWeight="SemiBold"
+                                             TextTrimming="CharacterEllipsis" />
+                                  <TextBlock Classes="muted caption"
+                                             Text="{Binding TargetSummary}"
+                                             TextWrapping="Wrap" />
+                                </StackPanel>
+                              </DataTemplate>
+                            </ListBox.ItemTemplate>
+                          </ListBox>
+                        </Border>
+                        <Border Grid.Column="1"
+                                Classes="section-frame"
+                                Padding="0"
+                                ClipToBounds="True">
+                          <ScrollViewer x:Name="ArtworkRepairDetailsScroll"
+                                        DataContext="{Binding SelectedArtworkRepairItem}"
+                                        VerticalScrollBarVisibility="Auto"
+                                        HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="12"
+                                        Spacing="8">
+                              <Grid ColumnDefinitions="*,Auto,Auto"
+                                    ColumnSpacing="12">
+                                <StackPanel>
+                                  <TextBlock Text="{Binding Title}"
+                                             FontWeight="SemiBold" />
+                                  <TextBlock Classes="muted"
+                                             Text="{Binding TargetSummary}" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1"
+                                           Classes="field-label"
+                                           Text="{DynamicResource Loc.Column.Disposition}"
+                                           VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="2"
+                                          Classes="app"
+                                          MinWidth="112"
+                                          ItemsSource="{Binding DispositionChoices}"
+                                          SelectedValue="{Binding Disposition, Mode=TwoWay}"
+                                          SelectedValueBinding="{Binding Value}"
+                                          IsEnabled="{Binding CanChangeDisposition}"
+                                          AutomationProperties.Name="{DynamicResource Loc.Health.Disposition.ArtworkRepair}" />
+                              </Grid>
+                              <TextBlock Text="{Binding Description}"
+                                         TextWrapping="Wrap" />
+                              <TextBlock Classes="warning-text"
+                                         Text="{Binding BlockingReason}"
+                                         TextWrapping="Wrap"
+                                         IsVisible="{Binding !!BlockingReason}" />
+                              <ListBox ItemsSource="{Binding Candidates}"
+                                       SelectedItem="{Binding SelectedCandidate, Mode=TwoWay}"
+                                       IsVisible="{Binding ShowGallery}"
+                                       Background="Transparent"
+                                       BorderThickness="0"
+                                       AutomationProperties.Name="{DynamicResource Loc.Health.Artwork.ChooseCanonicalAutomation}">
+                                <ListBox.ItemsPanel>
+                                  <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                  </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                  <DataTemplate>
+                                    <StackPanel Width="180"
+                                                Margin="4"
+                                                Spacing="4">
+                                      <Border Background="{DynamicResource AppPanelBrush}"
+                                              CornerRadius="6"
+                                              Padding="8">
+                                        <Image Source="{Binding ImageSource}"
+                                               Width="168"
+                                               Height="168"
+                                               Stretch="Uniform"
+                                               Tag="{Binding}"
+                                               AttachedToVisualTree="OnArtworkCandidateAttached" />
+                                      </Border>
+                                      <TextBlock Text="{Binding Label}"
+                                                 FontWeight="SemiBold"
+                                                 TextTrimming="CharacterEllipsis" />
+                                      <TextBlock Classes="muted caption"
+                                                 Text="{Binding Details}"
+                                                 TextWrapping="Wrap"
+                                                 MaxLines="2" />
+                                      <TextBlock Classes="warning-text caption"
+                                                 Text="{Binding ThumbnailError}"
+                                                 TextWrapping="Wrap"
+                                                 MaxLines="2"
+                                                 IsVisible="{Binding !!ThumbnailError}"
+                                                 AutomationProperties.LiveSetting="Polite" />
                                       <controls:LocalizedFormatTextBlock
-                                          Classes="muted"
-                                          FontWeight="SemiBold"
-                                          ResourceKey="Health.Artwork.AffectedFiles"
-                                          UseCountVariant="True"
-                                          Value="{Binding FileCount}" />
-                                    </Expander.Header>
-                                    <ScrollViewer MaxHeight="260" Margin="8,6,0,0"
-                                                  VerticalScrollBarVisibility="Auto"
-                                                  HorizontalScrollBarVisibility="Disabled">
-                                      <ItemsControl ItemsSource="{Binding AffectedPaths}">
-                                      <ItemsControl.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                      <ItemsControl.ItemTemplate><DataTemplate>
-                                        <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis"
-                                                   ToolTip.Tip="{Binding Path}" />
-                                      </DataTemplate></ItemsControl.ItemTemplate>
-                                      </ItemsControl>
-                                    </ScrollViewer>
-                                  </Expander>
-                                  <TextBlock Classes="muted" Text="{Binding ResultText}" TextWrapping="Wrap" />
+                                          Classes="muted caption"
+                                          ResourceKey="Common.DiagnosticDetailFormat"
+                                          Value="{Binding ThumbnailDiagnosticDetail}"
+                                          IsVisible="{Binding HasThumbnailDiagnosticDetail}"
+                                          TextWrapping="Wrap"
+                                          MaxLines="2" />
+                                    </StackPanel>
+                                  </DataTemplate>
+                                </ListBox.ItemTemplate>
+                              </ListBox>
+                              <Expander>
+                                <Expander.Header>
                                   <controls:LocalizedFormatTextBlock
                                       Classes="muted"
-                                      ResourceKey="Common.DiagnosticDetailFormat"
-                                      Value="{Binding ResultDiagnosticDetail}"
-                                      IsVisible="{Binding HasResultDiagnosticDetail}"
-                                      TextWrapping="Wrap" />
-                                </StackPanel>
-                              </Border>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </ScrollViewer>
+                                      FontWeight="SemiBold"
+                                      ResourceKey="Health.Artwork.AffectedFiles"
+                                      UseCountVariant="True"
+                                      Value="{Binding FileCount}" />
+                                </Expander.Header>
+                                <ItemsControl Margin="8,8,0,0"
+                                              ItemsSource="{Binding AffectedPaths}">
+                                  <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                      <TextBlock Text="{Binding Path}"
+                                                 TextTrimming="CharacterEllipsis"
+                                                 ToolTip.Tip="{Binding Path}" />
+                                    </DataTemplate>
+                                  </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                              </Expander>
+                              <TextBlock Classes="muted"
+                                         Text="{Binding ResultText}"
+                                         TextWrapping="Wrap" />
+                              <controls:LocalizedFormatTextBlock
+                                  Classes="muted"
+                                  ResourceKey="Common.DiagnosticDetailFormat"
+                                  Value="{Binding ResultDiagnosticDetail}"
+                                  IsVisible="{Binding HasResultDiagnosticDetail}"
+                                  TextWrapping="Wrap" />
+                            </StackPanel>
+                          </ScrollViewer>
+                        </Border>
+                      </Grid>
                       <TextBlock Classes="muted" IsVisible="{Binding !HasArtworkRepairResults}"
                                  Text="{DynamicResource Loc.Health.Artwork.Empty}"
                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -756,7 +1171,8 @@
               </Grid>
             </TabItem>
           </TabControl>
-          <StackPanel IsVisible="{Binding !HasRuns}" Spacing="10"
+          </Grid>
+          <StackPanel IsVisible="{Binding !HasRuns}" Spacing="12"
                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24">
             <TextBlock Classes="section-title" Text="{DynamicResource Loc.Health.NoSelection.Title}" TextAlignment="Center" />
             <TextBlock Classes="muted" Text="{DynamicResource Loc.Health.NoSelection.Description}"
@@ -766,5 +1182,5 @@
         </Border>
       </controls:PersistedSplitView.Right>
     </controls:PersistedSplitView>
-  </Grid>
+  </controls:AdaptivePage>
 </UserControl>

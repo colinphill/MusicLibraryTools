@@ -26,6 +26,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private bool _suppressDirty = true;
     private bool _refreshingSyncTargetChoices;
     private bool _refreshingDisplayLanguage;
+    private bool _refreshingDensity;
     private readonly HashSet<INotifyPropertyChanged> _trackedRows = [];
     private string? _statusMessageKey;
     private object?[] _statusMessageArguments = [];
@@ -79,6 +80,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     private LocalizedChoice<string>?
         _selectedDisplayLanguage;
+    [ObservableProperty]
+    private LocalizedChoice<UiDensity>?
+        _selectedDensityChoice;
     [ObservableProperty] private int _selectedTabIndex;
     [ObservableProperty] private bool _isGuidedSetupActive;
     [ObservableProperty]
@@ -173,6 +177,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<MetadataFieldMappingEditorRow> FieldMappings { get; } = [];
     public ObservableCollection<LocalizedChoice<string>>
         DisplayLanguageChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<UiDensity>>
+        DensityChoices { get; } = [];
     public ObservableCollection<LocalizedChoice<LibraryPathCollisionPolicy>>
         CollisionPolicyChoices { get; } = [];
     public ObservableCollection<LocalizedChoice<LibraryUnicodeNormalization>>
@@ -329,6 +335,13 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                     IndexTargets.Count, writableRoots, profileOverrides));
         }
     }
+
+    public IReadOnlyList<string> EffectivePolicySummaryItems =>
+        EffectivePolicySummary
+            .Split(
+                [Environment.NewLine],
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries);
 
     public string EffectivePolicyDetails
     {
@@ -536,6 +549,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         DeleteLibraryProfileCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanDeleteSelectedProfile));
         OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicySummaryItems));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         if (!_suppressDirty && newValue is not null)
             MarkDirty();
@@ -553,6 +567,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         DeleteIngestProfileCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanDeleteSelectedIngestProfile));
         OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicySummaryItems));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         if (!_suppressDirty && newValue is not null)
             MarkDirty();
@@ -573,6 +588,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             _refreshingSyncTargetChoices = false;
         }
         OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicySummaryItems));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         MarkDirty();
     }
@@ -602,6 +618,16 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (!_refreshingDisplayLanguage &&
             value is not null)
             _localization.SetCulture(value.Value);
+    }
+
+    partial void OnSelectedDensityChoiceChanged(
+        LocalizedChoice<UiDensity>? value)
+    {
+        if (!_refreshingDensity &&
+            value is not null)
+            AppearancePreferences.SetDensity(
+                _settings,
+                value.Value);
     }
 
     private void OnLocalizationCultureChanged(
@@ -713,6 +739,44 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         foreach (ThemeChoice theme in ThemeChoices)
             theme.Name = _localization.Get(
                 $"Settings.Choice.Theme.{ChoiceToken(theme.Value)}");
+        RefreshDensityChoices();
+    }
+
+    private void RefreshDensityChoices()
+    {
+        _refreshingDensity = true;
+        try
+        {
+            UiDensity selected =
+                SelectedDensityChoice?.Value ??
+                AppearancePreferences.GetDensity(
+                    _settings);
+            foreach (UiDensity density in
+                     Enum.GetValues<UiDensity>())
+            {
+                LocalizedChoice<UiDensity>? choice =
+                    DensityChoices.FirstOrDefault(item =>
+                        item.Value == density);
+                string label = _localization.Get(
+                    $"Settings.Choice.UiDensity.{density}");
+                if (choice is null)
+                {
+                    choice = new(density, label);
+                    DensityChoices.Add(choice);
+                }
+                else
+                {
+                    choice.Label = label;
+                }
+            }
+            SelectedDensityChoice =
+                DensityChoices.First(choice =>
+                    choice.Value == selected);
+        }
+        finally
+        {
+            _refreshingDensity = false;
+        }
     }
 
     private void RefreshChoices<T>(
@@ -830,6 +894,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                     _localization);
         OnPropertyChanged(nameof(ActiveConfigurationDisplay));
         OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicySummaryItems));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         RefreshSyncTargetChoices();
         RefreshDestinationRootChoices();
@@ -959,6 +1024,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         RefreshDestinationRootChoices();
         RefreshSyncTargetChoices();
         OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicySummaryItems));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         MarkDirty();
     }
@@ -1056,6 +1122,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                  !_refreshingSyncTargetChoices)
             RefreshSyncTargetChoices();
         OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicySummaryItems));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         MarkDirty();
     }
@@ -1252,7 +1319,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (!HasUnsavedChanges)
             return true;
-        return await _dialogs.ConfirmAsync(
+        return await _dialogs.ConfirmDestructiveAsync(
             _localization.Get("Settings.Dialog.Discard.Title"),
             _localization.Get("Settings.Dialog.Discard.Message"),
             _localization.Get("Settings.Dialog.Discard.Accept"));
@@ -1481,7 +1548,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                     "Settings.Dialog.DeleteProfile.WorkflowReferences",
                     workflowReferences),
                 fallback.Name);
-        if (!await _dialogs.ConfirmAsync(
+        if (!await _dialogs.ConfirmDestructiveAsync(
                 _localization.Format(
                     "Settings.Dialog.DeleteProfile.Title", selected.Name),
                 _localization.Format(
@@ -1571,7 +1638,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             string.Equals(profile.Id, selectedId, StringComparison.OrdinalIgnoreCase));
         LibraryIngestProfile fallback = IngestProfiles.First(profile =>
             !string.Equals(profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
-        if (!await _dialogs.ConfirmAsync(
+        if (!await _dialogs.ConfirmDestructiveAsync(
                 _localization.Format(
                     "Settings.Dialog.DeleteIngestProfile.Title",
                     selected.Name),
@@ -1668,6 +1735,38 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [RelayCommand]
     private void AddExportProfile() =>
         ExportProfiles.Add(ExportProfileEditorRow.Create());
+
+    [RelayCommand]
+    private void DuplicateExportProfile(ExportProfileEditorRow? row)
+    {
+        if (row is null)
+            return;
+
+        string sourceId = string.IsNullOrWhiteSpace(row.Id)
+            ? "export"
+            : row.Id.Trim();
+        string candidateId = $"{sourceId}-copy";
+        for (int suffix = 2;
+             ExportProfiles.Any(item => string.Equals(
+                 item.Id,
+                 candidateId,
+                 StringComparison.OrdinalIgnoreCase));
+             suffix++)
+        {
+            candidateId = $"{sourceId}-copy-{suffix}";
+        }
+
+        LibraryExportProfile copy = row.Build() with
+        {
+            Id = candidateId,
+            Name = row.Name +
+                   _localization.Get("Settings.Profile.CopySuffix"),
+        };
+        int index = ExportProfiles.IndexOf(row);
+        ExportProfiles.Insert(
+            index < 0 ? ExportProfiles.Count : index + 1,
+            ExportProfileEditorRow.From(copy));
+    }
 
     [RelayCommand]
     private void AddFieldMapping() =>
@@ -2144,6 +2243,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         foreach (IndexTargetEditorRow root in IndexTargets)
             root.RefreshProfileChoices(LibraryProfiles);
         OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicySummaryItems));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
     }
 

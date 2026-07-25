@@ -122,6 +122,32 @@ public partial class WorkbenchSessionSectionView : UserControl
         ColumnDefinitionsChanged?.Invoke();
     }
 
+    public void MoveColumn(
+        string key,
+        int offset)
+    {
+        int index = _workbenchColumns.FindIndex(
+            column => column.Key == key);
+        if (index < 0 || offset == 0)
+            return;
+        int destination = Math.Clamp(
+            index + offset,
+            0,
+            _workbenchColumns.Count - 1);
+        if (destination == index)
+            return;
+
+        AppGridColumnDefinition definition =
+            _workbenchColumns[index];
+        _workbenchColumns.RemoveAt(index);
+        _workbenchColumns.Insert(
+            destination,
+            definition);
+        ConfigureGrid();
+        PersistLayout();
+        ColumnDefinitionsChanged?.Invoke();
+    }
+
     private void OnColumnsClick(
         object? sender,
         global::Avalonia.Interactivity.RoutedEventArgs e) =>

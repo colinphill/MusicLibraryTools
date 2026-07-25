@@ -282,6 +282,7 @@ public partial class OperationsViewModel : ViewModelBase
     [ObservableProperty]
     private UnifiedJobChoiceViewModel? _selectedJobChoice;
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasJobOutput))]
     private string _jobOutput = "";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowJobApply))]
@@ -304,6 +305,8 @@ public partial class OperationsViewModel : ViewModelBase
         !string.IsNullOrWhiteSpace(StatusDiagnosticDetail);
     public bool HasJobStatusDiagnosticDetail =>
         !string.IsNullOrWhiteSpace(JobStatusDiagnosticDetail);
+    public bool HasJobOutput =>
+        !string.IsNullOrWhiteSpace(JobOutput);
     public bool HasRuns => Runs.Count > 0;
     public bool IsRunListEmpty => Runs.Count == 0;
     public bool ShowJobApply => HasJobPreview &&

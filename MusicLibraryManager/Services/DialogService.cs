@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using MusicLibraryManager.Presentation;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
@@ -20,6 +21,12 @@ public enum DialogDefaultAction
     None,
     Cancel,
     Primary,
+}
+
+public enum DialogActionRole
+{
+    Standard,
+    Destructive,
 }
 
 /// <summary>Controls which implicit gestures may dismiss a dialog.</summary>
@@ -45,6 +52,8 @@ public abstract record DialogRequest(string Title)
     public DialogTone Tone { get; init; } = DialogTone.Neutral;
     public DialogDefaultAction DefaultAction { get; init; } = DialogDefaultAction.Cancel;
     public DialogDismissalPolicy DismissalPolicy { get; init; } = DialogDismissalPolicy.Standard;
+    public DialogActionRole PrimaryActionRole { get; init; } =
+        DialogActionRole.Standard;
 }
 
 public sealed record MessageRequest(string DialogTitle, string Message)
@@ -58,6 +67,7 @@ public sealed class DialogService(
     IMetadataDocumentService documents,
     IMetadataOperationService operations,
     IActivityService activities,
+    IServiceProvider services,
     ILocalizationService? localization = null)
     : IDialogCoordinator, IFieldsEditorService
 {
@@ -78,11 +88,27 @@ public sealed class DialogService(
             return false;
         if (request.DismissalPolicy.CanDismissFromCloseButton)
             Complete(false);
+        else if (request is FieldsRequest fields &&
+                 fields.ViewModel.CancelCommand.CanExecute(
+                     null))
+            fields.ViewModel.CancelCommand.Execute(null);
         return true;
     }
 
     public Task<bool> ConfirmAsync(string title, string message, string primaryText) =>
         ConfirmAsync(title, message, primaryText, DialogTone.Warning);
+
+    public Task<bool> ConfirmDestructiveAsync(
+        string title,
+        string message,
+        string primaryText) =>
+        ConfirmAsync(
+            title,
+            message,
+            primaryText,
+            DialogTone.Warning,
+            primaryActionRole:
+                DialogActionRole.Destructive);
 
     public Task<bool> ConfirmAsync(
         string title,
@@ -90,12 +116,15 @@ public sealed class DialogService(
         string primaryText,
         DialogTone tone,
         DialogDefaultAction defaultAction = DialogDefaultAction.Cancel,
-        DialogDismissalPolicy? dismissalPolicy = null) =>
+        DialogDismissalPolicy? dismissalPolicy = null,
+        DialogActionRole? primaryActionRole = null) =>
         ShowAsync(new ConfirmRequest(title, message, primaryText)
         {
             Tone = tone,
             DefaultAction = defaultAction,
             DismissalPolicy = dismissalPolicy ?? DialogDismissalPolicy.Standard,
+            PrimaryActionRole = primaryActionRole ??
+                DialogActionRole.Standard,
         });
 
     public Task ShowMessageAsync(string title, string message) =>
@@ -121,6 +150,13 @@ public sealed class DialogService(
             documents,
             operations,
             paths,
+            (plan, ct) => services
+                .GetRequiredService<
+                    IWorkbenchPendingChangeCoordinator>()
+                .AddPendingMutationAsync(
+                    ReviewedMetadataMutationIntent.Create(
+                        plan),
+                    ct),
             activities,
             localization);
         Guid loadActivity = activities.Start(
@@ -252,7 +288,9 @@ public sealed class WorkflowDialogService(
             plan.FileCount,
             plan.TotalBytes),
         Text("Dialog.Purge.Action"),
-        DialogTone.Danger);
+        DialogTone.Danger,
+        primaryActionRole:
+            DialogActionRole.Destructive);
 
     private string Text(string key) =>
         localization?.Get(key) ??

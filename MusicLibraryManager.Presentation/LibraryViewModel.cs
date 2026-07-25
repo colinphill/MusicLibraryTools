@@ -18,6 +18,13 @@ public enum LibraryOperationScope
     CompleteLibrary,
 }
 
+public enum LibraryInspectorPreference
+{
+    Auto = 0,
+    Pinned = 1,
+    Closed = 2,
+}
+
 public partial class LibraryViewModel : ObservableObject, INavigationGuard
 {
     private const string ViewsPreference = "manager.library.views.v1";
@@ -75,6 +82,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenInWorkbenchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditSelectedInWorkbenchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditVisibleInWorkbenchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditAllInWorkbenchCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(ImportLibraryDelimitedMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
@@ -144,11 +154,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasRows))]
     [NotifyPropertyChangedFor(nameof(HasEmptyState))]
+    [NotifyPropertyChangedFor(nameof(ShowFooterGuidance))]
     [NotifyPropertyChangedFor(nameof(ResultCountText))]
     private IReadOnlyList<LibraryRow> _rows = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasEmptyState))]
+    [NotifyPropertyChangedFor(nameof(ShowFooterGuidance))]
     [NotifyPropertyChangedFor(nameof(EmptyStateTitle))]
     [NotifyPropertyChangedFor(nameof(EmptyStateMessage))]
     [NotifyPropertyChangedFor(nameof(EmptyStateActionLabel))]
@@ -156,6 +168,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     private bool _isInspectorOpen = true;
+
+    public LibraryInspectorPreference InspectorPreference
+    {
+        get;
+        private set;
+    } = LibraryInspectorPreference.Auto;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
@@ -345,15 +363,18 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         FileOperations =
             fileOperations is null ||
             files is null ||
-            dialogs is null
+            workbench is null
                 ? null
                 : new(
                     fileOperations,
                     files,
-                    dialogs,
                     () => ResolveOperationPaths(),
+                    plan => workbench
+                        .AddPendingMutationAsync(
+                            ReviewedFileOperationMutationIntent
+                                .Create(plan)),
                     FileOperationPreflightMessage,
-                    RefreshAfterFileOperationAsync);
+                    localization);
         if (FileOperations is not null)
             FileOperations.PropertyChanged +=
                 (_, args) =>
@@ -412,20 +433,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         LoadWorkspace();
         settings.ConfigurationChanged += OnConfigurationChanged;
         indexing.IndexCompleted += () => _ = ReloadAsync();
-        inspector.FilesChanged += () => _ = ReloadAsync();
         inspector.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName is
                 nameof(SelectionInspectorViewModel.HasUnsavedChanges) or
                 nameof(SelectionInspectorViewModel.PendingChangesVersion))
             {
-                if (inspector.HasUnsavedChanges &&
-                    _libraryOperationPlan is not null)
-                {
-                    _libraryOperationPlan = null;
-                    OperationPreviewChanges.Clear();
-                    HasApplicableOperationPreview = false;
-                }
                 RebuildPendingChanges();
                 OnPropertyChanged(nameof(HasUnsavedSelectionChanges));
                 OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -461,6 +474,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ImportEmptyCellModeChoices { get; } = [];
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
     public ObservableCollection<MetadataPreviewRow> PendingChanges { get; } = [];
+    public bool HasPendingChanges => PendingChanges.Count > 0;
+    public bool HasNoPendingChanges => PendingChanges.Count == 0;
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
     public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; }
     public DiscogsReleaseSearchViewModel DiscogsSearch { get; }
@@ -496,6 +511,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public bool HasVisualFilter => VisualFilterExpression is not null;
     public bool HasRows => Rows.Count > 0;
     public bool HasEmptyState => Rows.Count == 0 && PageState != LibraryPageState.Loading;
+    public bool ShowFooterGuidance =>
+        !(HasEmptyState &&
+          PageState == LibraryPageState.NoConfiguration);
     public bool HasFilterError => !string.IsNullOrWhiteSpace(FilterError);
     public bool HasFilterDiagnosticDetail =>
         !string.IsNullOrWhiteSpace(
@@ -518,6 +536,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             Rows.Count,
             TotalCount);
     public IReadOnlyList<string> SelectedPaths => _selectedPaths;
+    public int SelectedPathCount => _selectedPaths.Count;
+    public bool HasSelection => _selectedPaths.Count > 0;
     public bool HasUnsavedSelectionChanges => Inspector.HasUnsavedChanges;
     public bool HasUnsavedChanges =>
         HasUnsavedSelectionChanges ||
@@ -619,7 +639,39 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     partial void OnIsInspectorOpenChanged(bool value)
     {
         if (!_loadingWorkspace)
+        {
+            InspectorPreference = value
+                ? LibraryInspectorPreference.Pinned
+                : LibraryInspectorPreference.Closed;
+            OnPropertyChanged(
+                nameof(InspectorPreference));
             SaveWorkspace();
+        }
+    }
+
+    public void SetInspectorPreference(
+        LibraryInspectorPreference preference)
+    {
+        if (!Enum.IsDefined(preference))
+            throw new ArgumentOutOfRangeException(
+                nameof(preference));
+        InspectorPreference = preference;
+        OnPropertyChanged(nameof(InspectorPreference));
+        bool shouldBeOpen =
+            preference != LibraryInspectorPreference.Closed;
+        if (IsInspectorOpen != shouldBeOpen)
+        {
+            _loadingWorkspace = true;
+            try
+            {
+                IsInspectorOpen = shouldBeOpen;
+            }
+            finally
+            {
+                _loadingWorkspace = false;
+            }
+        }
+        SaveWorkspace();
     }
 
     partial void OnSelectedViewChanged(LibraryViewDefinition? value)
@@ -815,7 +867,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
              FileOperations?.HasUnsavedChanges != true) ||
             _dialogs is null)
             return true;
-        return await _dialogs.ConfirmAsync(
+        return await _dialogs.ConfirmDestructiveAsync(
             L("Library.Dialog.Leave.Title"),
             L("Library.Dialog.Leave.Message"),
             L("Library.Dialog.Leave.Confirm"));
@@ -841,6 +893,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             return;
         _selectedPaths = distinct;
         OnPropertyChanged(nameof(SelectedPaths));
+        OnPropertyChanged(nameof(SelectedPathCount));
+        OnPropertyChanged(nameof(HasSelection));
         FileOperations?.InvalidateTargets();
         InvalidateLibraryOperationPreview();
         ClearReleaseTrackMappings();
@@ -849,6 +903,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
         OpenInWorkbenchCommand.NotifyCanExecuteChanged();
+        EditSelectedInWorkbenchCommand.NotifyCanExecuteChanged();
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
         ImportLibraryDelimitedMetadataCommand.NotifyCanExecuteChanged();
         CopyLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
@@ -863,14 +918,102 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [RelayCommand(CanExecute = nameof(CanOpenInWorkbench))]
     private async Task OpenInWorkbenchAsync()
     {
-        if (_workbench is null || _selectedPaths.Count == 0)
-            return;
-        await _workbench.AddSourcesAsync(_selectedPaths);
-        _navigation.Navigate(ShellDestination.Workbench);
+        await HandoffToWorkbenchAsync(
+            WorkbenchSection.Session,
+            WorkbenchHandoffScopeKind.Selected);
     }
 
     private bool CanOpenInWorkbench() =>
         !IsBusy && _workbench is not null && _selectedPaths.Count > 0;
+
+    [RelayCommand(CanExecute = nameof(CanEditSelectedInWorkbench))]
+    private Task EditSelectedInWorkbenchAsync(string? sectionId) =>
+        TryParseHandoffSection(sectionId, out WorkbenchSection section)
+            ? HandoffToWorkbenchAsync(
+                section,
+                WorkbenchHandoffScopeKind.Selected)
+            : Task.CompletedTask;
+
+    private bool CanEditSelectedInWorkbench(string? sectionId) =>
+        CanHandoffToWorkbench(
+            sectionId,
+            WorkbenchHandoffScopeKind.Selected);
+
+    [RelayCommand(CanExecute = nameof(CanEditVisibleInWorkbench))]
+    private Task EditVisibleInWorkbenchAsync(string? sectionId) =>
+        TryParseHandoffSection(sectionId, out WorkbenchSection section)
+            ? HandoffToWorkbenchAsync(
+                section,
+                WorkbenchHandoffScopeKind.VisibleResults)
+            : Task.CompletedTask;
+
+    private bool CanEditVisibleInWorkbench(string? sectionId) =>
+        CanHandoffToWorkbench(
+            sectionId,
+            WorkbenchHandoffScopeKind.VisibleResults);
+
+    [RelayCommand(CanExecute = nameof(CanEditAllInWorkbench))]
+    private Task EditAllInWorkbenchAsync(string? sectionId) =>
+        TryParseHandoffSection(sectionId, out WorkbenchSection section)
+            ? HandoffToWorkbenchAsync(
+                section,
+                WorkbenchHandoffScopeKind.AllResults)
+            : Task.CompletedTask;
+
+    private bool CanEditAllInWorkbench(string? sectionId) =>
+        CanHandoffToWorkbench(
+            sectionId,
+            WorkbenchHandoffScopeKind.AllResults);
+
+    public async Task HandoffToWorkbenchAsync(
+        WorkbenchSection destinationSection,
+        WorkbenchHandoffScopeKind scopeKind)
+    {
+        if (_workbench is null || IsBusy)
+            return;
+        string[] paths = ResolveHandoffPaths(scopeKind);
+        if (paths.Length == 0)
+            return;
+        var request = WorkbenchHandoffRequest.Create(
+            destinationSection,
+            scopeKind,
+            paths);
+        if (await _workbench.AcceptHandoffAsync(request))
+            _navigation.Navigate(ShellDestination.Workbench);
+    }
+
+    private bool CanHandoffToWorkbench(
+        string? sectionId,
+        WorkbenchHandoffScopeKind scopeKind) =>
+        !IsBusy &&
+        _workbench is not null &&
+        TryParseHandoffSection(sectionId, out _) &&
+        ResolveHandoffPaths(scopeKind).Length > 0;
+
+    private static bool TryParseHandoffSection(
+        string? sectionId,
+        out WorkbenchSection section) =>
+        Enum.TryParse(sectionId, ignoreCase: false, out section) &&
+        Enum.IsDefined(section);
+
+    private string[] ResolveHandoffPaths(
+        WorkbenchHandoffScopeKind scopeKind)
+    {
+        IEnumerable<string> paths = scopeKind switch
+        {
+            WorkbenchHandoffScopeKind.Selected =>
+                _selectedPaths,
+            WorkbenchHandoffScopeKind.VisibleResults =>
+                Rows.Select(row => row.Path),
+            WorkbenchHandoffScopeKind.AllResults =>
+                _allRows.Select(row => row.Path),
+            _ => [],
+        };
+        return paths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(PathComparer)
+            .ToArray();
+    }
 
     [RelayCommand]
     private void OpenOperations()
@@ -1179,25 +1322,33 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             "Library.Progress.ApplyingMetadataChanges");
         try
         {
-            _libraryOperationPlan ??=
-                await _inspector.PreviewPendingChangesAsync(
-                    CreateOperationProgress(),
-                    _operationCancellation!.Token);
-            if (_libraryOperationPlan is null)
+            MetadataOperationPlan? inspectorPlan =
+                _inspector.HasUnsavedChanges
+                    ? await _inspector.PreviewPendingChangesAsync(
+                        CreateOperationProgress(),
+                        _operationCancellation!.Token)
+                    : null;
+            MetadataOperationPlan? effectivePlan =
+                _libraryOperationPlan is null
+                    ? inspectorPlan
+                    : inspectorPlan is null
+                        ? _libraryOperationPlan
+                        : MetadataOperationPlanComposer.Combine(
+                            L(
+                                "Library.PendingChanges.Title"),
+                            _libraryOperationPlan,
+                            inspectorPlan);
+            if (effectivePlan is null)
             {
                 SetOperationStatus(
                     "Library.Operation.Apply.NoPending");
                 return;
             }
-            MetadataPreviewRowBuilder.Populate(
-                OperationPreviewChanges,
-                _libraryOperationPlan,
-                _localization);
             HasApplicableOperationPreview =
-                _libraryOperationPlan.CanApply;
-            if (!_libraryOperationPlan.CanApply)
+                effectivePlan.CanApply;
+            if (!effectivePlan.CanApply)
             {
-                OperationIssue? blocker = _libraryOperationPlan
+                OperationIssue? blocker = effectivePlan
                     .Files
                     .SelectMany(file => file.Issues)
                     .FirstOrDefault(issue =>
@@ -1214,12 +1365,15 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             }
             MetadataApplyResult result =
                 await _metadataOperations.ApplyAsync(
-                    _libraryOperationPlan,
+                    effectivePlan,
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
+            bool appliedInspectorDraft =
+                inspectorPlan?.ChangedFileCount > 0;
             _libraryOperationPlan = null;
             OperationPreviewChanges.Clear();
-            if (_inspector.HasUnsavedChanges)
+            if (appliedInspectorDraft &&
+                _inspector.HasUnsavedChanges)
                 await _inspector.LoadAsync(
                     _inspector.Selection);
             RebuildPendingChanges();
@@ -1267,7 +1421,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     }
 
     private bool CanRevertPendingChanges() =>
-        !IsOperationBusy;
+        !IsOperationBusy &&
+        HasPendingChanges;
 
     [RelayCommand(CanExecute = nameof(CanUndoLibraryOperation))]
     private async Task UndoLibraryOperationAsync()
@@ -2783,17 +2938,16 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private void RebuildPendingChanges()
     {
         PendingChanges.Clear();
-        if (OperationPreviewChanges.Count > 0)
-        {
-            foreach (MetadataPreviewRow row in
-                     OperationPreviewChanges)
-                PendingChanges.Add(row);
-            return;
-        }
-
+        foreach (MetadataPreviewRow row in
+                 OperationPreviewChanges)
+            PendingChanges.Add(row);
         foreach (MetadataPreviewRow row in
                  _inspector.CreatePendingChangeRows())
             PendingChanges.Add(row);
+        OnPropertyChanged(nameof(HasPendingChanges));
+        OnPropertyChanged(nameof(HasNoPendingChanges));
+        RevertPendingChangesCommand
+            .NotifyCanExecuteChanged();
     }
 
     private void ScheduleRepresentativePreview()
@@ -2816,23 +2970,6 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             return L(
                 "Library.FileOperation.MetadataEditsPending");
         return null;
-    }
-
-    private async Task RefreshAfterFileOperationAsync(
-        ReviewedFileOperationPlan plan)
-    {
-        foreach (FileMutationAction action in
-                 plan.MutationPlan.Actions)
-        {
-            if (action.Kind != FileMutationKind.Copy)
-                await _reindex.ReindexFileAsync(
-                    action.SourcePath);
-            if (action.Kind is FileMutationKind.Copy or
-                FileMutationKind.Move)
-                await _reindex.ReindexFileAsync(
-                    action.DestinationPath);
-        }
-        await ReloadAsync();
     }
 
     partial void OnSelectedOperationScopeChanged(LibraryOperationScope value)
@@ -2859,6 +2996,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
         ImportLibraryDelimitedMetadataCommand.NotifyCanExecuteChanged();
         OpenOperationsCommand.NotifyCanExecuteChanged();
+        EditVisibleInWorkbenchCommand.NotifyCanExecuteChanged();
+        EditAllInWorkbenchCommand.NotifyCanExecuteChanged();
         DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
         PreviewLocalLibraryArtworkCommand.NotifyCanExecuteChanged();
         PreviewRemoveLibraryFrontCoverCommand.NotifyCanExecuteChanged();
@@ -3568,6 +3707,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             FilterMode = FilterMode.Substring;
             VisualFilterExpression = null;
             VisualFilterEditor.Load(null);
+            InspectorPreference =
+                LibraryInspectorPreference.Auto;
             IsInspectorOpen = true;
             string? json = _settings.GetLibraryPreference(WorkspacePreference);
             if (string.IsNullOrWhiteSpace(json))
@@ -3579,7 +3720,22 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 FilterMode = state.Mode;
                 VisualFilterExpression = state.VisualFilter;
                 VisualFilterEditor.Load(state.VisualFilter);
-                IsInspectorOpen = state.InspectorOpen ?? true;
+                InspectorPreference =
+                    state.InspectorPreference ??
+                    (state.InspectorOpen switch
+                    {
+                        true =>
+                            LibraryInspectorPreference.Pinned,
+                        false =>
+                            LibraryInspectorPreference.Closed,
+                        _ =>
+                            LibraryInspectorPreference.Auto,
+                    });
+                IsInspectorOpen =
+                    InspectorPreference !=
+                    LibraryInspectorPreference.Closed;
+                OnPropertyChanged(
+                    nameof(InspectorPreference));
             }
         }
         catch
@@ -3597,7 +3753,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 FilterText,
                 FilterMode,
                 IsInspectorOpen,
-                VisualFilterExpression)));
+                VisualFilterExpression,
+                InspectorPreference)));
 
     private string L(string key) =>
         _localization?.Get(key) ??
@@ -3820,7 +3977,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string? Filter,
         FilterMode Mode,
         bool? InspectorOpen = null,
-        LibraryVisualFilterNode? VisualFilter = null);
+        LibraryVisualFilterNode? VisualFilter = null,
+        LibraryInspectorPreference? InspectorPreference = null);
     private sealed record ThumbnailCacheItem(object? Image, LinkedListNode<string> Node);
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase

@@ -28,15 +28,7 @@ public sealed class ApplicationLocalizationCoverageTests
         new(
             "MainWindow.axaml",
             "Text",
-            "Ctrl K"),
-        new(
-            "Views/DevicesView.axaml",
-            "PlaceholderText",
-            "music or /storage/\u2026/Music"),
-        new(
-            "Views/DevicesView.axaml",
-            "PlaceholderText",
-            "**/*.tmp"),
+            "Ctrl+K"),
         new(
             "Views/LibraryView.axaml",
             "Text",
@@ -45,18 +37,6 @@ public sealed class ApplicationLocalizationCoverageTests
             "Views/LibraryView.axaml",
             "Text",
             "Album:\"Kind of Blue\""),
-        new(
-            "Views/LibraryView.axaml",
-            "PlaceholderText",
-            "{}{Group}.{Format}"),
-        new(
-            "Views/LibraryView.axaml",
-            "PlaceholderText",
-            "{}{Name} - {Group}"),
-        new(
-            "Views/LibraryView.axaml",
-            "PlaceholderText",
-            "{}{Files}"),
         new(
             "Views/ReviewedFileOperationEditorView.axaml",
             "PlaceholderText",

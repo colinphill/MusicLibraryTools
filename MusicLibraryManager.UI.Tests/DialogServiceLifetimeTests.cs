@@ -13,6 +13,78 @@ namespace MusicLibraryManager.UI.Tests;
 public sealed class DialogServiceLifetimeTests
 {
     [Fact]
+    public async Task Destructive_confirmation_marks_the_action_independently_of_message_tone()
+    {
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+            {
+                collection.AddSingleton<IAppSettings>(
+                    new TestSettings());
+                collection.AddSingleton<
+                    IMetadataDocumentService>(
+                    new TestDocumentService());
+            });
+        DialogService dialogs =
+            services.GetRequiredService<
+                DialogService>();
+
+        Task<bool> pending =
+            dialogs.ConfirmDestructiveAsync(
+                "Discard edits?",
+                "The draft will be removed.",
+                "Discard");
+        ConfirmRequest request =
+            Assert.IsType<ConfirmRequest>(
+                dialogs.Current);
+
+        Assert.Equal(
+            DialogTone.Warning,
+            request.Tone);
+        Assert.Equal(
+            DialogActionRole.Destructive,
+            request.PrimaryActionRole);
+
+        dialogs.Complete(false);
+        Assert.False(await pending);
+    }
+
+    [Fact]
+    public async Task Standard_warning_confirmation_keeps_a_standard_action_role()
+    {
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+            {
+                collection.AddSingleton<IAppSettings>(
+                    new TestSettings());
+                collection.AddSingleton<
+                    IMetadataDocumentService>(
+                    new TestDocumentService());
+            });
+        DialogService dialogs =
+            services.GetRequiredService<
+                DialogService>();
+
+        Task<bool> pending =
+            dialogs.ConfirmAsync(
+                "Continue?",
+                "Review the warning.",
+                "Continue");
+        ConfirmRequest request =
+            Assert.IsType<ConfirmRequest>(
+                dialogs.Current);
+
+        Assert.Equal(
+            DialogTone.Warning,
+            request.Tone);
+        Assert.Equal(
+            DialogActionRole.Standard,
+            request.PrimaryActionRole);
+
+        dialogs.Complete(false);
+        Assert.False(await pending);
+    }
+
+    [Fact]
     public async Task Closing_fields_dialog_disposes_its_localization_subscription()
     {
         var localization =
@@ -64,6 +136,52 @@ public sealed class DialogServiceLifetimeTests
             labels,
             choices.Select(choice =>
                 choice.Label));
+    }
+
+    [Fact]
+    public async Task Owner_close_routes_a_dirty_fields_editor_through_its_confirmation_flow()
+    {
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+            {
+                collection.AddSingleton<IAppSettings>(
+                    new TestSettings());
+                collection.AddSingleton<
+                    IMetadataDocumentService>(
+                    new TestDocumentService());
+            });
+        DialogService dialogs =
+            services.GetRequiredService<
+                DialogService>();
+        Task<bool> pending = dialogs.ShowAsync(
+            [@"C:\Music\Track.flac"]);
+        FieldsRequest request =
+            Assert.IsType<FieldsRequest>(
+                dialogs.Current);
+        await request.ViewModel.Loading;
+        request.ViewModel.Rows
+            .Single(row =>
+                row.Field == TagFields.Title)
+            .Value = "Edited title";
+
+        Assert.True(
+            dialogs.HandleOwnerWindowClose());
+
+        Assert.Same(
+            request,
+            dialogs.Current);
+        Assert.True(
+            request.ViewModel
+                .IsConfirmingCancel);
+        Assert.False(
+            pending.IsCompleted);
+
+        Assert.True(
+            dialogs.HandleOwnerWindowClose());
+        Assert.Null(
+            dialogs.Current);
+        Assert.False(
+            await pending);
     }
 
     private sealed class TrackingLocalizationService :

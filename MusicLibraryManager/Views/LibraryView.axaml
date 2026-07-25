@@ -4,14 +4,22 @@
              xmlns:controls="using:MusicLibraryManager.Controls"
              xmlns:views="using:MusicLibraryManager.Views"
              KeyDown="OnLibraryKeyDown">
-  <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14">
+  <controls:AdaptivePage x:Name="PageScaffold"
+                         RowDefinitions="Auto,Auto,*,Auto"
+                         RowSpacing="16">
     <controls:PageHeader Title="{DynamicResource Loc.Library.Title}"
         Subtitle="{DynamicResource Loc.Library.Subtitle}">
       <controls:PageHeader.Actions>
         <WrapPanel>
-          <Button Classes="app primary" Margin="0,0,8,6" Content="{DynamicResource Loc.Library.Action.Index}" Command="{Binding Indexing.IndexCommand}" />
+          <Button Classes="app"
+                  Classes.primary="{Binding HasNoPendingChanges}"
+                  Margin="0,0,8,8"
+                  Content="{DynamicResource Loc.Library.Action.Index}"
+                  Command="{Binding Indexing.IndexCommand}" />
           <Button x:Name="LibraryPendingChangesButton"
-                  Classes="app" Margin="0,0,8,6"
+                  Classes="app"
+                  Classes.primary="{Binding HasPendingChanges}"
+                  Margin="0,0,8,8"
                   Click="OnLibraryPendingChangesClick">
             <Button.Content>
               <StackPanel Orientation="Horizontal" Spacing="4">
@@ -20,32 +28,29 @@
               </StackPanel>
             </Button.Content>
           </Button>
-          <Button x:Name="InspectorToggle" Classes="app" Margin="0,0,0,6" Content="{DynamicResource Loc.Library.Action.Inspector}"
+          <Button x:Name="InspectorToggle" Classes="app" Margin="0,0,0,8" Content="{DynamicResource Loc.Library.Action.Inspector}"
                   Click="OnInspectorToggle" IsVisible="False" ToolTip.Tip="{DynamicResource Loc.Library.Action.InspectorTooltip}" />
-          <Button x:Name="LibraryMoreButton" Classes="app quiet overflow" Margin="8,0,8,6"
+          <Button x:Name="LibraryMoreButton" Classes="app quiet overflow" Margin="8,0,8,8"
                   Content="{DynamicResource Loc.Library.Action.More}" AutomationProperties.Name="{DynamicResource Loc.Library.Action.MoreAutomation}">
             <Button.Flyout>
               <MenuFlyout Placement="BottomEdgeAlignedRight">
                 <MenuItem Header="{DynamicResource Loc.Library.Action.ReloadCache}" Command="{Binding ReloadCommand}" />
-                <MenuItem Header="{DynamicResource Loc.Library.Action.OpenSelectedInWorkbench}"
-                          Command="{Binding OpenInWorkbenchCommand}" />
               </MenuFlyout>
             </Button.Flyout>
           </Button>
-          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Library.Action.CancelIndexing}"
+          <Button Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Library.Action.CancelIndexing}"
                   Command="{Binding Indexing.CancelCommand}"
                   IsVisible="{Binding Indexing.IsIndexing}" />
-          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Library.Action.CancelLoading}"
+          <Button Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Library.Action.CancelLoading}"
                   Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
         </WrapPanel>
       </controls:PageHeader.Actions>
     </controls:PageHeader>
 
     <StackPanel Grid.Row="1" Spacing="8">
-      <Grid ColumnDefinitions="*,150,Auto,Auto,Auto" ColumnSpacing="8">
-        <TextBox x:Name="FilterBox" Classes="app" Text="{Binding FilterText, Mode=TwoWay}"
-                 PlaceholderText="{DynamicResource Loc.Library.Filter.Placeholder}"
-                 AutomationProperties.Name="{DynamicResource Loc.Library.Filter.Automation}" />
+      <Grid ColumnDefinitions="Auto,150,Auto,Auto,*" ColumnSpacing="8">
+        <TextBlock Classes="field-label" VerticalAlignment="Center"
+                   Text="{DynamicResource Loc.Library.Filter.ModeAutomation}" />
         <ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding FilterModeChoices}"
                   DisplayMemberBinding="{Binding Label}"
                   SelectedValueBinding="{Binding Value}"
@@ -53,10 +58,16 @@
                   AutomationProperties.Name="{DynamicResource Loc.Library.Filter.ModeAutomation}" />
         <Button Grid.Column="2" Classes="app" Content="{DynamicResource Loc.Common.Clear}" Command="{Binding ClearFilterCommand}"
                 IsVisible="{Binding HasTextFilter}" ToolTip.Tip="{DynamicResource Loc.Library.Filter.ClearTooltip}" />
-        <Button x:Name="FilterHelpButton" Grid.Column="3" Classes="app" Width="36" Content="?"
-                Click="OnFilterHelpClick" ToolTip.Tip="{DynamicResource Loc.Library.Filter.HelpTooltip}"
-                AutomationProperties.Name="{DynamicResource Loc.Library.Filter.HelpAutomation}" />
-        <TextBlock Grid.Column="4" Classes="summary-label" VerticalAlignment="Center"
+        <Button x:Name="FilterHelpButton"
+                Grid.Column="3"
+                Classes="app icon"
+                Width="36"
+                Click="OnFilterHelpClick"
+                ToolTip.Tip="{DynamicResource Loc.Library.Filter.HelpTooltip}"
+                AutomationProperties.Name="{DynamicResource Loc.Library.Filter.HelpAutomation}">
+          <controls:AppVectorIcon Kind="Information" />
+        </Button>
+        <TextBlock Grid.Column="4" Classes="summary-label" VerticalAlignment="Center" HorizontalAlignment="Right"
                    Text="{Binding ResultCountText}" AutomationProperties.LiveSetting="Polite" />
       </Grid>
 
@@ -72,28 +83,32 @@
       </StackPanel>
 
       <WrapPanel>
-        <Border Classes="card" Padding="10,5" Margin="0,0,8,6" IsVisible="{Binding HasHealthFilter}">
+        <Border Classes="card" Padding="12,8" Margin="0,0,8,8" IsVisible="{Binding HasHealthFilter}">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock VerticalAlignment="Center" Text="{Binding HealthFilterSummary}" />
-            <Button Classes="app quiet icon" Content="&#x2715;"
+            <Button Classes="app quiet icon"
                     Command="{Binding ClearHealthFilterCommand}" ToolTip.Tip="{DynamicResource Loc.Library.Filter.ClearHealthTooltip}"
-                    AutomationProperties.Name="{DynamicResource Loc.Library.Filter.ClearHealthTooltip}" />
+                    AutomationProperties.Name="{DynamicResource Loc.Library.Filter.ClearHealthTooltip}">
+              <controls:AppVectorIcon Kind="Close" />
+            </Button>
           </StackPanel>
         </Border>
-        <Button x:Name="ColumnsButton" Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Library.Toolbar.Columns}" Click="OnColumnsClick" />
-        <Button x:Name="ViewsButton" Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Library.Toolbar.SavedViews}" Click="OnViewsClick" />
-        <Button x:Name="VisualFilterButton" Classes="app" Margin="0,0,8,6"
+        <Button x:Name="ColumnsButton" Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Library.Toolbar.Columns}" Click="OnColumnsClick" />
+        <Button x:Name="ViewsButton" Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Library.Toolbar.SavedViews}" Click="OnViewsClick" />
+        <Button x:Name="VisualFilterButton" Classes="app" Margin="0,0,8,8"
                 Content="{DynamicResource Loc.Library.Toolbar.VisualFilter}" Click="OnVisualFilterClick" />
-        <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Library.Toolbar.ClearVisualFilter}"
+        <Button Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Library.Toolbar.ClearVisualFilter}"
                 Command="{Binding ClearVisualFilterCommand}"
                 IsVisible="{Binding HasVisualFilter}" />
-        <Button x:Name="LibraryOperationsButton" Classes="app primary" Margin="0,0,8,6"
-                Content="{DynamicResource Loc.Library.Toolbar.Operations}" Command="{Binding OpenOperationsCommand}" />
+        <Button x:Name="LibraryWorkbenchButton" Classes="app" Margin="0,0,8,8"
+                Content="{DynamicResource Loc.Library.Handoff.Action}"
+                Click="OnEditInWorkbenchClick"
+                AutomationProperties.Name="{DynamicResource Loc.Library.Handoff.Automation}" />
       </WrapPanel>
     </StackPanel>
 
     <Grid Grid.Row="2">
-      <controls:PersistedSplitView x:Name="WorkspaceSplit" InitialLeftWidth="900" MinLeftWidth="340"
+      <controls:PersistedSplitView x:Name="WorkspaceSplit" InitialLeftWidth="900" MinLeftWidth="760"
                                    MaxLeftWidth="1800" MinRightWidth="320" PersistenceKey="library"
                                    Label="{DynamicResource Loc.Library.Split.LibraryInspector}">
         <controls:PersistedSplitView.Left>
@@ -102,11 +117,14 @@
               <controls:AppDataGrid x:Name="LibraryGrid" ItemsSource="{Binding Rows}" FrozenColumnCount="1"
                                     SelectionChanged="OnGridSelectionChanged" LoadingRow="OnLoadingRow"
                                     UnloadingRow="OnUnloadingRow"
+                                    PointerPressed="OnLibraryGridPointerPressed"
+                                    ContextRequested="OnLibraryGridContextRequested"
                                     AutomationProperties.Name="{DynamicResource Loc.Library.Grid.Automation}" />
 
-              <Border x:Name="LibraryEmptyState" IsVisible="{Binding HasEmptyState}"
-                      Background="{DynamicResource AppPanelBrush}" Padding="28">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="390" Spacing="10">
+              <Border x:Name="LibraryEmptyState"
+                      Classes="empty-state"
+                      IsVisible="{Binding HasEmptyState}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="390" Spacing="12">
                   <TextBlock Classes="section-title" FontSize="18" Text="{Binding EmptyStateTitle}"
                              TextAlignment="Center" TextWrapping="Wrap" />
                   <TextBlock Classes="muted" Text="{Binding EmptyStateMessage}"
@@ -116,8 +134,8 @@
                 </StackPanel>
               </Border>
 
-              <Border IsVisible="{Binding IsBusy}" Background="#990D1417" Padding="28">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+              <Border IsVisible="{Binding IsBusy}" Background="#990D1417" Padding="24">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
                   <ProgressBar IsIndeterminate="True" Width="220" Height="4" />
                   <TextBlock Foreground="White" Text="{DynamicResource Loc.Library.Loading}"
                              AutomationProperties.LiveSetting="Polite" />
@@ -139,75 +157,112 @@
       <Popup x:Name="ColumnPopover" PlacementTarget="{Binding #ColumnsButton}"
              Placement="BottomEdgeAlignedRight" VerticalOffset="8"
              IsLightDismissEnabled="True" IsOpen="False">
-        <Border Width="650" MaxHeight="610" KeyDown="OnLibraryKeyDown"
+        <Border x:Name="LibraryColumnsSurface"
+                Width="650" MaxHeight="610" KeyDown="OnLibraryKeyDown"
                 Background="{DynamicResource AppPanelBrush}" BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                BorderThickness="1" CornerRadius="9" Padding="12" BoxShadow="0 14 40 0 #77000000">
+                BorderThickness="1" CornerRadius="8" Padding="12" BoxShadow="0 14 40 0 #77000000">
           <Grid RowDefinitions="Auto,*" ColumnDefinitions="220,*"
-                RowSpacing="8" ColumnSpacing="14">
+                RowSpacing="8" ColumnSpacing="16">
             <Grid Grid.ColumnSpan="2"
                   ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <TextBlock VerticalAlignment="Center" Text="{DynamicResource Loc.Library.Columns.Title}" FontSize="14" FontWeight="SemiBold" />
               <Button x:Name="CloseColumnsButton" Grid.Column="1" Classes="app quiet icon"
-                      Content="&#x2715;" ToolTip.Tip="{DynamicResource Loc.Library.Columns.CloseTooltip}"
-                      AutomationProperties.Name="{DynamicResource Loc.Library.Columns.CloseTooltip}" Click="OnColumnsClose" />
+                      ToolTip.Tip="{DynamicResource Loc.Library.Columns.CloseTooltip}"
+                      AutomationProperties.Name="{DynamicResource Loc.Library.Columns.CloseTooltip}" Click="OnColumnsClose">
+                <controls:AppVectorIcon Kind="Close" />
+              </Button>
             </Grid>
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
               <StackPanel x:Name="ColumnOptions" Spacing="8" />
             </ScrollViewer>
-            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="7">
-              <TextBlock Classes="section-title"
-                         Text="{DynamicResource Loc.Library.Columns.MetadataColumns}" />
-              <ListBox x:Name="LibraryMetadataColumnList"
-                       MaxHeight="105"
-                       ItemsSource="{Binding ColumnEditor.Columns}"
-                       SelectedItem="{Binding ColumnEditor.SelectedColumn, Mode=TwoWay}">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                      <TextBlock Text="{Binding Label}" />
-                      <TextBlock Grid.Column="1" Classes="muted"
-                                 Text="{Binding Field}" />
-                    </Grid>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
-                <TextBox Classes="app"
-                         Text="{Binding ColumnEditor.Label, Mode=TwoWay}"
-                         PlaceholderText="{DynamicResource Loc.Library.Columns.LabelPlaceholder}" />
-                <ComboBox Grid.Column="1" Classes="app"
-                          ItemsSource="{Binding ColumnEditor.FieldKinds}"
-                          SelectedItem="{Binding ColumnEditor.FieldKind, Mode=TwoWay}" />
-              </Grid>
-              <ComboBox Classes="app"
-                        ItemsSource="{Binding ColumnEditor.KnownFields}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedItem="{Binding ColumnEditor.SelectedKnownField, Mode=TwoWay}"
-                        PlaceholderText="{DynamicResource Loc.Library.Columns.KnownFieldPlaceholder}" />
-              <TextBox Classes="app"
-                       Text="{Binding ColumnEditor.CustomFieldName, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}" />
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
-                <ComboBox Classes="app"
-                          ItemsSource="{Binding ColumnEditor.SortTypes}"
-                          SelectedItem="{Binding ColumnEditor.SortType, Mode=TwoWay}" />
-                <NumericUpDown Grid.Column="1" Classes="app"
-                               Minimum="50" Maximum="2000"
-                               Value="{Binding ColumnEditor.Width, Mode=TwoWay}"
-                               FormatString="0" />
-              </Grid>
-              <WrapPanel>
-                <Button Classes="app" Content="{DynamicResource Loc.Library.Columns.Action.New}"
-                        Command="{Binding ColumnEditor.NewColumnCommand}" />
-                <Button x:Name="SaveLibraryMetadataColumnButton"
-                        Classes="app primary" Content="{DynamicResource Loc.Library.Columns.Action.Save}"
-                        Command="{Binding ColumnEditor.SaveColumnCommand}" />
-                <Button Classes="app danger" Content="{DynamicResource Loc.Common.Remove}"
-                        Command="{Binding ColumnEditor.DeleteColumnCommand}" />
-              </WrapPanel>
-              <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="{Binding ColumnEditor.Status}" />
-            </StackPanel>
+            <ScrollViewer Grid.Row="1"
+                          Grid.Column="1"
+                          VerticalScrollBarVisibility="Auto">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="section-title"
+                           Text="{DynamicResource Loc.Library.Columns.MetadataColumns}" />
+                <ListBox x:Name="LibraryMetadataColumnList"
+                         MaxHeight="105"
+                         ItemsSource="{Binding ColumnEditor.Columns}"
+                         SelectedItem="{Binding ColumnEditor.SelectedColumn, Mode=TwoWay}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="{Binding Label}" />
+                        <TextBlock Grid.Column="1" Classes="muted"
+                                   Text="{Binding Field}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="field-label"
+                               Text="{DynamicResource Loc.Column.Label}" />
+                    <TextBox Classes="app"
+                             Text="{Binding ColumnEditor.Label, Mode=TwoWay}"
+                             PlaceholderText="{DynamicResource Loc.Library.Columns.LabelPlaceholder}"
+                             AutomationProperties.Name="{DynamicResource Loc.Column.Label}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Classes="field-label"
+                               Text="{DynamicResource Loc.Column.Type}" />
+                    <ComboBox Classes="app"
+                              ItemsSource="{Binding ColumnEditor.FieldKinds}"
+                              SelectedItem="{Binding ColumnEditor.FieldKind, Mode=TwoWay}"
+                              AutomationProperties.Name="{DynamicResource Loc.Column.Type}" />
+                  </StackPanel>
+                </Grid>
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Column.Field}" />
+                  <ComboBox Classes="app"
+                            ItemsSource="{Binding ColumnEditor.KnownFields}"
+                            DisplayMemberBinding="{Binding Label}"
+                            SelectedItem="{Binding ColumnEditor.SelectedKnownField, Mode=TwoWay}"
+                            PlaceholderText="{DynamicResource Loc.Library.Columns.KnownFieldPlaceholder}"
+                            AutomationProperties.Name="{DynamicResource Loc.Column.Field}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}" />
+                  <TextBox Classes="app"
+                           Text="{Binding ColumnEditor.CustomFieldName, Mode=TwoWay}"
+                           PlaceholderText="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}"
+                           AutomationProperties.Name="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}" />
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="field-label"
+                               Text="{DynamicResource Loc.Library.Reports.SortByPlaceholder}" />
+                    <ComboBox Classes="app"
+                              ItemsSource="{Binding ColumnEditor.SortTypes}"
+                              SelectedItem="{Binding ColumnEditor.SortType, Mode=TwoWay}"
+                              AutomationProperties.Name="{DynamicResource Loc.Library.Reports.SortByPlaceholder}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Classes="field-label"
+                               Text="{DynamicResource Loc.Library.Columns.Width}" />
+                    <NumericUpDown Classes="app"
+                                   Minimum="50" Maximum="2000"
+                                   Value="{Binding ColumnEditor.Width, Mode=TwoWay}"
+                                   FormatString="0"
+                                   AutomationProperties.Name="{DynamicResource Loc.Library.Columns.Width}" />
+                  </StackPanel>
+                </Grid>
+                <WrapPanel>
+                  <Button Classes="app" Content="{DynamicResource Loc.Library.Columns.Action.New}"
+                          Command="{Binding ColumnEditor.NewColumnCommand}" />
+                  <Button x:Name="SaveLibraryMetadataColumnButton"
+                          Classes="app primary" Content="{DynamicResource Loc.Library.Columns.Action.Save}"
+                          Command="{Binding ColumnEditor.SaveColumnCommand}" />
+                  <Button Classes="app danger" Content="{DynamicResource Loc.Common.Remove}"
+                          Command="{Binding ColumnEditor.DeleteColumnCommand}" />
+                </WrapPanel>
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="{Binding ColumnEditor.Status}" />
+              </StackPanel>
+            </ScrollViewer>
           </Grid>
         </Border>
       </Popup>
@@ -217,25 +272,35 @@
              IsLightDismissEnabled="True" IsOpen="False">
         <Border Width="330" MaxHeight="480" KeyDown="OnLibraryKeyDown"
                 Background="{DynamicResource AppPanelBrush}" BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                BorderThickness="1" CornerRadius="9" Padding="14" BoxShadow="0 14 40 0 #77000000">
-          <StackPanel Spacing="10">
+                BorderThickness="1" CornerRadius="8" Padding="16" BoxShadow="0 14 40 0 #77000000">
+          <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Text="{DynamicResource Loc.Library.SavedViews.Title}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-              <Button Grid.Column="1" Classes="app quiet icon" Content="&#x2715;"
+              <Button Grid.Column="1" Classes="app quiet icon"
                       Click="OnViewsClose" ToolTip.Tip="{DynamicResource Loc.Library.SavedViews.CloseTooltip}"
-                      AutomationProperties.Name="{DynamicResource Loc.Library.SavedViews.CloseTooltip}" />
+                      AutomationProperties.Name="{DynamicResource Loc.Library.SavedViews.CloseTooltip}">
+                <controls:AppVectorIcon Kind="Close" />
+              </Button>
             </Grid>
-            <ComboBox x:Name="SavedViews" Classes="app" ItemsSource="{Binding SavedViews}"
-                      SelectedItem="{Binding SelectedView, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Library.SavedViews.ChoosePlaceholder}"
-                      SelectionChanged="OnSavedViewChanged" AutomationProperties.Name="{DynamicResource Loc.Library.SavedViews.Automation}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+            <StackPanel Classes="field">
+              <TextBlock Classes="field-label"
+                         Text="{DynamicResource Loc.Library.SavedViews.ChoosePlaceholder}" />
+              <ComboBox x:Name="SavedViews" Classes="app" ItemsSource="{Binding SavedViews}"
+                        SelectedItem="{Binding SelectedView, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Library.SavedViews.ChoosePlaceholder}"
+                        SelectionChanged="OnSavedViewChanged" AutomationProperties.Name="{DynamicResource Loc.Library.SavedViews.Automation}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
             <Border Height="1" Background="{DynamicResource AppBorderBrush}" />
             <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.SavedViews.Description}" TextWrapping="Wrap" />
-            <TextBox x:Name="ViewNameBox" Classes="app" Text="{Binding NewViewName, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Library.SavedViews.NamePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Library.SavedViews.NameAutomation}" />
+            <StackPanel Classes="field">
+              <TextBlock Classes="field-label"
+                         Text="{DynamicResource Loc.Library.SavedViews.NamePlaceholder}" />
+              <TextBox x:Name="ViewNameBox" Classes="app" Text="{Binding NewViewName, Mode=TwoWay}"
+                       PlaceholderText="{DynamicResource Loc.Library.SavedViews.NamePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Library.SavedViews.NameAutomation}" />
+            </StackPanel>
             <WrapPanel>
               <Button Classes="app primary" Margin="0,0,8,0" Content="{DynamicResource Loc.Library.SavedViews.Action.Save}" Click="OnSaveView" />
               <Button Classes="app" Content="{DynamicResource Loc.Library.SavedViews.Action.Delete}" Command="{Binding DeleteViewCommand}" />
@@ -248,27 +313,36 @@
              PlacementTarget="{Binding #VisualFilterButton}"
              Placement="BottomEdgeAlignedLeft" VerticalOffset="8"
              IsLightDismissEnabled="True" IsOpen="False">
-        <Border Width="720" MaxHeight="620" KeyDown="OnLibraryKeyDown"
+        <Border x:Name="LibraryVisualFilterSurface"
+                Width="720" MaxHeight="620" KeyDown="OnLibraryKeyDown"
                 Background="{DynamicResource AppPanelBrush}"
                 BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                BorderThickness="1" CornerRadius="9" Padding="14"
+                BorderThickness="1" CornerRadius="8" Padding="16"
                 BoxShadow="0 14 40 0 #77000000">
           <Grid RowDefinitions="Auto,*" ColumnDefinitions="270,*"
-                RowSpacing="10" ColumnSpacing="14">
+                RowSpacing="12" ColumnSpacing="16">
             <Grid Grid.ColumnSpan="2" ColumnDefinitions="*,Auto">
               <TextBlock Text="{DynamicResource Loc.Library.VisualFilter.Title}" FontSize="14"
                          FontWeight="SemiBold" />
-              <Button Grid.Column="1" Classes="app quiet icon"
-                      Content="&#x2715;" Click="OnVisualFilterClose"
+              <Button x:Name="CloseVisualFilterButton"
+                      Grid.Column="1" Classes="app quiet icon"
+                      Click="OnVisualFilterClose"
                       ToolTip.Tip="{DynamicResource Loc.Library.VisualFilter.CloseTooltip}"
-                      AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.CloseTooltip}" />
+                      AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.CloseTooltip}">
+                <controls:AppVectorIcon Kind="Close" />
+              </Button>
             </Grid>
             <StackPanel Grid.Row="1" Spacing="8">
-              <ComboBox Classes="app"
-                        ItemsSource="{Binding VisualFilterEditor.RootModeChoices}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedValueBinding="{Binding Value}"
-                        SelectedValue="{Binding VisualFilterEditor.RootMode, Mode=TwoWay}" />
+              <StackPanel Spacing="4">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Library.VisualFilter.MatchMode}" />
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding VisualFilterEditor.RootModeChoices}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedValueBinding="{Binding Value}"
+                          SelectedValue="{Binding VisualFilterEditor.RootMode, Mode=TwoWay}"
+                          AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.MatchMode}" />
+              </StackPanel>
               <TextBlock Classes="muted" TextWrapping="Wrap"
                          Text="{DynamicResource Loc.Library.VisualFilter.Description}" />
               <ListBox x:Name="VisualFilterConditionList" MaxHeight="360"
@@ -288,58 +362,98 @@
                         Command="{Binding VisualFilterEditor.RemoveConditionCommand}" />
               </WrapPanel>
             </StackPanel>
-            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="8"
-                        DataContext="{Binding VisualFilterEditor.SelectedCondition}">
-              <Grid ColumnDefinitions="110,*" ColumnSpacing="8">
-                <NumericUpDown Classes="app" Minimum="1"
-                               Value="{Binding Group, Mode=TwoWay}"
-                               FormatString="0" />
-                <ComboBox Grid.Column="1" Classes="app"
-                          ItemsSource="{Binding DataContext.VisualFilterEditor.FieldKindChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedValueBinding="{Binding Value}"
-                          SelectedValue="{Binding FieldKind, Mode=TwoWay}" />
-              </Grid>
-              <ComboBox Classes="app"
-                        ItemsSource="{Binding DataContext.VisualFilterEditor.TechnicalFields, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedItem="{Binding SelectedTechnicalField, Mode=TwoWay}"
-                        PlaceholderText="{DynamicResource Loc.Library.VisualFilter.FieldPlaceholder}" />
-              <ComboBox Classes="app"
-                        ItemsSource="{Binding DataContext.VisualFilterEditor.KnownFields, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedItem="{Binding SelectedKnownField, Mode=TwoWay}"
-                        PlaceholderText="{DynamicResource Loc.Library.Columns.KnownFieldPlaceholder}" />
-              <TextBox Classes="app"
-                       Text="{Binding CustomFieldName, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}" />
-              <ComboBox Classes="app"
-                        ItemsSource="{Binding DataContext.VisualFilterEditor.ComparisonChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedValueBinding="{Binding Value}"
-                        SelectedValue="{Binding Comparison, Mode=TwoWay}" />
-              <TextBox Classes="app" Text="{Binding Value, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Library.VisualFilter.ValuePlaceholder}" />
-              <CheckBox Content="{DynamicResource Loc.Library.VisualFilter.Negate}"
-                        IsChecked="{Binding Negate, Mode=TwoWay}" />
-              <WrapPanel DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                <Button x:Name="ApplyVisualFilterButton"
-                        Classes="app primary" Content="{DynamicResource Loc.Library.VisualFilter.Action.Apply}"
-                        Command="{Binding ApplyVisualFilterCommand}" />
-                <Button Classes="app" Content="{DynamicResource Loc.Common.Clear}"
-                        Command="{Binding ClearVisualFilterCommand}" />
-              </WrapPanel>
-              <StackPanel DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                <TextBlock Classes="muted" TextWrapping="Wrap"
-                           Text="{Binding VisualFilterEditor.Status}" />
-                <controls:LocalizedFormatTextBlock
-                    Classes="faint"
-                    IsVisible="{Binding HasVisualFilterDiagnosticDetail}"
-                    ResourceKey="Common.DiagnosticDetailFormat"
-                    Value="{Binding VisualFilterDiagnosticDetail}"
-                    TextWrapping="Wrap" />
+            <ScrollViewer Grid.Row="1"
+                          Grid.Column="1"
+                          VerticalScrollBarVisibility="Auto">
+              <StackPanel Spacing="8"
+                          DataContext="{Binding VisualFilterEditor.SelectedCondition}">
+                <Grid ColumnDefinitions="110,*" ColumnSpacing="8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="field-label"
+                               Text="{DynamicResource Loc.Column.Group}" />
+                    <NumericUpDown Classes="app" Minimum="1"
+                                   Value="{Binding Group, Mode=TwoWay}"
+                                   FormatString="0"
+                                   AutomationProperties.Name="{DynamicResource Loc.Column.Group}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Classes="field-label"
+                               Text="{DynamicResource Loc.Column.Type}" />
+                    <ComboBox Classes="app"
+                              ItemsSource="{Binding DataContext.VisualFilterEditor.FieldKindChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              DisplayMemberBinding="{Binding Label}"
+                              SelectedValueBinding="{Binding Value}"
+                              SelectedValue="{Binding FieldKind, Mode=TwoWay}"
+                              AutomationProperties.Name="{DynamicResource Loc.Column.Type}" />
+                  </StackPanel>
+                </Grid>
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Library.VisualFilter.Field.Technical}" />
+                  <ComboBox Classes="app"
+                            ItemsSource="{Binding DataContext.VisualFilterEditor.TechnicalFields, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            DisplayMemberBinding="{Binding Label}"
+                            SelectedItem="{Binding SelectedTechnicalField, Mode=TwoWay}"
+                            PlaceholderText="{DynamicResource Loc.Library.VisualFilter.FieldPlaceholder}"
+                            AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.Field.Technical}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Library.VisualFilter.Field.Known}" />
+                  <ComboBox Classes="app"
+                            ItemsSource="{Binding DataContext.VisualFilterEditor.KnownFields, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            DisplayMemberBinding="{Binding Label}"
+                            SelectedItem="{Binding SelectedKnownField, Mode=TwoWay}"
+                            PlaceholderText="{DynamicResource Loc.Library.Columns.KnownFieldPlaceholder}"
+                            AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.Field.Known}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Library.VisualFilter.Field.Custom}" />
+                  <TextBox Classes="app"
+                           Text="{Binding CustomFieldName, Mode=TwoWay}"
+                           PlaceholderText="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}"
+                           AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.Field.Custom}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Library.VisualFilter.Comparison}" />
+                  <ComboBox Classes="app"
+                            ItemsSource="{Binding DataContext.VisualFilterEditor.ComparisonChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            DisplayMemberBinding="{Binding Label}"
+                            SelectedValueBinding="{Binding Value}"
+                            SelectedValue="{Binding Comparison, Mode=TwoWay}"
+                            AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.Comparison}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Library.VisualFilter.Value}" />
+                  <TextBox Classes="app"
+                           Text="{Binding Value, Mode=TwoWay}"
+                           PlaceholderText="{DynamicResource Loc.Library.VisualFilter.ValuePlaceholder}"
+                           AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.Value}" />
+                </StackPanel>
+                <CheckBox Content="{DynamicResource Loc.Library.VisualFilter.Negate}"
+                          IsChecked="{Binding Negate, Mode=TwoWay}" />
+                <WrapPanel DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                  <Button x:Name="ApplyVisualFilterButton"
+                          Classes="app primary" Content="{DynamicResource Loc.Library.VisualFilter.Action.Apply}"
+                          Command="{Binding ApplyVisualFilterCommand}" />
+                  <Button Classes="app" Content="{DynamicResource Loc.Common.Clear}"
+                          Command="{Binding ClearVisualFilterCommand}" />
+                </WrapPanel>
+                <StackPanel DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                  <TextBlock Classes="muted" TextWrapping="Wrap"
+                             Text="{Binding VisualFilterEditor.Status}" />
+                  <controls:LocalizedFormatTextBlock
+                      Classes="faint"
+                      IsVisible="{Binding HasVisualFilterDiagnosticDetail}"
+                      ResourceKey="Common.DiagnosticDetailFormat"
+                      Value="{Binding VisualFilterDiagnosticDetail}"
+                      TextWrapping="Wrap" />
+                </StackPanel>
               </StackPanel>
-            </StackPanel>
+            </ScrollViewer>
           </Grid>
         </Border>
       </Popup>
@@ -350,8 +464,8 @@
         <Border Width="360" KeyDown="OnLibraryKeyDown"
                 Background="{DynamicResource AppPanelBrush}"
                 BorderBrush="{DynamicResource AppBorderStrongBrush}" BorderThickness="1"
-                CornerRadius="9" Padding="14" BoxShadow="0 14 40 0 #77000000">
-          <StackPanel Spacing="7">
+                CornerRadius="8" Padding="16" BoxShadow="0 14 40 0 #77000000">
+          <StackPanel Spacing="8">
             <TextBlock Text="{DynamicResource Loc.Library.FilterHelp.Title}" FontSize="14" FontWeight="SemiBold" />
             <TextBlock Classes="muted" TextWrapping="Wrap"
                        Text="{DynamicResource Loc.Library.FilterHelp.Description}" />
@@ -361,696 +475,21 @@
         </Border>
       </Popup>
 
-      <Popup x:Name="LibraryOperationsPopover"
-             PlacementTarget="{Binding #LibraryOperationsButton}"
-             Placement="BottomEdgeAlignedLeft" VerticalOffset="8"
-             IsLightDismissEnabled="True"
-             IsOpen="{Binding IsOperationsOpen, Mode=TwoWay}">
-        <Border x:Name="LibraryOperationsSurface"
-                Width="980" MaxHeight="690" KeyDown="OnLibraryKeyDown"
-                Background="{DynamicResource AppPanelBrush}"
-                BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                BorderThickness="1" CornerRadius="9" Padding="14"
-                BoxShadow="0 14 40 0 #77000000">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" RowSpacing="10">
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-              <StackPanel Spacing="2">
-                <TextBlock Text="{DynamicResource Loc.Library.Operations.Title}" FontSize="16" FontWeight="SemiBold" />
-                <TextBlock Classes="muted"
-                           Text="{DynamicResource Loc.Library.Operations.Description}" />
-                <WrapPanel Margin="0,5,0,0">
-                  <Button x:Name="UndoLibraryOperationButton"
-                          Classes="app" Margin="0,0,6,0"
-                          Content="{DynamicResource Loc.Library.Operations.Action.UndoMetadata}"
-                          Command="{Binding UndoLibraryOperationCommand}" />
-                  <Button x:Name="RedoLibraryOperationButton"
-                          Classes="app" Margin="0,0,6,0"
-                          Content="{DynamicResource Loc.Library.Operations.Action.RedoPreview}"
-                          Command="{Binding RedoLibraryOperationCommand}" />
-                  <Button x:Name="RepeatLibraryRecipeButton"
-                          Classes="app"
-                          Content="{DynamicResource Loc.Library.Operations.Action.RepeatRecipe}"
-                          Command="{Binding RepeatLibraryRecipeCommand}" />
-                </WrapPanel>
-              </StackPanel>
-              <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                <ComboBox Classes="app"
-                          ItemsSource="{Binding OperationEditor.SavedRecipes}"
-                          SelectedItem="{Binding OperationEditor.SelectedSavedRecipe, Mode=TwoWay}"
-                          DisplayMemberBinding="{Binding Name}"
-                          PlaceholderText="{DynamicResource Loc.Library.Operations.RecipePlaceholder}" />
-                <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Library.Operations.Action.Load}"
-                        Command="{Binding OperationEditor.LoadRecipeCommand}" />
-              </Grid>
-              <Button x:Name="CloseLibraryOperationsButton"
-                      Grid.Column="2" Classes="app quiet icon"
-                      Content="&#x2715;"
-                      ToolTip.Tip="{DynamicResource Loc.Library.Operations.CloseTooltip}"
-                      AutomationProperties.Name="{DynamicResource Loc.Library.Operations.CloseTooltip}"
-                      Command="{Binding CloseOperationsCommand}" />
-            </Grid>
-
-            <Grid Grid.Row="1" ColumnDefinitions="1*,1*,1*,1*,1*" ColumnSpacing="10">
-              <StackPanel Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Scope}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationScopeChoices}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedValueBinding="{Binding Value}"
-                          SelectedValue="{Binding SelectedOperationScope, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Operation}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app"
-                          ItemsSource="{Binding OperationEditor.OperationChoices}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedValueBinding="{Binding Value}"
-                          SelectedValue="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="2" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Field}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding OperationEditor.SelectedField, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="3" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.DestinationField}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding OperationEditor.DestinationField, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="4" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.SecondSourceField}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding OperationEditor.SecondaryField, Mode=TwoWay}" />
-              </StackPanel>
-            </Grid>
-
-            <Grid Grid.Row="2" ColumnDefinitions="*,*,*,150,150,150" ColumnSpacing="10">
-              <StackPanel Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Value}" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app"
-                         Text="{Binding OperationEditor.OperationValue, Mode=TwoWay}"
-                         PlaceholderText="{DynamicResource Loc.Library.Operations.AssignmentPlaceholder}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Find}" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app"
-                         Text="{Binding OperationEditor.SearchText, Mode=TwoWay}"
-                         PlaceholderText="{DynamicResource Loc.Library.Operations.FindPlaceholder}" />
-              </StackPanel>
-              <StackPanel Grid.Column="2" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.ReplaceWith}" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app"
-                         Text="{Binding OperationEditor.ReplacementText, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="3" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Case}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.CaseModeChoices}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedValueBinding="{Binding Value}"
-                          SelectedValue="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="4" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Separator}" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app"
-                         Text="{Binding OperationEditor.Separator, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="5" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.ValueOrder}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.ValueOrderChoices}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedValueBinding="{Binding Value}"
-                          SelectedValue="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}" />
-              </StackPanel>
-            </Grid>
-
-            <Grid Grid.Row="3" ColumnDefinitions="190,90,*,140" ColumnSpacing="10">
-              <StackPanel Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.PathComponent}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.PathComponentChoices}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedValueBinding="{Binding Value}"
-                          SelectedValue="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.ParentLevel}" FontSize="12" FontWeight="SemiBold" />
-                <NumericUpDown Classes="app" Minimum="1"
-                               Value="{Binding OperationEditor.ParentLevel, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="2" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.ExtractionPattern}" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app"
-                         Text="{Binding OperationEditor.ExtractionPattern, Mode=TwoWay}"
-                         PlaceholderText="{DynamicResource Loc.Library.Operations.ExtractionPlaceholder}" />
-              </StackPanel>
-              <StackPanel Grid.Column="3" Spacing="4">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.CaptureGroup}" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app"
-                         Text="{Binding OperationEditor.ExtractionGroup, Mode=TwoWay}" />
-              </StackPanel>
-            </Grid>
-
-            <Grid Grid.Row="4" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,150,130,150,*" ColumnSpacing="10">
-              <CheckBox VerticalAlignment="Center" Content="{DynamicResource Loc.Library.Operations.RegularExpression}"
-                        IsChecked="{Binding OperationEditor.UseRegularExpression, Mode=TwoWay}" />
-              <TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center"
-                         Text="{DynamicResource Loc.Library.Operations.SequenceStart}" />
-              <NumericUpDown Grid.Column="2" Classes="app" Width="85" Minimum="0"
-                             Value="{Binding OperationEditor.SequenceStart, Mode=TwoWay}" />
-              <NumericUpDown Grid.Column="3" Classes="app" Width="85" Minimum="0" Maximum="12"
-                             Value="{Binding OperationEditor.SequencePadding, Mode=TwoWay}"
-                             ToolTip.Tip="{DynamicResource Loc.Library.Operations.SequencePaddingTooltip}" />
-              <CheckBox Grid.Column="4" VerticalAlignment="Center" Content="{DynamicResource Loc.Library.Operations.Condition}"
-                        IsChecked="{Binding OperationEditor.ConditionEnabled, Mode=TwoWay}" />
-              <ComboBox Grid.Column="5" Classes="app"
-                        ItemsSource="{Binding OperationEditor.Fields}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedItem="{Binding OperationEditor.SelectedConditionField, Mode=TwoWay}" />
-              <ComboBox Grid.Column="6" Classes="app"
-                        ItemsSource="{Binding OperationEditor.ConditionOperatorChoices}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedValueBinding="{Binding Value}"
-                        SelectedValue="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}" />
-              <TextBox Grid.Column="7" Classes="app"
-                       Text="{Binding OperationEditor.ConditionValue, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Library.Operations.ConditionValuePlaceholder}" />
-              <StackPanel Grid.Column="8" HorizontalAlignment="Right"
-                          Orientation="Horizontal" Spacing="6">
-                <ComboBox x:Name="LibraryImportEmptyCellMode"
-                          Classes="app" Width="135"
-                          ItemsSource="{Binding ImportEmptyCellModeChoices}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedValueBinding="{Binding Value}"
-                          SelectedValue="{Binding ImportEmptyCellMode, Mode=TwoWay}"
-                          ToolTip.Tip="{DynamicResource Loc.Library.Operations.EmptyImportTooltip}" />
-                <Button x:Name="ImportLibraryDelimitedMetadataButton"
-                        Classes="app" Content="{DynamicResource Loc.Library.Operations.Action.ImportCsv}"
-                        Command="{Binding ImportLibraryDelimitedMetadataCommand}" />
-                <Button x:Name="CopyLibraryMetadataFieldButton"
-                        Classes="app" Content="{DynamicResource Loc.Library.Operations.Action.CopyField}"
-                        ToolTip.Tip="{DynamicResource Loc.Library.Operations.CopyFieldTooltip}"
-                        Command="{Binding CopyLibraryMetadataFieldCommand}" />
-                <Button x:Name="PasteLibraryMetadataFieldButton"
-                        Classes="app" Content="{DynamicResource Loc.Library.Operations.Action.PastePreview}"
-                        ToolTip.Tip="{DynamicResource Loc.Library.Operations.PastePreviewTooltip}"
-                        Command="{Binding PasteLibraryMetadataFieldCommand}" />
-                <Button Classes="app primary"
-                        Content="{DynamicResource Loc.Library.Operations.Action.Preview}"
-                        Command="{Binding PreviewLibraryOperationCommand}" />
-              </StackPanel>
-            </Grid>
-
-            <TabControl Grid.Row="5" MinHeight="190">
-              <TabItem Header="{DynamicResource Loc.Library.Tab.MetadataPreview}">
-                <Grid Margin="0,6,0,0"
-                      RowDefinitions="Auto,*" RowSpacing="8">
-                  <Border x:Name="LibraryRepresentativePreview"
-                          Padding="10"
-                          Background="{DynamicResource AppInsetBrush}"
-                          BorderBrush="{DynamicResource AppBorderBrush}"
-                          BorderThickness="1" CornerRadius="7">
-                    <StackPanel Spacing="6">
-                      <TextBlock FontWeight="SemiBold"
-                                 Text="{DynamicResource Loc.Library.MetadataPreview.LiveDraft}" />
-                      <TextBlock Classes="muted" TextWrapping="Wrap"
-                                 Text="{Binding RepresentativePreview.Status}" />
-                      <ProgressBar IsVisible="{Binding RepresentativePreview.IsBusy}"
-                                   IsIndeterminate="True" Height="3" />
-                      <Grid IsVisible="{Binding RepresentativePreview.HasPreview}"
-                            ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <StackPanel Spacing="3">
-                          <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.MetadataPreview.Before}" />
-                          <TextBlock Text="{Binding RepresentativePreview.BeforeText}"
-                                     TextWrapping="Wrap" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Spacing="3">
-                          <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.MetadataPreview.After}" />
-                          <TextBlock Text="{Binding RepresentativePreview.AfterText}"
-                                     TextWrapping="Wrap" />
-                        </StackPanel>
-                      </Grid>
-                    </StackPanel>
-                  </Border>
-                  <controls:AppDataGrid x:Name="LibraryOperationPreviewGrid"
-                      Grid.Row="1"
-                      ItemsSource="{Binding OperationPreviewChanges}" />
-                </Grid>
-              </TabItem>
-              <TabItem Header="{DynamicResource Loc.Library.Tab.Files}">
-                <views:ReviewedFileOperationEditorView
-                    x:Name="LibraryFileOperationEditor"
-                    DataContext="{Binding FileOperations}" />
-              </TabItem>
-              <TabItem Header="{DynamicResource Loc.Library.Tab.AudioMatches}">
-                <controls:AppDataGrid x:Name="LibraryAudioDiscoveryGrid"
-                    Margin="0,6,0,0"
-                    ItemsSource="{Binding AudioMatches}"
-                    SelectedItem="{Binding SelectedAudioMatch, Mode=TwoWay}" />
-              </TabItem>
-              <TabItem Header="{DynamicResource Loc.Library.Tab.ReleaseEditions}">
-                <Grid Margin="0,6,0,0" RowDefinitions="Auto,*" RowSpacing="6">
-                  <Grid ColumnDefinitions="*,*,*,*,*,Auto" ColumnSpacing="6">
-                    <TextBox Classes="app"
-                             Text="{Binding ReleaseSearch.Artist, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.ArtistPlaceholder}" />
-                    <TextBox Grid.Column="1" Classes="app"
-                             Text="{Binding ReleaseSearch.Album, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.AlbumPlaceholder}" />
-                    <TextBox Grid.Column="2" Classes="app"
-                             Text="{Binding ReleaseSearch.Barcode, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.BarcodePlaceholder}" />
-                    <TextBox Grid.Column="3" Classes="app"
-                             Text="{Binding ReleaseSearch.CatalogNumber, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.CatalogNumberPlaceholder}" />
-                    <TextBox Grid.Column="4" Classes="app"
-                             Text="{Binding ReleaseSearch.ReleaseId, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.ReleaseIdPlaceholder}" />
-                    <Button Grid.Column="5" Classes="app primary"
-                            Content="{DynamicResource Loc.Library.Release.Action.Search}"
-                            Command="{Binding SearchLibraryMusicBrainzReleasesCommand}" />
-                  </Grid>
-                  <controls:AppDataGrid x:Name="LibraryReleaseDiscoveryGrid"
-                      Grid.Row="1"
-                      ItemsSource="{Binding ReleaseMatches}"
-                      SelectedItem="{Binding SelectedRelease, Mode=TwoWay}" />
-                </Grid>
-              </TabItem>
-              <TabItem Header="{DynamicResource Loc.Library.Tab.DiscogsEditions}">
-                <Grid Margin="0,6,0,0"
-                      RowDefinitions="Auto,*,Auto,*,Auto" RowSpacing="6">
-                  <Grid ColumnDefinitions="*,*,*,*,*,Auto,Auto" ColumnSpacing="6">
-                    <TextBox Classes="app"
-                             Text="{Binding DiscogsSearch.Artist, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.ArtistPlaceholder}" />
-                    <TextBox Grid.Column="1" Classes="app"
-                             Text="{Binding DiscogsSearch.Album, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.AlbumPlaceholder}" />
-                    <TextBox Grid.Column="2" Classes="app"
-                             Text="{Binding DiscogsSearch.Barcode, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.BarcodePlaceholder}" />
-                    <TextBox Grid.Column="3" Classes="app"
-                             Text="{Binding DiscogsSearch.CatalogNumber, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.CatalogNumberPlaceholder}" />
-                    <TextBox Grid.Column="4" Classes="app"
-                             Text="{Binding DiscogsSearch.ReleaseId, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Library.Release.DiscogsReleaseIdPlaceholder}" />
-                    <Button Grid.Column="5" Classes="app primary"
-                            Content="{DynamicResource Loc.Library.Release.Action.SearchDiscogs}"
-                            Command="{Binding SearchLibraryDiscogsReleasesCommand}" />
-                    <Button Grid.Column="6" Classes="app"
-                            Content="{DynamicResource Loc.Library.Release.Action.LoadDetails}"
-                            Command="{Binding LoadLibraryDiscogsReleaseDetailsCommand}" />
-                  </Grid>
-                  <controls:AppDataGrid x:Name="LibraryDiscogsDiscoveryGrid"
-                      Grid.Row="1"
-                      ItemsSource="{Binding DiscogsMatches}"
-                      SelectedItem="{Binding SelectedDiscogsRelease, Mode=TwoWay}" />
-                  <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="7">
-                    <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="{DynamicResource Loc.Library.Release.MappingDescription}"
-                               TextWrapping="Wrap" />
-                    <Button Grid.Column="1" Classes="app"
-                            Content="{DynamicResource Loc.Library.Release.Action.BuildMapping}"
-                            Command="{Binding BuildLibraryDiscogsReleaseMappingCommand}" />
-                    <Button Grid.Column="2" Classes="app primary"
-                            Content="{DynamicResource Loc.Library.Release.Action.PreviewMappedMetadata}"
-                            Command="{Binding PreviewLibraryDiscogsReleaseMetadataCommand}" />
-                    <Button Grid.Column="3" Classes="app"
-                            Content="{DynamicResource Loc.Library.Release.Action.PreviewCover}"
-                            Command="{Binding PreviewLibraryDiscogsReleaseArtworkCommand}" />
-                  </Grid>
-                  <controls:AppDataGrid x:Name="LibraryDiscogsTrackMappingGrid"
-                      Grid.Row="3"
-                      ItemsSource="{Binding DiscogsTrackMappings}" />
-                  <WrapPanel Grid.Row="4">
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.Titles}"
-                              IsChecked="{Binding DiscogsImport.TrackTitles, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.TrackArtists}"
-                              IsChecked="{Binding DiscogsImport.TrackArtists, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.AlbumDate}"
-                              IsChecked="{Binding DiscogsImport.ReleaseIdentity, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.Numbering}"
-                              IsChecked="{Binding DiscogsImport.Numbering, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.ReleaseDetails}"
-                              IsChecked="{Binding DiscogsImport.ReleaseDetails, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.GenresStyles}"
-                              IsChecked="{Binding DiscogsImport.GenresAndStyles, Mode=TwoWay}" />
-                    <CheckBox Content="{DynamicResource Loc.Library.Release.Field.DiscogsReleaseId}"
-                              IsChecked="{Binding DiscogsImport.DiscogsIdentifier, Mode=TwoWay}" />
-                  </WrapPanel>
-                </Grid>
-              </TabItem>
-              <TabItem Header="{DynamicResource Loc.Library.Tab.TrackMapping}">
-                <Grid Margin="0,6,0,0" RowDefinitions="Auto,*,Auto" RowSpacing="6">
-                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="7">
-                    <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="{DynamicResource Loc.Library.Release.TrackMappingDescription}"
-                               TextWrapping="Wrap" />
-                    <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Library.Release.Action.BuildMapping}"
-                            Command="{Binding BuildLibraryReleaseMappingCommand}" />
-                    <Button Grid.Column="2" Classes="app primary"
-                            Content="{DynamicResource Loc.Library.Release.Action.PreviewMappedMetadata}"
-                            Command="{Binding PreviewLibraryReleaseMetadataCommand}" />
-                  </Grid>
-                  <controls:AppDataGrid x:Name="LibraryReleaseTrackMappingGrid" Grid.Row="1"
-                      ItemsSource="{Binding ReleaseTrackMappings}" />
-                  <WrapPanel Grid.Row="2">
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.Titles}"
-                              IsChecked="{Binding ReleaseImport.TrackTitles, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.TrackArtists}"
-                              IsChecked="{Binding ReleaseImport.TrackArtists, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.AlbumDate}"
-                              IsChecked="{Binding ReleaseImport.ReleaseIdentity, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.Numbering}"
-                              IsChecked="{Binding ReleaseImport.Numbering, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="{DynamicResource Loc.Library.Release.Field.ReleaseDetails}"
-                              IsChecked="{Binding ReleaseImport.ReleaseDetails, Mode=TwoWay}" />
-                    <CheckBox Content="{DynamicResource Loc.Library.Release.Field.MusicBrainzIds}"
-                              IsChecked="{Binding ReleaseImport.MusicBrainzIdentifiers, Mode=TwoWay}" />
-                  </WrapPanel>
-                </Grid>
-              </TabItem>
-              <TabItem Header="{DynamicResource Loc.Library.Tab.Artwork}">
-                <Grid Margin="0,6,0,0" RowDefinitions="Auto,*" RowSpacing="6">
-                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
-                    <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="{DynamicResource Loc.Library.Artwork.Description}"
-                               TextWrapping="Wrap" />
-                    <WrapPanel Grid.Column="1">
-                      <Button Classes="app" Content="{DynamicResource Loc.Library.Artwork.Action.LocalFrontCover}"
-                              Command="{Binding PreviewLocalLibraryArtworkCommand}" />
-                      <Button Classes="app" Content="{DynamicResource Loc.Library.Artwork.Action.RemoveFront}"
-                              Command="{Binding PreviewRemoveLibraryFrontCoverCommand}" />
-                      <Button Classes="app" Content="{DynamicResource Loc.Library.Artwork.Action.RemoveAll}"
-                              Command="{Binding PreviewRemoveAllLibraryArtworkCommand}" />
-                      <Button Classes="app" Content="{DynamicResource Loc.Library.Artwork.Action.FindRelease}"
-                              Command="{Binding FindLibraryReleaseArtworkCommand}" />
-                      <Button Classes="app primary"
-                              Content="{DynamicResource Loc.Library.Artwork.Action.PreviewRelease}"
-                              Command="{Binding PreviewLibraryReleaseArtworkCommand}" />
-                    </WrapPanel>
-                  </Grid>
-                  <controls:AppDataGrid x:Name="LibraryReleaseArtworkGrid" Grid.Row="1"
-                      ItemsSource="{Binding ArtworkMatches}"
-                      SelectedItem="{Binding SelectedArtworkMatch, Mode=TwoWay}" />
-                </Grid>
-              </TabItem>
-              <TabItem Header="{DynamicResource Loc.Library.Tab.Reports}">
-                <Grid Margin="0,6,0,0" ColumnDefinitions="0.9*,12,1.1*">
-                  <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="7">
-                      <Grid ColumnDefinitions="*,150,170" ColumnSpacing="7">
-                        <TextBox Classes="app"
-                                 Text="{Binding ReportEditor.Name, Mode=TwoWay}"
-                                 PlaceholderText="{DynamicResource Loc.Library.Reports.NamePlaceholder}" />
-                        <ComboBox Grid.Column="1" Classes="app"
-                                  ItemsSource="{Binding ReportEditor.Formats}"
-                                  SelectedItem="{Binding ReportEditor.Format, Mode=TwoWay}" />
-                        <ComboBox Grid.Column="2" Classes="app"
-                                  ItemsSource="{Binding ReportEditor.Encodings}"
-                                  SelectedItem="{Binding ReportEditor.Encoding, Mode=TwoWay}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
-                        <TextBox Classes="app"
-                                 Text="{Binding ReportEditor.OutputPath, Mode=TwoWay}"
-                                 PlaceholderText="{DynamicResource Loc.Library.Reports.OutputPlaceholder}" />
-                        <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}"
-                                Command="{Binding BrowseLibraryReportOutputCommand}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="7">
-                        <CheckBox Content="{DynamicResource Loc.Library.Reports.OneFilePerGroup}"
-                                  IsChecked="{Binding ReportEditor.OneFilePerGroup, Mode=TwoWay}" />
-                        <TextBox Grid.Column="1" Classes="app"
-                                 Text="{Binding ReportEditor.GroupFileNameTemplate, Mode=TwoWay}"
-                                 PlaceholderText="{}{Group}.{Format}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
-                        <ComboBox Classes="app"
-                                  ItemsSource="{Binding ReportEditor.AvailableFields}"
-                                  DisplayMemberBinding="{Binding Label}"
-                                  SelectedItem="{Binding ReportEditor.SelectedAvailableField, Mode=TwoWay}" />
-                        <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Library.Reports.Action.AddColumn}"
-                                Command="{Binding ReportEditor.AddSelectedFieldCommand}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
-                        <TextBox Classes="app"
-                                 Text="{Binding ReportEditor.CustomFieldName, Mode=TwoWay}"
-                                 PlaceholderText="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}" />
-                        <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Library.Reports.Action.AddCustom}"
-                                Command="{Binding ReportEditor.AddCustomFieldCommand}" />
-                      </Grid>
-                      <ListBox MinHeight="100"
-                               ItemsSource="{Binding ReportEditor.Fields}"
-                               SelectedItem="{Binding ReportEditor.SelectedField, Mode=TwoWay}">
-                        <ListBox.ItemTemplate>
-                          <DataTemplate>
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
-                              <TextBlock Text="{Binding Label}" />
-                              <TextBlock Grid.Column="1" Classes="muted"
-                                         Text="{Binding Source}" />
-                            </Grid>
-                          </DataTemplate>
-                        </ListBox.ItemTemplate>
-                      </ListBox>
-                      <WrapPanel>
-                        <Button Classes="app" Content="{DynamicResource Loc.Common.Remove}"
-                                Command="{Binding ReportEditor.RemoveFieldCommand}" />
-                        <Button Classes="app" Content="{DynamicResource Loc.Library.Reports.Action.MoveUp}"
-                                Command="{Binding ReportEditor.MoveFieldUpCommand}" />
-                        <Button Classes="app" Content="{DynamicResource Loc.Library.Reports.Action.MoveDown}"
-                                Command="{Binding ReportEditor.MoveFieldDownCommand}" />
-                      </WrapPanel>
-                      <Grid ColumnDefinitions="*,*,130,Auto" ColumnSpacing="7">
-                        <ComboBox Classes="app"
-                                  ItemsSource="{Binding ReportEditor.Fields}"
-                                  DisplayMemberBinding="{Binding Label}"
-                                  SelectedItem="{Binding ReportEditor.SelectedGroupField, Mode=TwoWay}"
-                                  PlaceholderText="{DynamicResource Loc.Library.Reports.GroupByPlaceholder}" />
-                        <ComboBox Grid.Column="1" Classes="app"
-                                  ItemsSource="{Binding ReportEditor.Fields}"
-                                  DisplayMemberBinding="{Binding Label}"
-                                  SelectedItem="{Binding ReportEditor.SelectedSortField, Mode=TwoWay}"
-                                  PlaceholderText="{DynamicResource Loc.Library.Reports.SortByPlaceholder}" />
-                        <ComboBox Grid.Column="2" Classes="app"
-                                  ItemsSource="{Binding ReportEditor.SortTypes}"
-                                  SelectedItem="{Binding ReportEditor.SortType, Mode=TwoWay}" />
-                        <CheckBox Grid.Column="3" VerticalAlignment="Center"
-                                  Content="{DynamicResource Loc.Library.Reports.Descending}"
-                                  IsChecked="{Binding ReportEditor.SortDescending, Mode=TwoWay}" />
-                      </Grid>
-                    </StackPanel>
-                  </ScrollViewer>
-                  <Grid Grid.Column="2" RowDefinitions="*,Auto" RowSpacing="7">
-                    <controls:AppDataGrid x:Name="LibraryReportOutputGrid"
-                        ItemsSource="{Binding ReportOutputs}" />
-                    <WrapPanel Grid.Row="1" HorizontalAlignment="Right">
-                      <Button Classes="app" Content="{DynamicResource Loc.Library.Reports.Action.Preview}"
-                              Command="{Binding PreviewLibraryReportCommand}" />
-                      <Button Classes="app primary"
-                              Content="{DynamicResource Loc.Library.Reports.Action.Write}"
-                              Command="{Binding ApplyLibraryReportCommand}" />
-                    </WrapPanel>
-                  </Grid>
-                </Grid>
-              </TabItem>
-              <TabItem Header="{DynamicResource Loc.Library.Tab.Playlists}">
-                <Grid Margin="0,6,0,0"
-                      ColumnDefinitions="0.9*,12,1.1*">
-                  <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="7">
-                      <Grid ColumnDefinitions="*,120" ColumnSpacing="7">
-                        <TextBox Classes="app"
-                                 Text="{Binding PlaylistEditor.Name, Mode=TwoWay}"
-                                 PlaceholderText="{DynamicResource Loc.Library.Playlists.NamePlaceholder}" />
-                        <ComboBox Grid.Column="1" Classes="app"
-                                  ItemsSource="{Binding PlaylistEditor.Formats}"
-                                  SelectedItem="{Binding PlaylistEditor.Format, Mode=TwoWay}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
-                        <TextBox Classes="app"
-                                 Text="{Binding PlaylistEditor.OutputPath, Mode=TwoWay}"
-                                 PlaceholderText="{DynamicResource Loc.Library.Playlists.OutputPlaceholder}" />
-                        <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}"
-                                Command="{Binding BrowseLibraryPlaylistOutputCommand}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="*,*,*" ColumnSpacing="7">
-                        <ComboBox Classes="app"
-                                  ItemsSource="{Binding PlaylistEditor.PathStyles}"
-                                  SelectedItem="{Binding PlaylistEditor.PathStyle, Mode=TwoWay}" />
-                        <ComboBox Grid.Column="1" Classes="app"
-                                  ItemsSource="{Binding PlaylistEditor.Encodings}"
-                                  SelectedItem="{Binding PlaylistEditor.Encoding, Mode=TwoWay}" />
-                        <ComboBox Grid.Column="2" Classes="app"
-                                  ItemsSource="{Binding PlaylistEditor.LineEndings}"
-                                  SelectedItem="{Binding PlaylistEditor.LineEnding, Mode=TwoWay}" />
-                      </Grid>
-                      <CheckBox Content="{DynamicResource Loc.Library.Playlists.IncludeExtendedInfo}"
-                                IsChecked="{Binding PlaylistEditor.IncludeExtendedInfo, Mode=TwoWay}" />
-                      <CheckBox Content="{DynamicResource Loc.Library.Playlists.OnePerGroup}"
-                                IsChecked="{Binding PlaylistEditor.OnePlaylistPerGroup, Mode=TwoWay}" />
-                      <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
-                        <ComboBox Classes="app"
-                                  ItemsSource="{Binding PlaylistEditor.GroupFields}"
-                                  DisplayMemberBinding="{Binding Label}"
-                                  SelectedItem="{Binding PlaylistEditor.SelectedGroupField, Mode=TwoWay}" />
-                        <TextBox Grid.Column="1" Classes="app"
-                                 Text="{Binding PlaylistEditor.GroupFileNameTemplate, Mode=TwoWay}"
-                                 PlaceholderText="{}{Name} - {Group}" />
-                      </Grid>
-                      <Border Classes="status-banner info">
-                        <TextBlock TextWrapping="Wrap"
-                                   Text="{DynamicResource Loc.Library.Playlists.Description}" />
-                      </Border>
-                    </StackPanel>
-                  </ScrollViewer>
-                  <Grid Grid.Column="2" RowDefinitions="*,Auto"
-                        RowSpacing="7">
-                    <controls:AppDataGrid
-                        x:Name="LibraryPlaylistOutputGrid"
-                        ItemsSource="{Binding PlaylistOutputs}" />
-                    <WrapPanel Grid.Row="1"
-                               HorizontalAlignment="Right">
-                      <Button x:Name="PreviewLibraryPlaylistButton"
-                              Classes="app"
-                              Content="{DynamicResource Loc.Library.Playlists.Action.Preview}"
-                              Command="{Binding PreviewLibraryPlaylistCommand}" />
-                      <Button Classes="app primary"
-                              Content="{DynamicResource Loc.Library.Playlists.Action.Write}"
-                              Command="{Binding ApplyLibraryPlaylistCommand}" />
-                    </WrapPanel>
-                  </Grid>
-                </Grid>
-              </TabItem>
-              <TabItem Header="{DynamicResource Loc.Library.Tab.Tools}">
-                <Grid Margin="0,6,0,0"
-                      ColumnDefinitions="0.95*,12,1.05*">
-                  <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="7">
-                      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
-                            ColumnSpacing="6">
-                        <ComboBox Classes="app"
-                                  ItemsSource="{Binding ExternalToolEditor.SavedTools}"
-                                  DisplayMemberBinding="{Binding Name}"
-                                  SelectedItem="{Binding ExternalToolEditor.SelectedSavedTool, Mode=TwoWay}"
-                                  PlaceholderText="{DynamicResource Loc.Library.Tools.SavedPlaceholder}" />
-                        <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Library.Tools.Action.Load}"
-                                Command="{Binding ExternalToolEditor.LoadToolCommand}" />
-                        <Button Grid.Column="2" Classes="app" Content="{DynamicResource Loc.Library.Tools.Action.New}"
-                                Command="{Binding ExternalToolEditor.NewToolCommand}" />
-                        <Button Grid.Column="3" Classes="app" Content="{DynamicResource Loc.Library.Tools.Action.Save}"
-                                Command="{Binding ExternalToolEditor.SaveToolCommand}" />
-                        <Button Grid.Column="4" Classes="app" Content="{DynamicResource Loc.Library.Tools.Action.Delete}"
-                                Command="{Binding ExternalToolEditor.DeleteToolCommand}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="*,170" ColumnSpacing="7">
-                        <TextBox Classes="app"
-                                 Text="{Binding ExternalToolEditor.Name, Mode=TwoWay}"
-                                 PlaceholderText="{DynamicResource Loc.Library.Tools.NamePlaceholder}" />
-                        <ComboBox Grid.Column="1" Classes="app"
-                                  ItemsSource="{Binding ExternalToolEditor.InvocationModes}"
-                                  SelectedItem="{Binding ExternalToolEditor.InvocationMode, Mode=TwoWay}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
-                        <TextBox Classes="app"
-                                 Text="{Binding ExternalToolEditor.Executable, Mode=TwoWay}"
-                                 PlaceholderText="{DynamicResource Loc.Library.Tools.ExecutablePlaceholder}" />
-                        <Button Grid.Column="1" Classes="app"
-                                Content="{DynamicResource Loc.Library.Tools.Action.BrowseExecutable}"
-                                Command="{Binding BrowseLibraryExternalToolExecutableCommand}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
-                        <TextBox Classes="app"
-                                 Text="{Binding ExternalToolEditor.WorkingDirectory, Mode=TwoWay}"
-                                 PlaceholderText="{DynamicResource Loc.Library.Tools.WorkingDirectoryPlaceholder}" />
-                        <Button Grid.Column="1" Classes="app"
-                                Content="{DynamicResource Loc.Library.Tools.Action.BrowseFolder}"
-                                Command="{Binding BrowseLibraryExternalToolWorkingDirectoryCommand}" />
-                      </Grid>
-                      <TextBox Classes="app" MinHeight="90"
-                               AcceptsReturn="True" TextWrapping="NoWrap"
-                               Text="{Binding ExternalToolEditor.ArgumentsText, Mode=TwoWay}"
-                               PlaceholderText="{}{Files}" />
-                      <TextBlock Classes="muted" TextWrapping="Wrap"
-                                 Text="{DynamicResource Loc.Library.Tools.ArgumentsDescription}" />
-                      <Border Classes="status-banner warning">
-                        <TextBlock TextWrapping="Wrap"
-                                   Text="{DynamicResource Loc.Library.Tools.Warning}" />
-                      </Border>
-                    </StackPanel>
-                  </ScrollViewer>
-                  <Grid Grid.Column="2" RowDefinitions="*,Auto"
-                        RowSpacing="7">
-                    <controls:AppDataGrid
-                        x:Name="LibraryExternalToolInvocationGrid"
-                        ItemsSource="{Binding ExternalToolInvocations}" />
-                    <WrapPanel Grid.Row="1"
-                               HorizontalAlignment="Right">
-                      <Button x:Name="PreviewLibraryExternalToolButton"
-                              Classes="app" Content="{DynamicResource Loc.Library.Tools.Action.Preview}"
-                              Command="{Binding PreviewLibraryExternalToolCommand}" />
-                      <Button Classes="app primary"
-                              Content="{DynamicResource Loc.Library.Tools.Action.Run}"
-                              Command="{Binding RunLibraryExternalToolCommand}" />
-                    </WrapPanel>
-                  </Grid>
-                </Grid>
-              </TabItem>
-            </TabControl>
-
-            <Grid Grid.Row="6" ColumnDefinitions="*,190,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="7">
-              <StackPanel VerticalAlignment="Center">
-                <TextBlock Classes="muted"
-                           Text="{Binding OperationStatus}" TextWrapping="Wrap"
-                           AutomationProperties.LiveSetting="Polite" />
-                <controls:LocalizedFormatTextBlock
-                    Classes="faint"
-                    IsVisible="{Binding HasOperationDiagnosticDetail}"
-                    ResourceKey="Common.DiagnosticDetailFormat"
-                    Value="{Binding OperationDiagnosticDetail}"
-                    TextWrapping="Wrap" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="3"
-                          IsVisible="{Binding IsOperationBusy}">
-                <TextBlock Classes="muted" FontSize="11"
-                           Text="{Binding OperationProgressText}"
-                           TextTrimming="CharacterEllipsis"
-                           AutomationProperties.LiveSetting="Polite" />
-                <ProgressBar Height="4"
-                             IsIndeterminate="{Binding IsOperationProgressIndeterminate}"
-                             Maximum="{Binding OperationProgressMaximum}"
-                             Value="{Binding OperationProgressValue}" />
-              </StackPanel>
-              <Button Grid.Column="2" Classes="app" Content="{DynamicResource Loc.Common.Cancel}"
-                      IsVisible="{Binding IsOperationBusy}"
-                      Command="{Binding CancelLibraryOperationCommand}" />
-              <Button Grid.Column="3" Classes="app" Content="{DynamicResource Loc.Library.Audio.Action.Find}"
-                      Command="{Binding DiscoverLibraryAudioCommand}" />
-              <Button Grid.Column="4" Classes="app" Content="{DynamicResource Loc.Library.Audio.Action.PreviewIds}"
-                      Command="{Binding PreviewLibraryAudioIdentifiersCommand}" />
-              <Button Grid.Column="5" Classes="app" Content="{DynamicResource Loc.Library.Audio.Action.FindReleases}"
-                      Command="{Binding ResolveLibraryRecordingCommand}" />
-              <Button Grid.Column="6" Classes="app primary" Content="{DynamicResource Loc.Library.Audio.Action.ApplyPreview}"
-                      Command="{Binding ApplyLibraryOperationCommand}" />
-            </Grid>
-          </Grid>
-        </Border>
-      </Popup>
-
       <Popup x:Name="LibraryPendingChangesPopover"
              PlacementTarget="{Binding #LibraryPendingChangesButton}"
              Placement="BottomEdgeAlignedRight" VerticalOffset="8"
              IsLightDismissEnabled="True" IsOpen="False">
         <Border x:Name="LibraryPendingChangesSurface"
-                Width="900" MaxHeight="620" KeyDown="OnLibraryKeyDown"
+                Width="430" MinWidth="300" MaxHeight="620"
+                KeyDown="OnLibraryKeyDown"
                 Background="{DynamicResource AppPanelBrush}"
                 BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                BorderThickness="1" CornerRadius="9" Padding="14"
+                BorderThickness="1" CornerRadius="8" Padding="16"
                 BoxShadow="0 14 40 0 #77000000">
           <Grid RowDefinitions="Auto,Auto,*,Auto"
-                RowSpacing="10">
+                RowSpacing="12">
             <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Spacing="2">
+              <StackPanel Spacing="4">
                 <TextBlock Text="{DynamicResource Loc.Library.PendingChanges.Title}"
                            FontSize="16" FontWeight="SemiBold" />
                 <TextBlock Classes="muted"
@@ -1058,10 +497,11 @@
               </StackPanel>
               <Button x:Name="CloseLibraryPendingChangesButton"
                       Grid.Column="1" Classes="app quiet icon"
-                      Content="&#x2715;"
                       ToolTip.Tip="{DynamicResource Loc.Library.PendingChanges.CloseTooltip}"
                       AutomationProperties.Name="{DynamicResource Loc.Library.PendingChanges.CloseTooltip}"
-                      Click="OnLibraryPendingChangesClose" />
+                      Click="OnLibraryPendingChangesClose">
+                <controls:AppVectorIcon Kind="Close" />
+              </Button>
             </Grid>
 
             <StackPanel Grid.Row="1" Classes="summary-label" Orientation="Horizontal" Spacing="4">
@@ -1069,15 +509,68 @@
               <TextBlock Text="{DynamicResource Loc.Library.PendingChanges.CountLabel}" />
             </StackPanel>
 
-            <Grid Grid.Row="2">
-              <controls:AppDataGrid
+            <Grid Grid.Row="2" MinHeight="180">
+              <ListBox
                   x:Name="LibraryPendingChangesGrid"
+                  Classes="primary-list"
                   ItemsSource="{Binding PendingChanges}"
-                  AutomationProperties.Name="{DynamicResource Loc.Library.PendingChanges.Automation}" />
-              <Border Background="{DynamicResource AppInsetBrush}"
-                      IsVisible="{Binding !PendingChanges.Count}">
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                  AutomationProperties.Name="{DynamicResource Loc.Library.PendingChanges.Automation}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Classes="card dense-card"
+                            Margin="0,0,0,8">
+                      <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8">
+                          <TextBlock Text="{Binding File}"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis"
+                                     ToolTip.Tip="{Binding File}" />
+                          <Border Grid.Column="1"
+                                  Classes="inset-card"
+                                  Padding="8,4">
+                            <TextBlock Classes="caption"
+                                       Text="{Binding Field}" />
+                          </Border>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto,*"
+                              ColumnSpacing="8">
+                          <StackPanel Spacing="4">
+                            <TextBlock Classes="caption"
+                                       Text="{DynamicResource Loc.Column.Before}" />
+                            <TextBlock Text="{Binding Before}"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                          <Viewbox Grid.Column="1"
+                                   Width="16" Height="16"
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.Name="{DynamicResource Loc.Column.After}">
+                            <Path Data="M2,8 L14,8 M10,4 L14,8 L10,12"
+                                  Fill="Transparent"
+                                  Stroke="{DynamicResource AppMutedBrush}"
+                                  StrokeThickness="1.5"
+                                  StrokeLineCap="Round"
+                                  StrokeJoin="Round" />
+                          </Viewbox>
+                          <StackPanel Grid.Column="2"
+                                      Spacing="4">
+                            <TextBlock Classes="caption"
+                                       Text="{DynamicResource Loc.Column.After}" />
+                            <TextBlock Text="{Binding After}"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                        </Grid>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <Border Classes="empty-state"
+                       IsVisible="{Binding !PendingChanges.Count}">
                 <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center" Spacing="6">
+                            VerticalAlignment="Center" Spacing="8">
                   <TextBlock FontWeight="SemiBold"
                              Text="{DynamicResource Loc.Library.PendingChanges.EmptyTitle}" />
                   <TextBlock Classes="muted"
@@ -1086,8 +579,10 @@
               </Border>
             </Grid>
 
-            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto"
-                  ColumnSpacing="8">
+            <Border Grid.Row="3"
+                    Classes="sticky-footer">
+              <Grid ColumnDefinitions="*,Auto,Auto"
+                    ColumnSpacing="8">
               <StackPanel VerticalAlignment="Center">
                 <TextBlock Classes="muted"
                            Text="{Binding OperationStatus}"
@@ -1100,22 +595,26 @@
                     TextWrapping="Wrap" />
               </StackPanel>
               <Button x:Name="LibraryRevertPendingChangesButton"
-                      Grid.Column="1" Classes="app"
+                      Grid.Column="1" Classes="app danger"
                       Content="{DynamicResource Loc.Library.PendingChanges.Action.Revert}"
                       ToolTip.Tip="{DynamicResource Loc.Library.PendingChanges.RevertTooltip}"
+                      IsEnabled="{Binding HasPendingChanges}"
                       Command="{Binding RevertPendingChangesCommand}" />
               <Button x:Name="LibraryApplyPendingChangesButton"
                       Grid.Column="2" Classes="app primary"
                       Content="{DynamicResource Loc.Library.PendingChanges.Action.Apply}"
+                      IsEnabled="{Binding HasPendingChanges}"
                       Command="{Binding ApplyLibraryOperationCommand}" />
-            </Grid>
+              </Grid>
+            </Border>
           </Grid>
         </Border>
       </Popup>
     </Grid>
 
-    <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-      <StackPanel VerticalAlignment="Center">
+    <Grid Grid.Row="3" RowDefinitions="Auto,Auto" RowSpacing="8">
+      <StackPanel x:Name="LibraryFooterGuidance"
+                  IsVisible="{Binding ShowFooterGuidance}">
         <TextBlock Classes="muted" Text="{Binding StatusText}"
                    TextTrimming="CharacterEllipsis" AutomationProperties.LiveSetting="Polite" />
         <controls:LocalizedFormatTextBlock
@@ -1125,11 +624,25 @@
             Value="{Binding StatusDiagnosticDetail}"
             TextWrapping="Wrap" />
       </StackPanel>
-      <TextBlock x:Name="SelectedCountLabel" Grid.Column="1" Classes="summary-label" IsVisible="False" />
-      <Button x:Name="CopyButton" Grid.Column="2" Classes="app" IsVisible="False" Content="{DynamicResource Loc.Library.Action.CopyPaths}" Click="OnCopyPaths" />
-      <Button x:Name="RevealButton" Grid.Column="3" Classes="app" IsVisible="False" Content="{DynamicResource Loc.Library.Action.Reveal}" Click="OnReveal" />
-      <Button x:Name="ReindexButton" Grid.Column="4" Classes="app" IsVisible="False" Content="{DynamicResource Loc.Library.Action.Reindex}" Click="OnReindex" />
-      <TextBlock Grid.Column="5" Classes="muted" VerticalAlignment="Center" Text="{Binding Indexing.StatusText}" />
+      <WrapPanel Grid.Row="1" HorizontalAlignment="Right">
+        <TextBlock x:Name="SelectedCountLabel" Classes="summary-label" IsVisible="False"
+                   VerticalAlignment="Center" Margin="0,0,8,8" />
+        <Button x:Name="SelectionWorkbenchButton" Classes="app" IsVisible="False"
+                Margin="0,0,8,8"
+                Content="{DynamicResource Loc.Library.Handoff.Action}"
+                Click="OnEditInWorkbenchClick"
+                AutomationProperties.Name="{DynamicResource Loc.Library.Handoff.Automation}" />
+        <Button x:Name="CopyButton" Classes="app" IsVisible="False" Margin="0,0,8,8"
+                Content="{DynamicResource Loc.Library.Action.CopyPaths}" Click="OnCopyPaths" />
+        <Button x:Name="RevealButton" Classes="app" IsVisible="False" Margin="0,0,8,8"
+                Content="{DynamicResource Loc.Library.Action.Reveal}" Click="OnReveal" />
+        <Button x:Name="ReindexButton" Classes="app" IsVisible="False" Margin="0,0,8,8"
+                Content="{DynamicResource Loc.Library.Action.RefreshAffectedPaths}" Click="OnReindex" />
+        <TextBlock x:Name="LibraryIndexingFooterGuidance"
+                   Classes="muted" VerticalAlignment="Center" Margin="0,0,0,8"
+                   IsVisible="{Binding ShowFooterGuidance}"
+                   Text="{Binding Indexing.StatusText}" />
+      </WrapPanel>
     </Grid>
-  </Grid>
+  </controls:AdaptivePage>
 </UserControl>

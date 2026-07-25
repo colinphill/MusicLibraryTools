@@ -1,21 +1,230 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
+using MusicLibrary.Core.Models;
+using MusicLibrary.Core.Services;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Views;
+using MusicLibraryTools;
 using Xunit;
 
 namespace MusicLibraryManager.UI.Tests;
 
 public sealed class LibraryDrawerInteractionTests
 {
+    [AvaloniaFact]
+    public void Inspector_docking_uses_the_actual_split_host_threshold_and_preserves_the_central_minimum()
+    {
+        var settings = new MemorySettings();
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+                collection.AddSingleton<IAppSettings>(
+                    settings));
+        App.UseServicesForTests(services);
+        var view = new LibraryView();
+        var window = new Window
+        {
+            Width = 1200,
+            Height = 800,
+            Content = view,
+        };
+        try
+        {
+            services.GetRequiredService<
+                    LibraryViewModel>()
+                .SetInspectorPreference(
+                    LibraryInspectorPreference
+                        .Pinned);
+            window.Show();
+            Render();
+
+            PersistedSplitView split =
+                view.FindControl<PersistedSplitView>(
+                    "WorkspaceSplit")!;
+            ContentPresenter left =
+                split.FindControl<ContentPresenter>(
+                    "LeftPresenter")!;
+            ContentPresenter right =
+                split.FindControl<ContentPresenter>(
+                    "RightPresenter")!;
+            GridSplitter splitter =
+                split.FindControl<GridSplitter>(
+                    "Splitter")!;
+            double windowChrome =
+                window.Bounds.Width -
+                split.Bounds.Width;
+
+            AssertMode(
+                1089,
+                docked: false);
+            AssertMode(
+                1090,
+                docked: true);
+            AssertMode(
+                1091,
+                docked: true);
+
+            void AssertMode(
+                double splitWidth,
+                bool docked)
+            {
+                window.Width =
+                    splitWidth +
+                    windowChrome;
+                Render();
+                double correction =
+                    splitWidth -
+                    split.Bounds.Width;
+                if (Math.Abs(correction) >
+                    0.01)
+                {
+                    window.Width +=
+                        correction;
+                    Render();
+                }
+
+                Assert.InRange(
+                    split.Bounds.Width,
+                    splitWidth - 0.1,
+                    splitWidth + 0.1);
+                Assert.Equal(
+                    docked,
+                    splitter.IsEffectivelyVisible);
+                Assert.Equal(
+                    docked,
+                    right.IsEffectivelyVisible);
+                if (docked)
+                {
+                    Assert.True(
+                        left.Bounds.Width >=
+                        760,
+                        $"Docking at a {split.Bounds.Width:0.0} px split host left only {left.Bounds.Width:0.0} px for the central Library task.");
+                }
+                else
+                {
+                    Assert.True(
+                        view.FindControl<Button>(
+                                "InspectorToggle")!
+                            .IsEffectivelyVisible);
+                }
+            }
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Columns_and_visual_filter_overlays_clamp_to_the_library_viewport()
+    {
+        using ServiceProvider services =
+            Composition.BuildServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.MinWidth = 0;
+            window.MinHeight = 0;
+            window.Width = 700;
+            window.Height = 600;
+            window.Show();
+            window.WindowState =
+                WindowState.Normal;
+            services.GetRequiredService<
+                    INavigationService>()
+                .Navigate(
+                    ShellDestination.Library);
+            Render();
+
+            LibraryView view =
+                Assert.IsType<LibraryView>(
+                    window.FindControl<ContentControl>(
+                        "ContentHost")!.Content);
+            Border columns =
+                view.FindControl<Border>(
+                    "LibraryColumnsSurface")!;
+            Border visualFilter =
+                view.FindControl<Border>(
+                    "LibraryVisualFilterSurface")!;
+            double availableWidth =
+                Math.Max(
+                    320,
+                    view.Bounds.Width - 24);
+            double availableHeight =
+                Math.Max(
+                    320,
+                    view.Bounds.Height - 32);
+
+            Assert.Equal(
+                Math.Min(
+                    650,
+                    availableWidth),
+                columns.Width);
+            Assert.Equal(
+                Math.Min(
+                    610,
+                    availableHeight),
+                columns.MaxHeight);
+            Assert.Equal(
+                Math.Min(
+                    720,
+                    availableWidth),
+                visualFilter.Width);
+            Assert.Equal(
+                Math.Min(
+                    620,
+                    availableHeight),
+                visualFilter.MaxHeight);
+
+            view.FindControl<Button>(
+                    "ColumnsButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            Render();
+            Assert.True(
+                view.FindControl<Popup>(
+                    "ColumnPopover")!.IsOpen);
+            Assert.True(
+                columns.Bounds.Width <=
+                availableWidth);
+
+            view.FindControl<Button>(
+                    "CloseColumnsButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            view.FindControl<Button>(
+                    "VisualFilterButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            Render();
+            Assert.True(
+                view.FindControl<Popup>(
+                    "VisualFilterPopover")!
+                    .IsOpen);
+            Assert.True(
+                visualFilter.Bounds.Width <=
+                availableWidth);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
     [AvaloniaFact]
     public void Compact_inspector_supports_pointer_escape_close_and_focus_restoration()
     {
@@ -64,7 +273,9 @@ public sealed class LibraryDrawerInteractionTests
                     "RightPresenter")!;
 
             Assert.True(toggle.IsVisible);
-            Assert.False(scrim.IsVisible);
+            Assert.False(
+                scrim.IsVisible,
+                "The compact inspector scrim should start closed.");
 
             OpenDrawer(toggle);
             Assert.True(scrim.IsVisible);
@@ -83,6 +294,17 @@ public sealed class LibraryDrawerInteractionTests
                             2,
                             scrim.Bounds.Height / 2)),
                     window)!.Value;
+            IInputElement? hit =
+                window.InputHitTest(
+                    scrimPoint);
+            Assert.True(
+                hit is Control hitControl &&
+                (ReferenceEquals(
+                     hitControl,
+                     scrim) ||
+                 hitControl.GetVisualAncestors()
+                     .Contains(scrim)),
+                $"Expected the Library inspector scrim at {scrimPoint}, but hit {(hit as Control)?.Name ?? hit?.GetType().Name ?? "nothing"} within {string.Join("/", (hit as Control)?.GetVisualAncestors().OfType<Control>().Select(control => control.Name ?? control.GetType().Name) ?? [])}.");
             window.MouseDown(
                 scrimPoint,
                 MouseButton.Left,
@@ -93,8 +315,12 @@ public sealed class LibraryDrawerInteractionTests
                 RawInputModifiers.None);
             Render();
 
-            Assert.False(scrim.IsVisible);
-            Assert.False(right.IsVisible);
+            Assert.False(
+                scrim.IsVisible,
+                "Scrim dismissal should hide the inspector scrim.");
+            Assert.False(
+                right.IsVisible,
+                "Scrim dismissal should hide the compact inspector presenter.");
             Assert.True(model.IsInspectorOpen);
             Assert.Same(
                 toggle,
@@ -110,8 +336,12 @@ public sealed class LibraryDrawerInteractionTests
                 });
             Render();
 
-            Assert.False(scrim.IsVisible);
-            Assert.False(right.IsVisible);
+            Assert.False(
+                scrim.IsVisible,
+                "Escape should hide the inspector scrim.");
+            Assert.False(
+                right.IsVisible,
+                "Escape should hide the compact inspector presenter.");
             Assert.True(model.IsInspectorOpen);
             Assert.Same(
                 toggle,
@@ -123,9 +353,15 @@ public sealed class LibraryDrawerInteractionTests
                     Button.ClickEvent));
             Render();
 
-            Assert.False(scrim.IsVisible);
-            Assert.False(right.IsVisible);
-            Assert.False(model.IsInspectorOpen);
+            Assert.False(
+                scrim.IsVisible,
+                "The inspector close action should hide its scrim.");
+            Assert.False(
+                right.IsVisible,
+                "The inspector close action should hide its presenter.");
+            Assert.False(
+                model.IsInspectorOpen,
+                "The inspector close action should persist the closed preference.");
             Assert.Same(
                 toggle,
                 Focused(view));
@@ -136,9 +372,135 @@ public sealed class LibraryDrawerInteractionTests
         }
     }
 
+    [AvaloniaFact]
+    public void Compact_inspector_traps_tab_within_effectively_available_drawer_controls()
+    {
+        using ServiceProvider services =
+            Composition.BuildServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            window.WindowState =
+                WindowState.Normal;
+            window.Width = 900;
+            window.Height = 600;
+            window.Activate();
+            services.GetRequiredService<
+                    INavigationService>()
+                .Navigate(
+                    ShellDestination.Library);
+            Render();
+
+            LibraryView view =
+                Assert.IsType<LibraryView>(
+                    window.FindControl<ContentControl>(
+                        "ContentHost")!.Content);
+            SelectionInspectorView inspector =
+                view.FindControl<
+                    SelectionInspectorView>(
+                    "InspectorView")!;
+            inspector.DataContext =
+                new InspectorFocusFixture();
+            Render();
+            OpenDrawer(
+                view.FindControl<Button>(
+                    "InspectorToggle")!);
+
+            Control[] allFocusable =
+            [
+                .. inspector
+                    .GetVisualDescendants()
+                    .OfType<Control>()
+                    .Where(control =>
+                        control.Focusable),
+            ];
+            Control[] effectiveFocusable =
+            [
+                .. allFocusable.Where(control =>
+                    control.IsEffectivelyEnabled &&
+                    control.IsEffectivelyVisible),
+            ];
+            Assert.True(
+                effectiveFocusable.Length >= 3,
+                "The populated inspector fixture must exercise more than a one-control focus loop.");
+            Assert.Contains(
+                allFocusable,
+                control =>
+                    !control.IsEffectivelyEnabled ||
+                    !control.IsEffectivelyVisible);
+
+            AssertWraps(
+                effectiveFocusable[^1],
+                KeyModifiers.None,
+                effectiveFocusable[0]);
+            AssertWraps(
+                effectiveFocusable[0],
+                KeyModifiers.Shift,
+                effectiveFocusable[^1]);
+
+            Button outside =
+                view.FindControl<Button>(
+                    "InspectorToggle")!;
+            AssertWraps(
+                outside,
+                KeyModifiers.None,
+                effectiveFocusable[0]);
+
+            void AssertWraps(
+                Control startingControl,
+                KeyModifiers modifiers,
+                Control expected)
+            {
+                startingControl.Focus();
+                Render();
+                view.RaiseEvent(
+                    new KeyEventArgs
+                    {
+                        RoutedEvent =
+                            InputElement.KeyDownEvent,
+                        Key = Key.Tab,
+                        KeyModifiers = modifiers,
+                    });
+                Render();
+
+                Assert.Same(
+                    expected,
+                    Focused(view));
+                Assert.True(
+                    expected.IsEffectivelyEnabled);
+                Assert.True(
+                    expected.IsEffectivelyVisible);
+            }
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
     private static void OpenDrawer(
         Button toggle)
     {
+        if (TopLevel.GetTopLevel(toggle) is
+                MainWindow window &&
+            window.FindControl<Border>(
+                "NavigationScrim") is
+                { IsEffectivelyVisible: true })
+        {
+            window.RaiseEvent(
+                new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = Key.Escape,
+                });
+            Render();
+        }
+        toggle.Focus();
+        Render();
         toggle.RaiseEvent(
             new RoutedEventArgs(
                 Button.ClickEvent));
@@ -157,5 +519,97 @@ public sealed class LibraryDrawerInteractionTests
         AvaloniaHeadlessPlatform
             .ForceRenderTimerTick(2);
         Dispatcher.UIThread.RunJobs();
+    }
+
+    private sealed class MemorySettings :
+        IAppSettings
+    {
+        private readonly Dictionary<string, string>
+            _preferences = [];
+
+        public string? ConfigPath => null;
+        public LibraryConfiguration? Configuration =>
+            null;
+        public event EventHandler?
+            ConfigurationChanged;
+
+        public AppConfigurationSnapshot
+            GetSnapshot() =>
+            new(null, null, 0);
+
+        public void LoadConfig(
+            string path) =>
+            ConfigurationChanged?.Invoke(
+                this,
+                EventArgs.Empty);
+
+        public string? GetRememberedConfigPath() =>
+            null;
+        public IReadOnlyList<string>
+            RecentConfigPaths => [];
+        public void ClearRecentConfigs()
+        {
+        }
+
+        public string? GetPreference(
+            string key) =>
+            _preferences.GetValueOrDefault(
+                key);
+
+        public void SetPreference(
+            string key,
+            string? value)
+        {
+            if (value is null)
+                _preferences.Remove(key);
+            else
+                _preferences[key] = value;
+        }
+    }
+
+    private sealed class InspectorFocusFixture
+    {
+        public bool HasSelection => true;
+        public bool HasUnsavedChanges => false;
+        public string UnsavedChangesSummary => "";
+        public string SelectionSummary =>
+            "Two selected tracks";
+        public string Overview =>
+            "Editable metadata";
+        public bool IsBusy => false;
+        public InspectorFieldFixture[] Fields { get; } =
+        [
+            new(
+                "Title",
+                "Aurora"),
+            new(
+                "Artist",
+                "The Fixtures"),
+        ];
+        public bool HasStatusMessage => false;
+        public bool HasStatusDiagnosticDetail =>
+            false;
+        public bool IsStatusInfo => true;
+        public bool IsStatusSuccess => false;
+        public bool IsStatusWarning => false;
+        public bool IsStatusError => false;
+        public string StatusIcon => "";
+        public string StatusMessage => "";
+        public string StatusDiagnosticDetail => "";
+        public string ArtworkSummary =>
+            "No embedded artwork";
+        public bool IsArtworkMixed => false;
+        public object[] ArtworkItems => [];
+        public object[] ArtworkTypeChoices => [];
+        public int ArtworkMaxDimension => 600;
+    }
+
+    private sealed record InspectorFieldFixture(
+        string Label,
+        string Value)
+    {
+        public string PlaceholderText => "";
+        public string VerificationMessage => "";
+        public bool IsUnverified => false;
     }
 }

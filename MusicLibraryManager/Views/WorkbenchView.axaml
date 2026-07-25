@@ -7,49 +7,50 @@
              DragDrop.DragOver="OnDragOver"
              DragDrop.Drop="OnDrop"
              KeyDown="OnWorkbenchKeyDown">
-  <Grid x:Name="WorkbenchRoot"
-        Margin="26,22,26,26"
-        RowDefinitions="Auto,Auto,*"
-        RowSpacing="14">
+  <controls:AdaptivePage x:Name="WorkbenchRoot"
+                         RowDefinitions="Auto,Auto,*"
+                         RowSpacing="12">
     <controls:PageHeader x:Name="WorkbenchHeader"
                          Title="{DynamicResource Loc.Workbench.Title}"
                          Subtitle="{DynamicResource Loc.Workbench.Subtitle}">
-      <controls:PageHeader.Actions>
-        <WrapPanel>
-          <Button x:Name="WorkbenchPendingChangesButton"
-                  Classes="app primary"
-                  Margin="0,0,8,6"
-                  AutomationProperties.Name="{DynamicResource Loc.Workbench.PendingChanges.ReviewAutomation}"
-                  Click="OnWorkbenchPendingChangesClick">
-            <controls:LocalizedFormatTextBlock
-                ResourceKey="Workbench.PendingChanges.Review"
-                UseCountVariant="True"
-                Value="{Binding PendingChanges.Count}" />
-          </Button>
-          <Button x:Name="WorkbenchInspectorToggle"
-                  Classes="app"
-                  Margin="0,0,8,6"
-                  Content="{DynamicResource Loc.Workbench.Action.Inspector}"
-                  AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.InspectorAutomation}"
-                  Click="OnInspectorToggle" />
-          <Button x:Name="WorkbenchMoreButton"
-                  Classes="app"
-                  Margin="0,0,0,6"
-                  Content="{DynamicResource Loc.Workbench.Action.More}"
-                  AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.MoreAutomation}">
-            <Button.Flyout>
-              <MenuFlyout>
-                <MenuItem Header="{DynamicResource Loc.Workbench.Action.UndoLastApply}"
-                          Command="{Binding UndoCommand}" />
-                <MenuItem Header="{DynamicResource Loc.Workbench.Action.Redo}"
-                          Command="{Binding RedoCommand}" />
-                <MenuItem Header="{DynamicResource Loc.Workbench.Action.RepeatRecipe}"
-                          Command="{Binding RepeatCommand}" />
-              </MenuFlyout>
-            </Button.Flyout>
-          </Button>
-        </WrapPanel>
-      </controls:PageHeader.Actions>
+      <controls:PageHeader.PrimaryAction>
+        <Button x:Name="WorkbenchPendingChangesButton"
+                Classes="app"
+                AutomationProperties.Name="{DynamicResource Loc.Workbench.PendingChanges.ReviewAutomation}"
+                Click="OnWorkbenchPendingChangesClick">
+          <controls:LocalizedFormatTextBlock
+              ResourceKey="Workbench.PendingChanges.Review"
+              UseCountVariant="True"
+              Value="{Binding PendingChanges.Count}" />
+        </Button>
+      </controls:PageHeader.PrimaryAction>
+      <controls:PageHeader.SecondaryActions>
+        <Button x:Name="WorkbenchInspectorToggle"
+                Classes="app"
+                Content="{DynamicResource Loc.Workbench.Action.Inspector}"
+                AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.InspectorAutomation}"
+                Click="OnInspectorToggle" />
+      </controls:PageHeader.SecondaryActions>
+      <controls:PageHeader.MoreAction>
+        <Button x:Name="WorkbenchMoreButton"
+                Classes="app quiet overflow"
+                Content="{DynamicResource Loc.Workbench.Action.More}"
+                AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.MoreAutomation}">
+          <Button.Flyout>
+            <MenuFlyout>
+              <MenuItem Header="{DynamicResource Loc.Workbench.Action.Inspector}"
+                        Click="OnInspectorToggle" />
+              <Separator />
+              <MenuItem Header="{DynamicResource Loc.Workbench.Action.UndoLastApply}"
+                        Command="{Binding UndoCommand}" />
+              <MenuItem Header="{DynamicResource Loc.Workbench.Action.Redo}"
+                        Command="{Binding RedoCommand}" />
+              <MenuItem Header="{DynamicResource Loc.Workbench.Action.RepeatRecipe}"
+                        Command="{Binding RepeatCommand}" />
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
+      </controls:PageHeader.MoreAction>
     </controls:PageHeader>
 
     <WrapPanel x:Name="WorkbenchSourceBar"
@@ -57,7 +58,7 @@
                VerticalAlignment="Center">
       <SplitButton x:Name="AddWorkbenchSourceButton"
                    Classes="app primary"
-                   Margin="0,0,8,6"
+                   Margin="0,0,8,8"
                    Content="{DynamicResource Loc.Workbench.Action.AddFiles}"
                    Command="{Binding BrowseFilesCommand}"
                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Source.AddAutomation}">
@@ -66,7 +67,7 @@
             <Border Width="320"
                     Padding="12"
                     Background="{DynamicResource AppPanelBrush}">
-              <StackPanel Spacing="9">
+              <StackPanel Spacing="8">
                 <TextBlock FontSize="16"
                            FontWeight="SemiBold"
                            Text="{DynamicResource Loc.Workbench.Source.Title}" />
@@ -90,7 +91,8 @@
                           IsChecked="{Binding Recursive, Mode=TwoWay}" />
                 <Border Height="1"
                         Background="{DynamicResource AppBorderBrush}" />
-                <TextBlock FontWeight="SemiBold"
+                <TextBlock Classes="field-label"
+                           FontWeight="SemiBold"
                            Text="{DynamicResource Loc.Workbench.Source.RecentLocation}" />
                 <ComboBox x:Name="RecentLocationsBox"
                           Classes="app"
@@ -108,13 +110,21 @@
           </Flyout>
         </SplitButton.Flyout>
       </SplitButton>
+      <ComboBox x:Name="WorkbenchSectionPicker"
+                Classes="app"
+                Width="240"
+                Margin="0,0,8,8"
+                ItemsSource="{Binding SectionOptions}"
+                DisplayMemberBinding="{Binding Label}"
+                SelectedItem="{Binding SelectedSectionOption, Mode=TwoWay}"
+                AutomationProperties.Name="{DynamicResource Loc.Workbench.Navigation.SectionAutomation}" />
       <StackPanel x:Name="WorkbenchProgressPanel"
                   Width="250"
-                  Margin="0,0,8,6"
-                  Spacing="3"
+                  Margin="0,0,8,8"
+                  Spacing="4"
                   IsVisible="{Binding IsBusy}">
         <TextBlock Classes="muted"
-                   FontSize="11"
+                   FontSize="{DynamicResource AppFontSizeCaption}"
                    Text="{Binding ProgressText}"
                    TextTrimming="CharacterEllipsis"
                    AutomationProperties.LiveSetting="Polite" />
@@ -123,8 +133,16 @@
                      Maximum="{Binding ProgressMaximum}"
                      Value="{Binding ProgressValue}" />
       </StackPanel>
+      <controls:LocalizedFormatTextBlock
+          Margin="4,0,8,8"
+          VerticalAlignment="Center"
+          Classes="compact-status"
+          ResourceKey="Workbench.Status.SessionFileCount"
+          UseCountVariant="True"
+          Value="{Binding Files.Count}"
+          IsVisible="{Binding !IsBusy}" />
       <Button Classes="app"
-              Margin="0,0,0,6"
+              Margin="0,0,0,8"
               Content="{DynamicResource Loc.Common.Cancel}"
               Command="{Binding CancelCommand}"
               IsVisible="{Binding IsBusy}" />
@@ -132,132 +150,51 @@
 
     <controls:PersistedSplitView x:Name="WorkbenchSplit"
                                  Grid.Row="2"
-                                 InitialLeftWidth="980"
-                                 MinLeftWidth="420"
+                                 InitialLeftWidth="982"
+                                 MinLeftWidth="982"
                                  MaxLeftWidth="1800"
                                  MinRightWidth="320"
                                  PersistenceKey="workbench"
                                  Label="{DynamicResource Loc.Workbench.Split.Resize}">
       <controls:PersistedSplitView.Left>
-        <Grid RowDefinitions="Auto,*"
-              RowSpacing="8">
-          <ComboBox x:Name="WorkbenchSectionPicker"
-                    Classes="app"
-                    ItemsSource="{Binding SectionOptions}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding SelectedSectionOption, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Navigation.SectionAutomation}" />
           <Grid x:Name="WorkbenchBody"
-                Grid.Row="1"
                 ColumnDefinitions="212,10,*">
             <Border x:Name="WorkbenchSectionRail"
-                    Classes="card"
+                    Classes="card dense-card"
                     Padding="8"
                     ClipToBounds="True"
                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Navigation.Automation}">
-              <ScrollViewer VerticalScrollBarVisibility="Auto"
-                            HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Spacing="3">
-                  <TextBlock Classes="faint"
-                             Margin="8,5,8,2"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Workspace}" />
-                  <Button x:Name="WorkbenchSectionSession"
-                          Classes="app quiet"
-                          HorizontalContentAlignment="Left"
-                          Content="{DynamicResource Loc.Workbench.Section.Session}"
-                          Tag="Session"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.SessionAutomation}"
-                          Click="OnWorkbenchSectionClick" />
-                  <TextBlock Classes="faint"
-                             Margin="8,10,8,2"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Edit}" />
-                  <Button x:Name="WorkbenchSectionBulkOperation"
-                          Classes="app quiet"
-                          HorizontalContentAlignment="Left"
-                          Content="{DynamicResource Loc.Workbench.Section.BulkOperation}"
-                          Tag="BulkOperation"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.BulkOperationAutomation}"
-                          Click="OnWorkbenchSectionClick" />
-                  <Button x:Name="WorkbenchSectionAllFields"
-                          Classes="app quiet"
-                          HorizontalContentAlignment="Left"
-                          Content="{DynamicResource Loc.Workbench.Section.AllFields}"
-                          Tag="AllFields"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.AllFieldsAutomation}"
-                          Click="OnWorkbenchSectionClick" />
-                  <Button x:Name="WorkbenchSectionFiles"
-                          Classes="app quiet"
-                          HorizontalContentAlignment="Left"
-                          Content="{DynamicResource Loc.Workbench.Section.Files}"
-                          Tag="Files"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.FilesAutomation}"
-                          Click="OnWorkbenchSectionClick" />
-                  <TextBlock Classes="faint"
-                             Margin="8,10,8,2"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Enrich}" />
-                  <Button x:Name="WorkbenchSectionOnlineMetadata"
-                          Classes="app quiet"
-                          HorizontalContentAlignment="Left"
-                          Content="{DynamicResource Loc.Workbench.Section.OnlineMetadata}"
-                          Tag="OnlineMetadata"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.OnlineMetadataAutomation}"
-                          Click="OnWorkbenchSectionClick" />
-                  <TextBlock Classes="faint"
-                             Margin="8,10,8,2"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Output}" />
-                  <Button x:Name="WorkbenchSectionReports"
-                          Classes="app quiet"
-                          HorizontalContentAlignment="Left"
-                          Content="{DynamicResource Loc.Workbench.Section.Reports}"
-                          Tag="Reports"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.ReportsAutomation}"
-                          Click="OnWorkbenchSectionClick" />
-                  <Button x:Name="WorkbenchSectionPlaylists"
-                          Classes="app quiet"
-                          HorizontalContentAlignment="Left"
-                          Content="{DynamicResource Loc.Workbench.Section.Playlists}"
-                          Tag="Playlists"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.PlaylistsAutomation}"
-                          Click="OnWorkbenchSectionClick" />
-                  <TextBlock Classes="faint"
-                             Margin="8,10,8,2"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Automate}" />
-                  <Button x:Name="WorkbenchSectionTools"
-                          Classes="app quiet"
-                          HorizontalContentAlignment="Left"
-                          Content="{DynamicResource Loc.Workbench.Section.Tools}"
-                          Tag="Tools"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.ToolsAutomation}"
-                          Click="OnWorkbenchSectionClick" />
-                  <Button x:Name="WorkbenchSectionShortcuts"
-                          Classes="app quiet"
-                          HorizontalContentAlignment="Left"
-                          Content="{DynamicResource Loc.Workbench.Section.Shortcuts}"
-                          Tag="Shortcuts"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.ShortcutsAutomation}"
-                          Click="OnWorkbenchSectionClick" />
-                </StackPanel>
-              </ScrollViewer>
+              <ListBox x:Name="WorkbenchSectionNavigation"
+                       Classes="secondary-nav"
+                       ItemsSource="{Binding SectionOptions}"
+                       SelectedItem="{Binding SelectedSectionOption, Mode=TwoWay}"
+                       AutomationProperties.Name="{DynamicResource Loc.Workbench.Navigation.Automation}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid RowDefinitions="Auto,Auto"
+                          AutomationProperties.Name="{Binding Label}">
+                      <TextBlock Classes="faint caption"
+                                 Margin="0,8,0,4"
+                                 FontWeight="SemiBold"
+                                 Text="{Binding Group}"
+                                 IsVisible="{Binding HasGroupHeader}" />
+                      <TextBlock Grid.Row="1"
+                                 VerticalAlignment="Center"
+                                 Text="{Binding Label}" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
             </Border>
             <Border x:Name="WorkbenchSectionDivider"
                     Grid.Column="1"
                     Width="2"
                     Margin="4,8"
-                    CornerRadius="2"
+                    CornerRadius="99"
                     Background="{DynamicResource AppBorderBrush}" />
             <Border x:Name="WorkbenchSectionContentCard"
                     Grid.Column="2"
-                    Classes="card"
+                    Classes="section-frame"
                     Padding="12"
                     ClipToBounds="True">
               <Carousel x:Name="WorkbenchTabs">
@@ -288,11 +225,10 @@
                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Drawer.CloseAutomation}"
                     PointerPressed="OnDrawerScrimPressed" />
           </Grid>
-        </Grid>
       </controls:PersistedSplitView.Left>
       <controls:PersistedSplitView.Right>
         <Border x:Name="WorkbenchDrawerPane"
-                Classes="card"
+                Classes="drawer-surface"
                 Padding="0"
                 ClipToBounds="True"
                 AutomationProperties.Name="{DynamicResource Loc.Workbench.Drawer.Automation}">
@@ -320,5 +256,5 @@
             IsVisible="False"
             AutomationProperties.Name="{DynamicResource Loc.Workbench.Drawer.CloseAutomation}"
             PointerPressed="OnDrawerScrimPressed" />
-  </Grid>
+  </controls:AdaptivePage>
 </UserControl>

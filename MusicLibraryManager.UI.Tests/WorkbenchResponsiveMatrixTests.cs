@@ -332,6 +332,133 @@ public sealed class WorkbenchResponsiveMatrixTests
                 $"{section} has page-level horizontal overflow at {width}x{height}: extent {scroll.Extent.Width:0}, viewport {scroll.Viewport.Width:0}.");
         }
 
+        if (section == WorkbenchSection.Files &&
+            width == 900 &&
+            height == 600)
+        {
+            Control renderedSection =
+                Assert.Single(
+                    sections
+                        .GetVisualDescendants()
+                        .OfType<Control>(),
+                    control =>
+                        control.Name ==
+                        "WorkbenchFilesSection");
+            ScrollViewer[] pageScrollOwners =
+            [
+                .. renderedSection
+                    .GetVisualDescendants()
+                    .OfType<ScrollViewer>()
+                    .Where(control =>
+                        control
+                            .IsEffectivelyVisible)
+                    .Where(control =>
+                        !control
+                            .GetVisualAncestors()
+                            .Any(ancestor =>
+                                ancestor is
+                                    AppDataGrid or
+                                    TextBox or
+                                    ComboBox or
+                                    ListBox or
+                                    NumericUpDown)),
+            ];
+            ScrollViewer formScroll =
+                Assert.Single(
+                    pageScrollOwners);
+            Assert.Equal(
+                "ReviewedFileOperationFormScroll",
+                formScroll.Name);
+            Button preview =
+                Assert.Single(
+                    renderedSection
+                        .GetVisualDescendants()
+                        .OfType<Button>(),
+                    control =>
+                        control.Name ==
+                        "PreviewReviewedFileOperationButton");
+            Rect previewBounds =
+                BoundsRelativeTo(
+                    preview,
+                    sections);
+            Assert.True(
+                preview.IsEffectivelyVisible);
+            Assert.True(
+                preview.Bounds.Height >= 36);
+            Assert.True(
+                previewBounds.Top >= -1 &&
+                previewBounds.Bottom <=
+                sections.Bounds.Height + 1,
+                $"File operations Preview was clipped at 900x600: {previewBounds} within {sections.Bounds.Size}.");
+        }
+
+        if (section == WorkbenchSection.Reports &&
+            width == 900 &&
+            height == 600)
+        {
+            Control renderedSection =
+                Assert.Single(
+                    sections
+                        .GetVisualDescendants()
+                        .OfType<Control>(),
+                    control =>
+                        control.Name ==
+                        "WorkbenchReportsSection");
+            ScrollViewer editor =
+                Assert.Single(
+                    renderedSection
+                        .GetVisualDescendants()
+                        .OfType<ScrollViewer>(),
+                    control =>
+                        control.Name ==
+                        "EditorScroll");
+            Grid reviewed =
+                Assert.Single(
+                    renderedSection
+                        .GetVisualDescendants()
+                        .OfType<Grid>(),
+                    control =>
+                        control.Name ==
+                        "ReviewedPanel");
+            Button preview =
+                Assert.Single(
+                    renderedSection
+                        .GetVisualDescendants()
+                        .OfType<Button>(),
+                    control =>
+                        control.Name ==
+                        "PreviewReportButton");
+            Rect editorBounds =
+                BoundsRelativeTo(
+                    editor,
+                    sections);
+            Rect reviewedBounds =
+                BoundsRelativeTo(
+                    reviewed,
+                    sections);
+            Rect previewBounds =
+                BoundsRelativeTo(
+                    preview,
+                    sections);
+
+            Assert.True(
+                editorBounds.Height >= 140,
+                $"Reports editor became an unusably small strip at 900x600: {editorBounds}.");
+            Assert.True(
+                editorBounds.Bottom <=
+                reviewedBounds.Top + 1,
+                $"Reports editor overlapped the Reviewed area at 900x600: editor {editorBounds}, reviewed {reviewedBounds}.");
+            Assert.True(
+                preview.IsEffectivelyVisible);
+            Assert.True(
+                preview.Bounds.Height >= 36);
+            Assert.True(
+                previewBounds.Top >= -1 &&
+                previewBounds.Bottom <=
+                sections.Bounds.Height + 1,
+                $"Reports Preview was clipped at 900x600: {previewBounds} within {sections.Bounds.Size}.");
+        }
+
         string subtitle =
             view.FindControl<PageHeader>(
                     "WorkbenchHeader")!
@@ -343,6 +470,21 @@ public sealed class WorkbenchResponsiveMatrixTests
             Assert.False(
                 string.IsNullOrWhiteSpace(
                     subtitle));
+    }
+
+    private static Rect BoundsRelativeTo(
+        Control control,
+        Control ancestor)
+    {
+        Point? topLeft =
+            control.TranslatePoint(
+                default,
+                ancestor);
+        Assert.NotNull(
+            topLeft);
+        return new Rect(
+            topLeft.Value,
+            control.Bounds.Size);
     }
 
     private static void

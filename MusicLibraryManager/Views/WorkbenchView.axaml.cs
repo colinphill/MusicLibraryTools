@@ -6,8 +6,11 @@ using global::Avalonia.Input;
 using global::Avalonia.Interactivity;
 using global::Avalonia.Platform.Storage;
 using global::Avalonia.Threading;
+using global::Avalonia.VisualTree;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using MusicLibrary.Core.Services;
+using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
 
 namespace MusicLibraryManager.Views;
@@ -59,26 +62,45 @@ public partial class WorkbenchView : UserControl
             OnDrawerCloseRequested;
         WorkbenchInspectorDrawer.CloseRequested +=
             OnInspectorCloseRequested;
+        WorkbenchInspectorDrawer.ReviewChangesRequested +=
+            OnInspectorReviewChangesRequested;
         WorkbenchTranscodeDrawer.CloseRequested +=
             OnDrawerCloseRequested;
-        if (_viewModel.TranscodeEditor is not null)
-            _viewModel.TranscodeEditor.PreviewCompleted +=
-                OnTranscodePreviewCompleted;
-
         AttachedToVisualTree += (_, _) =>
         {
             _viewModel.PropertyChanged +=
                 OnViewModelPropertyChanged;
+            _viewModel.PendingChanges.CollectionChanged +=
+                OnPendingChangesChanged;
+            _viewModel.ReviewChangesRequested +=
+                OnReviewChangesRequested;
             _localization.CultureChanged +=
                 OnLocalizationCultureChanged;
+            if (_viewModel.TranscodeEditor is not null)
+                _viewModel.TranscodeEditor.PreviewCompleted +=
+                    OnTranscodePreviewCompleted;
+            if (_viewModel.FileOperations is not null)
+                _viewModel.FileOperations.PreviewAddedToReview +=
+                    OnFileOperationPreviewAddedToReview;
             ApplySectionSelection();
+            ApplyActionEmphasis();
         };
         DetachedFromVisualTree += (_, _) =>
         {
             _viewModel.PropertyChanged -=
                 OnViewModelPropertyChanged;
+            _viewModel.PendingChanges.CollectionChanged -=
+                OnPendingChangesChanged;
+            _viewModel.ReviewChangesRequested -=
+                OnReviewChangesRequested;
             _localization.CultureChanged -=
                 OnLocalizationCultureChanged;
+            if (_viewModel.TranscodeEditor is not null)
+                _viewModel.TranscodeEditor.PreviewCompleted -=
+                    OnTranscodePreviewCompleted;
+            if (_viewModel.FileOperations is not null)
+                _viewModel.FileOperations.PreviewAddedToReview -=
+                    OnFileOperationPreviewAddedToReview;
         };
         SizeChanged += (_, _) =>
             ApplyResponsiveLayout(
@@ -86,18 +108,7 @@ public partial class WorkbenchView : UserControl
 
         ApplySectionSelection();
         ApplyResponsiveLayout(compact: false);
-    }
-
-    private void OnWorkbenchSectionClick(
-        object? sender,
-        RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string section } &&
-            Enum.TryParse(
-                section,
-                ignoreCase: false,
-                out WorkbenchSection selected))
-            _viewModel.SelectedSection = selected;
+        ApplyActionEmphasis();
     }
 
     private void OnViewModelPropertyChanged(
@@ -108,6 +119,13 @@ public partial class WorkbenchView : UserControl
             nameof(WorkbenchViewModel.SelectedSection))
         {
             ApplySectionSelection();
+            return;
+        }
+
+        if (e.PropertyName ==
+            nameof(WorkbenchViewModel.HasFiles))
+        {
+            ApplyActionEmphasis();
             return;
         }
 
@@ -143,20 +161,6 @@ public partial class WorkbenchView : UserControl
         WorkbenchTabs.SelectedIndex =
             (int)section;
 
-        foreach ((WorkbenchSection value, Button button) in
-                 SectionButtons())
-        {
-            bool selected = value == section;
-            button.Classes.Set(
-                "primary",
-                selected);
-            AutomationProperties.SetItemStatus(
-                button,
-                selected
-                    ? L("Shell.Selection.Selected")
-                    : L("Shell.Selection.NotSelected"));
-        }
-
         _sectionSuppressesInspector =
             section is
                 WorkbenchSection.Reports or
@@ -165,6 +169,8 @@ public partial class WorkbenchView : UserControl
                 WorkbenchSection.Shortcuts;
         WorkbenchInspectorToggle.IsVisible =
             !_sectionSuppressesInspector;
+        WorkbenchSourceBar.IsVisible =
+            section != WorkbenchSection.Shortcuts;
 
         if (_sectionSuppressesInspector &&
             _activeDrawer ==
@@ -194,36 +200,19 @@ public partial class WorkbenchView : UserControl
         ApplyDrawerState();
     }
 
-    private IEnumerable<(WorkbenchSection Section, Button Button)>
-        SectionButtons()
+    private void OnPendingChangesChanged(
+        object? sender,
+        NotifyCollectionChangedEventArgs e) =>
+        ApplyActionEmphasis();
+
+    private void ApplyActionEmphasis()
     {
-        yield return (
-            WorkbenchSection.Session,
-            WorkbenchSectionSession);
-        yield return (
-            WorkbenchSection.BulkOperation,
-            WorkbenchSectionBulkOperation);
-        yield return (
-            WorkbenchSection.AllFields,
-            WorkbenchSectionAllFields);
-        yield return (
-            WorkbenchSection.Files,
-            WorkbenchSectionFiles);
-        yield return (
-            WorkbenchSection.OnlineMetadata,
-            WorkbenchSectionOnlineMetadata);
-        yield return (
-            WorkbenchSection.Reports,
-            WorkbenchSectionReports);
-        yield return (
-            WorkbenchSection.Playlists,
-            WorkbenchSectionPlaylists);
-        yield return (
-            WorkbenchSection.Tools,
-            WorkbenchSectionTools);
-        yield return (
-            WorkbenchSection.Shortcuts,
-            WorkbenchSectionShortcuts);
+        WorkbenchPendingChangesButton.Classes.Set(
+            "primary",
+            _viewModel.PendingChanges.Count > 0);
+        AddWorkbenchSourceButton.Classes.Set(
+            "primary",
+            !_viewModel.HasFiles);
     }
 
     private void OnInspectorToggle(
@@ -245,7 +234,9 @@ public partial class WorkbenchView : UserControl
         _viewModel.IsInspectorOpen = true;
         ShowDrawer(
             WorkbenchDrawerSurface.Inspector,
-            WorkbenchInspectorToggle);
+            sender is MenuItem
+                ? WorkbenchMoreButton
+                : WorkbenchInspectorToggle);
     }
 
     private void OnWorkbenchPendingChangesClick(
@@ -279,6 +270,13 @@ public partial class WorkbenchView : UserControl
     }
 
     private void OnTranscodePreviewCompleted(
+        object? sender,
+        EventArgs e) =>
+        ShowDrawer(
+            WorkbenchDrawerSurface.PendingChanges,
+            WorkbenchPendingChangesButton);
+
+    private void OnFileOperationPreviewAddedToReview(
         object? sender,
         EventArgs e) =>
         ShowDrawer(
@@ -347,6 +345,20 @@ public partial class WorkbenchView : UserControl
         CloseActiveDrawer(
             restoreFocus: true,
             persistInspectorClose: true);
+
+    private void OnInspectorReviewChangesRequested(
+        object? sender,
+        EventArgs e) =>
+        ShowDrawer(
+            WorkbenchDrawerSurface.PendingChanges,
+            WorkbenchPendingChangesButton);
+
+    private void OnReviewChangesRequested(
+        object? sender,
+        EventArgs e) =>
+        ShowDrawer(
+            WorkbenchDrawerSurface.PendingChanges,
+            WorkbenchPendingChangesButton);
 
     private void CloseActiveDrawer(
         bool restoreFocus,
@@ -435,12 +447,22 @@ public partial class WorkbenchView : UserControl
                 _responsiveCompact
                     ? drawerWidth
                     : double.NaN;
-            presenter.IsVisible =
+            // Keep the presenter attached while closed so drawer
+            // names, focus targets, and live localized resources
+            // remain available without constructing a second host.
+            presenter.IsVisible = true;
+            presenter.IsHitTestVisible =
                 drawerVisible;
+            presenter.Opacity =
+                drawerVisible
+                    ? 1
+                    : 0;
             WorkbenchDrawerPane.Width =
                 _responsiveCompact
                     ? drawerWidth
                     : double.NaN;
+            WorkbenchDrawerPane.IsVisible =
+                drawerVisible;
         }
 
         bool scrimVisible =
@@ -481,19 +503,45 @@ public partial class WorkbenchView : UserControl
         bool compact)
     {
         double width = Bounds.Width;
+        double height = Bounds.Height;
         bool wasResponsiveCompact =
             _responsiveCompact;
-        _responsiveCompact =
-            width > 0
-                ? width < 1200
-                : compact;
-        _compactSectionPicker =
-            width > 0
-                ? width < 880
-                : compact;
         _compactHeight =
-            Bounds.Height > 0 &&
-            Bounds.Height <= 700;
+            height > 0 &&
+            height <= 700;
+
+        double gutter = _compactHeight
+            ? AdaptivePage.CompactHeightGutter
+            : width > 0 &&
+              width <
+              AdaptivePage.NarrowContentThreshold
+                ? AdaptivePage.NarrowGutter
+                : AdaptivePage.WideGutter;
+        double contentWidth =
+            width > 0
+                ? Math.Max(0, width - gutter * 2)
+                : compact
+                    ? 700
+                    : 1200;
+        const double railAndDividerWidth = 222;
+        const double preferredDrawerWidth = 340;
+        const double splitDividerWidth = 10;
+        const double minimumSectionWidth = 720;
+        const double minimumDockedEditorWidth = 760;
+
+        _compactSectionPicker =
+            contentWidth - railAndDividerWidth <
+            minimumSectionWidth;
+        double visibleRailWidth =
+            _compactSectionPicker
+                ? 0
+                : railAndDividerWidth;
+        _responsiveCompact =
+            contentWidth -
+            visibleRailWidth -
+            splitDividerWidth -
+            preferredDrawerWidth <
+            minimumDockedEditorWidth;
 
         WorkbenchSectionPicker.IsVisible =
             _compactSectionPicker;
@@ -510,27 +558,15 @@ public partial class WorkbenchView : UserControl
                 ? new GridLength(0)
                 : new GridLength(10);
         WorkbenchRoot.Margin =
-            _compactHeight
-                ? new Thickness(
-                    10,
-                    8,
-                    10,
-                    10)
-                : _compactSectionPicker
-                    ? new Thickness(
-                        16,
-                        14,
-                        16,
-                        16)
-                    : new Thickness(
-                        26,
-                        22,
-                        26,
-                        26);
+            new Thickness(gutter);
         WorkbenchRoot.RowSpacing =
             _compactHeight
                 ? 8
-                : 14;
+                : 12;
+        WorkbenchSectionPicker.Width =
+            contentWidth < 700
+                ? 190
+                : 240;
         WorkbenchHeader.Subtitle =
             _compactHeight
                 ? string.Empty
@@ -609,20 +645,46 @@ public partial class WorkbenchView : UserControl
         object? sender,
         KeyEventArgs e)
     {
+        Control? focused =
+            TopLevel.GetTopLevel(this)?
+                .FocusManager?
+                .GetFocusedElement() as Control;
+
+        if (e.Key == Key.Tab &&
+            _activeDrawer != WorkbenchDrawerSurface.None &&
+            (WorkbenchInspectorScrim.IsVisible ||
+             WorkbenchHeaderScrim.IsVisible) &&
+            TryCycleDrawerFocus(
+                e.KeyModifiers.HasFlag(
+                    KeyModifiers.Shift)))
+        {
+            e.Handled = true;
+            return;
+        }
+
         bool requestsContextMenu =
             e.Key == Key.Apps ||
             e.Key == Key.F10 &&
             e.KeyModifiers.HasFlag(
                 KeyModifiers.Shift);
+        AppDataGrid sessionGrid =
+            WorkbenchSessionSection.SessionGrid;
+        bool focusIsInSessionGrid =
+            focused is not null &&
+            (ReferenceEquals(
+                 focused,
+                 sessionGrid) ||
+             focused.GetVisualAncestors()
+                 .Contains(sessionGrid));
         if (requestsContextMenu &&
             _viewModel.SelectedSection ==
                 WorkbenchSection.Session &&
-            WorkbenchSessionSection.SessionGrid
-                .ContextMenu is
+            focusIsInSessionGrid &&
+            sessionGrid.ContextMenu is
                 { } sessionMenu)
         {
             sessionMenu.Open(
-                WorkbenchSessionSection.SessionGrid);
+                sessionGrid);
             e.Handled = true;
             return;
         }
@@ -637,10 +699,6 @@ public partial class WorkbenchView : UserControl
             return;
         }
 
-        object? focused =
-            TopLevel.GetTopLevel(this)?
-                .FocusManager?
-                .GetFocusedElement();
         if (focused is
             TextBox or
             ComboBox or
@@ -677,6 +735,50 @@ public partial class WorkbenchView : UserControl
         e.Handled = true;
         await _viewModel.ExecuteShortcutAsync(
             binding);
+    }
+
+    private bool TryCycleDrawerFocus(
+        bool reverse)
+    {
+        Control[] focusable =
+        [
+            .. WorkbenchDrawerPane
+                .GetVisualDescendants()
+                .OfType<Control>()
+                .Where(control =>
+                    control.IsEffectivelyVisible &&
+                    control.IsEffectivelyEnabled &&
+                    control.Focusable),
+        ];
+        if (focusable.Length == 0)
+            return false;
+
+        object? focused =
+            TopLevel.GetTopLevel(this)?
+                .FocusManager?
+                .GetFocusedElement();
+        int index = Array.IndexOf(
+            focusable,
+            focused);
+        if (index < 0)
+        {
+            (reverse
+                ? focusable[^1]
+                : focusable[0]).Focus();
+            return true;
+        }
+
+        bool atBoundary =
+            reverse
+                ? index == 0
+                : index == focusable.Length - 1;
+        if (!atBoundary)
+            return false;
+
+        (reverse
+            ? focusable[^1]
+            : focusable[0]).Focus();
+        return true;
     }
 
     private string L(string key) =>

@@ -23,7 +23,8 @@ public sealed record MetadataPreviewRow(
     string File,
     string Field,
     string Before,
-    string After);
+    string After,
+    string? DiagnosticDetail = null);
 
 public sealed record PendingMetadataOperationRow(
     int Number,

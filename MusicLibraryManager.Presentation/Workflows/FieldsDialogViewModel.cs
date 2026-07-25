@@ -130,6 +130,10 @@ public partial class FieldsDialogViewModel :
 {
     private readonly IMetadataDocumentService _documents;
     private readonly IMetadataOperationService _operations;
+    private readonly Func<
+        MetadataOperationPlan,
+        CancellationToken,
+        Task<bool>> _reviewPending;
     private readonly IReadOnlyList<string> _paths;
     private readonly IActivityService? _activities;
     private readonly ILocalizationService? _localization;
@@ -179,8 +183,8 @@ public partial class FieldsDialogViewModel :
         Rows.Any(row => row.IsModified || row.MarkedForRemoval);
     public string SaveButtonText => L(
         IsConfirmingSave
-            ? "Fields.Action.ApplyChanges"
-            : "Fields.Action.Save");
+            ? "Inspector.View.ReviewChanges"
+            : "Common.Preview");
     public string CancelButtonText => IsBusy
         ? L("Fields.Action.CancelSave")
         : IsConfirmingCancel
@@ -224,11 +228,18 @@ public partial class FieldsDialogViewModel :
         IMetadataDocumentService documents,
         IMetadataOperationService operations,
         IReadOnlyList<string> paths,
+        Func<
+            MetadataOperationPlan,
+            CancellationToken,
+            Task<bool>> reviewPending,
         IActivityService? activities = null,
         ILocalizationService? localization = null)
     {
         _documents = documents;
         _operations = operations;
+        _reviewPending = reviewPending ??
+            throw new ArgumentNullException(
+                nameof(reviewPending));
         _paths = paths;
         _activities = activities;
         _localization = localization;
@@ -491,7 +502,7 @@ public partial class FieldsDialogViewModel :
                 }
                 IsConfirmingSave = true;
                 SetStatus(
-                    MessageTone.Warning,
+                    MessageTone.Info,
                     "Fields.Status.PreviewReady",
                     _plan.ChangedFileCount,
                     edits.Count);
@@ -550,45 +561,51 @@ public partial class FieldsDialogViewModel :
         CancelCommand.NotifyCanExecuteChanged();
         DiagnosticDetail = null;
         Guid? activity = _activities?.Start(
-            L("Fields.Activity.Save.Title"),
-            LFC(
-                "Fields.Activity.Save.Starting",
-                _plan.ChangedFileCount),
+            L("Fields.Activity.Preview.Title"),
+            L(
+                "Workbench.PendingChanges.Description"),
             ShellDestination.Library,
             _saveCancellation.Cancel);
-        IProgress<OperationProgress> progress =
-            CreateProgress(activity);
         try
         {
-            MetadataApplyResult result =
-                await _operations.ApplyAsync(
+            bool accepted =
+                await _reviewPending(
                     _plan,
-                    progress,
                     _saveCancellation.Token);
-            SetCountStatus(
-                MessageTone.Success,
-                "Fields.Status.SaveComplete",
-                result.ChangedFiles);
+            if (!accepted)
+            {
+                SetStatus(
+                    MessageTone.Info,
+                    "Workbench.PendingChanges.Description");
+                if (activity.HasValue)
+                    _activities!.Finish(
+                        activity.Value,
+                        StatusMessage!,
+                        AppActivityState.Completed);
+                return;
+            }
             if (activity.HasValue)
                 _activities!.Finish(
                     activity.Value,
-                    StatusMessage!,
+                    L(
+                        "Workbench.PendingChanges.Description"),
                     AppActivityState.Completed);
             _plan = null;
+            IsConfirmingSave = false;
             CloseRequested?.Invoke(true);
         }
         catch (OperationCanceledException) when (_saveCancellation.IsCancellationRequested)
         {
             SetStatus(
                 MessageTone.Warning,
-                "Fields.Status.SaveCancelled");
+                "Fields.Status.PreviewCancelled");
             if (activity.HasValue)
                 _activities!.Finish(activity.Value, StatusMessage!, AppActivityState.Cancelled);
         }
         catch (Exception error)
         {
             SetFailure(
-                "Fields.Status.SaveFailed",
+                "Fields.Status.PreviewFailed",
                 error);
             if (activity.HasValue)
                 _activities!.Finish(activity.Value, StatusMessage!, AppActivityState.Failed);

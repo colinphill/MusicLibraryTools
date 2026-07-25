@@ -3,112 +3,138 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
   <Grid x:Name="EditorLayout"
-        Margin="0,10,0,0"
-        RowDefinitions="Auto,Auto,*,Auto"
-        RowSpacing="10">
-    <Grid x:Name="SourceOptionsLayout"
-          ColumnDefinitions="170,*,Auto"
-          ColumnSpacing="8">
-      <ComboBox x:Name="ReviewedFileOperationKind"
-                Classes="app"
-                ItemsSource="{Binding OperationKindChoices}"
-                DisplayMemberBinding="{Binding Label}"
-                SelectedValueBinding="{Binding Value}"
-                SelectedValue="{Binding SelectedKind, Mode=TwoWay}"
-                AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.KindAutomation}" />
-      <Grid x:Name="DestinationLayout"
-            Grid.Column="1"
-            ColumnDefinitions="*,Auto"
-            ColumnSpacing="7"
-            IsVisible="{Binding NeedsDestination}">
-        <TextBox x:Name="ReviewedFileOperationDestination"
-                 Classes="app"
-                 Text="{Binding DestinationDirectory, Mode=TwoWay}"
-               PlaceholderText="{DynamicResource Loc.ReviewedFileOperation.DestinationPlaceholder}"
-               AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.DestinationAutomation}" />
-        <Button Grid.Column="1"
-                Classes="app"
-            Content="{DynamicResource Loc.Common.Browse}"
-                Command="{Binding BrowseDestinationCommand}" />
-      </Grid>
-      <TextBlock x:Name="TargetSummaryText"
-                 Grid.Column="2"
-                 Classes="muted"
-                 VerticalAlignment="Center"
-                 Text="{Binding TargetSummary}" />
-    </Grid>
+        Margin="0,12,0,0"
+        RowDefinitions="*,*,Auto"
+        RowSpacing="12">
+    <ScrollViewer x:Name="ReviewedFileOperationFormScroll"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Classes="content-stack">
+        <Grid x:Name="SourceOptionsLayout"
+              ColumnDefinitions="170,*,Auto"
+              ColumnSpacing="8">
+      <StackPanel x:Name="ReviewedFileOperationKindField"
+                  Classes="field">
+        <TextBlock Classes="field-label"
+                   Text="{DynamicResource Loc.ReviewedFileOperation.KindAutomation}" />
+        <ComboBox x:Name="ReviewedFileOperationKind"
+                  Classes="app"
+                  ItemsSource="{Binding OperationKindChoices}"
+                  DisplayMemberBinding="{Binding Label}"
+                  SelectedValueBinding="{Binding Value}"
+                  SelectedValue="{Binding SelectedKind, Mode=TwoWay}"
+                  AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.KindAutomation}" />
+      </StackPanel>
+      <StackPanel x:Name="DestinationLayout"
+                  Grid.Column="1"
+                  Classes="field"
+                  IsVisible="{Binding NeedsDestination}">
+        <TextBlock Classes="field-label"
+                   Text="{DynamicResource Loc.ReviewedFileOperation.DestinationAutomation}" />
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="8">
+          <TextBox x:Name="ReviewedFileOperationDestination"
+                   Classes="app"
+                   Text="{Binding DestinationDirectory, Mode=TwoWay}"
+                   PlaceholderText="{DynamicResource Loc.ReviewedFileOperation.DestinationPlaceholder}"
+                   AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.DestinationAutomation}" />
+          <Button Grid.Column="1"
+                  Classes="app"
+                  Content="{DynamicResource Loc.Common.Browse}"
+                  Command="{Binding BrowseDestinationCommand}" />
+        </Grid>
+      </StackPanel>
+      <Border x:Name="TargetSummaryText"
+              Grid.Column="2"
+              Classes="status-banner info"
+              Padding="12,8"
+              VerticalAlignment="Bottom">
+        <TextBlock Text="{Binding TargetSummary}"
+                   TextWrapping="Wrap"
+                   AutomationProperties.LiveSetting="Polite" />
+      </Border>
+        </Grid>
 
-    <Grid x:Name="TemplateOptionsLayout"
-          Grid.Row="1"
-          ColumnDefinitions="*,170,Auto,Auto,Auto"
-          ColumnSpacing="8">
-      <TextBox x:Name="ReviewedFileNameTemplate"
-               Classes="app"
-               Text="{Binding FileNameTemplate, Mode=TwoWay}"
-               PlaceholderText="{}{Name}{Extension}"
-               AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.TemplateAutomation}" />
-      <ComboBox x:Name="ReviewedCollisionPolicy"
-                Grid.Column="1"
-                Classes="app"
-                ItemsSource="{Binding CollisionPolicyChoices}"
-                DisplayMemberBinding="{Binding Label}"
-                SelectedValueBinding="{Binding Value}"
-                SelectedValue="{Binding SelectedCollisionPolicy, Mode=TwoWay}"
+        <Grid x:Name="TemplateOptionsLayout"
+              ColumnDefinitions="*,170,Auto"
+              ColumnSpacing="8">
+      <StackPanel x:Name="ReviewedFileNameTemplateField"
+                  Classes="field">
+        <TextBlock Classes="field-label"
+                   Text="{DynamicResource Loc.ReviewedFileOperation.TemplateAutomation}" />
+        <TextBox x:Name="ReviewedFileNameTemplate"
+                 Classes="app"
+                 Text="{Binding FileNameTemplate, Mode=TwoWay}"
+                 PlaceholderText="{}{Name}{Extension}"
+                 AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.TemplateAutomation}" />
+      </StackPanel>
+      <StackPanel x:Name="ReviewedCollisionPolicyField"
+                  Grid.Column="1"
+                  Classes="field">
+        <TextBlock Classes="field-label"
+                   Text="{DynamicResource Loc.ReviewedFileOperation.CollisionPolicyAutomation}" />
+        <ComboBox x:Name="ReviewedCollisionPolicy"
+                  Classes="app"
+                  ItemsSource="{Binding CollisionPolicyChoices}"
+                  DisplayMemberBinding="{Binding Label}"
+                  SelectedValueBinding="{Binding Value}"
+                  SelectedValue="{Binding SelectedCollisionPolicy, Mode=TwoWay}"
                   AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.CollisionPolicyAutomation}" />
+      </StackPanel>
       <CheckBox x:Name="PreserveRelativeFoldersCheckBox"
                 Grid.Column="2"
-                VerticalAlignment="Center"
-              Content="{DynamicResource Loc.ReviewedFileOperation.PreserveRelativeFolders}"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,8"
+                Content="{DynamicResource Loc.ReviewedFileOperation.PreserveRelativeFolders}"
                 IsEnabled="{Binding NeedsDestination}"
                 IsChecked="{Binding PreserveRelativeLayout, Mode=TwoWay}" />
-      <Button x:Name="PreviewReviewedFileOperationButton"
-              Grid.Column="3"
-              Classes="app"
-            Content="{DynamicResource Loc.ReviewedFileOperation.Preview}"
-              Command="{Binding PreviewCommand}" />
-      <Button x:Name="ApplyReviewedFileOperationButton"
-              Grid.Column="4"
-              Classes="app primary"
-            Content="{DynamicResource Loc.ReviewedFileOperation.Apply}"
-              Command="{Binding ApplyCommand}" />
-    </Grid>
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
 
     <controls:AppDataGrid x:Name="ReviewedFileOperationPreviewGrid"
-                          Grid.Row="2"
-                          MinHeight="180"
+                          Grid.Row="1"
+                          MinHeight="72"
                           ItemsSource="{Binding PreviewItems}"
         AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.PreviewAutomation}" />
 
-    <Grid Grid.Row="3"
-          ColumnDefinitions="*,180,Auto"
-          ColumnSpacing="8">
-      <StackPanel VerticalAlignment="Center"
-                  Spacing="2">
-        <TextBlock Classes="muted"
-                   TextWrapping="Wrap"
-                   AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.StatusAutomation}"
-                   AutomationProperties.LiveSetting="Polite"
-                   Text="{Binding Status}" />
-        <controls:LocalizedFormatTextBlock
-            Classes="muted"
-            FontSize="11"
-            TextWrapping="Wrap"
-            ResourceKey="Common.DiagnosticDetailFormat"
-            Value="{Binding StatusDiagnosticDetail}"
-            IsVisible="{Binding HasStatusDiagnosticDetail}" />
-      </StackPanel>
-      <ProgressBar Grid.Column="1"
-                   VerticalAlignment="Center"
-                   IsVisible="{Binding IsBusy}"
-                   IsIndeterminate="{Binding IsProgressIndeterminate}"
-                   Maximum="{Binding ProgressMaximum}"
-                   Value="{Binding ProgressValue}"
-                 AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.ProgressAutomation}" />
-      <Button Grid.Column="2"
-              Classes="app"
-              IsVisible="{Binding IsBusy}"
-              Content="{DynamicResource Loc.Common.Cancel}"
-              Command="{Binding CancelCommand}" />
-    </Grid>
+    <Border Grid.Row="2"
+            Classes="sticky-footer">
+      <Grid ColumnDefinitions="*,160,Auto,Auto"
+            ColumnSpacing="8">
+        <StackPanel VerticalAlignment="Center"
+                    Spacing="4">
+          <TextBlock Classes="compact-status"
+                    TextWrapping="Wrap"
+                    AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.StatusAutomation}"
+                    AutomationProperties.LiveSetting="Polite"
+                    Text="{Binding Status}" />
+          <controls:LocalizedFormatTextBlock
+              Classes="muted"
+              FontSize="{DynamicResource AppFontSizeCaption}"
+              TextWrapping="Wrap"
+              ResourceKey="Common.DiagnosticDetailFormat"
+              Value="{Binding StatusDiagnosticDetail}"
+              IsVisible="{Binding HasStatusDiagnosticDetail}" />
+        </StackPanel>
+        <ProgressBar Grid.Column="1"
+                     VerticalAlignment="Center"
+                     IsVisible="{Binding IsBusy}"
+                     IsIndeterminate="{Binding IsProgressIndeterminate}"
+                     Maximum="{Binding ProgressMaximum}"
+                     Value="{Binding ProgressValue}"
+                   AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.ProgressAutomation}" />
+        <Button Grid.Column="2"
+                Classes="app"
+                IsVisible="{Binding IsBusy}"
+                Content="{DynamicResource Loc.Common.Cancel}"
+                Command="{Binding CancelCommand}" />
+        <Button x:Name="PreviewReviewedFileOperationButton"
+                Grid.Column="3"
+                Classes="app primary"
+                Content="{DynamicResource Loc.ReviewedFileOperation.Preview}"
+                Command="{Binding PreviewCommand}" />
+      </Grid>
+    </Border>
   </Grid>
 </UserControl>

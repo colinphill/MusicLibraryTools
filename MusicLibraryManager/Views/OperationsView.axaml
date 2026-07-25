@@ -2,46 +2,92 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
-  <Grid Margin="26,22,26,26" RowDefinitions="Auto,*" RowSpacing="14">
+  <controls:AdaptivePage RowDefinitions="Auto,*" RowSpacing="16">
     <controls:PageHeader Title="{DynamicResource Loc.Operations.Title}"
         Subtitle="{DynamicResource Loc.Operations.Subtitle}">
-      <controls:PageHeader.Actions>
+      <controls:PageHeader.SecondaryActions>
         <Button Classes="app" Content="{DynamicResource Loc.Common.Cancel}" Command="{Binding CancelCommand}"
                 IsVisible="{Binding IsBusy}" />
-      </controls:PageHeader.Actions>
+      </controls:PageHeader.SecondaryActions>
     </controls:PageHeader>
     <Border Grid.Row="1" Classes="card" Padding="12" ClipToBounds="True">
       <TabControl>
         <TabItem Header="{DynamicResource Loc.Operations.Tab.Jobs}">
-          <Grid Margin="0,12,0,0" ColumnDefinitions="330,14,*">
-            <ListBox Grid.Column="0" Classes="primary-list" ItemsSource="{Binding JobChoices}" SelectedItem="{Binding SelectedJobChoice, Mode=TwoWay}"
+          <Grid x:Name="JobsLayout"
+                Margin="0,12,0,0"
+                ColumnDefinitions="300,14,*"
+                RowDefinitions="Auto,*"
+                RowSpacing="12">
+            <ListBox x:Name="JobListPane"
+                     Grid.Column="0"
+                     Grid.RowSpan="2"
+                     Classes="primary-list" ItemsSource="{Binding JobChoices}" SelectedItem="{Binding SelectedJobChoice, Mode=TwoWay}"
                      Background="Transparent" BorderThickness="0">
               <ListBox.ItemTemplate>
                 <DataTemplate>
-                  <Border Classes="card" Background="Transparent" Padding="11" Margin="0,0,0,6">
-                    <StackPanel Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding Description}" TextWrapping="Wrap" /></StackPanel>
+                  <Border Classes="card" Background="Transparent" Padding="12" Margin="0,0,0,8">
+                    <StackPanel Spacing="4"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding Description}" TextWrapping="Wrap" /></StackPanel>
                   </Border>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
-            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
-              <StackPanel Margin="6" Spacing="10">
+            <ComboBox x:Name="JobPicker"
+                      Grid.Column="2"
+                      Classes="app"
+                      ItemsSource="{Binding JobChoices}"
+                      SelectedItem="{Binding SelectedJobChoice, Mode=TwoWay}"
+                      DisplayMemberBinding="{Binding Name}"
+                      AutomationProperties.Name="{DynamicResource Loc.Operations.Job.PickerAutomation}"
+                      IsVisible="False" />
+            <ScrollViewer x:Name="JobDetailsScroll"
+                          Grid.Row="1"
+                          Grid.Column="2"
+                          VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="8" Spacing="12">
                 <TextBlock Classes="section-title" Text="{Binding SelectedJobChoice.Name}" />
                 <TextBlock Classes="muted" Text="{Binding SelectedJobChoice.Description}" TextWrapping="Wrap" />
-                <StackPanel Spacing="5" IsVisible="{Binding ShowPlaylistName}"><TextBlock Classes="muted" Text="{DynamicResource Loc.Operations.PlaylistName}" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="app" Text="{Binding JobPlaylistName, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Operations.PlaylistName}" /></StackPanel>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding ShowDestinationPath}"><TextBox Classes="app" Text="{Binding JobDestinationPath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Operations.Destination}" AutomationProperties.Name="{DynamicResource Loc.Operations.JobDestinationAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseJobDestinationCommand}" /></Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding ShowValidationPath}"><TextBox Classes="app" Text="{Binding JobValidationPath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Operations.ValidationPath}" AutomationProperties.Name="{DynamicResource Loc.Operations.ValidationPath}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseJobValidationCommand}" /></Grid>
-                <StackPanel Spacing="5" IsVisible="{Binding ShowRemovalLimit}"><TextBlock Classes="muted" Text="{DynamicResource Loc.Operations.MaximumRemovals}" FontSize="12" FontWeight="SemiBold" /><NumericUpDown Classes="app" Minimum="0" Value="{Binding JobMaxRemovals, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Operations.MaximumRemovals}" /></StackPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding ShowPlaylistName}"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Operations.PlaylistName}" /><TextBox Classes="app" Text="{Binding JobPlaylistName, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Operations.PlaylistName}" /></StackPanel>
+                <StackPanel Classes="field"
+                            IsVisible="{Binding ShowDestinationPath}">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Operations.Destination}" />
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="8">
+                    <TextBox Classes="app"
+                             Text="{Binding JobDestinationPath, Mode=TwoWay}"
+                             AutomationProperties.Name="{DynamicResource Loc.Operations.JobDestinationAutomation}" />
+                    <Button Grid.Column="1"
+                            Classes="app"
+                            Content="{DynamicResource Loc.Common.Browse}"
+                            Command="{Binding BrowseJobDestinationCommand}" />
+                  </Grid>
+                </StackPanel>
+                <StackPanel Classes="field"
+                            IsVisible="{Binding ShowValidationPath}">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Operations.ValidationPath}" />
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="8">
+                    <TextBox Classes="app"
+                             Text="{Binding JobValidationPath, Mode=TwoWay}"
+                             AutomationProperties.Name="{DynamicResource Loc.Operations.ValidationPath}" />
+                    <Button Grid.Column="1"
+                            Classes="app"
+                            Content="{DynamicResource Loc.Common.Browse}"
+                            Command="{Binding BrowseJobValidationCommand}" />
+                  </Grid>
+                </StackPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding ShowRemovalLimit}"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Operations.MaximumRemovals}" /><NumericUpDown Classes="app" Minimum="0" Value="{Binding JobMaxRemovals, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Operations.MaximumRemovals}" /></StackPanel>
                 <WrapPanel>
-                  <CheckBox Margin="0,0,14,6" Content="{DynamicResource Loc.Operations.Initialize}" IsChecked="{Binding JobInitialize, Mode=TwoWay}" IsVisible="{Binding ShowInitialize}" />
-                  <CheckBox Margin="0,0,14,6" Content="{DynamicResource Loc.Operations.Rebalance}" IsChecked="{Binding JobRebalance, Mode=TwoWay}" IsVisible="{Binding ShowRebalance}" />
-                  <CheckBox Margin="0,0,14,6" Content="{DynamicResource Loc.Operations.FixErrors}" IsChecked="{Binding JobFixErrors, Mode=TwoWay}" IsVisible="{Binding ShowFixErrors}" />
+                  <CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Operations.Initialize}" IsChecked="{Binding JobInitialize, Mode=TwoWay}" IsVisible="{Binding ShowInitialize}" />
+                  <CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Operations.Rebalance}" IsChecked="{Binding JobRebalance, Mode=TwoWay}" IsVisible="{Binding ShowRebalance}" />
+                  <CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Operations.FixErrors}" IsChecked="{Binding JobFixErrors, Mode=TwoWay}" IsVisible="{Binding ShowFixErrors}" />
                 </WrapPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8"><Button Classes="app" Content="{DynamicResource Loc.Common.Preview}" Command="{Binding PreviewJobCommand}" /><Button Classes="app primary" Content="{DynamicResource Loc.Operations.Action.ApplyJob}" Command="{Binding ApplyJobCommand}" IsVisible="{Binding ShowJobApply}" /></StackPanel>
                 <Border Classes="status-banner info" AutomationProperties.LiveSetting="Polite">
                   <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                    <TextBlock Classes="status-icon" Text="i" />
-                    <StackPanel Grid.Column="1" Spacing="3">
+                    <controls:AppVectorIcon Kind="Information" />
+                    <StackPanel Grid.Column="1" Spacing="4">
                       <TextBlock Text="{Binding JobStatus}" TextWrapping="Wrap" />
                       <controls:LocalizedFormatTextBlock
                           Classes="muted"
@@ -52,7 +98,19 @@
                     </StackPanel>
                   </Grid>
                 </Border>
-                <TextBox Classes="app" Text="{Binding JobOutput}" AcceptsReturn="True" IsReadOnly="True" MinHeight="220" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.Name="{DynamicResource Loc.Operations.JobOutputAutomation}" />
+                <StackPanel Spacing="4"
+                            IsVisible="{Binding HasJobOutput}">
+                  <TextBlock Classes="field-label"
+                             Text="{DynamicResource Loc.Operations.Job.OutputLabel}" />
+                  <TextBox Classes="app"
+                           Text="{Binding JobOutput}"
+                           AcceptsReturn="True"
+                           IsReadOnly="True"
+                           MaxHeight="240"
+                           TextWrapping="Wrap"
+                           ScrollViewer.VerticalScrollBarVisibility="Auto"
+                           AutomationProperties.Name="{DynamicResource Loc.Operations.JobOutputAutomation}" />
+                </StackPanel>
               </StackPanel>
             </ScrollViewer>
           </Grid>
@@ -63,15 +121,37 @@
         </TabItem>
 
         <TabItem Header="{DynamicResource Loc.Operations.Tab.Recovery}">
-          <Grid Margin="0,12,0,0" ColumnDefinitions="0.7*,14,1.3*">
-            <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="10">
-              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding SearchRoot, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Operations.Recovery.SearchRoot}" AutomationProperties.Name="{DynamicResource Loc.Operations.Recovery.SearchRootAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseRootCommand}" /><Button Grid.Column="2" Classes="app" Content="{DynamicResource Loc.Common.Scan}" Command="{Binding RefreshCommand}" /></Grid>
+          <Grid x:Name="RecoveryLayout"
+                Margin="0,12,0,0"
+                ColumnDefinitions="0.7*,14,1.3*">
+            <Grid x:Name="RecoveryRunPane"
+                  Grid.Column="0"
+                  RowDefinitions="Auto,*"
+                  RowSpacing="12">
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Operations.Recovery.SearchRoot}" />
+                <Grid ColumnDefinitions="*,Auto,Auto"
+                      ColumnSpacing="8">
+                  <TextBox Classes="app"
+                           Text="{Binding SearchRoot, Mode=TwoWay}"
+                           AutomationProperties.Name="{DynamicResource Loc.Operations.Recovery.SearchRootAutomation}" />
+                  <Button Grid.Column="1"
+                          Classes="app"
+                          Content="{DynamicResource Loc.Common.Browse}"
+                          Command="{Binding BrowseRootCommand}" />
+                  <Button Grid.Column="2"
+                          Classes="app"
+                          Content="{DynamicResource Loc.Common.Scan}"
+                          Command="{Binding RefreshCommand}" />
+                </Grid>
+              </StackPanel>
               <Grid Grid.Row="1">
                 <ListBox ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
                   <ListBox.ItemTemplate>
                     <DataTemplate>
-                      <Border Classes="card" Padding="11" Margin="0,0,0,6">
-                        <StackPanel Spacing="3">
+                      <Border Classes="card" Padding="12" Margin="0,0,0,8">
+                        <StackPanel Spacing="4">
                           <TextBlock Text="{Binding ToolName}" FontWeight="SemiBold" />
                           <TextBlock Classes="muted" Text="{Binding State}" />
                           <TextBlock Classes="muted"
@@ -84,7 +164,7 @@
                     </DataTemplate>
                   </ListBox.ItemTemplate>
                 </ListBox>
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8"
                             IsVisible="{Binding IsRunListEmpty}" MaxWidth="300">
                   <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Operations.Recovery.EmptyTitle}" />
                   <TextBlock Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
@@ -92,36 +172,72 @@
                 </StackPanel>
               </Grid>
             </Grid>
-            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="10">
-              <WrapPanel>
-                <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Operations.Action.OpenRun}"
+            <Grid x:Name="RecoveryDetailPane"
+                  Grid.Column="2"
+                  RowDefinitions="Auto,Auto,Auto,*,Auto,Auto"
+                  RowSpacing="12">
+              <Grid x:Name="RecoveryCompactSearch"
+                    RowDefinitions="Auto,Auto"
+                    RowSpacing="4"
+                    IsVisible="False">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Operations.Recovery.SearchRoot}" />
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="*,Auto,Auto"
+                      ColumnSpacing="8">
+                  <TextBox Classes="app"
+                           Text="{Binding SearchRoot, Mode=TwoWay}"
+                           AutomationProperties.Name="{DynamicResource Loc.Operations.Recovery.SearchRootAutomation}" />
+                  <Button Grid.Column="1"
+                          Classes="app"
+                          Content="{DynamicResource Loc.Common.Browse}"
+                          Command="{Binding BrowseRootCommand}" />
+                  <Button Grid.Column="2"
+                          Classes="app"
+                          Content="{DynamicResource Loc.Common.Scan}"
+                          Command="{Binding RefreshCommand}" />
+                </Grid>
+              </Grid>
+              <ComboBox x:Name="RecoveryRunPicker"
+                        Grid.Row="1"
+                        Classes="app"
+                        ItemsSource="{Binding Runs}"
+                        SelectedItem="{Binding SelectedRun, Mode=TwoWay}"
+                        DisplayMemberBinding="{Binding ToolName}"
+                        AutomationProperties.Name="{DynamicResource Loc.Operations.Tab.Recovery}"
+                        IsVisible="False" />
+              <WrapPanel Grid.Row="2">
+                <Button Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Operations.Action.OpenRun}"
                         Command="{Binding OpenRunCommand}" CommandParameter="{Binding SelectedRun}" />
-                <Button Classes="app quiet" Margin="0,0,8,6" Content="{DynamicResource Loc.Operations.Action.SelectRestorable}"
+                <Button Classes="app quiet" Margin="0,0,8,8" Content="{DynamicResource Loc.Operations.Action.SelectRestorable}"
                         Command="{Binding SelectAllRestorableCommand}" />
-                <Button Classes="app quiet" Margin="0,0,8,6" Content="{DynamicResource Loc.Operations.Action.ClearSelection}"
+                <Button Classes="app quiet" Margin="0,0,8,8" Content="{DynamicResource Loc.Operations.Action.ClearSelection}"
                         Command="{Binding ClearRestoreSelectionCommand}" />
               </WrapPanel>
-              <ListBox Grid.Row="1" ItemsSource="{Binding RootNodes}" Background="Transparent" BorderThickness="0">
-                <ListBox.ItemTemplate><DataTemplate><Border Classes="card" Padding="11" Margin="0,0,0,6"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" IsEnabled="{Binding CanRestore}" /><StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding OriginalPath}" TextTrimming="CharacterEllipsis" /><TextBlock Classes="muted" Text="{Binding RecoveryStorageText}" IsVisible="{Binding HasRecoveryStorage}" TextTrimming="CharacterEllipsis" /></StackPanel><TextBlock Grid.Column="2" Classes="summary-label" HorizontalAlignment="Right" Text="{Binding StateText}" /></Grid></Border></DataTemplate></ListBox.ItemTemplate>
+              <ListBox Grid.Row="3" ItemsSource="{Binding RootNodes}" Background="Transparent" BorderThickness="0">
+                <ListBox.ItemTemplate><DataTemplate><Border Classes="card" Padding="12" Margin="0,0,0,8"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" IsEnabled="{Binding CanRestore}" AutomationProperties.Name="{Binding Name}" /><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding OriginalPath}" TextTrimming="CharacterEllipsis" /><TextBlock Classes="muted" Text="{Binding RecoveryStorageText}" IsVisible="{Binding HasRecoveryStorage}" TextTrimming="CharacterEllipsis" /></StackPanel><TextBlock Grid.Column="2" Classes="summary-label" HorizontalAlignment="Right" Text="{Binding StateText}" /></Grid></Border></DataTemplate></ListBox.ItemTemplate>
               </ListBox>
-              <Border Grid.Row="2" Classes="status-banner warning" IsVisible="{Binding ShowRestorePreview}" AutomationProperties.LiveSetting="Polite"><TextBlock Text="{Binding RestorePreviewText}" TextWrapping="Wrap" /></Border>
-              <StackPanel Grid.Row="3" Spacing="8">
+              <Border Grid.Row="4" Classes="status-banner warning" IsVisible="{Binding ShowRestorePreview}" AutomationProperties.LiveSetting="Polite"><TextBlock Text="{Binding RestorePreviewText}" TextWrapping="Wrap" /></Border>
+              <Border Grid.Row="5"
+                      Padding="12,12,12,0"
+                      BorderBrush="{DynamicResource AppBorderBrush}"
+                      BorderThickness="0,1,0,0">
+              <StackPanel Spacing="8">
                 <WrapPanel>
-                  <Button Classes="app" Margin="0,0,8,6"
+                  <Button Classes="app" Margin="0,0,8,8"
                           Content="{DynamicResource Loc.Operations.Action.PreviewRestore}" Command="{Binding PreviewRestoreCommand}" />
-                  <Button Classes="app primary" Margin="0,0,8,6"
+                  <Button Classes="app primary" Margin="0,0,8,8"
                           Content="{DynamicResource Loc.Operations.Action.ApplyRestore}" Command="{Binding ApplyRestoreCommand}" />
                 </WrapPanel>
                 <WrapPanel>
-                  <StackPanel Margin="0,0,8,6" Spacing="4">
-                    <TextBlock Classes="muted" Text="{DynamicResource Loc.Operations.Recovery.Retention}"
-                               FontSize="12" FontWeight="SemiBold" />
+                  <StackPanel Margin="0,0,8,8" Spacing="4">
+                    <TextBlock Classes="field-label" Text="{DynamicResource Loc.Operations.Recovery.Retention}" />
                     <NumericUpDown Classes="app" Width="150" Minimum="1"
                                    Value="{Binding RetentionDays, Mode=TwoWay}"
                                    AutomationProperties.Name="{DynamicResource Loc.Operations.Recovery.RetentionAutomation}" />
                   </StackPanel>
                   <Button x:Name="RecoveryMaintenanceButton"
-                          Classes="app quiet overflow" Margin="0,0,8,6"
+                          Classes="app quiet overflow" Margin="0,0,8,8"
                           VerticalAlignment="Bottom"
                           Content="{DynamicResource Loc.Operations.Action.Maintenance}"
                           AutomationProperties.Name="{DynamicResource Loc.Operations.Action.MaintenanceAutomation}">
@@ -136,7 +252,7 @@
                     </Button.Flyout>
                   </Button>
                 </WrapPanel>
-                <StackPanel Spacing="3" AutomationProperties.LiveSetting="Polite">
+                <StackPanel Spacing="4" AutomationProperties.LiveSetting="Polite">
                   <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" />
                   <controls:LocalizedFormatTextBlock
                       Classes="faint"
@@ -146,10 +262,11 @@
                       TextWrapping="Wrap" />
                 </StackPanel>
               </StackPanel>
+              </Border>
             </Grid>
           </Grid>
         </TabItem>
       </TabControl>
     </Border>
-  </Grid>
+  </controls:AdaptivePage>
 </UserControl>

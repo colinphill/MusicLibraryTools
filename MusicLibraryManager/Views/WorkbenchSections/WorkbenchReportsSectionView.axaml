@@ -4,60 +4,96 @@
              xmlns:controls="using:MusicLibraryManager.Controls">
   <Grid x:Name="SectionLayout"
         Margin="0,12,0,0"
-        ColumnDefinitions="0.9*,14,1.1*">
+        ColumnDefinitions="0.9*,12,1.1*">
     <ScrollViewer x:Name="EditorScroll"
                   VerticalScrollBarVisibility="Auto">
-      <StackPanel Spacing="9">
+      <StackPanel Classes="content-stack">
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.Reports.Title}" />
+        <TextBlock Classes="field-label"
+                   Text="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}" />
         <TextBox Classes="app"
                  Text="{Binding ReportEditor.Name, Mode=TwoWay}"
-                 PlaceholderText="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}" />
+                 PlaceholderText="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}"
+                 AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}" />
         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-          <ComboBox Classes="app"
-                    ItemsSource="{Binding ReportEditor.FormatChoices}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedValueBinding="{Binding Value}"
-                    SelectedValue="{Binding ReportEditor.Format, Mode=TwoWay}" />
-          <ComboBox Grid.Column="1"
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Grid.Header.Formats}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding ReportEditor.FormatChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding ReportEditor.Format, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Grid.Header.Formats}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1"
+                      Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Playlists.Encoding}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding ReportEditor.EncodingChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding ReportEditor.Encoding, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Playlists.Encoding}" />
+          </StackPanel>
+        </Grid>
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Common.OutputPathPlaceholder}" />
+          <Grid ColumnDefinitions="*,Auto"
+                ColumnSpacing="8">
+            <TextBox Classes="app"
+                     Text="{Binding ReportEditor.OutputPath, Mode=TwoWay}"
+                     PlaceholderText="{DynamicResource Loc.Workbench.Common.OutputPathPlaceholder}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Common.OutputPathPlaceholder}" />
+            <Button Grid.Column="1"
                     Classes="app"
-                    ItemsSource="{Binding ReportEditor.EncodingChoices}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedValueBinding="{Binding Value}"
-                    SelectedValue="{Binding ReportEditor.Encoding, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <TextBox Classes="app"
-                   Text="{Binding ReportEditor.OutputPath, Mode=TwoWay}"
-                   PlaceholderText="{DynamicResource Loc.Workbench.Common.OutputPathPlaceholder}" />
-          <Button Grid.Column="1"
-                  Classes="app"
-                  Content="{DynamicResource Loc.Common.Browse}"
-                  Command="{Binding BrowseReportOutputCommand}" />
-        </Grid>
+                    Content="{DynamicResource Loc.Common.Browse}"
+                    Command="{Binding BrowseReportOutputCommand}" />
+          </Grid>
+        </StackPanel>
         <CheckBox Content="{DynamicResource Loc.Workbench.Reports.OnePerGroup}"
                   IsChecked="{Binding ReportEditor.OneFilePerGroup, Mode=TwoWay}" />
-        <TextBox Classes="app"
-                 Text="{Binding ReportEditor.GroupFileNameTemplate, Mode=TwoWay}"
-                 PlaceholderText="{}{Group}.{Format}" />
+        <StackPanel x:Name="GroupFileNameField"
+                    IsVisible="{Binding ReportEditor.OneFilePerGroup}"
+                    Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Reports.GroupFileNamePattern}" />
+          <TextBox Classes="app"
+                   Text="{Binding ReportEditor.GroupFileNameTemplate, Mode=TwoWay}"
+                   PlaceholderText="{}{Group}.{Format}"
+                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.GroupFileNamePattern}"
+                   AutomationProperties.HelpText="{DynamicResource Loc.Workbench.Reports.GroupFileNameHelp}" />
+          <TextBlock Classes="field-help"
+                     Text="{DynamicResource Loc.Workbench.Reports.GroupFileNameHelp}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
 
         <TextBlock Classes="section-title"
                    Margin="0,8,0,0"
+                   Text="{DynamicResource Loc.Workbench.Reports.Columns}" />
+        <TextBlock Classes="field-label"
                    Text="{DynamicResource Loc.Workbench.Reports.Columns}" />
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
           <ComboBox Classes="app"
                     ItemsSource="{Binding ReportEditor.AvailableFields}"
                     DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding ReportEditor.SelectedAvailableField, Mode=TwoWay}" />
+                    SelectedItem="{Binding ReportEditor.SelectedAvailableField, Mode=TwoWay}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.Columns}" />
           <Button Grid.Column="1"
                   Classes="app"
                   Content="{DynamicResource Loc.Workbench.Action.Add}"
                   Command="{Binding ReportEditor.AddSelectedFieldCommand}" />
         </Grid>
+        <TextBlock Classes="field-label"
+                   Text="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
           <TextBox Classes="app"
                    Text="{Binding ReportEditor.CustomFieldName, Mode=TwoWay}"
-                   PlaceholderText="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
+                   PlaceholderText="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}"
+                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
           <Button Grid.Column="1"
                   Classes="app"
                   Content="{DynamicResource Loc.Workbench.Reports.Action.AddCustom}"
@@ -69,62 +105,79 @@
                  SelectedItem="{Binding ReportEditor.SelectedField, Mode=TwoWay}">
           <ListBox.ItemTemplate>
             <DataTemplate>
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+              <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
                 <TextBlock Text="{Binding Label}" />
                 <TextBlock Grid.Column="1"
                            Classes="muted"
                            Text="{Binding Source}" />
+                <Button Grid.Column="2"
+                        Classes="app icon"
+                        AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.ColumnActions}">
+                  <controls:AppVectorIcon Kind="More" />
+                  <Button.Flyout>
+                    <MenuFlyout>
+                      <MenuItem Header="{DynamicResource Loc.Workbench.Action.MoveUp}"
+                                Tag="{Binding}"
+                                Click="OnMoveFieldUp" />
+                      <MenuItem Header="{DynamicResource Loc.Workbench.Action.MoveDown}"
+                                Tag="{Binding}"
+                                Click="OnMoveFieldDown" />
+                      <Separator />
+                      <MenuItem Header="{DynamicResource Loc.Common.Remove}"
+                                Tag="{Binding}"
+                                Click="OnRemoveField" />
+                    </MenuFlyout>
+                  </Button.Flyout>
+                </Button>
               </Grid>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
-        <WrapPanel>
-          <Button Classes="app"
-                  Content="{DynamicResource Loc.Common.Remove}"
-                  Command="{Binding ReportEditor.RemoveFieldCommand}" />
-          <Button Classes="app"
-                  Content="{DynamicResource Loc.Workbench.Action.MoveUp}"
-                  Command="{Binding ReportEditor.MoveFieldUpCommand}" />
-          <Button Classes="app"
-                  Content="{DynamicResource Loc.Workbench.Action.MoveDown}"
-                  Command="{Binding ReportEditor.MoveFieldDownCommand}" />
-        </WrapPanel>
-        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-          <StackPanel Spacing="4">
-            <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Reports.GroupBy}" />
-            <ComboBox Classes="app"
-                      ItemsSource="{Binding ReportEditor.Fields}"
-                      DisplayMemberBinding="{Binding Label}"
-                      SelectedItem="{Binding ReportEditor.SelectedGroupField, Mode=TwoWay}"
-                      PlaceholderText="{DynamicResource Loc.Workbench.Reports.NoGrouping}" />
-          </StackPanel>
-          <StackPanel Grid.Column="1" Spacing="4">
-            <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Reports.SortBy}" />
-            <ComboBox Classes="app"
-                      ItemsSource="{Binding ReportEditor.Fields}"
-                      DisplayMemberBinding="{Binding Label}"
-                      SelectedItem="{Binding ReportEditor.SelectedSortField, Mode=TwoWay}"
-                      PlaceholderText="{DynamicResource Loc.Workbench.Reports.SourceOrder}" />
-          </StackPanel>
-        </Grid>
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <StackPanel x:Name="GroupFieldPickerField"
+                    Classes="field"
+                    IsVisible="{Binding ReportEditor.OneFilePerGroup}">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Reports.GroupBy}" />
           <ComboBox Classes="app"
-                    ItemsSource="{Binding ReportEditor.SortTypeChoices}"
+                    ItemsSource="{Binding ReportEditor.Fields}"
                     DisplayMemberBinding="{Binding Label}"
-                    SelectedValueBinding="{Binding Value}"
-                    SelectedValue="{Binding ReportEditor.SortType, Mode=TwoWay}" />
-          <CheckBox Grid.Column="1"
-                    VerticalAlignment="Center"
-                    Content="{DynamicResource Loc.Workbench.Reports.Descending}"
-                    IsChecked="{Binding ReportEditor.SortDescending, Mode=TwoWay}" />
-        </Grid>
+                    SelectedItem="{Binding ReportEditor.SelectedGroupField, Mode=TwoWay}"
+                    PlaceholderText="{DynamicResource Loc.Workbench.Reports.NoGrouping}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.GroupBy}" />
+        </StackPanel>
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Reports.SortBy}" />
+          <ComboBox Classes="app"
+                    ItemsSource="{Binding ReportEditor.Fields}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedItem="{Binding ReportEditor.SelectedSortField, Mode=TwoWay}"
+                    PlaceholderText="{DynamicResource Loc.Workbench.Reports.SourceOrder}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.SortBy}" />
+        </StackPanel>
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Reports.SortBy}" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding ReportEditor.SortTypeChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding ReportEditor.SortType, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.SortBy}" />
+            <CheckBox Grid.Column="1"
+                      VerticalAlignment="Center"
+                      Content="{DynamicResource Loc.Workbench.Reports.Descending}"
+                      IsChecked="{Binding ReportEditor.SortDescending, Mode=TwoWay}" />
+          </Grid>
+        </StackPanel>
       </StackPanel>
     </ScrollViewer>
 
     <Grid x:Name="ReviewedPanel"
           Grid.Column="2"
           RowDefinitions="Auto,*,Auto,Auto"
-          RowSpacing="9">
+          RowSpacing="8">
       <TextBlock Classes="section-title"
                  Text="{DynamicResource Loc.Workbench.Reports.Reviewed}" />
       <controls:AppDataGrid x:Name="ReportOutputGrid"
@@ -132,27 +185,32 @@
                             MinHeight="150"
                             ItemsSource="{Binding ReportOutputs}" />
       <Border Grid.Row="2" Classes="status-banner info">
-        <StackPanel Spacing="2">
+        <StackPanel Spacing="4">
           <TextBlock Text="{Binding StatusText}"
                      TextWrapping="Wrap" />
           <controls:LocalizedFormatTextBlock
               Classes="muted"
-              FontSize="11"
+              FontSize="{DynamicResource AppFontSizeCaption}"
               TextWrapping="Wrap"
               ResourceKey="Common.DiagnosticDetailFormat"
               Value="{Binding StatusDiagnosticDetail}"
               IsVisible="{Binding HasStatusDiagnosticDetail}" />
         </StackPanel>
       </Border>
-      <WrapPanel Grid.Row="3"
-                 HorizontalAlignment="Right">
-        <Button Classes="app"
-                Content="{DynamicResource Loc.Workbench.Reports.Action.Preview}"
-                Command="{Binding PreviewReportCommand}" />
-        <Button Classes="app primary"
-                Content="{DynamicResource Loc.Workbench.Reports.Action.Write}"
-                Command="{Binding ApplyReportCommand}" />
-      </WrapPanel>
+      <Border Grid.Row="3"
+              Classes="sticky-footer">
+        <WrapPanel HorizontalAlignment="Right">
+          <Button x:Name="PreviewReportButton"
+                  Classes="app"
+                  Classes.primary="{Binding !ReportOutputs.Count}"
+                  Content="{DynamicResource Loc.Workbench.Reports.Action.Preview}"
+                  Command="{Binding PreviewReportCommand}" />
+          <Button Classes="app primary"
+                  IsVisible="{Binding ReportOutputs.Count}"
+                  Content="{DynamicResource Loc.Workbench.Reports.Action.Write}"
+                  Command="{Binding ApplyReportCommand}" />
+        </WrapPanel>
+      </Border>
     </Grid>
   </Grid>
 </UserControl>

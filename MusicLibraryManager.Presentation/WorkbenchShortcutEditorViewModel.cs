@@ -172,6 +172,10 @@ public partial class WorkbenchShortcutEditorViewModel :
     [NotifyCanExecuteChangedFor(nameof(RemoveShortcutCommand))]
     private WorkbenchShortcutRow? _selectedBinding;
     [ObservableProperty] private string _status = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(HasGestureValidationError))]
+    private string _gestureValidationMessage = "";
 
     public WorkbenchShortcutEditorViewModel(
         IWorkbenchShortcutStore? store = null,
@@ -204,6 +208,9 @@ public partial class WorkbenchShortcutEditorViewModel :
     public ObservableCollection<
         LocalizedChoice<WorkbenchShortcutTargetKind>>
         TargetKindChoices { get; } = [];
+    public bool HasGestureValidationError =>
+        !string.IsNullOrWhiteSpace(
+            GestureValidationMessage);
 
     [RelayCommand]
     private void NewShortcut()
@@ -231,45 +238,25 @@ public partial class WorkbenchShortcutEditorViewModel :
     {
         if (_store is null)
             return;
-        if (!WorkbenchShortcutGestureParser.TryParse(
-                GestureText,
-                out ParsedWorkbenchShortcut? gesture,
-                out string? error))
+        string? validationError =
+            GetGestureValidationError(
+                out ParsedWorkbenchShortcut? gesture);
+        if (validationError is not null)
         {
-            Status = error ?? L(
-                "Workbench.Shortcuts.Validation.Invalid");
-            _statusKey = error is null
-                ? "Workbench.Shortcuts.Validation.Invalid"
-                : null;
+            GestureValidationMessage =
+                validationError;
+            Status = validationError;
+            _statusKey = null;
             return;
         }
-        if (ReservedGestures.Contains(gesture!.Display))
-        {
-            SetStatus(
-                "Workbench.Shortcuts.Validation.Reserved",
-                gesture.Display);
-            return;
-        }
-        WorkbenchShortcutRow? conflict = Bindings.FirstOrDefault(row =>
-            !ReferenceEquals(row, SelectedBinding) &&
-            row.Gesture.Equals(
-                gesture.Display,
-                StringComparison.OrdinalIgnoreCase));
-        if (conflict is not null)
-        {
-            SetStatus(
-                "Workbench.Shortcuts.Validation.Conflict",
-                gesture.Display,
-                conflict.Target);
-            return;
-        }
+        ParsedWorkbenchShortcut parsedGesture = gesture!;
         WorkbenchShortcutBinding binding;
         if (TargetKind == WorkbenchShortcutTargetKind.Command &&
             SelectedCommand is not null)
         {
             binding = new(
                 SelectedBinding?.Binding.Id ?? Guid.NewGuid(),
-                gesture.Display,
+                parsedGesture.Display,
                 TargetKind,
                 SelectedCommand.Command,
                 TargetLabel: SelectedCommand.Label);
@@ -280,7 +267,7 @@ public partial class WorkbenchShortcutEditorViewModel :
         {
             binding = new(
                 SelectedBinding?.Binding.Id ?? Guid.NewGuid(),
-                gesture.Display,
+                parsedGesture.Display,
                 TargetKind,
                 RecipeId: SelectedRecipe.Id,
                 TargetLabel: SelectedRecipe.Name);
@@ -310,9 +297,20 @@ public partial class WorkbenchShortcutEditorViewModel :
     private bool CanSaveShortcut() =>
         _store is not null &&
         !string.IsNullOrWhiteSpace(GestureText) &&
+        GetGestureValidationError(
+            out _) is null &&
         (TargetKind == WorkbenchShortcutTargetKind.Command
             ? SelectedCommand is not null
             : SelectedRecipe is not null);
+
+    partial void OnGestureTextChanged(
+        string value)
+    {
+        GestureValidationMessage =
+            GetGestureValidationError(
+                out _) ??
+            "";
+    }
 
     [RelayCommand(CanExecute = nameof(CanRemoveShortcut))]
     private void RemoveShortcut()
@@ -395,6 +393,10 @@ public partial class WorkbenchShortcutEditorViewModel :
             ? null
             : Bindings.FirstOrDefault(row =>
                 row.Binding.Id == selectedId);
+        GestureValidationMessage =
+            GetGestureValidationError(
+                out _) ??
+            "";
     }
 
     private void ReloadRecipes()
@@ -431,6 +433,38 @@ public partial class WorkbenchShortcutEditorViewModel :
         _statusKey = key;
         _statusArguments = arguments;
         Status = LF(key, arguments);
+    }
+
+    private string? GetGestureValidationError(
+        out ParsedWorkbenchShortcut? gesture)
+    {
+        if (!WorkbenchShortcutGestureParser.TryParse(
+                GestureText,
+                out gesture,
+                out string? parserError))
+            return parserError ??
+                L(
+                    "Workbench.Shortcuts.Validation.Invalid");
+        ParsedWorkbenchShortcut parsedGesture = gesture!;
+        if (ReservedGestures.Contains(
+                parsedGesture.Display))
+            return LF(
+                "Workbench.Shortcuts.Validation.Reserved",
+                parsedGesture.Display);
+        WorkbenchShortcutRow? conflict =
+            Bindings.FirstOrDefault(row =>
+                !ReferenceEquals(
+                    row,
+                    SelectedBinding) &&
+                row.Gesture.Equals(
+                    parsedGesture.Display,
+                    StringComparison.OrdinalIgnoreCase));
+        return conflict is null
+            ? null
+            : LF(
+                "Workbench.Shortcuts.Validation.Conflict",
+                parsedGesture.Display,
+                conflict.Target);
     }
 
     private void RefreshLocalizedChoices()
@@ -472,5 +506,9 @@ public partial class WorkbenchShortcutEditorViewModel :
             Status = LF(
                 _statusKey,
                 _statusArguments);
+        GestureValidationMessage =
+            GetGestureValidationError(
+                out _) ??
+            "";
     }
 }

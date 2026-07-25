@@ -2,14 +2,47 @@
              x:Name="Root"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Focusable="True"
+             Focusable="False"
              AutomationProperties.Name="{Binding Title, ElementName=Root}">
-  <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="20" RowSpacing="10">
-    <StackPanel Spacing="5">
-      <TextBlock Classes="page-title" Text="{Binding Title, ElementName=Root}" />
-      <TextBlock Classes="muted" Text="{Binding Subtitle, ElementName=Root}" TextWrapping="Wrap" />
+  <Grid x:Name="HeaderGrid"
+        Classes="adaptive-command-bar"
+        ColumnDefinitions="*,Auto"
+        RowDefinitions="Auto,Auto"
+        ColumnSpacing="{DynamicResource AppSpaceLarge}"
+        RowSpacing="{DynamicResource AppSpaceSmall}">
+    <StackPanel x:Name="TitleStack" Spacing="{DynamicResource AppSpaceXSmall}">
+      <TextBlock x:Name="TitleBlock"
+                 Classes="page-title"
+                 Text="{Binding Title, ElementName=Root}"
+                 TextWrapping="Wrap"
+                 AutomationProperties.HeadingLevel="1" />
+      <TextBlock x:Name="SubtitleBlock"
+                 Classes="supporting"
+                 Text="{Binding Subtitle, ElementName=Root}"
+                 TextWrapping="Wrap" />
     </StackPanel>
     <ContentPresenter x:Name="ActionsPresenter" Grid.Column="1" Content="{Binding Actions, ElementName=Root}"
-                      HorizontalAlignment="Right" VerticalAlignment="Top" />
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Top" />
+    <Grid x:Name="CommandBar"
+          Classes="toolbar"
+          Grid.Column="1"
+          ColumnDefinitions="Auto,Auto,Auto"
+          ColumnSpacing="{DynamicResource AppSpaceSmall}"
+          HorizontalAlignment="Right"
+          VerticalAlignment="Top"
+          IsVisible="False">
+      <ContentPresenter x:Name="PrimaryActionPresenter"
+                        Content="{Binding PrimaryAction, ElementName=Root}"
+                        VerticalAlignment="Top" />
+      <ContentPresenter x:Name="SecondaryActionsPresenter"
+                        Grid.Column="1"
+                        Content="{Binding SecondaryActions, ElementName=Root}"
+                        VerticalAlignment="Top" />
+      <ContentPresenter x:Name="MoreActionPresenter"
+                        Grid.Column="2"
+                        Content="{Binding MoreAction, ElementName=Root}"
+                        VerticalAlignment="Top" />
+    </Grid>
   </Grid>
 </UserControl>

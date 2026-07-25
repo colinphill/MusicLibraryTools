@@ -7,13 +7,6 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibraryManager.Presentation;
 
-public interface IWorkbenchPendingChangeCoordinator
-{
-    Task<bool> AddPendingTranscodeAsync(
-        AudioTranscodePlan plan,
-        CancellationToken ct = default);
-}
-
 public sealed partial class TranscodeEditorViewModel :
     ObservableObject
 {
@@ -412,7 +405,7 @@ public sealed partial class TranscodeEditorViewModel :
     private async Task DeletePresetAsync()
     {
         if (SelectedPreset is null ||
-            !await _dialogs.ConfirmAsync(
+            !await _dialogs.ConfirmDestructiveAsync(
                 L("Transcode.Preset.DeleteTitle"),
                 L("Transcode.Preset.DeleteMessage"),
                 L("Common.Delete")))

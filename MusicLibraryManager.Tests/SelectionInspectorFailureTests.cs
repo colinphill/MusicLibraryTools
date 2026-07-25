@@ -9,29 +9,56 @@ namespace MusicLibraryManager.Tests;
 public sealed class SelectionInspectorFailureTests
 {
     [Fact]
-    public async Task Partial_tag_failure_keeps_proposed_edits_ready_to_retry()
+    public void Inspector_exposes_review_and_discard_instead_of_direct_write_commands()
+    {
+        Type inspector = typeof(SelectionInspectorViewModel);
+
+        Assert.Null(inspector.GetProperty("SaveTagsCommand"));
+        Assert.Null(inspector.GetProperty("SaveArtworkSetCommand"));
+        Assert.Null(inspector.GetProperty("ReplaceArtworkCommand"));
+        Assert.Null(inspector.GetProperty("EditAllFieldsCommand"));
+        Assert.NotNull(inspector.GetProperty("RevertCommand"));
+    }
+
+    [Fact]
+    public async Task Tag_draft_preview_never_calls_the_direct_writer()
     {
         MediaFileModel[] models =
         [
             Model(@"C:\one.flac", "One"),
             Model(@"C:\two.flac", "Two"),
         ];
-        var inspector = Create(models, new PartialTagWriter(), new PartialArtworkService());
+        var tags = new PartialTagWriter();
+        var operations = new FakeMetadataOperationService();
+        var inspector = Create(
+            models,
+            tags,
+            new PartialArtworkService(),
+            operations: operations);
         await inspector.LoadAsync(new SelectionContext(models.Select(model => model.Path).ToArray()));
         EditableTagField artist = inspector.Fields.Single(field => field.Field == TagFields.Artist);
         artist.Value = "Canonical artist";
 
-        await inspector.SaveTagsCommand.ExecuteAsync(null);
+        MetadataOperationPlan? plan =
+            await inspector.PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current.CancellationToken);
 
+        Assert.NotNull(plan);
+        Assert.Equal(0, tags.ApplyCallCount);
+        Assert.Null(operations.AppliedPlan);
         Assert.True(artist.IsModified);
         Assert.Equal("Canonical artist", artist.Value);
         Assert.True(inspector.HasUnsavedChanges);
-        Assert.True(inspector.SaveTagsCommand.CanExecute(null));
-        Assert.Contains("remain ready to retry", inspector.StatusMessage);
+
+        await inspector.DiscardPendingChangesAsync();
+
+        Assert.Equal(0, tags.ApplyCallCount);
+        Assert.False(inspector.HasUnsavedChanges);
     }
 
     [Fact]
-    public async Task Partial_artwork_failure_keeps_prepared_set_ready_to_retry()
+    public async Task Artwork_draft_preview_never_calls_the_direct_artwork_writer()
     {
         MediaFileModel[] models =
         [
@@ -39,26 +66,41 @@ public sealed class SelectionInspectorFailureTests
             Model(@"C:\two.flac", "Two"),
         ];
         var artwork = new PartialArtworkService();
-        var inspector = Create(models, new PartialTagWriter(), artwork,
-            new FakeFilePicker(@"C:\cover.jpg"));
+        var operations = new FakeMetadataOperationService();
+        var inspector = Create(
+            models,
+            new PartialTagWriter(),
+            artwork,
+            new FakeFilePicker(@"C:\cover.jpg"),
+            operations);
         await inspector.LoadAsync(new SelectionContext(models.Select(model => model.Path).ToArray()));
         await inspector.AddArtworkCommand.ExecuteAsync(null);
 
-        await inspector.SaveArtworkSetCommand.ExecuteAsync(null);
+        MetadataOperationPlan? plan =
+            await inspector.PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, artwork.SaveCallCount);
+        Assert.NotNull(plan);
+        Assert.Equal(0, artwork.SaveCallCount);
+        Assert.Null(operations.AppliedPlan);
         Assert.Single(inspector.ArtworkItems);
         Assert.True(inspector.HasPendingArtworkChanges);
         Assert.True(inspector.HasUnsavedChanges);
-        Assert.True(inspector.SaveArtworkSetCommand.CanExecute(null));
-        Assert.Contains("remain ready to retry", inspector.StatusMessage);
+
+        await inspector.DiscardPendingChangesAsync();
+
+        Assert.Equal(0, artwork.SaveCallCount);
+        Assert.Empty(inspector.ArtworkItems);
+        Assert.False(inspector.HasUnsavedChanges);
     }
 
     private static SelectionInspectorViewModel Create(
         IReadOnlyList<MediaFileModel> models,
         ITagWriteService tags,
         IArtworkService artwork,
-        IFilePickerService? files = null) =>
+        IFilePickerService? files = null,
+        IMetadataOperationService? operations = null) =>
         new(
             new FakeMediaService(models.ToArray()),
             new FakeLibrary([]),
@@ -68,7 +110,8 @@ public sealed class SelectionInspectorFailureTests
             new FakeDialogs(),
             new FakeFieldsEditor(),
             new FakeThumbnails(),
-            new AppActivityService());
+            new AppActivityService(),
+            operations);
 
     private static MediaFileModel Model(string path, string title) => new()
     {
@@ -85,17 +128,22 @@ public sealed class SelectionInspectorFailureTests
 
     private sealed class PartialTagWriter : ITagWriteService
     {
+        public int ApplyCallCount { get; private set; }
+
         public Task<BatchWriteResult> ApplyAsync(
             IReadOnlyList<string> paths,
             IReadOnlyList<TagEdit> edits,
             IProgress<int>? progress = null,
-            CancellationToken ct = default) =>
-            Task.FromResult(new BatchWriteResult(paths.Select((path, index) => new FileWriteResult
+            CancellationToken ct = default)
+        {
+            ApplyCallCount++;
+            return Task.FromResult(new BatchWriteResult(paths.Select((path, index) => new FileWriteResult
             {
                 Path = path,
                 Outcome = index == 0 ? WriteOutcome.Saved : WriteOutcome.Failed,
                 Error = index == 0 ? null : "Fixture write failure",
             }).ToArray()));
+        }
     }
 
     private sealed class PartialArtworkService : IArtworkService

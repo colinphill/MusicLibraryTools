@@ -170,7 +170,9 @@ public partial class ReportEditorViewModel : ObservableObject
             OutputPath?.Trim() ?? "",
             Fields.Select(row => row.Descriptor).ToImmutableArray(),
             [.. sorting],
-            SelectedGroupField?.Descriptor.Id,
+            OneFilePerGroup
+                ? SelectedGroupField?.Descriptor.Id
+                : null,
             OneFilePerGroup,
             GroupFileNameTemplate,
             Encoding);

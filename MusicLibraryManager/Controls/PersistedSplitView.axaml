@@ -10,7 +10,7 @@
     </Grid.ColumnDefinitions>
     <ContentPresenter x:Name="LeftPresenter" Grid.Column="0"
                       HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
-    <Border Grid.Column="1" Width="2" Margin="0,8" CornerRadius="2"
+    <Border Grid.Column="1" Width="2" Margin="0,8" CornerRadius="99"
             Background="{DynamicResource AppBorderBrush}" />
     <GridSplitter x:Name="Splitter" Grid.Column="1"
                   ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"

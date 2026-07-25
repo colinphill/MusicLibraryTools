@@ -55,16 +55,25 @@ public sealed class UiControlTests
                 .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.True(library.FindControl<Popup>(
                 "LibraryPendingChangesPopover")!.IsOpen);
-            Assert.NotNull(library.FindControl<AppDataGrid>(
+            Assert.NotNull(library.FindControl<ListBox>(
                 "LibraryPendingChangesGrid"));
             Assert.Equal(
-                "Revert",
+                "Discard all pending changes",
                 library.FindControl<Button>(
                     "LibraryRevertPendingChangesButton")!.Content);
             Assert.Equal(
                 "Apply",
                 library.FindControl<Button>(
                     "LibraryApplyPendingChangesButton")!.Content);
+            Assert.False(
+                library.FindControl<Button>(
+                    "LibraryRevertPendingChangesButton")!
+                    .IsEnabled);
+            Assert.False(
+                services.GetRequiredService<
+                    LibraryViewModel>()
+                    .RevertPendingChangesCommand
+                    .CanExecute(null));
 
             navigation.Navigate(ShellDestination.Workbench);
             Dispatcher.UIThread.RunJobs();
@@ -81,10 +90,10 @@ public sealed class UiControlTests
                 "WorkbenchInspectorDrawer")!.IsVisible);
             Assert.False(workbench.FindControl<Control>(
                 "WorkbenchColumnsDrawer")!.IsVisible);
-            Assert.NotNull(workbench.FindControl<AppDataGrid>(
+            Assert.NotNull(workbench.FindControl<ListBox>(
                 "WorkbenchPendingChangesGrid"));
             Assert.Equal(
-                "Revert",
+                "Discard all pending changes",
                 workbench.FindControl<Button>(
                     "WorkbenchRevertPendingChangesButton")!.Content);
             Assert.Equal(
@@ -94,10 +103,34 @@ public sealed class UiControlTests
 
             WorkbenchViewModel workbenchModel =
                 services.GetRequiredService<WorkbenchViewModel>();
+            Assert.False(
+                workbenchModel.HasPendingChanges);
+            Assert.False(
+                workbenchModel
+                    .RevertPendingChangesCommand
+                    .CanExecute(null));
+            Assert.False(
+                workbench.FindControl<Button>(
+                    "WorkbenchRevertPendingChangesButton")!
+                    .IsEnabled);
             workbenchModel.PreviewChanges.Add(
                 new("song.flac", "Title", "Before", "After"));
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(
+                workbenchModel.HasPendingChanges);
+            Assert.True(
+                workbench.FindControl<Button>(
+                    "WorkbenchRevertPendingChangesButton")!
+                    .IsEnabled);
             workbenchModel.RevertPendingChangesCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
             Assert.Empty(workbenchModel.PreviewChanges);
+            Assert.False(
+                workbenchModel.HasPendingChanges);
+            Assert.False(
+                workbench.FindControl<Button>(
+                    "WorkbenchRevertPendingChangesButton")!
+                    .IsEnabled);
             Assert.Contains("reverted", workbenchModel.StatusText);
         }
         finally
@@ -128,44 +161,27 @@ public sealed class UiControlTests
             LibraryView library = Assert.IsType<LibraryView>(
                 window.FindControl<ContentControl>("ContentHost")!.Content);
             Assert.Equal(
-                ["Reload cached library", "Open selected files in Workbench"],
+                ["Reload cached library"],
                 MenuHeaders(library.FindControl<Button>("LibraryMoreButton")!));
 
             Button openOperations =
-                library.FindControl<Button>("LibraryOperationsButton")!;
+                library.FindControl<Button>("LibraryWorkbenchButton")!;
             Assert.True(
                 openOperations.IsEffectivelyEnabled,
-                "Library operations command should be available in the empty-library view.");
-            Assert.NotNull(openOperations.Command);
-            openOperations.Command.Execute(
-                openOperations.CommandParameter);
+                "Workbench handoff should be available in the empty-library view.");
+            Assert.Equal(
+                "Choose a Workbench destination and result scope",
+                AutomationProperties.GetName(openOperations));
             Render();
-            Assert.True(
+            Assert.Null(
                 library.FindControl<Popup>(
-                    "LibraryOperationsPopover")!.IsOpen,
-                "Library operations popover did not open.");
-            Border operationsSurface = library.FindControl<Border>(
-                "LibraryOperationsSurface")!;
-            Assert.True(
-                operationsSurface.Width <= library.Bounds.Width - 20,
-                $"Operations width {operationsSurface.Width} exceeds Library width {library.Bounds.Width}.");
-            Assert.True(
-                operationsSurface.Height <= library.Bounds.Height,
-                $"Operations height {operationsSurface.Height} exceeds Library height {library.Bounds.Height}.");
-            Button closeOperations = library.FindControl<Button>(
-                "CloseLibraryOperationsButton")!;
-            Assert.Equal(36, closeOperations.Width);
-            Assert.Equal("Close Library operations",
-                AutomationProperties.GetName(closeOperations));
-            Assert.Equal(3,
-                Assert.IsType<Grid>(closeOperations.Parent)
-                    .ColumnDefinitions.Count);
+                    "LibraryOperationsPopover"));
 
             library.FindControl<Button>("LibraryPendingChangesButton")!
                 .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Render();
-            Assert.False(library.FindControl<Popup>(
-                "LibraryOperationsPopover")!.IsOpen);
+            Assert.Null(library.FindControl<Popup>(
+                "LibraryOperationsPopover"));
             Assert.True(
                 library.FindControl<Popup>(
                     "LibraryPendingChangesPopover")!.IsOpen,
@@ -266,7 +282,7 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
-    public void Reviewed_file_operation_editor_exposes_preview_and_apply_actions()
+    public void Reviewed_file_operation_editor_routes_preview_to_review_changes()
     {
         using ServiceProvider services =
             BuildIsolatedServices();
@@ -284,11 +300,9 @@ public sealed class UiControlTests
                 view.FindControl<Button>(
                     "PreviewReviewedFileOperationButton")!
                     .Content);
-            Assert.Equal(
-                "Apply reviewed plan",
+            Assert.Null(
                 view.FindControl<Button>(
-                    "ApplyReviewedFileOperationButton")!
-                    .Content);
+                    "ApplyReviewedFileOperationButton"));
             Assert.NotNull(
                 view.FindControl<AppDataGrid>(
                     "ReviewedFileOperationPreviewGrid"));
@@ -353,7 +367,8 @@ public sealed class UiControlTests
             PageHeader heading = view.GetVisualDescendants()
                 .OfType<PageHeader>()
                 .Single();
-            Assert.Same(
+            Assert.False(heading.Focusable);
+            Assert.NotSame(
                 heading,
                 window.FocusManager?.GetFocusedElement());
             Assert.Equal(
@@ -416,6 +431,11 @@ public sealed class UiControlTests
             tabs.SelectedIndex = 5;
             Dispatcher.UIThread.RunJobs();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+            settings.FindControl<Expander>(
+                    "RootPolicyEditorExpander")!
+                .IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
 
             ComboBox profilePicker = settings.FindControl<ComboBox>("ProfilePresetPicker")!;
             Assert.Equal(LibraryProfilePresets.CatalogOnlyId,
@@ -432,8 +452,26 @@ public sealed class UiControlTests
                 button => Equals(button.Content, "New"));
             Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
                 button => Equals(button.Content, "Duplicate"));
-            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
-                button => Equals(button.Content, "Delete"));
+            Button libraryProfileMore =
+                settings.FindControl<Button>(
+                    "LibraryProfileMoreButton")!;
+            MenuFlyout libraryProfileMenu =
+                Assert.IsType<MenuFlyout>(
+                    libraryProfileMore.Flyout);
+            libraryProfileMenu.ShowAt(
+                libraryProfileMore);
+            Dispatcher.UIThread.RunJobs();
+            MenuItem deleteLibraryProfile =
+                Assert.Single(
+                    libraryProfileMenu.Items
+                        .OfType<MenuItem>());
+            Assert.Same(
+                viewModel.DeleteLibraryProfileCommand,
+                deleteLibraryProfile.Command);
+            Assert.Contains(
+                "danger",
+                deleteLibraryProfile.Classes);
+            libraryProfileMenu.Hide();
             tabs.SelectedIndex = 1;
             Dispatcher.UIThread.RunJobs();
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
@@ -481,6 +519,12 @@ public sealed class UiControlTests
 
             settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 5;
             Dispatcher.UIThread.RunJobs();
+            settings.FindControl<Expander>(
+                    "RootPolicyAdvancedExpander")!
+                .IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform
+                .ForceRenderTimerTick(2);
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.Text == "Metadata fidelity");
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
@@ -498,6 +542,12 @@ public sealed class UiControlTests
                 text => text.Text == "Disc-album limit (legacy DiscNumLengthLimit)");
             settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 6;
             Dispatcher.UIThread.RunJobs();
+            settings.FindControl<Expander>(
+                    "IngestProfileEditorExpander")!
+                .IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform
+                .ForceRenderTimerTick(2);
             Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
                 button => Equals(button.Content, "Add recipe"));
             Assert.DoesNotContain(settings.GetVisualDescendants().OfType<TextBlock>(), text =>
@@ -614,8 +664,10 @@ public sealed class UiControlTests
             ActivateTab(tabs, 2);
             AssertVisibleChoicesSelected(settings);
             ActivateTab(tabs, 5);
+            ExpandRootPolicy(settings);
             AssertVisibleChoicesSelected(settings);
             ActivateTab(tabs, 6);
+            ExpandIngestPolicy(settings);
             AssertVisibleChoicesSelected(settings);
             ActivateTab(tabs, 7);
             ActivateTab(tabs, 2);
@@ -633,6 +685,7 @@ public sealed class UiControlTests
             Assert.Equal("lf", export.PlaylistLineEnding);
 
             ActivateTab(tabs, 5);
+            ExpandRootPolicy(settings);
             AssertVisibleChoicesSelected(settings);
             Assert.Same(advanced, viewModel.AdvancedProfile);
             Assert.Equal(LibraryUnicodeNormalization.FormKD, advanced.UnicodeNormalization);
@@ -641,6 +694,7 @@ public sealed class UiControlTests
             Assert.Equal(LibrarySourceDisposition.Quarantine,
                 advancedIngest.SourceDisposition);
             ActivateTab(tabs, 6);
+            ExpandIngestPolicy(settings);
             AssertVisibleChoicesSelected(settings);
             Assert.Equal(LibraryIngestAction.Transcode, recipe.Action);
             Assert.Equal(["Stereo", "Multi"],
@@ -709,6 +763,58 @@ public sealed class UiControlTests
                 $"ComboBox selection was empty (data context: {choice.DataContext?.GetType().Name ?? "null"}; " +
                 $"selected value: {choice.SelectedValue ?? "null"}; " +
                 $"items: {choice.ItemCount})."));
+        }
+
+        static void ExpandRootPolicy(
+            SettingsView settings)
+        {
+            settings.FindControl<Expander>(
+                    "RootPolicyEditorExpander")!
+                .IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+            settings.FindControl<Expander>(
+                    "RootPolicyAdvancedExpander")!
+                .IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform
+                .ForceRenderTimerTick(2);
+            Dispatcher.UIThread.RunJobs();
+        }
+
+        static void ExpandIngestPolicy(
+            SettingsView settings)
+        {
+            settings.FindControl<Expander>(
+                    "IngestProfileEditorExpander")!
+                .IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform
+                .ForceRenderTimerTick(2);
+            foreach (Expander recipeEditor in
+                     settings.GetVisualDescendants()
+                         .OfType<Expander>()
+                         .Where(expander =>
+                             expander.Name ==
+                             "IngestRecipeEditorExpander"))
+            {
+                recipeEditor.IsExpanded = true;
+            }
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform
+                .ForceRenderTimerTick(2);
+            foreach (Expander advanced in
+                     settings.GetVisualDescendants()
+                         .OfType<Expander>()
+                         .Where(expander =>
+                             expander.Name ==
+                             "IngestRecipeAdvancedExpander"))
+            {
+                advanced.IsExpanded = true;
+            }
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform
+                .ForceRenderTimerTick(2);
+            Dispatcher.UIThread.RunJobs();
         }
     }
 
@@ -828,9 +934,14 @@ public sealed class UiControlTests
                     $"Responsive settings form exceeded its viewport: {right.Value.X:0}/{viewport.Bounds.Width:0}.");
             });
 
-            StackPanel saveActions =
-                settings.FindControl<StackPanel>("SettingsSaveActions")!;
-            double actionTop = saveActions.TranslatePoint(
+            PageHeader settingsHeader =
+                settings.GetVisualDescendants()
+                    .OfType<PageHeader>()
+                    .Single();
+            Grid commandBar =
+                settingsHeader.FindControl<Grid>(
+                    "CommandBar")!;
+            double actionTop = commandBar.TranslatePoint(
                 new Point(0, 0), settings)!.Value.Y;
             ScrollViewer activeScroll = responsiveForms[0]
                 .GetVisualAncestors()
@@ -840,7 +951,7 @@ public sealed class UiControlTests
             Render();
             Assert.Equal(
                 actionTop,
-                saveActions.TranslatePoint(new Point(0, 0), settings)!.Value.Y,
+                commandBar.TranslatePoint(new Point(0, 0), settings)!.Value.Y,
                 precision: 1);
 
             categoryPicker.SelectedIndex = 9;
@@ -890,14 +1001,16 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
-    public void Settings_forms_stack_to_one_column_below_700_content_pixels()
+    public void Settings_forms_stack_to_one_column_below_600_content_pixels()
     {
         using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
         var settings = new SettingsView();
         var window = new Window
         {
-            Width = 650,
+            // The picker presentation reserves 24 px around the page.
+            // A 623 px view therefore gives the form 599 px.
+            Width = 623,
             Height = 720,
             FontSize = 18,
             Content = settings,
@@ -912,7 +1025,7 @@ public sealed class UiControlTests
             categoryPicker.SelectedIndex = 5;
             Render();
 
-            Assert.True(settings.Bounds.Width < 700);
+            Assert.True(settings.Bounds.Width < 624);
             Assert.True(categoryPicker.IsEffectivelyVisible);
             Grid[] responsiveForms = settings.GetVisualDescendants()
                 .OfType<Grid>()
@@ -942,6 +1055,403 @@ public sealed class UiControlTests
             Dispatcher.UIThread.RunJobs();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
             Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Settings_header_keeps_save_visible_and_places_secondary_actions_in_more()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var settings = new SettingsView();
+        var window = new Window
+        {
+            Width = 900,
+            Height = 600,
+            Content = settings,
+        };
+        try
+        {
+            window.Show();
+            SettingsViewModel viewModel =
+                Assert.IsType<SettingsViewModel>(
+                    settings.DataContext);
+            viewModel.DatabaseFile += ".changed";
+            RenderUi();
+
+            PageHeader header = Assert.Single(
+                settings.GetVisualDescendants()
+                    .OfType<PageHeader>());
+            Button[] visibleHeaderButtons = header
+                .GetVisualDescendants()
+                .OfType<Button>()
+                .Where(button =>
+                    button.IsEffectivelyVisible)
+                .ToArray();
+            Assert.Contains(
+                visibleHeaderButtons,
+                button => Equals(
+                    button.Content,
+                    "Save"));
+            Assert.Contains(
+                visibleHeaderButtons,
+                button => Equals(
+                    button.Content,
+                    "More"));
+            Assert.DoesNotContain(
+                visibleHeaderButtons,
+                button => Equals(
+                    button.Content,
+                    "Save as") ||
+                          Equals(
+                              button.Content,
+                              "Discard"));
+
+            Button more = settings.FindControl<Button>(
+                "SettingsMoreButton")!;
+            MenuFlyout menu =
+                Assert.IsType<MenuFlyout>(
+                    more.Flyout);
+            menu.ShowAt(more);
+            RenderUi();
+
+            MenuItem saveAs = Assert.Single(
+                menu.Items.OfType<MenuItem>(),
+                item => Equals(
+                    item.Header,
+                    "Save as"));
+            MenuItem discard = Assert.Single(
+                menu.Items.OfType<MenuItem>(),
+                item => Equals(
+                    item.Header,
+                    "Discard"));
+            Assert.NotNull(saveAs.Command);
+            Assert.True(discard.IsVisible);
+            Assert.Contains(
+                "danger",
+                discard.Classes);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Settings_export_profiles_use_summary_cards_and_grouped_advanced_editors()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var settings = new SettingsView();
+        var window = new Window
+        {
+            Width = 1200,
+            Height = 760,
+            Content = settings,
+        };
+        try
+        {
+            window.Show();
+            SettingsViewModel viewModel =
+                Assert.IsType<SettingsViewModel>(
+                    settings.DataContext);
+            await viewModel.NewConfigurationCommand
+                .ExecuteAsync(null);
+            viewModel.AddExportProfileCommand.Execute(
+                null);
+            ExportProfileEditorRow original =
+                Assert.Single(
+                    viewModel.ExportProfiles);
+            original.Name = "Living room";
+            TabControl tabs = settings.FindControl<TabControl>(
+                "SettingsTabs")!;
+            tabs.SelectedIndex = 2;
+            RenderUi();
+
+            Border card = Assert.Single(
+                settings.GetVisualDescendants()
+                    .OfType<Border>(),
+                border =>
+                    border.Classes.Contains(
+                        "export-profile-card"));
+            Button edit = Assert.Single(
+                card.GetVisualDescendants()
+                    .OfType<Button>(),
+                button =>
+                    button is not ToggleButton &&
+                    Equals(
+                    button.Content,
+                    "Edit"));
+            Button duplicate = Assert.Single(
+                card.GetVisualDescendants()
+                    .OfType<Button>(),
+                button =>
+                    button is not ToggleButton &&
+                    Equals(
+                    button.Content,
+                    "Duplicate"));
+            Assert.Contains(
+                card.GetVisualDescendants()
+                    .OfType<Button>(),
+                button => Equals(
+                    button.Content,
+                    "More"));
+            Expander editor = Assert.Single(
+                card.GetVisualDescendants()
+                    .OfType<Expander>(),
+                expander =>
+                    expander.Name ==
+                    "ExportProfileEditorExpander");
+            Assert.False(editor.IsExpanded);
+
+            edit.RaiseEvent(
+                new RoutedEventArgs(
+                    Button.ClickEvent));
+            RenderUi();
+            Assert.True(editor.IsExpanded);
+            Expander advanced = Assert.Single(
+                card.GetVisualDescendants()
+                    .OfType<Expander>(),
+                expander =>
+                    expander.Name ==
+                    "ExportProfileAdvancedExpander");
+            advanced.IsExpanded = true;
+            RenderUi();
+
+            string[] expectedGroups =
+            [
+                "Selection",
+                "Transcode audio",
+                "Naming and artwork",
+                "Generated playlists and transport",
+                "Reconciliation",
+            ];
+            string[] visibleTitles = card
+                .GetVisualDescendants()
+                .OfType<TextBlock>()
+                .Where(text =>
+                    text.IsEffectivelyVisible)
+                .Select(text => text.Text ?? "")
+                .ToArray();
+            Assert.All(
+                expectedGroups,
+                expected =>
+                    Assert.Contains(
+                        expected,
+                        visibleTitles));
+
+            Assert.NotNull(
+                duplicate.Command);
+            Assert.Same(
+                original,
+                duplicate.CommandParameter);
+            duplicate.Command!.Execute(
+                duplicate.CommandParameter);
+            RenderUi();
+            Assert.Equal(
+                2,
+                viewModel.ExportProfiles.Count);
+            ExportProfileEditorRow copy =
+                viewModel.ExportProfiles[1];
+            Assert.NotEqual(
+                original.Id,
+                copy.Id);
+            Assert.Equal(
+                "Living room copy",
+                copy.Name);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Settings_profile_summary_edit_actions_open_the_selected_profile_editor()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var settings = new SettingsView();
+        var window = new Window
+        {
+            Width = 1000,
+            Height = 700,
+            Content = settings,
+        };
+        try
+        {
+            window.Show();
+            TabControl tabs = settings.FindControl<TabControl>(
+                "SettingsTabs")!;
+
+            tabs.SelectedIndex = 5;
+            RenderUi();
+            Expander libraryEditor =
+                settings.FindControl<Expander>(
+                    "RootPolicyEditorExpander")!;
+            Assert.False(
+                libraryEditor.IsExpanded);
+            settings.FindControl<Button>(
+                    "EditLibraryProfileButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            RenderUi();
+            Assert.True(
+                libraryEditor.IsExpanded);
+
+            tabs.SelectedIndex = 6;
+            RenderUi();
+            Expander ingestEditor =
+                settings.FindControl<Expander>(
+                    "IngestProfileEditorExpander")!;
+            Assert.False(
+                ingestEditor.IsExpanded);
+            settings.FindControl<Button>(
+                    "EditIngestProfileButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            RenderUi();
+            Assert.True(
+                ingestEditor.IsExpanded);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Settings_effective_policy_renders_bullets_and_collapsed_provenance()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var settings = new SettingsView();
+        var window = new Window
+        {
+            Width = 1000,
+            Height = 700,
+            Content = settings,
+        };
+        try
+        {
+            window.Show();
+            SettingsViewModel viewModel =
+                Assert.IsType<SettingsViewModel>(
+                    settings.DataContext);
+            await viewModel.NewConfigurationCommand
+                .ExecuteAsync(null);
+            settings.FindControl<TabControl>(
+                    "SettingsTabs")!
+                .SelectedIndex = 7;
+            RenderUi();
+
+            ItemsControl summary =
+                settings.FindControl<ItemsControl>(
+                    "EffectivePolicySummaryList")!;
+            Assert.Equal(
+                viewModel.EffectivePolicySummaryItems
+                    .Count,
+                summary.ItemCount);
+            Assert.True(
+                summary.ItemCount >= 5);
+            Assert.All(
+                viewModel.EffectivePolicySummaryItems,
+                item =>
+                {
+                    Assert.False(
+                        string.IsNullOrWhiteSpace(
+                            item));
+                    Assert.DoesNotContain(
+                        Environment.NewLine,
+                        item);
+                });
+            Expander provenance = Assert.Single(
+                settings.GetVisualDescendants()
+                    .OfType<Expander>(),
+                expander => Equals(
+                    expander.Header,
+                    "Technical provenance"));
+            Assert.False(
+                provenance.IsExpanded);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Settings_field_mappings_are_labeled_single_column_cards_at_narrow_width()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var settings = new SettingsView();
+        var window = new Window
+        {
+            Width = 700,
+            Height = 720,
+            Content = settings,
+        };
+        try
+        {
+            window.Show();
+            SettingsViewModel viewModel =
+                Assert.IsType<SettingsViewModel>(
+                    settings.DataContext);
+            viewModel.AddFieldMappingCommand.Execute(
+                null);
+            settings.FindControl<TabControl>(
+                    "SettingsTabs")!
+                .SelectedIndex = 8;
+            RenderUi();
+
+            Grid fields = Assert.Single(
+                settings.GetVisualDescendants()
+                    .OfType<Grid>(),
+                grid =>
+                    grid.IsEffectivelyVisible &&
+                    grid.Classes.Contains(
+                        "field-mapping-fields"));
+            Assert.Single(
+                fields.ColumnDefinitions);
+            Control[] inputs = fields
+                .GetVisualDescendants()
+                .OfType<Control>()
+                .Where(control =>
+                    control is ComboBox ||
+                    control is TextBox &&
+                    !control.GetVisualAncestors()
+                        .OfType<ComboBox>()
+                        .Any())
+                .ToArray();
+            Assert.Equal(
+                3,
+                inputs.Length);
+            Assert.All(
+                inputs,
+                input =>
+                {
+                    StackPanel field = Assert.Single(
+                        input.GetVisualAncestors()
+                            .OfType<StackPanel>(),
+                        panel =>
+                            panel.Classes.Contains(
+                                "field"));
+                    Assert.Contains(
+                        field.GetVisualDescendants()
+                            .OfType<TextBlock>(),
+                        label =>
+                            label.Classes.Contains(
+                                "field-label") &&
+                            !string.IsNullOrWhiteSpace(
+                                label.Text));
+                });
+        }
+        finally
+        {
+            window.Hide();
         }
     }
 
@@ -1083,6 +1593,72 @@ public sealed class UiControlTests
         Assert.Equal("Health", header.Title);
         Assert.Equal("Audit the collection.", header.Subtitle);
         Assert.Same(action, header.Actions);
+    }
+
+    [AvaloniaFact]
+    public void Page_header_measures_commands_before_choosing_the_inline_layout()
+    {
+        var actions = new WrapPanel();
+        foreach (string label in new[]
+                 {
+                     "Index library",
+                     "Pending changes (0)",
+                     "Hide inspector",
+                     "More",
+                 })
+        {
+            actions.Children.Add(
+                new Button
+                {
+                    Content = label,
+                    MinWidth = 105,
+                });
+        }
+        var header = new PageHeader
+        {
+            Title = "Library",
+            Subtitle =
+                "Browse the cache instantly, even when music roots are offline.",
+            Actions = actions,
+        };
+        var window = new Window
+        {
+            Width = 812,
+            Height = 240,
+            Content = header,
+        };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            ContentPresenter presenter =
+                header.FindControl<ContentPresenter>(
+                    "ActionsPresenter")!;
+            Assert.Equal(1, Grid.GetRow(presenter));
+            Assert.True(
+                presenter.Bounds.Width >=
+                actions.DesiredSize.Width - 1);
+
+            double[] buttonTops =
+            [
+                .. actions.Children
+                    .OfType<Button>()
+                    .Select(button =>
+                        button.TranslatePoint(
+                            new Point(),
+                            actions)!.Value.Y),
+            ];
+            Assert.True(
+                buttonTops.Max() -
+                buttonTops.Min() <= 1,
+                "Header commands wrapped even though the stacked action row had enough width.");
+        }
+        finally
+        {
+            window.Hide();
+        }
     }
 
     [AvaloniaFact]
@@ -1397,7 +1973,7 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
-    public void Playlist_output_is_available_from_workbench_and_library()
+    public void Advanced_output_editors_are_consolidated_in_workbench()
     {
         using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
@@ -1414,115 +1990,80 @@ public sealed class UiControlTests
                 window.FindControl<ContentControl>("ContentHost")!.Content);
             WorkbenchViewModel workbenchModel =
                 services.GetRequiredService<WorkbenchViewModel>();
-            Assert.NotNull(workbench.FindControl<AppDataGrid>(
-                "PlaylistOutputGrid"));
-            Assert.Same(
-                workbenchModel.PreviewPlaylistCommand,
-                workbench.FindControl<Button>(
-                    "PreviewPlaylistButton")!.Command);
-            Assert.Same(
-                workbenchModel.ImportDelimitedMetadataCommand,
-                workbench.FindControl<Button>(
-                    "ImportDelimitedMetadataButton")!.Command);
-            Assert.Same(
-                workbenchModel.CopyMetadataFieldCommand,
-                workbench.FindControl<Button>(
-                    "CopyWorkbenchMetadataFieldButton")!.Command);
-            Assert.Same(
-                workbenchModel.PasteMetadataFieldCommand,
-                workbench.FindControl<Button>(
-                    "PasteWorkbenchMetadataFieldButton")!.Command);
-            Assert.NotNull(workbench.FindControl<AppDataGrid>(
-                "ExternalToolInvocationGrid"));
-            Assert.Same(
-                workbenchModel.PreviewExternalToolCommand,
-                workbench.FindControl<Button>(
-                    "PreviewExternalToolButton")!.Command);
-            Button columns = workbench.FindControl<Button>(
-                "WorkbenchColumnsButton")!;
-            WrapPanel columnOptions =
-                workbench.FindControl<WrapPanel>(
-                    "WorkbenchColumnOptions")!;
-            columns.RaiseEvent(
-                new RoutedEventArgs(Button.ClickEvent));
-            Dispatcher.UIThread.RunJobs();
-            Assert.True(workbench.FindControl<Control>(
-                "WorkbenchColumnsDrawer")!.IsVisible);
-            Assert.True(columnOptions.Children.Count >= 20);
-            Assert.NotNull(workbench.FindControl<ListBox>(
-                "WorkbenchMetadataColumnList"));
-            Assert.Same(
-                workbenchModel.ColumnEditor.SaveColumnCommand,
-                workbench.FindControl<Button>(
-                    "SaveWorkbenchMetadataColumnButton")!.Command);
-            Assert.NotNull(workbench.FindControl<ListBox>(
-                "ShortcutBindingList"));
-            Assert.Same(
-                workbenchModel.ShortcutEditor.SaveShortcutCommand,
-                workbench.FindControl<Button>(
-                    "SaveShortcutButton")!.Command);
-            Assert.NotNull(workbench.FindControl<Border>(
-                "WorkbenchRepresentativePreview"));
+            Carousel sections =
+                workbench.FindControl<Carousel>(
+                    "WorkbenchTabs")!;
+            Assert.Collection(
+                sections.Items
+                    .OfType<Control>(),
+                item => Assert.IsType<
+                    WorkbenchSessionSectionView>(
+                    item),
+                item => Assert.IsType<
+                    WorkbenchBulkOperationSectionView>(
+                    item),
+                item => Assert.IsType<
+                    WorkbenchAllFieldsSectionView>(
+                    item),
+                item => Assert.IsType<
+                    WorkbenchFilesSectionView>(
+                    item),
+                item => Assert.IsType<
+                    WorkbenchOnlineMetadataSectionView>(
+                    item),
+                item => Assert.IsType<
+                    WorkbenchReportsSectionView>(
+                    item),
+                item => Assert.IsType<
+                    WorkbenchPlaylistsSectionView>(
+                    item),
+                item => Assert.IsType<
+                    WorkbenchToolsSectionView>(
+                    item),
+                item => Assert.IsType<
+                    WorkbenchShortcutsSectionView>(
+                    item));
             Assert.NotNull(
-                workbench.FindControl<
-                    ReviewedFileOperationEditorView>(
-                    "WorkbenchFileOperationEditor"));
+                workbenchModel.FileOperations);
+            Assert.Equal(
+                9,
+                workbenchModel.SectionOptions
+                    .Count);
 
             navigation.Navigate(ShellDestination.Library);
             Dispatcher.UIThread.RunJobs();
             LibraryView library = Assert.IsType<LibraryView>(
                 window.FindControl<ContentControl>("ContentHost")!.Content);
-            Assert.NotNull(library.FindControl<AppDataGrid>(
+            Assert.Null(library.FindControl<AppDataGrid>(
                 "LibraryPlaylistOutputGrid"));
-            Assert.Equal(
-                "Preview playlist",
-                library.FindControl<Button>(
-                    "PreviewLibraryPlaylistButton")!.Content);
-            Assert.Equal(
-                "Import CSV/TSV",
-                library.FindControl<Button>(
-                    "ImportLibraryDelimitedMetadataButton")!.Content);
-            Assert.Equal(
-                "Copy field",
-                library.FindControl<Button>(
-                    "CopyLibraryMetadataFieldButton")!.Content);
-            Assert.Equal(
-                "Paste + preview",
-                library.FindControl<Button>(
-                    "PasteLibraryMetadataFieldButton")!.Content);
-            Assert.NotNull(library.FindControl<AppDataGrid>(
+            Assert.Null(library.FindControl<Button>(
+                "PreviewLibraryPlaylistButton"));
+            Assert.Null(library.FindControl<Button>(
+                "ImportLibraryDelimitedMetadataButton"));
+            Assert.Null(library.FindControl<Button>(
+                "CopyLibraryMetadataFieldButton"));
+            Assert.Null(library.FindControl<Button>(
+                "PasteLibraryMetadataFieldButton"));
+            Assert.Null(library.FindControl<AppDataGrid>(
                 "LibraryExternalToolInvocationGrid"));
-            Assert.Equal(
-                "Preview tool",
-                library.FindControl<Button>(
-                    "PreviewLibraryExternalToolButton")!.Content);
+            Assert.Null(library.FindControl<Button>(
+                "PreviewLibraryExternalToolButton"));
             Assert.NotNull(library.FindControl<ListBox>(
                 "LibraryMetadataColumnList"));
-            Assert.Equal(
-                "Save column",
-                library.FindControl<Button>(
-                    "SaveLibraryMetadataColumnButton")!.Content);
-            Assert.NotNull(library.FindControl<Border>(
+            Assert.Null(library.FindControl<Border>(
                 "LibraryRepresentativePreview"));
-            Assert.NotNull(
+            Assert.Null(
                 library.FindControl<
                     ReviewedFileOperationEditorView>(
                     "LibraryFileOperationEditor"));
-            Assert.Equal(
-                "Undo metadata",
-                library.FindControl<Button>(
-                    "UndoLibraryOperationButton")!
-                    .Content);
-            Assert.Equal(
-                "Redo preview",
-                library.FindControl<Button>(
-                    "RedoLibraryOperationButton")!
-                    .Content);
-            Assert.Equal(
-                "Repeat recipe",
-                library.FindControl<Button>(
-                    "RepeatLibraryRecipeButton")!
-                    .Content);
+            Assert.Null(library.FindControl<Button>(
+                "UndoLibraryOperationButton"));
+            Assert.Null(library.FindControl<Button>(
+                "RedoLibraryOperationButton"));
+            Assert.Null(library.FindControl<Button>(
+                "RepeatLibraryRecipeButton"));
+            Assert.NotNull(library.FindControl<Button>(
+                "LibraryWorkbenchButton"));
             Button visualFilter = library.FindControl<Button>(
                 "VisualFilterButton")!;
             Popup visualFilterPopover =
@@ -1537,6 +2078,119 @@ public sealed class UiControlTests
                 "Apply visual filter",
                 library.FindControl<Button>(
                     "ApplyVisualFilterButton")!.Content);
+
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Library_handoff_captures_scope_and_preserves_library_state()
+    {
+        TrackRecord[] records =
+        [
+            new()
+            {
+                Path = Path.GetFullPath(
+                    "handoff-aurora.flac"),
+                Title = "Aurora",
+                Artist = "The Fixtures",
+                CodecName = "FLAC",
+            },
+            new()
+            {
+                Path = Path.GetFullPath(
+                    "handoff-harbor.flac"),
+                Title = "Harbor",
+                Artist = "The Fixtures",
+                CodecName = "FLAC",
+            },
+        ];
+        var workbench =
+            new RecordingWorkbenchService();
+        using ServiceProvider services =
+            BuildIsolatedServices(
+                records,
+                collection =>
+                    collection.AddSingleton<
+                        IWorkbenchService>(
+                        workbench));
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            INavigationService navigation =
+                services.GetRequiredService<
+                    INavigationService>();
+            navigation.Navigate(
+                ShellDestination.Library);
+            Dispatcher.UIThread.RunJobs();
+            LibraryView library =
+                Assert.IsType<LibraryView>(
+                    window.FindControl<
+                        ContentControl>(
+                        "ContentHost")!
+                        .Content);
+            LibraryViewModel libraryModel =
+                services.GetRequiredService<
+                    LibraryViewModel>();
+            await libraryModel.ReloadAsync();
+            libraryModel.FilterText = "Aurora";
+            await libraryModel
+                .ApplyFilterNowAsync();
+            LibraryRow selected =
+                Assert.Single(
+                    libraryModel.Rows);
+            Assert.True(
+                await libraryModel.SelectAsync(
+                    [selected]));
+            string filterBefore =
+                libraryModel.FilterText!;
+            string[] selectedBefore =
+            [
+                .. libraryModel.SelectedPaths,
+            ];
+
+            await libraryModel
+                .EditSelectedInWorkbenchCommand
+                .ExecuteAsync(
+                    nameof(
+                        WorkbenchSection.Files));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(
+                ShellDestination.Workbench,
+                navigation.Current);
+            Assert.Equal(
+                [records[0].Path],
+                Assert.Single(
+                    workbench.Requests)
+                    .Sources);
+            WorkbenchViewModel workbenchModel =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            Assert.Equal(
+                WorkbenchSection.Files,
+                workbenchModel.SelectedSection);
+            Assert.Equal(
+                [records[0].Path],
+                workbenchModel.SelectedFiles
+                    .Select(file => file.Path));
+            Assert.Equal(
+                filterBefore,
+                libraryModel.FilterText);
+            Assert.Equal(
+                selectedBefore,
+                libraryModel.SelectedPaths);
+            Assert.Single(
+                libraryModel.Rows);
+            Assert.Same(
+                selected,
+                libraryModel.Rows[0]);
         }
         finally
         {
@@ -1669,14 +2323,21 @@ public sealed class UiControlTests
                     view.FindControl<Button>(
                         "WorkbenchInspectorToggle")!
                         .IsVisible);
-                Assert.False(
+                ContentPresenter inactiveDrawerHost =
                     view.FindControl<
                             PersistedSplitView>(
                             "WorkbenchSplit")!
                         .FindControl<
                             ContentPresenter>(
-                            "RightPresenter")!
-                        .IsVisible);
+                            "RightPresenter")!;
+                Assert.True(
+                    inactiveDrawerHost.IsVisible);
+                Assert.False(
+                    inactiveDrawerHost
+                        .IsHitTestVisible);
+                Assert.Equal(
+                    0,
+                    inactiveDrawerHost.Opacity);
 
                 model.SelectedSection =
                     WorkbenchSection.Session;
@@ -1790,13 +2451,27 @@ public sealed class UiControlTests
                 view.FindControl<ComboBox>(
                     "WorkbenchSectionPicker")!
                     .IsVisible);
-            Assert.Equal(
-                3,
+            Button workbenchMoreButton =
+                view.FindControl<Button>(
+                    "WorkbenchMoreButton")!;
+            MenuFlyout workbenchMore =
                 Assert.IsType<MenuFlyout>(
-                        view.FindControl<Button>(
-                            "WorkbenchMoreButton")!
-                            .Flyout)
-                    .Items.Count);
+                    workbenchMoreButton.Flyout);
+            Assert.Equal(
+                5,
+                workbenchMore.Items.Count);
+            workbenchMore.ShowAt(
+                workbenchMoreButton);
+            RenderUi();
+            Assert.Contains(
+                workbenchMore.Items
+                    .OfType<MenuItem>(),
+                item => Equals(
+                    item.Header,
+                    view.FindControl<Button>(
+                        "WorkbenchInspectorToggle")!
+                        .Content));
+            workbenchMore.Hide();
             SplitButton addSources =
                 view.FindControl<SplitButton>(
                     "AddWorkbenchSourceButton")!;
@@ -1839,6 +2514,10 @@ public sealed class UiControlTests
                     view.FindControl<AppDataGrid>(
                         "WorkbenchGrid")!
                         .ContextMenu);
+            view.FindControl<AppDataGrid>(
+                    "WorkbenchGrid")!
+                .Focus();
+            RenderUi();
             view.RaiseEvent(new KeyEventArgs
             {
                 RoutedEvent =
@@ -2215,18 +2894,6 @@ public sealed class UiControlTests
                     INavigationService>();
 
             navigation.Navigate(
-                ShellDestination.Library);
-            Dispatcher.UIThread.RunJobs();
-            LibraryView library =
-                Assert.IsType<LibraryView>(
-                    window.FindControl<
-                        ContentControl>(
-                        "ContentHost")!.Content);
-            AssertDiagnosticToolTipBinding(
-                library.FindControl<AppDataGrid>(
-                    "LibraryReleaseArtworkGrid")!);
-
-            navigation.Navigate(
                 ShellDestination.Workbench);
             Dispatcher.UIThread.RunJobs();
             WorkbenchView workbench =
@@ -2234,11 +2901,17 @@ public sealed class UiControlTests
                     window.FindControl<
                         ContentControl>(
                         "ContentHost")!.Content);
-            services.GetRequiredService<
-                    WorkbenchViewModel>()
-                .SelectedSection =
-                    WorkbenchSection.OnlineMetadata;
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            model.SelectedSection =
+                WorkbenchSection.OnlineMetadata;
+            model.SelectedOnlineMetadataResultStep =
+                WorkbenchOnlineMetadataResultStep
+                    .Artwork;
             Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform
+                .ForceRenderTimerTick(2);
             AssertDiagnosticToolTipBinding(
                 workbench.FindControl<AppDataGrid>(
                     "ReleaseArtworkGrid")!);
@@ -2450,33 +3123,132 @@ public sealed class UiControlTests
                     window.FindControl<
                         ContentControl>(
                         "ContentHost")!.Content);
-            Button session =
-                view.FindControl<Button>(
-                    "WorkbenchSectionSession")!;
-            Button bulk =
-                view.FindControl<Button>(
-                    "WorkbenchSectionBulkOperation")!;
+            ListBox navigation =
+                view.FindControl<ListBox>(
+                    "WorkbenchSectionNavigation")!;
+            WorkbenchSectionOption session =
+                Assert.IsType<
+                    WorkbenchSectionOption>(
+                    navigation.SelectedItem);
             Assert.Equal(
-                "Selected",
-                AutomationProperties
-                    .GetItemStatus(session));
+                WorkbenchSection.Session,
+                session.Section);
             Assert.Equal(
-                "Not selected",
-                AutomationProperties
-                    .GetItemStatus(bulk));
+                0,
+                navigation.SelectedIndex);
 
-            bulk.RaiseEvent(
-                new RoutedEventArgs(
-                    Button.ClickEvent));
+            WorkbenchSectionOption bulk =
+                Assert.Single(
+                    navigation.Items
+                        .OfType<
+                            WorkbenchSectionOption>(),
+                    option =>
+                        option.Section ==
+                        WorkbenchSection
+                            .BulkOperation);
+            navigation.SelectedItem = bulk;
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(
-                "Not selected",
-                AutomationProperties
-                    .GetItemStatus(session));
+                WorkbenchSection.BulkOperation,
+                services.GetRequiredService<
+                        WorkbenchViewModel>()
+                    .SelectedSection);
             Assert.Equal(
-                "Selected",
-                AutomationProperties
-                    .GetItemStatus(bulk));
+                bulk,
+                navigation.SelectedItem);
+
+            navigation.Focus();
+            navigation.RaiseEvent(
+                new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = Key.End,
+                });
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                navigation.ItemCount - 1,
+                navigation.SelectedIndex);
+            navigation.RaiseEvent(
+                new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = Key.Home,
+                });
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                0,
+                navigation.SelectedIndex);
+
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            var tagDocument =
+                new MediaDocument(
+                    "tag-layers.mp3",
+                    [],
+                    [],
+                    null,
+                    new(
+                        "tag-layers.mp3",
+                        10,
+                        DateTime.UtcNow,
+                        "tag-layers"),
+                    true)
+                {
+                    EditableTagLayers =
+                    [
+                        new(
+                            TagLayerKind.Id3v2,
+                            "ID3v2",
+                            true,
+                            false,
+                            true,
+                            true),
+                        new(
+                            TagLayerKind.ApeV2,
+                            "APEv2",
+                            false,
+                            true,
+                            false,
+                            false),
+                        new(
+                            TagLayerKind.Id3v1,
+                            "ID3v1",
+                            true,
+                            true,
+                            true,
+                            false),
+                    ],
+                };
+            var tagFile =
+                new WorkbenchTrackViewModel(
+                    tagDocument);
+            model.Files.Add(tagFile);
+            model.SetSelectedFiles(
+                [tagFile]);
+            Dispatcher.UIThread.RunJobs();
+            Button inspectorToggle =
+                view.FindControl<Button>(
+                    "WorkbenchInspectorToggle")!;
+            if (!view.FindControl<Control>(
+                    "WorkbenchInspectorDrawer")!
+                .IsVisible)
+            {
+                inspectorToggle.RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            }
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform
+                .ForceRenderTimerTick(2);
+            view.FindControl<Expander>(
+                    "WorkbenchTagToolsExpander")!
+                .IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform
+                .ForceRenderTimerTick(2);
 
             Control inspectorDrawer =
                 view.FindControl<Control>(
@@ -2492,17 +3264,61 @@ public sealed class UiControlTests
                     .Cast<string>()
                     .ToArray();
             Assert.Contains(
-                "Add ID3v2 tag layer",
+                "ID3v2 actions",
                 tagActionNames);
             Assert.Contains(
-                "Add APEv2 tag layer",
+                "APEv2 actions",
                 tagActionNames);
             Assert.Contains(
+                "ID3v1 actions",
+                tagActionNames);
+            AssertLayerMenu(
+                "ID3v2 actions",
+                "Add ID3v2 tag layer");
+            AssertLayerMenu(
+                "APEv2 actions",
+                "Add APEv2 tag layer");
+            AssertLayerMenu(
+                "ID3v1 actions",
                 "Add ID3v1 tag layer",
-                tagActionNames);
-            Assert.Contains(
-                "Remove ID3v1 tag layer",
-                tagActionNames);
+                "Remove ID3v1 tag layer");
+
+            void AssertLayerMenu(
+                string launcherName,
+                params string[] expectedActions)
+            {
+                Button launcher =
+                    inspectorDrawer
+                        .GetLogicalDescendants()
+                        .OfType<Button>()
+                        .Single(button =>
+                            AutomationProperties
+                                .GetName(button) ==
+                            launcherName);
+                MenuFlyout flyout =
+                    Assert.IsType<MenuFlyout>(
+                        launcher.Flyout);
+                flyout.ShowAt(launcher);
+                Dispatcher.UIThread.RunJobs();
+                string[] actions =
+                [
+                    .. flyout.Items
+                        .OfType<MenuItem>()
+                        .Select(
+                            AutomationProperties
+                                .GetName)
+                        .Where(name =>
+                            !string.IsNullOrWhiteSpace(
+                                name))
+                        .Cast<string>(),
+                ];
+                foreach (string expected in
+                         expectedActions)
+                    Assert.Contains(
+                        expected,
+                        actions);
+                flyout.Hide();
+            }
         }
         finally
         {
@@ -2544,9 +3360,9 @@ public sealed class UiControlTests
                 .RaiseEvent(new RoutedEventArgs(
                     Button.ClickEvent));
             CheckBox formatVisibility =
-                view.FindControl<WrapPanel>(
+                view.FindControl<StackPanel>(
                         "WorkbenchColumnOptions")!
-                    .Children
+                    .GetVisualDescendants()
                     .OfType<CheckBox>()
                     .Single(check =>
                         Equals(check.Tag, "Format"));
@@ -2595,6 +3411,94 @@ public sealed class UiControlTests
             {
                 restoredHost.Hide();
             }
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Workbench_pending_drawer_keeps_reviewed_preview_and_later_grid_draft()
+    {
+        var loader = new RecordingWorkbenchService();
+        using ServiceProvider services = BuildIsolatedServices(
+            configureServices: collection =>
+                collection.AddSingleton<IWorkbenchService>(
+                    loader));
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            window.Width = 1200;
+            window.Height = 700;
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            WorkbenchView view = Assert.IsType<WorkbenchView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            WorkbenchViewModel model =
+                services.GetRequiredService<WorkbenchViewModel>();
+            string path = Path.GetFullPath(
+                "composed-pending.flac");
+            await model.AddSourcesAsync([path]);
+            WorkbenchTrackViewModel file =
+                Assert.Single(model.Files);
+            MetadataFieldKey title =
+                MetadataFieldKey.Known(
+                    TagFields.Title);
+            var plan = new MetadataOperationPlan(
+                Guid.NewGuid(),
+                "Bulk preview",
+                [
+                    new(
+                        path,
+                        file.Document.Snapshot,
+                        [
+                            new(
+                                title,
+                                ["composed-pending"],
+                                ["Bulk title"]),
+                        ],
+                        [
+                            new(
+                                title,
+                                ["Bulk title"]),
+                        ],
+                        []),
+                ],
+                DateTimeOffset.UtcNow);
+            Assert.True(await model.AddPendingMutationAsync(
+                ReviewedMetadataMutationIntent.Create(
+                    plan),
+                TestContext.Current.CancellationToken));
+
+            file.Artist = "Grid artist";
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(2, model.PendingChanges.Count);
+            Button review = view.FindControl<Button>(
+                "WorkbenchPendingChangesButton")!;
+            review.RaiseEvent(
+                new RoutedEventArgs(
+                    Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            ListBox pending = view.FindControl<ListBox>(
+                "WorkbenchPendingChangesGrid")!;
+            Assert.Equal(2, pending.ItemCount);
+
+            await model.RevertPendingChangesCommand
+                .ExecuteAsync(null);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Empty(model.PendingChanges);
+            Assert.Contains(
+                "0",
+                ((TextBlock)review.Content!).Text);
         }
         finally
         {
@@ -3103,8 +4007,12 @@ public sealed class UiControlTests
                 Popup columnPopover = library.FindControl<Popup>("ColumnPopover")!;
                 Button columnsButton = library.FindControl<Button>("ColumnsButton")!;
                 Button closeColumnsButton = library.FindControl<Button>("CloseColumnsButton")!;
-                Assert.Equal("Filter library", global::Avalonia.Automation.AutomationProperties.GetName(
-                    library.FindControl<TextBox>("FilterBox")!));
+                Assert.Null(
+                    library.FindControl<TextBox>("FilterBox"));
+                Assert.Equal(
+                    "Search the library",
+                    global::Avalonia.Automation.AutomationProperties.GetName(
+                        window.FindControl<TextBox>("SearchBox")!));
                 Assert.True(columnPopover.IsLightDismissEnabled);
                 columnsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.True(columnPopover.IsOpen);
@@ -3120,52 +4028,14 @@ public sealed class UiControlTests
             }
             else if (host.Content is HealthView health)
             {
-                TabControl resultTabs = health
-                    .GetVisualDescendants()
-                    .OfType<TabControl>()
-                    .Single();
+                TabControl resultTabs =
+                    health.FindControl<TabControl>(
+                        "HealthResultsTabs")!;
                 resultTabs.IsVisible = true;
-                resultTabs.SelectedIndex = 6;
-                Dispatcher.UIThread.RunJobs();
-                AvaloniaHeadlessPlatform
-                    .ForceRenderTimerTick(2);
-                TextBlock matrixExplanation = health.FindControl<TextBlock>("AlbumMatrixExplanation")!;
-                Assert.Equal("Read-only album consistency audit", matrixExplanation.Text);
-                TextBox artistThreshold = health.FindControl<TextBox>("ArtistThresholdInput")!;
-                Assert.NotNull(health.FindControl<ComboBox>("ArtworkRepairRootDisposition"));
-                Assert.Equal("Similar artist fuzzy threshold",
-                    global::Avalonia.Automation.AutomationProperties.GetName(artistThreshold));
-                artistThreshold.Text = "0.13";
-                Dispatcher.UIThread.RunJobs();
-                Assert.Equal(0.13, services.GetRequiredService<AnalyzerViewModel>().ArtistThreshold,
-                    precision: 3);
-                artistThreshold.Text = "";
-                Dispatcher.UIThread.RunJobs();
-                Assert.Equal(0, services.GetRequiredService<AnalyzerViewModel>().ArtistThreshold);
-                Assert.NotNull(health.FindControl<ComboBox>("ArtistRootDisposition"));
-                Assert.DoesNotContain(health.GetVisualDescendants().OfType<Button>(),
-                    button => string.Equals(button.Content as string, "Merge", StringComparison.Ordinal));
-                AppDataGrid repairGrid = health.FindControl<AppDataGrid>("RepairGrid")!;
-                DataGridColumn before = repairGrid.Columns.Single(column =>
-                    repairGrid.KeyFor(column) == "Before");
-                DataGridColumn after = repairGrid.Columns.Single(column =>
-                    repairGrid.KeyFor(column) == "After");
-                DataGridColumn result = repairGrid.Columns.Single(column =>
-                    repairGrid.KeyFor(column) == "Result");
-                Assert.IsType<DataGridTemplateColumn>(before);
-                Assert.IsType<DataGridTemplateColumn>(after);
-                Assert.IsType<DataGridTextColumn>(result);
-
-                var item = new AnalysisRepairItemViewModel(new AnalysisTagRepair(
-                    @"Z:\Music\Track.flac", TagFields.Title, "Mix\u00A0One", "Mix One",
-                    "Normalize whitespace.", 100, DateTime.UtcNow));
-                var beforeColumn = Assert.IsType<DataGridTemplateColumn>(before);
-                TextBlock beforeCell = Assert.IsType<TextBlock>(
-                    beforeColumn.CellTemplate!.Build(item));
-                Assert.Contains(beforeCell.Inlines!.OfType<Run>(),
-                    run => run.Classes.Contains("text-difference"));
-                Assert.Contains("U+00A0 NO-BREAK SPACE",
-                    Assert.IsType<string>(ToolTip.GetTip(beforeCell)));
+                Assert.Equal(0, resultTabs.SelectedIndex);
+                Assert.NotNull(
+                    health.FindControl<ListBox>(
+                        "HealthResultNavigation"));
             }
             else if (host.Content is IngestView ingest)
             {
@@ -3606,11 +4476,15 @@ public sealed class UiControlTests
             Dispatcher.UIThread.RunJobs();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
 
-            ItemsControl list = health.FindControl<ItemsControl>("DuplicateResultsList")!;
+            ListBox list = health.FindControl<ListBox>("DuplicateResultsList")!;
             var panel = Assert.IsType<VirtualizingStackPanel>(list.ItemsPanelRoot);
             Assert.InRange(panel.Children.Count, 1, 100);
             Assert.True(panel.Children.Count < groups.Length);
-            Assert.False(list is SelectingItemsControl);
+            Assert.Empty(list.GetVisualAncestors().OfType<ScrollViewer>());
+            Assert.Same(groups[0], list.SelectedItem);
+            ListBox detail =
+                health.FindControl<ListBox>("DuplicateTrackList")!;
+            Assert.Same(groups[0].Tracks, detail.ItemsSource);
         }
         finally
         {
@@ -3619,7 +4493,7 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
-    public void Health_interactive_artwork_results_are_nonselecting_and_virtualized()
+    public void Health_interactive_artwork_results_use_virtualized_master_detail()
     {
         using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
@@ -3645,17 +4519,180 @@ public sealed class UiControlTests
             Dispatcher.UIThread.RunJobs();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
 
-            ItemsControl list = health.FindControl<ItemsControl>("ArtworkRepairResultsList")!;
+            ListBox list = health.FindControl<ListBox>("ArtworkRepairResultsList")!;
             var panel = Assert.IsType<VirtualizingStackPanel>(list.ItemsPanelRoot);
             Assert.InRange(panel.Children.Count, 1, 100);
             Assert.True(panel.Children.Count < repairs.Length);
-            Assert.False(list is SelectingItemsControl);
+            Assert.Empty(list.GetVisualAncestors().OfType<ScrollViewer>());
+            Assert.Same(repairs[0], list.SelectedItem);
+            ScrollViewer details =
+                health.FindControl<ScrollViewer>("ArtworkRepairDetailsScroll")!;
+            Assert.Same(repairs[0], details.DataContext);
             Assert.NotNull(health.GetVisualDescendants().OfType<TreeView>().FirstOrDefault(tree =>
                 ReferenceEquals(tree.ItemsSource, viewModel.ArtworkRepairGroups)));
         }
         finally
         {
             window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Health_without_configuration_shows_one_contextual_setup_action()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var health = new HealthView();
+        var navigation = Assert.IsType<NavigationService>(
+            services.GetRequiredService<INavigationService>());
+        var window = new Window
+        {
+            Width = 900,
+            Height = 600,
+            Content = health,
+        };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            Assert.True(
+                health.FindControl<Border>("HealthSetupCard")!
+                    .IsEffectivelyVisible);
+            Assert.False(
+                health.FindControl<Border>("HealthActionCard")!
+                    .IsEffectivelyVisible);
+            Assert.False(
+                health.FindControl<PersistedSplitView>("HealthResultsHost")!
+                    .IsEffectivelyVisible);
+            Button setup =
+                health.FindControl<Button>("HealthSetupAction")!;
+            Assert.False(
+                string.IsNullOrWhiteSpace(
+                    AutomationProperties.GetName(setup)));
+
+            setup.RaiseEvent(
+                new RoutedEventArgs(
+                    Button.ClickEvent));
+
+            Assert.Equal(
+                ShellDestination.Settings,
+                navigation.Current);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Health_high_cardinality_master_detail_stacks_narrow_and_keeps_keyboard_selection()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var health = new HealthView();
+        var viewModel =
+            Assert.IsType<AnalyzerViewModel>(
+                health.DataContext);
+        DuplicateGroup[] groups =
+            Enumerable.Range(0, 250)
+                .Select(index =>
+                    new DuplicateGroup(
+                        $"Duplicate {index:N0}",
+                        [
+                            new TrackRecord
+                            {
+                                Path =
+                                    $@"C:\Music\Track {index:N0}.flac",
+                                Title =
+                                    $"Track {index:N0}",
+                            },
+                        ]))
+                .ToArray();
+        AnalysisRunViewModel run =
+            AnalysisRunViewModel.ForDuplicates(
+                "Duplicates",
+                groups,
+                "250 duplicate groups");
+        viewModel.Runs.Add(run);
+        viewModel.SelectedRun = run;
+        var window = new Window
+        {
+            Width = 900,
+            Height = 600,
+            Content = health,
+        };
+        try
+        {
+            window.Show();
+            Render();
+
+            Grid layout =
+                health.FindControl<Grid>(
+                    "DuplicateMasterDetailLayout")!;
+            Assert.Single(
+                layout.ColumnDefinitions);
+            Assert.Equal(
+                2,
+                layout.RowDefinitions.Count);
+
+            ListBox master =
+                health.FindControl<ListBox>(
+                    "DuplicateResultsList")!;
+            Assert.False(
+                string.IsNullOrWhiteSpace(
+                    AutomationProperties.GetName(
+                        master)));
+            Assert.Same(
+                groups[0],
+                master.SelectedItem);
+            ListBoxItem firstRow =
+                Assert.IsType<VirtualizingStackPanel>(
+                        master.ItemsPanelRoot)
+                    .Children
+                    .OfType<ListBoxItem>()
+                    .First();
+            Assert.Empty(
+                firstRow.GetVisualDescendants()
+                    .OfType<ComboBox>());
+
+            master.Focus();
+            master.RaiseEvent(
+                new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = Key.Down,
+                });
+            Render();
+            Assert.Same(
+                groups[1],
+                master.SelectedItem);
+            Assert.Same(
+                groups[1],
+                viewModel.SelectedDuplicate);
+
+            window.Width = 1440;
+            Render();
+            Assert.Equal(
+                2,
+                layout.ColumnDefinitions.Count);
+            Assert.Single(
+                layout.RowDefinitions);
+            Assert.Empty(
+                master.GetVisualAncestors()
+                    .OfType<ScrollViewer>());
+        }
+        finally
+        {
+            window.Hide();
+        }
+
+        static void Render()
+        {
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
         }
     }
 
@@ -4034,15 +5071,40 @@ public sealed class UiControlTests
                         .Select(control => $"{control.GetType().Name}:{control.Bounds.Width:0}x{control.Bounds.Height:0}"));
                     Assert.True(grid.Bounds.Width >= 500, $"Library grid width collapsed. Left={split.Left?.GetType().Name ?? "null"}; Presented={leftPresenter.Content?.GetType().Name ?? "null"}; Split={split.Bounds.Width:0}x{split.Bounds.Height:0}; Presenter={leftPresenter.Bounds.Width:0}x{leftPresenter.Bounds.Height:0}; {bounds}");
                     Assert.True(grid.Bounds.Height >= 300, $"Library grid height collapsed. {bounds}");
-                    Assert.True(split.FindControl<ContentPresenter>("RightPresenter")!.Bounds.Width >= 190,
-                        "Library inspector collapsed below its minimum width.");
+                    ContentPresenter inspectorPresenter =
+                        split.FindControl<ContentPresenter>(
+                            "RightPresenter")!;
+                    Assert.False(
+                        inspectorPresenter.IsEffectivelyVisible,
+                        "An empty, unpinned Library inspector docked without a selection.");
                     Assert.InRange(grid.Columns.Count, 8, 13);
                     Assert.Contains(grid.GetVisualDescendants(), visual => visual.GetType().Name == "DataGridColumnHeader");
                     if (!isCapturing)
                         Assert.NotNull(grid.ItemsSource);
-                    SelectionInspectorView inspector = library.GetVisualDescendants().OfType<SelectionInspectorView>().Single();
+                    SelectionInspectorView inspector =
+                        library.FindControl<
+                            SelectionInspectorView>(
+                            "InspectorView")!;
                     Assert.True(inspector.FindControl<Border>("EmptyState")!.IsVisible);
                     Assert.False(inspector.FindControl<ScrollViewer>("InspectorContent")!.IsVisible);
+                    Button inspectorReview =
+                        inspector.FindControl<Button>(
+                            "InspectorReviewChangesButton")!;
+                    Assert.False(inspectorReview.IsEnabled);
+                    Assert.NotNull(inspector.FindControl<Button>(
+                        "InspectorDiscardEditsButton"));
+                    Assert.DoesNotContain(
+                        inspector.GetVisualDescendants()
+                            .OfType<Button>(),
+                        button =>
+                            string.Equals(
+                                button.Content?.ToString(),
+                                "Save tags",
+                                StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(
+                                button.Content?.ToString(),
+                                "All fields...",
+                                StringComparison.OrdinalIgnoreCase));
                 }
                 else if (destination == ShellDestination.Settings)
                 {
@@ -4072,7 +5134,7 @@ public sealed class UiControlTests
                     ScrollViewer scroll = settings.FindControl<ScrollViewer>("ConfigurationSettingsScroll")!;
                     StackPanel content = settings.FindControl<StackPanel>("ConfigurationSettingsContent")!;
                     Assert.Equal(global::Avalonia.Layout.HorizontalAlignment.Stretch, scroll.HorizontalContentAlignment);
-                    Assert.Equal(ScrollBarVisibility.Auto, scroll.HorizontalScrollBarVisibility);
+                    Assert.Equal(ScrollBarVisibility.Disabled, scroll.HorizontalScrollBarVisibility);
                     Assert.Equal(global::Avalonia.Layout.HorizontalAlignment.Stretch, content.HorizontalAlignment);
                     Assert.InRange(content.Bounds.Width, 700, 1040);
                     Assert.True(content.Bounds.Width <= scroll.Bounds.Width,
@@ -4081,18 +5143,12 @@ public sealed class UiControlTests
                 else if (destination == ShellDestination.Health)
                 {
                     HealthView health = Assert.IsType<HealthView>(window.FindControl<ContentControl>("ContentHost")!.Content);
-                    TabControl resultTabs = health
-                        .GetVisualDescendants()
-                        .OfType<TabControl>()
-                        .Single();
-                    resultTabs.IsVisible = true;
-                    resultTabs.SelectedIndex = 0;
-                    Dispatcher.UIThread.RunJobs();
-                    AvaloniaHeadlessPlatform
-                        .ForceRenderTimerTick(2);
-                    Assert.Equal("All findings", Assert.IsType<TextBlock>(
-                        Assert.IsType<Grid>(health.FindControl<Button>("FindingRootButton")!.Content)
-                            .GetVisualDescendants().OfType<TextBlock>().First()).Text);
+                    Assert.NotNull(
+                        health.FindControl<TabControl>(
+                            "HealthResultsTabs"));
+                    Assert.NotNull(
+                        health.FindControl<ListBox>(
+                            "HealthResultNavigation"));
                 }
                 using var frame = window.GetLastRenderedFrame();
                 Assert.NotNull(frame);
@@ -4207,9 +5263,22 @@ public sealed class UiControlTests
                                         .VerticalScrollBarVisibility);
                             }
                             PageHeader header = settings.GetVisualDescendants().OfType<PageHeader>().Single();
-                            Button discard = settings.FindControl<Button>(
-                                "SettingsDiscardButton")!;
-                            Assert.True(discard.IsEffectivelyVisible);
+                            Button settingsMore = settings.FindControl<Button>(
+                                "SettingsMoreButton")!;
+                            MenuFlyout settingsMenu =
+                                Assert.IsType<MenuFlyout>(
+                                    settingsMore.Flyout);
+                            settingsMenu.ShowAt(
+                                settingsMore);
+                            Dispatcher.UIThread.RunJobs();
+                            MenuItem discard =
+                                Assert.Single(
+                                    settingsMenu.Items
+                                        .OfType<MenuItem>(),
+                                    item => Equals(
+                                        item.Header,
+                                        "Discard"));
+                            Assert.True(discard.IsVisible);
                             foreach (Button button in header.GetVisualDescendants().OfType<Button>()
                                          .Where(button => button.IsEffectivelyVisible))
                             {
@@ -4350,11 +5419,250 @@ public sealed class UiControlTests
 
             HealthView health = Assert.IsType<HealthView>(
                 window.FindControl<ContentControl>("ContentHost")!.Content);
-            AssertNestedPaneFits(health, "health-metadata-repairs");
+            Border compactPicker =
+                health.FindControl<Border>(
+                    "HealthResultPickerHost")!;
+            Border resultRail =
+                health.FindControl<Border>(
+                    "HealthResultNavigationRail")!;
+            ComboBox resultPicker =
+                health.FindControl<ComboBox>(
+                    "HealthResultPicker")!;
+            ListBox resultNavigation =
+                health.FindControl<ListBox>(
+                    "HealthResultNavigation")!;
+            TabControl resultContent =
+                health.FindControl<TabControl>(
+                    "HealthResultsTabs")!;
 
+            Assert.False(
+                string.IsNullOrWhiteSpace(
+                    AutomationProperties.GetName(
+                        resultPicker)));
+            Assert.False(
+                string.IsNullOrWhiteSpace(
+                    AutomationProperties.GetName(
+                        resultNavigation)));
+
+            analyzer.ActiveResultIndex = 2;
+            Render();
+            TextBox artistThreshold =
+                health.FindControl<TextBox>(
+                    "ArtistThresholdInput")!;
+            Assert.Equal(
+                "Similar artist fuzzy threshold",
+                AutomationProperties.GetName(
+                    artistThreshold));
+            artistThreshold.Text = "0.13";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                0.13,
+                analyzer.ArtistThreshold,
+                precision: 3);
+            artistThreshold.Text = "";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                0,
+                analyzer.ArtistThreshold);
+            Assert.NotNull(
+                health.FindControl<ComboBox>(
+                    "ArtistRootDisposition"));
+            Assert.NotNull(
+                health.FindControl<ComboBox>(
+                    "ArtworkRepairRootDisposition"));
+            Assert.DoesNotContain(
+                health.GetVisualDescendants()
+                    .OfType<Button>(),
+                button => string.Equals(
+                    button.Content as string,
+                    "Merge",
+                    StringComparison.Ordinal));
+
+            analyzer.ActiveResultIndex = 3;
+            Render();
+            AppDataGrid repairGrid =
+                health.FindControl<AppDataGrid>(
+                    "RepairGrid")!;
+            DataGridColumn before =
+                repairGrid.Columns.Single(column =>
+                    repairGrid.KeyFor(column) ==
+                    "Before");
+            DataGridColumn after =
+                repairGrid.Columns.Single(column =>
+                    repairGrid.KeyFor(column) ==
+                    "After");
+            DataGridColumn result =
+                repairGrid.Columns.Single(column =>
+                    repairGrid.KeyFor(column) ==
+                    "Result");
+            Assert.IsType<DataGridTemplateColumn>(
+                before);
+            Assert.IsType<DataGridTemplateColumn>(
+                after);
+            Assert.IsType<DataGridTextColumn>(
+                result);
+
+            var repairItem =
+                new AnalysisRepairItemViewModel(
+                    new AnalysisTagRepair(
+                        @"Z:\Music\Track.flac",
+                        TagFields.Title,
+                        "Mix\u00A0One",
+                        "Mix One",
+                        "Normalize whitespace.",
+                        100,
+                        DateTime.UtcNow));
+            var beforeColumn =
+                Assert.IsType<DataGridTemplateColumn>(
+                    before);
+            TextBlock beforeCell =
+                Assert.IsType<TextBlock>(
+                    beforeColumn.CellTemplate!
+                        .Build(repairItem));
+            Assert.Contains(
+                beforeCell.Inlines!.OfType<Run>(),
+                run => run.Classes.Contains(
+                    "text-difference"));
+            Assert.Contains(
+                "U+00A0 NO-BREAK SPACE",
+                Assert.IsType<string>(
+                    ToolTip.GetTip(beforeCell)));
+
+            Assert.True(
+                compactPicker.IsEffectivelyVisible);
+            Assert.False(
+                resultRail.IsEffectivelyVisible);
+            Assert.Equal(
+                "3",
+                Assert.IsType<ComboBoxItem>(
+                    resultPicker.SelectedItem).Tag);
+            Assert.Equal(
+                3,
+                resultContent.SelectedIndex);
+            Assert.DoesNotContain(
+                resultContent.GetVisualDescendants()
+                    .OfType<TabStrip>(),
+                tabStrip =>
+                    tabStrip.IsEffectivelyVisible);
+            AssertNestedPaneFits(health, "health-metadata-repairs");
+            Assert.DoesNotContain(
+                health.GetVisualDescendants()
+                    .OfType<PersistedSplitView>(),
+                split =>
+                    split.PersistenceKey ==
+                    "health-findings");
+
+            window.Width = 1440;
+            Render();
+            Assert.False(
+                compactPicker.IsEffectivelyVisible);
+            Assert.True(
+                resultRail.IsEffectivelyVisible);
+            Assert.Equal(
+                "3",
+                Assert.IsType<ListBoxItem>(
+                    resultNavigation.SelectedItem).Tag);
+            string[] visibleResultTags =
+                resultNavigation.Items
+                    .OfType<ListBoxItem>()
+                    .Where(item =>
+                        item.Tag is not null &&
+                        item.IsVisible)
+                    .Select(item =>
+                        item.Tag!.ToString()!)
+                    .ToArray();
+            Assert.True(
+                visibleResultTags.SequenceEqual(
+                    ["0", "3"]),
+                $"Visible tags: {string.Join(",", visibleResultTags)}; " +
+                $"duplicates={analyzer.HasDuplicateSection}, artists={analyzer.HasArtistSection}, " +
+                $"repairs={analyzer.HasRepairSection}, file={analyzer.HasRepresentationSection}, " +
+                $"conflicts={analyzer.HasConflictSection}, matrix={analyzer.HasMatrixSection}, " +
+                $"itl={analyzer.HasItlRepairSection}, artwork={analyzer.HasArtworkRepairSection}; " +
+                $"items={string.Join(";",
+                    resultNavigation.Items
+                        .OfType<ListBoxItem>()
+                        .Where(item => item.Tag is not null)
+                        .Select(item =>
+                            $"{item.Tag}:{item.IsVisible}/{item.IsEffectivelyVisible}/" +
+                            $"{item.DataContext?.GetType().Name ?? "<null>"}"))}.");
+            Assert.All(
+                resultNavigation.Items
+                    .OfType<ListBoxItem>()
+                    .Where(item =>
+                        item.Tag is not null &&
+                        item.IsVisible),
+                item =>
+                    Assert.False(
+                        string.IsNullOrWhiteSpace(
+                            AutomationProperties.GetName(
+                                item))));
+            Assert.Equal(
+                3,
+                resultContent.SelectedIndex);
+            AssertNestedPaneFits(
+                health,
+                "health-metadata-repairs");
+            ListBoxItem findingsNavigation =
+                resultNavigation.Items
+                    .OfType<ListBoxItem>()
+                    .Single(item =>
+                        item.Tag?.ToString() == "0");
+            ListBoxItem repairNavigation =
+                resultNavigation.Items
+                    .OfType<ListBoxItem>()
+                    .Single(item =>
+                        item.Tag?.ToString() == "3");
+            resultNavigation.SelectedItem =
+                findingsNavigation;
+            Render();
+            Assert.Equal(
+                0,
+                analyzer.ActiveResultIndex);
+            Assert.Equal(
+                0,
+                resultContent.SelectedIndex);
+            resultNavigation.SelectedItem =
+                repairNavigation;
+            Render();
+            Assert.Equal(
+                3,
+                analyzer.ActiveResultIndex);
+            Assert.Equal(
+                3,
+                resultContent.SelectedIndex);
+
+            window.Width = 900;
+            Render();
             analyzer.SelectedRun = findings;
             Render();
+            Assert.True(
+                compactPicker.IsEffectivelyVisible);
+            Assert.False(
+                resultRail.IsEffectivelyVisible);
+            Assert.Equal(
+                "0",
+                Assert.IsType<ComboBoxItem>(
+                    resultPicker.SelectedItem).Tag);
+            Assert.Equal(
+                ["0"],
+                resultPicker.Items
+                    .OfType<ComboBoxItem>()
+                    .Where(item =>
+                        item.IsVisible)
+                    .Select(item =>
+                        item.Tag!.ToString()!)
+                    .ToArray());
+            Assert.Equal(
+                0,
+                resultContent.SelectedIndex);
             AssertNestedPaneFits(health, "health-findings");
+            Assert.DoesNotContain(
+                health.GetVisualDescendants()
+                    .OfType<PersistedSplitView>(),
+                split =>
+                    split.PersistenceKey ==
+                    "health-metadata-repairs");
 
             using var frame = window.GetLastRenderedFrame();
             Assert.NotNull(frame);
@@ -4623,6 +5931,14 @@ public sealed class UiControlTests
                 services.AddSingleton<ILibraryService>(new FixtureLibraryService(records));
             configureServices?.Invoke(services);
         });
+
+    private static void RenderUi()
+    {
+        Dispatcher.UIThread.RunJobs();
+        AvaloniaHeadlessPlatform
+            .ForceRenderTimerTick(2);
+        Dispatcher.UIThread.RunJobs();
+    }
 
     private static async Task WaitForUiAsync(
         Func<bool> condition)

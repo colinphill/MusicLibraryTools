@@ -8,19 +8,19 @@ namespace MusicLibraryManager.Presentation;
 
 /// <summary>
 /// Shared Workbench/Library controller for explicitly scoped file mutations.
-/// Preview captures immutable source/destination snapshots; apply accepts only
-/// that reviewed plan.
+/// Preview captures immutable source/destination snapshots and submits the
+/// reviewed plan to the mandatory pending-change coordinator. This editor
+/// never executes a mutation plan directly.
 /// </summary>
 public partial class ReviewedFileOperationEditorViewModel :
     ObservableObject
 {
     private readonly IReviewedFileOperationService _operations;
     private readonly IFilePickerService _files;
-    private readonly IDialogCoordinator _dialogs;
     private readonly Func<IReadOnlyList<string>> _targetProvider;
     private readonly Func<string?>? _preflightMessage;
-    private readonly Func<ReviewedFileOperationPlan, Task>?
-        _applied;
+    private readonly Func<ReviewedFileOperationPlan, Task<bool>>
+        _reviewPending;
     private readonly ILocalizationService? _localization;
     private ReviewedFileOperationPlan? _plan;
     private CancellationTokenSource? _cancellation;
@@ -31,18 +31,19 @@ public partial class ReviewedFileOperationEditorViewModel :
     public ReviewedFileOperationEditorViewModel(
         IReviewedFileOperationService operations,
         IFilePickerService files,
-        IDialogCoordinator dialogs,
         Func<IReadOnlyList<string>> targetProvider,
+        Func<ReviewedFileOperationPlan, Task<bool>>
+            reviewPending,
         Func<string?>? preflightMessage = null,
-        Func<ReviewedFileOperationPlan, Task>? applied = null,
         ILocalizationService? localization = null)
     {
         _operations = operations;
         _files = files;
-        _dialogs = dialogs;
         _targetProvider = targetProvider;
+        _reviewPending = reviewPending ??
+            throw new ArgumentNullException(
+                nameof(reviewPending));
         _preflightMessage = preflightMessage;
-        _applied = applied;
         _localization = localization;
         RefreshLocalizedChoices();
         SetStatus(
@@ -54,6 +55,8 @@ public partial class ReviewedFileOperationEditorViewModel :
 
     public ObservableCollection<ReviewedFileOperationItem>
         PreviewItems { get; } = [];
+
+    public event EventHandler? PreviewAddedToReview;
 
     public IReadOnlyList<ReviewedFileOperationKind>
         OperationKinds { get; } =
@@ -91,7 +94,6 @@ public partial class ReviewedFileOperationEditorViewModel :
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BrowseDestinationCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
-    [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -112,7 +114,6 @@ public partial class ReviewedFileOperationEditorViewModel :
     private string? _statusDiagnosticDetail;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     [NotifyPropertyChangedFor(nameof(HasUnsavedChanges))]
     private bool _hasApplicablePreview;
 
@@ -243,6 +244,20 @@ public partial class ReviewedFileOperationEditorViewModel :
                 SetStatus(
                     "ReviewedFileOperation.Status.NoChanges");
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            if (HasApplicablePreview &&
+                await _reviewPending(plan))
+            {
+                _plan = null;
+                HasApplicablePreview = false;
+                OnPropertyChanged(
+                    nameof(HasUnsavedChanges));
+                SetCountStatus(
+                    "ReviewedFileOperation.Status.AddedToReview",
+                    plan.MutationPlan.Actions.Count);
+                PreviewAddedToReview?.Invoke(
+                    this,
+                    EventArgs.Empty);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -257,65 +272,6 @@ public partial class ReviewedFileOperationEditorViewModel :
                 "ReviewedFileOperation.Status.PreviewFailed",
                 error.Message);
             OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
-        finally
-        {
-            EndOperation();
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanApply))]
-    private async Task ApplyAsync()
-    {
-        ReviewedFileOperationPlan plan =
-            _plan ??
-            throw new InvalidOperationException(
-                L(
-                    "ReviewedFileOperation.Error.PreviewFirst"));
-        int count =
-            plan.MutationPlan.Actions.Count;
-        bool confirmed =
-            await _dialogs.ConfirmAsync(
-                LF(
-                    "ReviewedFileOperation.Dialog.Apply.Title",
-                    KindLabel(plan.Request.Kind)),
-                LC(
-                    "ReviewedFileOperation.Dialog.Apply.Message",
-                    count),
-                L("Common.Apply"));
-        if (!confirmed)
-            return;
-
-        BeginOperation(
-            L("ReviewedFileOperation.Activity.Applying"));
-        try
-        {
-            FileMutationSummary result =
-                await _operations.ApplyAsync(
-                    plan,
-                    CreateProgress(),
-                    _cancellation!.Token);
-            _plan = null;
-            HasApplicablePreview = false;
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            if (_applied is not null)
-                await _applied(plan);
-            SetStatus(
-                "ReviewedFileOperation.Status.Completed",
-                result.Copied,
-                result.Moved,
-                result.Quarantined);
-        }
-        catch (OperationCanceledException)
-        {
-            SetStatus(
-                "ReviewedFileOperation.Status.ApplyCancelled");
-        }
-        catch (Exception error)
-        {
-            SetFailure(
-                "ReviewedFileOperation.Status.ApplyFailed",
-                error.Message);
         }
         finally
         {
@@ -338,11 +294,6 @@ public partial class ReviewedFileOperationEditorViewModel :
              DestinationDirectory)) &&
         !string.IsNullOrWhiteSpace(
             FileNameTemplate);
-
-    private bool CanApply() =>
-        !IsBusy &&
-        HasApplicablePreview &&
-        _plan is not null;
 
     private void InvalidatePreview()
     {
@@ -390,7 +341,6 @@ public partial class ReviewedFileOperationEditorViewModel :
         _cancellation = null;
         CancelCommand.NotifyCanExecuteChanged();
         PreviewCommand.NotifyCanExecuteChanged();
-        ApplyCommand.NotifyCanExecuteChanged();
     }
 
     private IProgress<OperationProgress>

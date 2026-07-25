@@ -448,6 +448,17 @@ public sealed class TranscodeEditorViewModelTests
     {
         public AudioTranscodePlan? Plan { get; private set; }
 
+        public Task<bool> AddPendingMutationAsync(
+            ReviewedMediaMutationIntent intent,
+            CancellationToken ct = default)
+        {
+            if (intent is not ReviewedTranscodeMutationIntent transcode)
+                return Task.FromResult(false);
+
+            Plan = transcode.Plan;
+            return Task.FromResult(true);
+        }
+
         public Task<bool> AddPendingTranscodeAsync(
             AudioTranscodePlan plan,
             CancellationToken ct = default)

@@ -58,11 +58,20 @@ public interface IFilePickerService
 public interface IDialogCoordinator
 {
     Task<bool> ConfirmAsync(string title, string message, string primaryText);
+    Task<bool> ConfirmDestructiveAsync(
+        string title,
+        string message,
+        string primaryText) =>
+        ConfirmAsync(title, message, primaryText);
     Task ShowMessageAsync(string title, string message);
 }
 
 public interface IFieldsEditorService
 {
+    /// <summary>
+    /// Returns true when the editor's immutable preview was accepted by the
+    /// reviewed pending-change coordinator.
+    /// </summary>
     Task<bool> ShowAsync(IReadOnlyList<string> paths);
 }
 

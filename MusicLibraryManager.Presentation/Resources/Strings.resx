@@ -103,6 +103,9 @@
   <data name="Common.Beta" xml:space="preserve">
     <value>Beta</value>
   </data>
+  <data name="Common.Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
   <data name="Common.Browse" xml:space="preserve">
     <value>Browse</value>
   </data>
@@ -773,13 +776,13 @@
     <value>Choose canonical album artwork</value>
   </data>
   <data name="Health.Artwork.Action.SelectFirst" xml:space="preserve">
-    <value>Select first image and mark Active</value>
+    <value>Select first image and mark active</value>
   </data>
   <data name="Health.Artwork.Action.SelectHighestResolution" xml:space="preserve">
-    <value>Select highest resolution and mark Active</value>
+    <value>Select highest resolution and mark active</value>
   </data>
   <data name="Health.Artwork.Action.SelectLargestFile" xml:space="preserve">
-    <value>Select largest file and mark Active</value>
+    <value>Select largest file and mark active</value>
   </data>
   <data name="Health.Artwork.Selection.NoneChanged" xml:space="preserve">
     <value>No eligible mixed-artwork repairs were changed.</value>
@@ -923,7 +926,7 @@
     <value>Resize metadata repair hierarchy</value>
   </data>
   <data name="Health.NoSelection.Description" xml:space="preserve">
-    <value>Run an Audit or Prepare repairs command to review its results here.</value>
+    <value>Run an audit or prepare repairs to review the results here.</value>
   </data>
   <data name="Health.NoSelection.Title" xml:space="preserve">
     <value>No analysis selected</value>
@@ -1025,7 +1028,7 @@
     <value>Clear selected files</value>
   </data>
   <data name="Ingest.Action.More" xml:space="preserve">
-    <value>More…</value>
+    <value>More</value>
   </data>
   <data name="Ingest.Action.MoreAutomation" xml:space="preserve">
     <value>More ingest actions</value>
@@ -1139,7 +1142,7 @@
     <value>Inspector (unsaved)</value>
   </data>
   <data name="Library.Action.More" xml:space="preserve">
-    <value>More…</value>
+    <value>More</value>
   </data>
   <data name="Library.Action.MoreAutomation" xml:space="preserve">
     <value>More Library actions</value>
@@ -1222,6 +1225,9 @@
   <data name="Library.Columns.CustomFieldPlaceholder" xml:space="preserve">
     <value>Native custom field name</value>
   </data>
+  <data name="Library.Columns.Width" xml:space="preserve">
+    <value>Width</value>
+  </data>
   <data name="Library.Columns.Action.New" xml:space="preserve">
     <value>New</value>
   </data>
@@ -1257,6 +1263,15 @@
   </data>
   <data name="Library.VisualFilter.Title" xml:space="preserve">
     <value>Visual filter</value>
+  </data>
+  <data name="Library.VisualFilter.MatchMode" xml:space="preserve">
+    <value>Match mode</value>
+  </data>
+  <data name="Library.VisualFilter.Comparison" xml:space="preserve">
+    <value>Comparison</value>
+  </data>
+  <data name="Library.VisualFilter.Value" xml:space="preserve">
+    <value>Value</value>
   </data>
   <data name="Library.VisualFilter.CloseTooltip" xml:space="preserve">
     <value>Close visual filter</value>
@@ -1654,12 +1669,8 @@
   <data name="Library.PendingChanges.EmptyDescription" xml:space="preserve">
     <value>Preview a Library metadata operation to review its edits here.</value>
   </data>
-  <data name="Library.PendingChanges.Action.Revert" xml:space="preserve">
-    <value>Revert</value>
-  </data>
-  <data name="Library.PendingChanges.RevertTooltip" xml:space="preserve">
-    <value>Discard this pending preview without changing files</value>
-  </data>
+  <data name="Library.PendingChanges.Action.Revert" xml:space="preserve"><value>Discard all pending changes</value></data>
+  <data name="Library.PendingChanges.RevertTooltip" xml:space="preserve"><value>Discard all pending changes without changing files</value></data>
   <data name="Library.PendingChanges.Action.Apply" xml:space="preserve">
     <value>Apply</value>
   </data>
@@ -4949,7 +4960,7 @@
   <data name="Inspector.View.RemoveArtworkAutomation" xml:space="preserve"><value>Remove artwork</value></data>
   <data name="Inspector.View.ReplaceArtwork" xml:space="preserve"><value>Replace artwork...</value></data>
   <data name="Inspector.View.ReplaceArtworkAutomation" xml:space="preserve"><value>Replace artwork</value></data>
-  <data name="Inspector.View.Revert" xml:space="preserve"><value>Revert</value></data>
+  <data name="Inspector.View.Revert" xml:space="preserve"><value>Discard edits</value></data>
   <data name="Inspector.View.SaveArtworkToFile" xml:space="preserve"><value>Save to file...</value></data>
   <data name="Inspector.View.SaveArtworkToFileAutomation" xml:space="preserve"><value>Save artwork to file</value></data>
   <data name="Inspector.View.SaveTags" xml:space="preserve"><value>Save tags</value></data>
@@ -5007,19 +5018,19 @@
   <data name="ReviewedFileOperation.Target.Files.Other" xml:space="preserve"><value>{0:N0} files in the current scope.</value></data>
   <data name="ReviewedFileOperation.Target.None" xml:space="preserve"><value>No files in the current scope.</value></data>
   <data name="Workbench.Action.Add" xml:space="preserve"><value>Add</value></data>
-  <data name="Workbench.Action.AddFiles" xml:space="preserve"><value>Add Files</value></data>
-  <data name="Workbench.Action.HideInspector" xml:space="preserve"><value>Hide Inspector</value></data>
+  <data name="Workbench.Action.AddFiles" xml:space="preserve"><value>Add files</value></data>
+  <data name="Workbench.Action.HideInspector" xml:space="preserve"><value>Hide inspector</value></data>
   <data name="Workbench.Action.Inspector" xml:space="preserve"><value>Inspector</value></data>
   <data name="Workbench.Action.InspectorAutomation" xml:space="preserve"><value>Inspector</value></data>
   <data name="Workbench.Action.More" xml:space="preserve"><value>More</value></data>
   <data name="Workbench.Action.MoreAutomation" xml:space="preserve"><value>More</value></data>
-  <data name="Workbench.Action.MoveDown" xml:space="preserve"><value>Move Down</value></data>
-  <data name="Workbench.Action.MoveUp" xml:space="preserve"><value>Move Up</value></data>
+  <data name="Workbench.Action.MoveDown" xml:space="preserve"><value>Move down</value></data>
+  <data name="Workbench.Action.MoveUp" xml:space="preserve"><value>Move up</value></data>
   <data name="Workbench.Action.New" xml:space="preserve"><value>New</value></data>
   <data name="Workbench.Action.Redo" xml:space="preserve"><value>Redo</value></data>
-  <data name="Workbench.Action.RepeatRecipe" xml:space="preserve"><value>Repeat Recipe</value></data>
-  <data name="Workbench.Action.Revert" xml:space="preserve"><value>Revert</value></data>
-  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>Undo Last Apply</value></data>
+  <data name="Workbench.Action.RepeatRecipe" xml:space="preserve"><value>Repeat recipe</value></data>
+  <data name="Workbench.Action.Revert" xml:space="preserve"><value>Discard all pending changes</value></data>
+  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>Undo last apply</value></data>
   <data name="Workbench.Activity.ApplyingReviewedChanges" xml:space="preserve"><value>Applying reviewed metadata changes</value></data>
   <data name="Workbench.Activity.BuildingPlaylistPreview" xml:space="preserve"><value>Building playlist preview</value></data>
   <data name="Workbench.Activity.BuildingPreview" xml:space="preserve"><value>Building metadata preview</value></data>
@@ -5040,8 +5051,8 @@
   <data name="Workbench.Activity.WritingReport" xml:space="preserve"><value>Writing reviewed report</value></data>
   <data name="Workbench.AllFields.Action.Copy" xml:space="preserve"><value>Copy field</value></data>
   <data name="Workbench.AllFields.Action.CopyTooltip" xml:space="preserve"><value>Copy field</value></data>
-  <data name="Workbench.AllFields.Action.NewCustomField" xml:space="preserve"><value>New Custom Field</value></data>
-  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>New Known Field</value></data>
+  <data name="Workbench.AllFields.Action.NewCustomField" xml:space="preserve"><value>New custom field</value></data>
+  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>New known field</value></data>
   <data name="Workbench.AllFields.Action.PastePreview" xml:space="preserve"><value>Paste + preview</value></data>
   <data name="Workbench.AllFields.Action.PastePreviewTooltip" xml:space="preserve"><value>Paste + preview</value></data>
   <data name="Workbench.AllFields.Action.Preview" xml:space="preserve"><value>Preview</value></data>
@@ -5049,18 +5060,18 @@
   <data name="Workbench.AllFields.ExistingField" xml:space="preserve"><value>Existing Field</value></data>
   <data name="Workbench.AllFields.OrderedValues" xml:space="preserve"><value>Ordered Values</value></data>
   <data name="Workbench.AllFields.Title" xml:space="preserve"><value>All metadata fields</value></data>
-  <data name="Workbench.AllFields.ValueAction" xml:space="preserve"><value>Value Action</value></data>
-  <data name="Workbench.Bulk.Action.AddToRecipe" xml:space="preserve"><value>Add To Recipe</value></data>
-  <data name="Workbench.Bulk.Action.DeleteRecipe" xml:space="preserve"><value>Delete Recipe</value></data>
-  <data name="Workbench.Bulk.Action.DuplicateStep" xml:space="preserve"><value>Duplicate Step</value></data>
-  <data name="Workbench.Bulk.Action.LoadRecipe" xml:space="preserve"><value>Load Recipe</value></data>
-  <data name="Workbench.Bulk.Action.MoreRecipeAutomation" xml:space="preserve"><value>More Recipe</value></data>
-  <data name="Workbench.Bulk.Action.NewRecipe" xml:space="preserve"><value>New Recipe</value></data>
-  <data name="Workbench.Bulk.Action.PreviewOperation" xml:space="preserve"><value>Preview Operation</value></data>
-  <data name="Workbench.Bulk.Action.RemoveStep" xml:space="preserve"><value>Remove Step</value></data>
-  <data name="Workbench.Bulk.Action.SaveRecipe" xml:space="preserve"><value>Save Recipe</value></data>
-  <data name="Workbench.Bulk.Action.StepActions" xml:space="preserve"><value>Step Actions</value></data>
-  <data name="Workbench.Bulk.Action.StepActionsAutomation" xml:space="preserve"><value>Step Actions</value></data>
+  <data name="Workbench.AllFields.ValueAction" xml:space="preserve"><value>Value action</value></data>
+  <data name="Workbench.Bulk.Action.AddToRecipe" xml:space="preserve"><value>Add to recipe</value></data>
+  <data name="Workbench.Bulk.Action.DeleteRecipe" xml:space="preserve"><value>Delete recipe</value></data>
+  <data name="Workbench.Bulk.Action.DuplicateStep" xml:space="preserve"><value>Duplicate step</value></data>
+  <data name="Workbench.Bulk.Action.LoadRecipe" xml:space="preserve"><value>Load recipe</value></data>
+  <data name="Workbench.Bulk.Action.MoreRecipeAutomation" xml:space="preserve"><value>More recipe actions</value></data>
+  <data name="Workbench.Bulk.Action.NewRecipe" xml:space="preserve"><value>New recipe</value></data>
+  <data name="Workbench.Bulk.Action.PreviewOperation" xml:space="preserve"><value>Preview operation</value></data>
+  <data name="Workbench.Bulk.Action.RemoveStep" xml:space="preserve"><value>Remove step</value></data>
+  <data name="Workbench.Bulk.Action.SaveRecipe" xml:space="preserve"><value>Save recipe</value></data>
+  <data name="Workbench.Bulk.Action.StepActions" xml:space="preserve"><value>Step actions</value></data>
+  <data name="Workbench.Bulk.Action.StepActionsAutomation" xml:space="preserve"><value>Step actions</value></data>
   <data name="Workbench.Bulk.AssignmentPlaceholder" xml:space="preserve"><value>Assignment</value></data>
   <data name="Workbench.Bulk.CaptureGroup" xml:space="preserve"><value>Capture Group</value></data>
   <data name="Workbench.Bulk.Case" xml:space="preserve"><value>Case</value></data>
@@ -5069,23 +5080,23 @@
   <data name="Workbench.Bulk.Description" xml:space="preserve"><value>Build a reusable metadata recipe, preview its effects, and apply only reviewed changes.</value></data>
   <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>Destination Field</value></data>
   <data name="Workbench.Bulk.EnableCondition" xml:space="preserve"><value>Enable Condition</value></data>
-  <data name="Workbench.Bulk.ExtractionPattern" xml:space="preserve"><value>Extraction Pattern</value></data>
-  <data name="Workbench.Bulk.ExtractionPatternPlaceholder" xml:space="preserve"><value>Extraction Pattern</value></data>
+  <data name="Workbench.Bulk.ExtractionPattern" xml:space="preserve"><value>Extraction pattern</value></data>
+  <data name="Workbench.Bulk.ExtractionPatternPlaceholder" xml:space="preserve"><value>Extraction pattern</value></data>
   <data name="Workbench.Bulk.Field" xml:space="preserve"><value>Field</value></data>
   <data name="Workbench.Bulk.Find" xml:space="preserve"><value>Find</value></data>
   <data name="Workbench.Bulk.FindPlaceholder" xml:space="preserve"><value>Find</value></data>
   <data name="Workbench.Bulk.Operation" xml:space="preserve"><value>Operation</value></data>
-  <data name="Workbench.Bulk.OrderedRecipe" xml:space="preserve"><value>Ordered Recipe</value></data>
+  <data name="Workbench.Bulk.OrderedRecipe" xml:space="preserve"><value>Draft recipe</value></data>
   <data name="Workbench.Bulk.ParentLevel" xml:space="preserve"><value>Parent Level</value></data>
   <data name="Workbench.Bulk.PathComponent" xml:space="preserve"><value>Path Component</value></data>
-  <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>Pending Operations</value></data>
-  <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>Pending Operations</value></data>
-  <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>Personal Recipes</value></data>
+  <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>Preview results</value></data>
+  <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>Preview results</value></data>
+  <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>Saved recipes</value></data>
   <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>Recipe Name</value></data>
   <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>Replace With</value></data>
   <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>A lightweight draft preview updates as you edit the current operation.</value></data>
-  <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>Representative Draft</value></data>
-  <data name="Workbench.Bulk.ReviewedChanges" xml:space="preserve"><value>Reviewed Changes</value></data>
+  <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>Representative preview</value></data>
+  <data name="Workbench.Bulk.ReviewedChanges" xml:space="preserve"><value>Reviewed changes</value></data>
   <data name="Workbench.Bulk.Safety" xml:space="preserve"><value>Previewing never changes files. Applying uses stale-file checks, recovery journals, and undo.</value></data>
   <data name="Workbench.Bulk.SavedRecipePlaceholder" xml:space="preserve"><value>Saved Recipe</value></data>
   <data name="Workbench.Bulk.SecondSourceField" xml:space="preserve"><value>Second Source Field</value></data>
@@ -5103,12 +5114,12 @@
   <data name="Workbench.Choice.FieldEditMode.RemoveValues" xml:space="preserve"><value>Remove Values</value></data>
   <data name="Workbench.Choice.FieldEditMode.Replace" xml:space="preserve"><value>Replace</value></data>
   <data name="Workbench.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>Automatic</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin1</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>Utf16</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>Utf8</value></data>
-  <data name="Workbench.Choice.Id3Version.V22" xml:space="preserve"><value>V22</value></data>
-  <data name="Workbench.Choice.Id3Version.V23" xml:space="preserve"><value>V23</value></data>
-  <data name="Workbench.Choice.Id3Version.V24" xml:space="preserve"><value>V24</value></data>
+  <data name="Workbench.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin-1</value></data>
+  <data name="Workbench.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>UTF-16</value></data>
+  <data name="Workbench.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>UTF-8</value></data>
+  <data name="Workbench.Choice.Id3Version.V22" xml:space="preserve"><value>ID3v2.2</value></data>
+  <data name="Workbench.Choice.Id3Version.V23" xml:space="preserve"><value>ID3v2.3</value></data>
+  <data name="Workbench.Choice.Id3Version.V24" xml:space="preserve"><value>ID3v2.4</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>Ignore</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>Preserve Empty Value</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>Remove Field</value></data>
@@ -5121,21 +5132,21 @@
   <data name="Workbench.Choice.OnlineProvider.MusicBrainz" xml:space="preserve"><value>MusicBrainz</value></data>
   <data name="Workbench.Choice.OnlineScope.AllFiles" xml:space="preserve"><value>All Files</value></data>
   <data name="Workbench.Choice.OnlineScope.SelectedFile" xml:space="preserve"><value>Selected File</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf16LittleEndian" xml:space="preserve"><value>Utf16 Little Endian</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8" xml:space="preserve"><value>Utf8</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8WithBom" xml:space="preserve"><value>Utf8 With Bom</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.CrLf" xml:space="preserve"><value>Cr Lf</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.Lf" xml:space="preserve"><value>Lf</value></data>
+  <data name="Workbench.Choice.PlaylistEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
+  <data name="Workbench.Choice.PlaylistEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
+  <data name="Workbench.Choice.PlaylistEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8 with BOM</value></data>
+  <data name="Workbench.Choice.PlaylistLineEnding.CrLf" xml:space="preserve"><value>CRLF</value></data>
+  <data name="Workbench.Choice.PlaylistLineEnding.Lf" xml:space="preserve"><value>LF</value></data>
   <data name="Workbench.Choice.PlaylistLineEnding.Platform" xml:space="preserve"><value>Platform</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Absolute" xml:space="preserve"><value>Absolute</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.AsProvided" xml:space="preserve"><value>As Provided</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Relative" xml:space="preserve"><value>Relative</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf16LittleEndian" xml:space="preserve"><value>Utf16 Little Endian</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8" xml:space="preserve"><value>Utf8</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8WithBom" xml:space="preserve"><value>Utf8 With Bom</value></data>
-  <data name="Workbench.Choice.ReportFormat.Csv" xml:space="preserve"><value>Csv</value></data>
-  <data name="Workbench.Choice.ReportFormat.Html" xml:space="preserve"><value>Html</value></data>
-  <data name="Workbench.Choice.ReportFormat.Rtf" xml:space="preserve"><value>Rtf</value></data>
+  <data name="Workbench.Choice.ReportEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
+  <data name="Workbench.Choice.ReportEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
+  <data name="Workbench.Choice.ReportEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8 with BOM</value></data>
+  <data name="Workbench.Choice.ReportFormat.Csv" xml:space="preserve"><value>CSV</value></data>
+  <data name="Workbench.Choice.ReportFormat.Html" xml:space="preserve"><value>HTML</value></data>
+  <data name="Workbench.Choice.ReportFormat.Rtf" xml:space="preserve"><value>RTF</value></data>
   <data name="Workbench.Choice.ReportFormat.Text" xml:space="preserve"><value>Text</value></data>
   <data name="Workbench.Choice.ReportSortType.DateTime" xml:space="preserve"><value>Date Time</value></data>
   <data name="Workbench.Choice.ReportSortType.Natural" xml:space="preserve"><value>Natural</value></data>
@@ -5156,7 +5167,7 @@
   <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>New unsaved metadata column.</value></data>
   <data name="Workbench.Columns.Status.Removed" xml:space="preserve"><value>Removed metadata column &apos;{0}&apos;.</value></data>
   <data name="Workbench.Columns.Status.Saved" xml:space="preserve"><value>Saved metadata column &apos;{0}&apos;.</value></data>
-  <data name="Workbench.Columns.Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Workbench.Columns.Title" xml:space="preserve"><value>Column details</value></data>
   <data name="Workbench.Columns.Visible" xml:space="preserve"><value>Visible</value></data>
   <data name="Workbench.Common.After" xml:space="preserve"><value>After</value></data>
   <data name="Workbench.Common.Before" xml:space="preserve"><value>Before</value></data>
@@ -5208,7 +5219,7 @@
   <data name="Workbench.Grid.Header.Label" xml:space="preserve"><value>Label</value></data>
   <data name="Workbench.Grid.Header.Labels" xml:space="preserve"><value>Labels</value></data>
   <data name="Workbench.Grid.Header.MatchedPosition" xml:space="preserve"><value>Matched Position</value></data>
-  <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>MusicBrainz Recording Ids</value></data>
+  <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>MusicBrainz recording IDs</value></data>
   <data name="Workbench.Grid.Header.MusicBrainzReleaseId" xml:space="preserve"><value>MusicBrainz Release ID</value></data>
   <data name="Workbench.Grid.Header.Operation" xml:space="preserve"><value>Operation</value></data>
   <data name="Workbench.Grid.Header.Position" xml:space="preserve"><value>Position</value></data>
@@ -5264,23 +5275,23 @@
   <data name="Workbench.Navigation.Group.Enrich" xml:space="preserve"><value>Enrich</value></data>
   <data name="Workbench.Navigation.Group.Output" xml:space="preserve"><value>Output</value></data>
   <data name="Workbench.Navigation.Group.Workspace" xml:space="preserve"><value>Workspace</value></data>
-  <data name="Workbench.Navigation.Section.AllFields" xml:space="preserve"><value>All Fields</value></data>
-  <data name="Workbench.Navigation.Section.BulkOperation" xml:space="preserve"><value>Bulk Operation</value></data>
-  <data name="Workbench.Navigation.Section.Files" xml:space="preserve"><value>Files</value></data>
-  <data name="Workbench.Navigation.Section.OnlineMetadata" xml:space="preserve"><value>Online Metadata</value></data>
+  <data name="Workbench.Navigation.Section.AllFields" xml:space="preserve"><value>All fields</value></data>
+  <data name="Workbench.Navigation.Section.BulkOperation" xml:space="preserve"><value>Bulk edit</value></data>
+  <data name="Workbench.Navigation.Section.Files" xml:space="preserve"><value>File operations</value></data>
+  <data name="Workbench.Navigation.Section.OnlineMetadata" xml:space="preserve"><value>Online metadata</value></data>
   <data name="Workbench.Navigation.Section.Playlists" xml:space="preserve"><value>Playlists</value></data>
   <data name="Workbench.Navigation.Section.Reports" xml:space="preserve"><value>Reports</value></data>
   <data name="Workbench.Navigation.Section.Session" xml:space="preserve"><value>Session</value></data>
   <data name="Workbench.Navigation.Section.Shortcuts" xml:space="preserve"><value>Shortcuts</value></data>
-  <data name="Workbench.Navigation.Section.Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Workbench.Navigation.Section.Tools" xml:space="preserve"><value>External tools</value></data>
   <data name="Workbench.Navigation.SectionAutomation" xml:space="preserve"><value>Section</value></data>
   <data name="Workbench.Online.AddImage" xml:space="preserve"><value>Add image</value></data>
   <data name="Workbench.Online.AdvancedIdentifiers" xml:space="preserve"><value>Advanced Identifiers</value></data>
   <data name="Workbench.Online.AlbumPlaceholder" xml:space="preserve"><value>Album</value></data>
   <data name="Workbench.Online.ArtistPlaceholder" xml:space="preserve"><value>Artist</value></data>
   <data name="Workbench.Online.Artwork" xml:space="preserve"><value>Artwork</value></data>
-  <data name="Workbench.Online.ArtworkActions" xml:space="preserve"><value>Artwork Actions</value></data>
-  <data name="Workbench.Online.ArtworkActionsAutomation" xml:space="preserve"><value>Artwork Actions</value></data>
+  <data name="Workbench.Online.ArtworkActions" xml:space="preserve"><value>Artwork actions</value></data>
+  <data name="Workbench.Online.ArtworkActionsAutomation" xml:space="preserve"><value>Artwork actions</value></data>
   <data name="Workbench.Online.ArtworkDescription" xml:space="preserve"><value>Edit the ordered embedded artwork set or use artwork from a confirmed release mapping.</value></data>
   <data name="Workbench.Online.ArtworkRole" xml:space="preserve"><value>Artwork Role</value></data>
   <data name="Workbench.Online.AudioCandidates" xml:space="preserve"><value>Audio Candidates</value></data>
@@ -5295,7 +5306,7 @@
   <data name="Workbench.Online.DiscogsReleaseIdPlaceholder" xml:space="preserve"><value>Discogs Release ID</value></data>
   <data name="Workbench.Online.Discover" xml:space="preserve"><value>Discover</value></data>
   <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>Fingerprint the chosen files and find AcoustID and MusicBrainz recording candidates. Nothing is submitted.</value></data>
-  <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>Discover Title</value></data>
+  <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>Discover audio</value></data>
   <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>Embedded Artwork Set</value></data>
   <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>Export Artwork</value></data>
   <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>Export Artwork</value></data>
@@ -5303,7 +5314,7 @@
   <data name="Workbench.Online.Field.AlbumDate" xml:space="preserve"><value>Album Date</value></data>
   <data name="Workbench.Online.Field.DiscogsReleaseId" xml:space="preserve"><value>Discogs Release ID</value></data>
   <data name="Workbench.Online.Field.GenresStyles" xml:space="preserve"><value>Genres Styles</value></data>
-  <data name="Workbench.Online.Field.MusicBrainzIds" xml:space="preserve"><value>MusicBrainz Ids</value></data>
+  <data name="Workbench.Online.Field.MusicBrainzIds" xml:space="preserve"><value>MusicBrainz IDs</value></data>
   <data name="Workbench.Online.Field.Numbering" xml:space="preserve"><value>Numbering</value></data>
   <data name="Workbench.Online.Field.ReleaseDetails" xml:space="preserve"><value>Release Details</value></data>
   <data name="Workbench.Online.Field.Titles" xml:space="preserve"><value>Titles</value></data>
@@ -5323,7 +5334,7 @@
   <data name="Workbench.Online.PreviewCover" xml:space="preserve"><value>Preview Cover</value></data>
   <data name="Workbench.Online.PreviewMappedMetadata" xml:space="preserve"><value>Preview Mapped Metadata</value></data>
   <data name="Workbench.Online.PreviewReleaseCover" xml:space="preserve"><value>Preview Release Cover</value></data>
-  <data name="Workbench.Online.PreviewSelectedIds" xml:space="preserve"><value>Preview Selected Ids</value></data>
+  <data name="Workbench.Online.PreviewSelectedIds" xml:space="preserve"><value>Preview selected IDs</value></data>
   <data name="Workbench.Online.ProviderAutomation" xml:space="preserve"><value>Provider</value></data>
   <data name="Workbench.Online.ReleaseArtworkCandidates" xml:space="preserve"><value>Release Artwork Candidates</value></data>
   <data name="Workbench.Online.ReleaseEditions" xml:space="preserve"><value>Release Editions</value></data>
@@ -5332,11 +5343,11 @@
   <data name="Workbench.Online.ReplaceArtwork" xml:space="preserve"><value>Replace Artwork</value></data>
   <data name="Workbench.Online.ReplaceArtworkAutomation" xml:space="preserve"><value>Replace Artwork</value></data>
   <data name="Workbench.Online.ResultsDescription" xml:space="preserve"><value>Choose a candidate, confirm mappings and fields, then add the result to Pending Changes.</value></data>
-  <data name="Workbench.Online.ResultsTitle" xml:space="preserve"><value>Results Title</value></data>
+  <data name="Workbench.Online.ResultsTitle" xml:space="preserve"><value>Review matches</value></data>
   <data name="Workbench.Online.ScopeAutomation" xml:space="preserve"><value>Scope</value></data>
   <data name="Workbench.Online.Search" xml:space="preserve"><value>Search</value></data>
   <data name="Workbench.Online.SearchDescription" xml:space="preserve"><value>Choose a provider, search, then review and map an edition below.</value></data>
-  <data name="Workbench.Online.SearchTitle" xml:space="preserve"><value>Search Title</value></data>
+  <data name="Workbench.Online.SearchTitle" xml:space="preserve"><value>Search releases</value></data>
   <data name="Workbench.Online.SelectedImage" xml:space="preserve"><value>Selected Image</value></data>
   <data name="Workbench.Online.Source.Cache" xml:space="preserve"><value>Cache</value></data>
   <data name="Workbench.Online.Source.OfflineCache" xml:space="preserve"><value>Offline cache</value></data>
@@ -5368,31 +5379,31 @@
   <data name="Workbench.PendingChanges.Close" xml:space="preserve"><value>Close</value></data>
   <data name="Workbench.PendingChanges.Count.One" xml:space="preserve"><value>{0:N0} pending edit</value></data>
   <data name="Workbench.PendingChanges.Count.Other" xml:space="preserve"><value>{0:N0} pending edits</value></data>
-  <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>Review every pending metadata edit before writing files.</value></data>
-  <data name="Workbench.PendingChanges.Empty" xml:space="preserve"><value>No pending edits. Changes made in the grid or inspector will appear here.</value></data>
-  <data name="Workbench.PendingChanges.EmptyDescription" xml:space="preserve"><value>Empty Description</value></data>
-  <data name="Workbench.PendingChanges.EmptyTitle" xml:space="preserve"><value>Empty Title</value></data>
-  <data name="Workbench.PendingChanges.GridAutomation" xml:space="preserve"><value>Grid</value></data>
-  <data name="Workbench.PendingChanges.RevertTooltip" xml:space="preserve"><value>Revert</value></data>
-  <data name="Workbench.PendingChanges.Review.One" xml:space="preserve"><value>Review {0:N0} pending change</value></data>
-  <data name="Workbench.PendingChanges.Review.Other" xml:space="preserve"><value>Review {0:N0} pending changes</value></data>
+  <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>Review every pending edit and file operation before anything is written.</value></data>
+  <data name="Workbench.PendingChanges.Empty" xml:space="preserve"><value>No pending changes. Edits from the grid, Inspector, file operations, and transcodes will appear here.</value></data>
+  <data name="Workbench.PendingChanges.EmptyDescription" xml:space="preserve"><value>Edits from the grid, Inspector, file operations, and transcodes will appear here before anything is written.</value></data>
+  <data name="Workbench.PendingChanges.EmptyTitle" xml:space="preserve"><value>No pending changes</value></data>
+  <data name="Workbench.PendingChanges.GridAutomation" xml:space="preserve"><value>Pending change list</value></data>
+  <data name="Workbench.PendingChanges.RevertTooltip" xml:space="preserve"><value>Discard all pending changes</value></data>
+  <data name="Workbench.PendingChanges.Review.One" xml:space="preserve"><value>Changes ({0:N0})</value></data>
+  <data name="Workbench.PendingChanges.Review.Other" xml:space="preserve"><value>Changes ({0:N0})</value></data>
   <data name="Workbench.PendingChanges.ReviewAutomation" xml:space="preserve"><value>Review</value></data>
-  <data name="Workbench.PendingChanges.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.AddArtwork.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.AddFolder.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.AddSources.Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Workbench.PendingChanges.Title" xml:space="preserve"><value>Review changes</value></data>
+  <data name="Workbench.Picker.AddArtwork.Title" xml:space="preserve"><value>Add artwork</value></data>
+  <data name="Workbench.Picker.AddFolder.Title" xml:space="preserve"><value>Add a source folder</value></data>
+  <data name="Workbench.Picker.AddSources.Title" xml:space="preserve"><value>Add source files</value></data>
   <data name="Workbench.Picker.ArtworkImages" xml:space="preserve"><value>Artwork Images</value></data>
   <data name="Workbench.Picker.DelimitedMetadata" xml:space="preserve"><value>Delimited Metadata</value></data>
-  <data name="Workbench.Picker.ExportArtwork.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.ExternalTool.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.ExternalWorkingDirectory.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.FrontCover.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.ImportMetadata.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.PlaylistFolder.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.PlaylistOutput.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.ReplaceArtwork.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.ReportFolder.Title" xml:space="preserve"><value>Title</value></data>
-  <data name="Workbench.Picker.ReportOutput.Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Workbench.Picker.ExportArtwork.Title" xml:space="preserve"><value>Export artwork</value></data>
+  <data name="Workbench.Picker.ExternalTool.Title" xml:space="preserve"><value>Choose a tool executable</value></data>
+  <data name="Workbench.Picker.ExternalWorkingDirectory.Title" xml:space="preserve"><value>Choose a working directory</value></data>
+  <data name="Workbench.Picker.FrontCover.Title" xml:space="preserve"><value>Choose front-cover artwork</value></data>
+  <data name="Workbench.Picker.ImportMetadata.Title" xml:space="preserve"><value>Import metadata</value></data>
+  <data name="Workbench.Picker.PlaylistFolder.Title" xml:space="preserve"><value>Choose a playlist folder</value></data>
+  <data name="Workbench.Picker.PlaylistOutput.Title" xml:space="preserve"><value>Save playlist</value></data>
+  <data name="Workbench.Picker.ReplaceArtwork.Title" xml:space="preserve"><value>Replace artwork</value></data>
+  <data name="Workbench.Picker.ReportFolder.Title" xml:space="preserve"><value>Choose a report folder</value></data>
+  <data name="Workbench.Picker.ReportOutput.Title" xml:space="preserve"><value>Save report</value></data>
   <data name="Workbench.Picker.SupportedSources" xml:space="preserve"><value>Supported Sources</value></data>
   <data name="Workbench.Playlists.Action.Preview" xml:space="preserve"><value>Preview playlist</value></data>
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>Write</value></data>
@@ -5400,20 +5411,23 @@
   <data name="Workbench.Playlists.Description" xml:space="preserve"><value>Preview playlist destinations and contents before writing output.</value></data>
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>Encoding</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>Extended Info</value></data>
+  <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>Line endings</value></data>
   <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
   <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>One Per Group</value></data>
+  <data name="Workbench.Playlists.Grouping" xml:space="preserve"><value>Grouping</value></data>
   <data name="Workbench.Playlists.PathStyle" xml:space="preserve"><value>Path Style</value></data>
   <data name="Workbench.Playlists.Reviewed" xml:space="preserve"><value>Reviewed</value></data>
   <data name="Workbench.Playlists.Safety" xml:space="preserve"><value>Playlist output is separate from metadata changes and writes only after review.</value></data>
-  <data name="Workbench.Playlists.Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Workbench.Playlists.Title" xml:space="preserve"><value>Playlists</value></data>
   <data name="Workbench.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>Loading artwork thumbnail {0:N0} of {1:N0}</value></data>
   <data name="Workbench.Progress.ReadingFile" xml:space="preserve"><value>Reading {0}</value></data>
   <data name="Workbench.Progress.Restored.One" xml:space="preserve"><value>Restored {0:N0} file</value></data>
   <data name="Workbench.Progress.Restored.Other" xml:space="preserve"><value>Restored {0:N0} files</value></data>
-  <data name="Workbench.Reports.Action.AddCustom" xml:space="preserve"><value>Add Custom</value></data>
+  <data name="Workbench.Reports.Action.AddCustom" xml:space="preserve"><value>Add custom field</value></data>
   <data name="Workbench.Reports.Action.Preview" xml:space="preserve"><value>Preview</value></data>
   <data name="Workbench.Reports.Action.Write" xml:space="preserve"><value>Write</value></data>
   <data name="Workbench.Reports.Columns" xml:space="preserve"><value>Columns</value></data>
+  <data name="Workbench.Reports.ColumnActions" xml:space="preserve"><value>Column actions</value></data>
   <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>Music library report</value></data>
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>Descending</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>Choose fields, grouping, and sorting, then review every output destination.</value></data>
@@ -5426,19 +5440,21 @@
   <data name="Workbench.Reports.Field.Metadata" xml:space="preserve"><value>Metadata - {0}</value></data>
   <data name="Workbench.Reports.Field.SampleRate" xml:space="preserve"><value>Sample Rate</value></data>
   <data name="Workbench.Reports.Field.Technical" xml:space="preserve"><value>Technical - {0}</value></data>
-  <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>Group By</value></data>
+  <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>Group by</value></data>
+  <data name="Workbench.Reports.GroupFileNamePattern" xml:space="preserve"><value>Group file name pattern</value></data>
+  <data name="Workbench.Reports.GroupFileNameHelp" xml:space="preserve"><value>Use {Group} for the selected group value and {Format} for the report file extension.</value></data>
   <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
-  <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>No Grouping</value></data>
-  <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>One Per Group</value></data>
+  <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>No grouping</value></data>
+  <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>One file per group</value></data>
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>Reviewed</value></data>
   <data name="Workbench.Reports.Safety" xml:space="preserve"><value>Report output never changes media files.</value></data>
-  <data name="Workbench.Reports.SortBy" xml:space="preserve"><value>Sort By</value></data>
+  <data name="Workbench.Reports.SortBy" xml:space="preserve"><value>Sort by</value></data>
   <data name="Workbench.Reports.Source.Custom" xml:space="preserve"><value>Custom: {0}</value></data>
   <data name="Workbench.Reports.Source.File" xml:space="preserve"><value>File: {0}</value></data>
   <data name="Workbench.Reports.Source.Metadata" xml:space="preserve"><value>Metadata: {0}</value></data>
   <data name="Workbench.Reports.Source.Technical" xml:space="preserve"><value>Technical: {0}</value></data>
-  <data name="Workbench.Reports.SourceOrder" xml:space="preserve"><value>Source Order</value></data>
-  <data name="Workbench.Reports.Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Workbench.Reports.SourceOrder" xml:space="preserve"><value>Source order</value></data>
+  <data name="Workbench.Reports.Title" xml:space="preserve"><value>Reports</value></data>
   <data name="Workbench.Representative.Error.NoFile" xml:space="preserve"><value>The representative preview returned no file.</value></data>
   <data name="Workbench.Representative.Missing" xml:space="preserve"><value>(missing)</value></data>
   <data name="Workbench.Representative.Status.Blocked" xml:space="preserve"><value>Draft preview blocked.</value></data>
@@ -5451,9 +5467,9 @@
   <data name="Workbench.Representative.ValueSeparator" xml:space="preserve"><value> / </value></data>
   <data name="Workbench.Section.AllFields" xml:space="preserve"><value>All fields</value></data>
   <data name="Workbench.Section.AllFieldsAutomation" xml:space="preserve"><value>All metadata fields</value></data>
-  <data name="Workbench.Section.BulkOperation" xml:space="preserve"><value>Bulk operation</value></data>
+  <data name="Workbench.Section.BulkOperation" xml:space="preserve"><value>Bulk edit</value></data>
   <data name="Workbench.Section.BulkOperationAutomation" xml:space="preserve"><value>Bulk metadata operation</value></data>
-  <data name="Workbench.Section.Files" xml:space="preserve"><value>Files</value></data>
+  <data name="Workbench.Section.Files" xml:space="preserve"><value>File operations</value></data>
   <data name="Workbench.Section.FilesAutomation" xml:space="preserve"><value>Reviewed file operations</value></data>
   <data name="Workbench.Section.OnlineMetadata" xml:space="preserve"><value>Online metadata</value></data>
   <data name="Workbench.Section.OnlineMetadataAutomation" xml:space="preserve"><value>Online metadata</value></data>
@@ -5465,37 +5481,37 @@
   <data name="Workbench.Section.SessionAutomation" xml:space="preserve"><value>Workbench session</value></data>
   <data name="Workbench.Section.Shortcuts" xml:space="preserve"><value>Shortcuts</value></data>
   <data name="Workbench.Section.ShortcutsAutomation" xml:space="preserve"><value>Workbench shortcuts</value></data>
-  <data name="Workbench.Section.Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Workbench.Section.Tools" xml:space="preserve"><value>External tools</value></data>
   <data name="Workbench.Section.ToolsAutomation" xml:space="preserve"><value>External tools</value></data>
   <data name="Workbench.Selection.Files.One" xml:space="preserve"><value>{0:N0} file selected</value></data>
   <data name="Workbench.Selection.Files.Other" xml:space="preserve"><value>{0:N0} files selected</value></data>
-  <data name="Workbench.Session.Action.Clear" xml:space="preserve"><value>Clear</value></data>
-  <data name="Workbench.Session.Action.RemoveSelected" xml:space="preserve"><value>Remove Selected</value></data>
-  <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>Send To Ingest</value></data>
+  <data name="Workbench.Session.Action.Clear" xml:space="preserve"><value>Clear session</value></data>
+  <data name="Workbench.Session.Action.RemoveSelected" xml:space="preserve"><value>Remove from session</value></data>
+  <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>Send to Ingest</value></data>
   <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>{0:N0} artwork</value></data>
   <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>{0:N0} artworks</value></data>
   <data name="Workbench.Session.Columns" xml:space="preserve"><value>Columns</value></data>
   <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>Empty Cell</value></data>
   <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>Empty Cell</value></data>
-  <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>Empty Description</value></data>
-  <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>Empty Title</value></data>
+  <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>Add audio files or a folder to begin reviewing and editing a session.</value></data>
+  <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>No files in this session</value></data>
   <data name="Workbench.Session.FieldsCount.One" xml:space="preserve"><value>{0:N0} field</value></data>
   <data name="Workbench.Session.FieldsCount.Other" xml:space="preserve"><value>{0:N0} fields</value></data>
   <data name="Workbench.Session.GridAutomation" xml:space="preserve"><value>Grid</value></data>
   <data name="Workbench.Session.ImportDelimited" xml:space="preserve"><value>Import CSV/TSV</value></data>
-  <data name="Workbench.Session.SelectionActions" xml:space="preserve"><value>Selection Actions</value></data>
+  <data name="Workbench.Session.SelectionActions" xml:space="preserve"><value>Selection actions</value></data>
   <data name="Workbench.Session.TagsFormat" xml:space="preserve"><value>Tags: {0}</value></data>
-  <data name="Workbench.Shortcuts.BindingTitle" xml:space="preserve"><value>Binding Title</value></data>
+  <data name="Workbench.Shortcuts.BindingTitle" xml:space="preserve"><value>Shortcut details</value></data>
   <data name="Workbench.Shortcuts.Command" xml:space="preserve"><value>Command</value></data>
-  <data name="Workbench.Shortcuts.Command.AddFiles" xml:space="preserve"><value>Add Files</value></data>
-  <data name="Workbench.Shortcuts.Command.AddFolder" xml:space="preserve"><value>Add Folder</value></data>
-  <data name="Workbench.Shortcuts.Command.ApplyReviewedChanges" xml:space="preserve"><value>Apply Reviewed Changes</value></data>
-  <data name="Workbench.Shortcuts.Command.CancelCurrentOperation" xml:space="preserve"><value>Cancel Current Operation</value></data>
-  <data name="Workbench.Shortcuts.Command.PreviewCurrentRecipe" xml:space="preserve"><value>Preview Current Recipe</value></data>
-  <data name="Workbench.Shortcuts.Command.PreviewInlineEdits" xml:space="preserve"><value>Preview Inline Edits</value></data>
+  <data name="Workbench.Shortcuts.Command.AddFiles" xml:space="preserve"><value>Add files</value></data>
+  <data name="Workbench.Shortcuts.Command.AddFolder" xml:space="preserve"><value>Add folder</value></data>
+  <data name="Workbench.Shortcuts.Command.ApplyReviewedChanges" xml:space="preserve"><value>Apply reviewed changes</value></data>
+  <data name="Workbench.Shortcuts.Command.CancelCurrentOperation" xml:space="preserve"><value>Cancel current operation</value></data>
+  <data name="Workbench.Shortcuts.Command.PreviewCurrentRecipe" xml:space="preserve"><value>Preview current recipe</value></data>
+  <data name="Workbench.Shortcuts.Command.PreviewInlineEdits" xml:space="preserve"><value>Preview inline edits</value></data>
   <data name="Workbench.Shortcuts.Command.Redo" xml:space="preserve"><value>Redo</value></data>
-  <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>Repeat Last Recipe</value></data>
-  <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>Undo Last Apply</value></data>
+  <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>Repeat last recipe</value></data>
+  <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>Undo last apply</value></data>
   <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>Use a modifier and an Avalonia key name, for example Ctrl+Alt+R, Meta+F8, or Ctrl+Shift+Enter.</value></data>
   <data name="Workbench.Shortcuts.GesturePlaceholder" xml:space="preserve"><value>Gesture</value></data>
   <data name="Workbench.Shortcuts.InputWarning" xml:space="preserve"><value>Shortcuts are ignored while a text or choice editor has focus. Ctrl+K and Ctrl+I remain reserved for global search and indexing.</value></data>
@@ -5508,7 +5524,8 @@
   <data name="Workbench.Shortcuts.Status.Removed" xml:space="preserve"><value>Removed {0}.</value></data>
   <data name="Workbench.Shortcuts.Status.Saved" xml:space="preserve"><value>Saved {0} for {1}.</value></data>
   <data name="Workbench.Shortcuts.Target.Recipe" xml:space="preserve"><value>Recipe</value></data>
-  <data name="Workbench.Shortcuts.Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Workbench.Shortcuts.Target" xml:space="preserve"><value>Target</value></data>
+  <data name="Workbench.Shortcuts.Title" xml:space="preserve"><value>Shortcuts</value></data>
   <data name="Workbench.Shortcuts.Validation.ChooseTarget" xml:space="preserve"><value>Choose a shortcut target.</value></data>
   <data name="Workbench.Shortcuts.Validation.Conflict" xml:space="preserve"><value>{0} is already assigned to {1}.</value></data>
   <data name="Workbench.Shortcuts.Validation.Invalid" xml:space="preserve"><value>The shortcut is invalid.</value></data>
@@ -5655,13 +5672,14 @@
   <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>External tool</value></data>
   <data name="Workbench.Tools.Delete" xml:space="preserve"><value>Delete tool</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>Executable</value></data>
+  <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>Invocation mode</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>Load</value></data>
   <data name="Workbench.Tools.MoreAutomation" xml:space="preserve"><value>More</value></data>
   <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
   <data name="Workbench.Tools.New" xml:space="preserve"><value>New tool</value></data>
   <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>Documented placeholders: {Files} for one selection process; or {File}, {Directory}, {FileName}, {FileNameWithoutExtension}, {Extension}, {Index}, and {Count} for one process per file. {Files} must be its own argument.</value></data>
   <data name="Workbench.Tools.Preview" xml:space="preserve"><value>Preview tool</value></data>
-  <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>Reviewed Title</value></data>
+  <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>Reviewed invocation</value></data>
   <data name="Workbench.Tools.Run" xml:space="preserve"><value>Run</value></data>
   <data name="Workbench.Tools.Safety" xml:space="preserve"><value>No shell is used, but the selected executable can still change files. External tools are outside MusicLibraryManager recovery and always require confirmation.</value></data>
   <data name="Workbench.Tools.Save" xml:space="preserve"><value>Save tool</value></data>
@@ -5670,7 +5688,7 @@
   <data name="Workbench.Tools.Status.Loaded" xml:space="preserve"><value>Loaded &apos;{0}&apos;.</value></data>
   <data name="Workbench.Tools.Status.New" xml:space="preserve"><value>New unsaved tool.</value></data>
   <data name="Workbench.Tools.Status.Saved" xml:space="preserve"><value>Saved &apos;{0}&apos; as a personal tool.</value></data>
-  <data name="Workbench.Tools.Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Workbench.Tools.Title" xml:space="preserve"><value>External tools</value></data>
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>Working Directory</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
   <data name="Workbench.Value.SampleRate" xml:space="preserve"><value>{0:N0} Hz</value></data>
@@ -5910,7 +5928,7 @@
   <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>The preview expired. Preview the field changes again.</value></data>
   <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>The field-change preview failed. Proposed changes remain ready to retry.</value></data>
   <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>The preview found no applicable changes. No files were changed.</value></data>
-  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>Preview ready. Files with changes: {0:N0}; field changes: {1:N0}. Apply uses stale-file checks, recovery journals, and undo. Choose Apply changes to continue.</value></data>
+  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>Preview ready. Files with changes: {0:N0}; field changes: {1:N0}. Nothing has been written. Choose Review changes to add this preview to the shared pending-changes drawer.</value></data>
   <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>Save cancelled. Proposed field changes remain ready to retry.</value></data>
   <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>Updated {0:N0} file. The original is retained for undo.</value></data>
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>Updated {0:N0} files. Originals are retained for undo.</value></data>
@@ -6240,4 +6258,42 @@
   <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>Choose Monkey's Audio MAC executable</value></data>
   <data name="Transcode.Format.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio</value></data>
   <data name="Transcode.Encoder.MonkeysAudioMac" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
+  <data name="Shell.Navigation.Toggle" xml:space="preserve"><value>Expand or collapse navigation</value></data>
+  <data name="Library.Handoff.Action" xml:space="preserve"><value>Edit in Workbench…</value></data>
+  <data name="Library.Handoff.Automation" xml:space="preserve"><value>Choose a Workbench destination and result scope</value></data>
+  <data name="Library.Handoff.Scope.Selected" xml:space="preserve"><value>Selected files</value></data>
+  <data name="Library.Handoff.Scope.Visible" xml:space="preserve"><value>Visible results</value></data>
+  <data name="Library.Handoff.Scope.All" xml:space="preserve"><value>All results</value></data>
+  <data name="Library.Action.RefreshAffectedPaths" xml:space="preserve"><value>Refresh affected paths</value></data>
+  <data name="Devices.Action.More" xml:space="preserve"><value>More</value></data>
+  <data name="Devices.Action.MoreAutomation" xml:space="preserve"><value>More device actions</value></data>
+  <data name="Devices.Advanced.Title" xml:space="preserve"><value>Advanced</value></data>
+  <data name="Operations.Job.OutputLabel" xml:space="preserve"><value>Output and diagnostic log</value></data>
+  <data name="Operations.Job.PickerAutomation" xml:space="preserve"><value>Operation run</value></data>
+  <data name="Ingest.PreflightChecks.Title" xml:space="preserve"><value>Preflight checks</value></data>
+  <data name="Settings.EffectivePolicy.ProvenanceTitle" xml:space="preserve"><value>Technical provenance</value></data>
+  <data name="Settings.FieldMappings.SourceLabel" xml:space="preserve"><value>Source field</value></data>
+  <data name="Settings.FieldMappings.TargetLabel" xml:space="preserve"><value>Target field</value></data>
+  <data name="Inspector.View.ReviewChanges" xml:space="preserve"><value>Review changes</value></data>
+  <data name="Inspector.View.OptimizeOptions" xml:space="preserve"><value>Optimize options</value></data>
+  <data name="Workbench.Common.Advanced" xml:space="preserve"><value>Advanced</value></data>
+  <data name="Workbench.Inspector.LayerPresent" xml:space="preserve"><value>Present</value></data>
+  <data name="Workbench.Inspector.LayerMissing" xml:space="preserve"><value>Missing</value></data>
+  <data name="Workbench.Inspector.Id3v2Actions" xml:space="preserve"><value>ID3v2 actions</value></data>
+  <data name="Workbench.Inspector.ApeV2Actions" xml:space="preserve"><value>APEv2 actions</value></data>
+  <data name="Workbench.Inspector.Id3v1Actions" xml:space="preserve"><value>ID3v1 actions</value></data>
+  <data name="Transcode.Concurrency.ParallelJobs" xml:space="preserve"><value>Parallel jobs</value></data>
+  <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>Added {0:N0} file operation to Review Changes.</value></data>
+  <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>Added {0:N0} file operations to Review Changes.</value></data>
+  <data name="Workbench.Dialog.PendingConflict.Title" xml:space="preserve"><value>Conflicting pending change</value></data>
+  <data name="Workbench.Dialog.PendingConflict.Message" xml:space="preserve"><value>A selected source already has an incompatible pending transcode or file operation. Discard that pending change before adding another.</value></data>
+  <data name="Workbench.Dialog.ReplacePendingFileOperation.Title" xml:space="preserve"><value>Replace pending file operation?</value></data>
+  <data name="Workbench.Dialog.ReplacePendingFileOperation.Message" xml:space="preserve"><value>The selected source already has a pending file operation. Replace it with the newly previewed operation?</value></data>
+  <data name="Workbench.Dialog.ReplacePendingFileOperation.Confirm" xml:space="preserve"><value>Replace</value></data>
+  <data name="Workbench.PendingChanges.FileOperation" xml:space="preserve"><value>File operation</value></data>
+  <data name="Workbench.PendingChanges.NoDestination" xml:space="preserve"><value>No destination</value></data>
+  <data name="Settings.Appearance.Density" xml:space="preserve"><value>Content density</value></data>
+  <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>Compact reduces row, card, and form spacing without shrinking navigation or icon targets.</value></data>
+  <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>Standard</value></data>
+  <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>Compact</value></data>
 </root>

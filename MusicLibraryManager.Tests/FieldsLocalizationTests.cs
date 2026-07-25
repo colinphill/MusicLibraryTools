@@ -69,6 +69,7 @@ public sealed class FieldsLocalizationTests
                     @"C:\music\track.flac")),
             new FakeMetadataOperationService(),
             [@"C:\music\track.flac"],
+            (_, _) => Task.FromResult(true),
             localization: localization);
         await viewModel.Loading;
 
@@ -144,7 +145,7 @@ public sealed class FieldsLocalizationTests
             previewStatus,
             viewModel.StatusMessage);
         Assert.StartsWith(
-            "fr-FR:Fields.Status.PreviewReady",
+            "fr-FR:Fields.Status.PreviewReady:1|1",
             viewModel.StatusMessage,
             StringComparison.Ordinal);
     }
@@ -159,6 +160,7 @@ public sealed class FieldsLocalizationTests
                 "decoder exploded"),
             new FakeMetadataOperationService(),
             [@"C:\music\one.flac"],
+            (_, _) => Task.FromResult(true),
             localization: oneLocalization);
         await one.Loading;
 
@@ -209,6 +211,7 @@ public sealed class FieldsLocalizationTests
                 @"C:\music\one.flac",
                 @"C:\music\two.flac",
             ],
+            (_, _) => Task.FromResult(true),
             localization:
                 new SwitchingLocalizationService());
         await many.Loading;

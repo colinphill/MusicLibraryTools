@@ -14,7 +14,8 @@ public sealed class FieldsDialogSafetyTests
         var viewModel = new FieldsDialogViewModel(
             new FakeMetadataDocumentService(Document()),
             new FakeMetadataOperationService(),
-            [@"C:\track.flac"]);
+            [@"C:\track.flac"],
+            (_, _) => Task.FromResult(true));
         await viewModel.Loading;
         viewModel.Rows.Single(row => row.Field == TagFields.Title).Value = "Edited";
         bool? closed = null;
@@ -32,15 +33,18 @@ public sealed class FieldsDialogSafetyTests
     }
 
     [Fact]
-    public async Task Fields_save_is_persistent_and_cancellable_after_summary_confirmation()
+    public async Task Fields_review_handoff_is_cancellable_after_preview_confirmation()
     {
         var operations =
-            new BlockingMetadataOperationService();
+            new RecordingMetadataOperationService();
+        var review =
+            new BlockingReviewCoordinator();
         var activities = new AppActivityService();
         var viewModel = new FieldsDialogViewModel(
             new FakeMetadataDocumentService(Document()),
             operations,
             [@"C:\track.flac"],
+            review.AddAsync,
             activities);
         await viewModel.Loading;
         viewModel.Rows.Single(row => row.Field == TagFields.Title).Value = "Edited";
@@ -52,7 +56,7 @@ public sealed class FieldsDialogSafetyTests
             viewModel.IsConfirmingSave,
             viewModel.StatusMessage);
         Task saving = viewModel.SaveCommand.ExecuteAsync(null);
-        await operations.Started.Task.WaitAsync(
+        await review.Started.Task.WaitAsync(
             TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         AppActivity activity = activities.Activities.First();
         Assert.Equal(ShellDestination.Library, activity.Destination);
@@ -67,6 +71,40 @@ public sealed class FieldsDialogSafetyTests
         Assert.Equal(
             AppActivityState.Cancelled,
             activities.Activities.First().State);
+        Assert.Equal(0, operations.ApplyCalls);
+    }
+
+    [Fact]
+    public async Task Fields_confirmed_preview_is_staged_for_review_without_writing()
+    {
+        var operations =
+            new RecordingMetadataOperationService();
+        MetadataOperationPlan? reviewed = null;
+        var viewModel = new FieldsDialogViewModel(
+            new FakeMetadataDocumentService(Document()),
+            operations,
+            [@"C:\track.flac"],
+            (plan, _) =>
+            {
+                reviewed = plan;
+                return Task.FromResult(true);
+            });
+        await viewModel.Loading;
+        viewModel.Rows.Single(row =>
+            row.Field == TagFields.Title).Value =
+                "Edited";
+        bool? closed = null;
+        viewModel.CloseRequested +=
+            result => closed = result;
+
+        await viewModel.SaveCommand.ExecuteAsync(null);
+        await viewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.True(closed);
+        Assert.NotNull(reviewed);
+        Assert.Equal("Edited", Assert.Single(
+            Assert.Single(reviewed!.Files).Edits).Values.Single());
+        Assert.Equal(0, operations.ApplyCalls);
     }
 
     private static MediaDocument Document() =>
@@ -91,24 +129,35 @@ public sealed class FieldsDialogSafetyTests
                 "hash"),
             true);
 
-    private sealed class BlockingMetadataOperationService :
+    private sealed class RecordingMetadataOperationService :
         FakeMetadataOperationService
     {
-        public TaskCompletionSource<bool> Started { get; } =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int ApplyCalls { get; private set; }
 
-        public override async Task<MetadataApplyResult>
+        public override Task<MetadataApplyResult>
             ApplyAsync(
             MetadataOperationPlan plan,
             IProgress<OperationProgress>? progress = null,
             CancellationToken ct = default)
         {
+            ApplyCalls++;
+            throw new InvalidOperationException(
+                "FieldsDialog must not apply directly.");
+        }
+    }
+
+    private sealed class BlockingReviewCoordinator
+    {
+        public TaskCompletionSource<bool> Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<bool> AddAsync(
+            MetadataOperationPlan plan,
+            CancellationToken ct)
+        {
             Started.TrySetResult(true);
             await Task.Delay(Timeout.InfiniteTimeSpan, ct);
-            return new MetadataApplyResult(
-                0,
-                [],
-                []);
+            return true;
         }
     }
 }

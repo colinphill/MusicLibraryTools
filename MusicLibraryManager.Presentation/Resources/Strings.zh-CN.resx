@@ -103,6 +103,9 @@
   <data name="Common.Beta" xml:space="preserve">
     <value>测试版</value>
   </data>
+  <data name="Common.Back" xml:space="preserve">
+    <value>背面</value>
+  </data>
   <data name="Common.Browse" xml:space="preserve">
     <value>浏览</value>
   </data>
@@ -113,7 +116,7 @@
     <value>清除</value>
   </data>
   <data name="Common.CloseDialog" xml:space="preserve">
-    <value>关闭 对话框</value>
+    <value>关闭对话框</value>
   </data>
   <data name="Common.Dismiss" xml:space="preserve">
     <value>关闭</value>
@@ -134,10 +137,10 @@
     <value>扫描</value>
   </data>
   <data name="Common.Ok" xml:space="preserve">
-    <value>OK</value>
+    <value>确定</value>
   </data>
   <data name="Common.ResizePanes" xml:space="preserve">
-    <value>调整大小 窗格</value>
+    <value>调整窗格大小</value>
   </data>
   <data name="Column.AcoustId" xml:space="preserve">
     <value>AcoustID</value>
@@ -212,7 +215,7 @@
     <value>国家</value>
   </data>
   <data name="Column.CurrentLocation" xml:space="preserve">
-    <value>当前 位置</value>
+    <value>当前位置</value>
   </data>
   <data name="Column.Date" xml:space="preserve">
     <value>日期</value>
@@ -221,7 +224,7 @@
     <value>目标</value>
   </data>
   <data name="Column.DestinationPath" xml:space="preserve">
-    <value>目标 路径</value>
+    <value>目标路径</value>
   </data>
   <data name="Column.Directory" xml:space="preserve">
     <value>目录</value>
@@ -239,7 +242,7 @@
     <value>Discogs 音轨</value>
   </data>
   <data name="Column.Disposition" xml:space="preserve">
-    <value>处置</value>
+    <value>处理方式</value>
   </data>
   <data name="Column.Duration" xml:space="preserve">
     <value>时长</value>
@@ -263,7 +266,7 @@
     <value>文件</value>
   </data>
   <data name="Column.FileSize" xml:space="preserve">
-    <value>文件 大小</value>
+    <value>文件大小</value>
   </data>
   <data name="Column.Formats" xml:space="preserve">
     <value>格式</value>
@@ -305,7 +308,7 @@
     <value>MusicBrainz 发行版 ID</value>
   </data>
   <data name="Column.NewLocation" xml:space="preserve">
-    <value>新建 位置</value>
+    <value>新位置</value>
   </data>
   <data name="Column.NumberSign" xml:space="preserve">
     <value>#</value>
@@ -410,10 +413,10 @@
     <value>自动检测 adb</value>
   </data>
   <data name="Devices.AdoptDescription" xml:space="preserve">
-    <value>采用 信任 该 当前 目标 内容 和 包括 它们 在 该 第一个 同步 预览.</value>
+    <value>信任当前目标位置的内容，并将其纳入首次同步预览。</value>
   </data>
   <data name="Devices.AdoptExisting" xml:space="preserve">
-    <value>采用 一个 现有 非-空 目标</value>
+    <value>采用已有的非空目标位置</value>
   </data>
   <data name="Devices.AndroidDestination" xml:space="preserve">
     <value>Android 目标</value>
@@ -425,7 +428,7 @@
     <value>删除 和 恢复</value>
   </data>
   <data name="Devices.DeleteExtras" xml:space="preserve">
-    <value>删除 目标-仅 条目</value>
+    <value>删除仅存在于目标位置的项目</value>
   </data>
   <data name="Devices.DeviceDiscoveryFailed" xml:space="preserve">
     <value>设备 发现 失败</value>
@@ -437,7 +440,7 @@
     <value>设备 序列号 (可选)</value>
   </data>
   <data name="Devices.DeviceSerialPlaceholder" xml:space="preserve">
-    <value>自动-选择 该 仅 就绪 设备</value>
+    <value>自动选择唯一已就绪的设备</value>
   </data>
   <data name="Devices.DirectTransfer" xml:space="preserve">
     <value>直接 传输 (高级; 否 暂存 或 恢复)</value>
@@ -446,10 +449,10 @@
     <value>直接 传输 是 更快 但是 无法 为 已还原. 预览 和 审阅 该 最终 确认 谨慎地.</value>
   </data>
   <data name="Devices.PlannedCount.One" xml:space="preserve">
-    <value>{0} 操作 已计划</value>
+    <value>已计划 {0} 个操作</value>
   </data>
   <data name="Devices.PlannedCount.Other" xml:space="preserve">
-    <value>{0} 操作 已计划</value>
+    <value>已计划 {0} 个操作</value>
   </data>
   <data name="Devices.DiscoveringAutomation" xml:space="preserve">
     <value>正在发现 Android 设备</value>
@@ -524,7 +527,7 @@
     <value>对话框</value>
   </data>
   <data name="Dialog.LayerAutomationName" xml:space="preserve">
-    <value>对话框 层</value>
+    <value>对话框层</value>
   </data>
   <data name="Dialog.Tone.Danger" xml:space="preserve">
     <value>危险</value>
@@ -554,7 +557,7 @@
     <value>混合 值; 一个 值 每 行</value>
   </data>
   <data name="FieldsEditor.UserStringName" xml:space="preserve">
-    <value>用户-字符串 name</value>
+    <value>用户字符串名称</value>
   </data>
   <data name="Home.Action.OpenHealth" xml:space="preserve">
     <value>打开 健康状况</value>
@@ -575,7 +578,7 @@
     <value>选择 或 创建 配置</value>
   </data>
   <data name="Home.Empty.Description" xml:space="preserve">
-    <value>连接 一个 配置 之前 浏览, 审核, 或 整理 音乐. 您的 现有 文件 是 不 已更改 期间 设置.</value>
+    <value>请先连接配置，再浏览、审核或整理音乐。设置过程中不会更改现有文件。</value>
   </data>
   <data name="Home.Empty.Title" xml:space="preserve">
     <value>设置 设置 您的 音乐库</value>
@@ -683,7 +686,7 @@
     <value>日期</value>
   </data>
   <data name="Health.AlbumMatrix.Description" xml:space="preserve">
-    <value>仅 专辑 文件夹 带 一个 问题 是 已显示. 琥珀色 单元格 识别 缺失 或 冲突 艺术家, 专辑, 日期, 音轨/光盘 编号, 或 总计 值; 悬停 一个 单元格 用于 其 原因. 专辑 带 该 相同 name 是 分开 当 其 文件夹 路径 不同.</value>
+    <value>仅显示存在问题的专辑文件夹。琥珀色单元格表示艺术家、专辑、日期、音轨/光盘编号或总数缺失或冲突；将指针悬停在单元格上可查看原因。名称相同的专辑如果文件夹路径不同，仍会分开处理。</value>
   </data>
   <data name="Health.AlbumMatrix.Disc" xml:space="preserve">
     <value>光盘</value>
@@ -698,7 +701,7 @@
     <value>原因 它 曾是 已标记</value>
   </data>
   <data name="Health.AlbumMatrix.ReadOnly" xml:space="preserve">
-    <value>读取-仅 专辑 一致性 审核</value>
+    <value>只读专辑一致性审计</value>
   </data>
   <data name="Health.AlbumMatrix.Track" xml:space="preserve">
     <value>音轨</value>
@@ -710,16 +713,16 @@
     <value>音轨总数</value>
   </data>
   <data name="Health.Artist.CanonicalName" xml:space="preserve">
-    <value>规范 name</value>
+    <value>规范名称</value>
   </data>
   <data name="Health.Artist.CanonicalNameAutomation" xml:space="preserve">
-    <value>规范 艺术家 name</value>
+    <value>艺术家的规范名称</value>
   </data>
   <data name="Health.Artist.CanonicalTarget" xml:space="preserve">
     <value>规范 目标</value>
   </data>
   <data name="Health.Artist.Description" xml:space="preserve">
-    <value>选择 该 规范 name 用于 每个 群集, 然后 标记 仅 该 变体 您 希望 已重命名 活动. 筛选器 发送 一个 变体's 音轨 到 库.</value>
+    <value>为每个组选择规范名称，然后仅将要重命名的变体标记为“启用”。使用筛选器可将某个变体的音轨发送到音乐库。</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
     <value>{0} 音轨 已选择 跨 活动 变体</value>
@@ -752,7 +755,7 @@
     <value>文件 ({0})</value>
   </data>
   <data name="Health.Artist.Empty" xml:space="preserve">
-    <value>否 相似 艺术家 名称 曾是 已找到 在 该 已选择 阈值.</value>
+    <value>在所选阈值下未找到相似的艺术家名称。</value>
   </data>
   <data name="Health.Artist.ReviewTitle" xml:space="preserve">
     <value>审阅 艺术家 拼写 变体</value>
@@ -767,25 +770,25 @@
     <value>最大值 规范化 编辑 距离. 小写 值 是 更严格; 0 允许 仅 规范化等价 拼写.</value>
   </data>
   <data name="Health.Artwork.Description" xml:space="preserve">
-    <value>选择 一个 封面 用于 混合 专辑, 标记 该 修复 您 希望 活动, 然后 应用. 每个 操作 使用 该 分开 修复 大小 和 尺寸 目标 从 设置.</value>
+    <value>对于包含多个图像的专辑，请选择一个封面，将所需的修复标记为活动，然后应用。每项操作都会使用设置中单独的修复大小和尺寸限制。</value>
   </data>
   <data name="Health.Artwork.ChooseCanonicalAutomation" xml:space="preserve">
     <value>选择 规范 专辑 封面</value>
   </data>
   <data name="Health.Artwork.Action.SelectFirst" xml:space="preserve">
-    <value>选择 第一个 图像 和 标记 活动</value>
+    <value>选择第一张图像并标记为启用</value>
   </data>
   <data name="Health.Artwork.Action.SelectHighestResolution" xml:space="preserve">
-    <value>选择 最高 分辨率 和 标记 活动</value>
+    <value>选择分辨率最高的图像并标记为启用</value>
   </data>
   <data name="Health.Artwork.Action.SelectLargestFile" xml:space="preserve">
-    <value>选择 最大 文件 和 标记 活动</value>
+    <value>选择最大的文件并标记为启用</value>
   </data>
   <data name="Health.Artwork.Selection.NoneChanged" xml:space="preserve">
     <value>否 符合条件 混合-封面 修复 曾是 已更改.</value>
   </data>
   <data name="Health.Artwork.Selection.ChangedFormat" xml:space="preserve">
-    <value>已选择 封面 和 标记 {0:N0} 修复(s) 活动.</value>
+    <value>已选择封面并将 {0:N0} 个修复标记为启用。</value>
   </data>
   <data name="Health.Artwork.SelectedCount.One" xml:space="preserve">
     <value>{0} 修复 操作 已选择</value>
@@ -830,58 +833,58 @@
     <value>元数据 不一致</value>
   </data>
   <data name="Health.Audit.Menu.VerifyAudio" xml:space="preserve">
-    <value>验证 已解码 音频</value>
+    <value>验证解码后的音频</value>
   </data>
   <data name="Health.Audit.Run" xml:space="preserve">
-    <value>运行 审核…</value>
+    <value>运行审计…</value>
   </data>
   <data name="Health.Audit.RunAutomation" xml:space="preserve">
-    <value>选择 一个 审核 到 运行</value>
+    <value>选择要运行的审计</value>
   </data>
   <data name="Health.Audit.Title" xml:space="preserve">
-    <value>审核</value>
+    <value>审计</value>
   </data>
   <data name="Health.Deferred.Description" xml:space="preserve">
-    <value>该 审核 已使用 该 元数据 缓存 和 已执行 不 读取 这些 文件. 强制 扫描 读取 其 嵌入式 封面 现在 和 刷新 该 结果.</value>
+    <value>此次审计使用了缓存的元数据，未读取这些文件。请强制分析，以立即读取其嵌入式封面并刷新结果。</value>
   </data>
   <data name="Health.Deferred.Count.One" xml:space="preserve">
-    <value>{0} 封面 文件 曾是 已推迟</value>
+    <value>已推迟 {0} 个封面文件</value>
   </data>
   <data name="Health.Deferred.Count.Other" xml:space="preserve">
-    <value>{0} 封面 文件 曾是 已推迟</value>
+    <value>已推迟 {0} 个封面文件</value>
   </data>
   <data name="Health.Disposition.AllArtists" xml:space="preserve">
-    <value>处置 用于 全部 艺术家 变体</value>
+    <value>所有艺术家变体的处理方式</value>
   </data>
   <data name="Health.Disposition.AllArtworkRepairs" xml:space="preserve">
-    <value>处置 用于 全部 封面 修复</value>
+    <value>所有封面修复的处理方式</value>
   </data>
   <data name="Health.Disposition.AllFileRepairs" xml:space="preserve">
-    <value>处置 用于 全部 文件 修复</value>
+    <value>所有文件修复的处理方式</value>
   </data>
   <data name="Health.Disposition.AllFindings" xml:space="preserve">
-    <value>处置 用于 全部 发现项</value>
+    <value>所有检查结果的处理方式</value>
   </data>
   <data name="Health.Disposition.AllItunesRepairs" xml:space="preserve">
-    <value>处置 用于 全部 iTunes 修复</value>
+    <value>所有 iTunes 修复的处理方式</value>
   </data>
   <data name="Health.Disposition.AllMetadataRepairs" xml:space="preserve">
-    <value>处置 用于 全部 元数据 修复</value>
+    <value>所有元数据修复的处理方式</value>
   </data>
   <data name="Health.Disposition.ArtistCluster" xml:space="preserve">
-    <value>处置 用于 艺术家 群集</value>
+    <value>艺术家组的处理方式</value>
   </data>
   <data name="Health.Disposition.ArtistVariant" xml:space="preserve">
-    <value>处置 用于 艺术家 拼写 变体</value>
+    <value>艺术家拼写变体的处理方式</value>
   </data>
   <data name="Health.Disposition.ArtworkRepair" xml:space="preserve">
-    <value>处置 用于 封面 修复</value>
+    <value>封面修复的处理方式</value>
   </data>
   <data name="Health.Duplicates.Empty" xml:space="preserve">
-    <value>否 重复 组 曾是 已找到.</value>
+    <value>未找到重复组。</value>
   </data>
   <data name="Health.Conflicts.Empty" xml:space="preserve">
-    <value>否 专辑-艺术家 冲突 曾是 已找到.</value>
+    <value>未找到专辑与专辑艺术家的冲突。</value>
   </data>
   <data name="Health.Findings.All" xml:space="preserve">
     <value>全部 发现项</value>
@@ -923,7 +926,7 @@
     <value>调整大小 元数据 修复 层次结构</value>
   </data>
   <data name="Health.NoSelection.Description" xml:space="preserve">
-    <value>运行 一个 审核 或 准备 修复 命令 到 审阅 其 结果 此处.</value>
+    <value>运行审计或准备修复后，可在此审阅结果。</value>
   </data>
   <data name="Health.NoSelection.Title" xml:space="preserve">
     <value>否 分析 已选择</value>
@@ -950,7 +953,7 @@
     <value>已启用 策略 元数据 修复</value>
   </data>
   <data name="Health.Repair.Menu.SimilarArtists" xml:space="preserve">
-    <value>相似 艺术家 名称</value>
+    <value>相似的艺术家名称</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
     <value>准备 修复…</value>
@@ -1025,7 +1028,7 @@
     <value>清除 所选文件</value>
   </data>
   <data name="Ingest.Action.More" xml:space="preserve">
-    <value>更多…</value>
+    <value>更多</value>
   </data>
   <data name="Ingest.Action.MoreAutomation" xml:space="preserve">
     <value>更多 引入 操作</value>
@@ -1139,7 +1142,7 @@
     <value>检查器 (未保存)</value>
   </data>
   <data name="Library.Action.More" xml:space="preserve">
-    <value>更多…</value>
+    <value>更多</value>
   </data>
   <data name="Library.Action.MoreAutomation" xml:space="preserve">
     <value>更多 库 操作</value>
@@ -1157,7 +1160,7 @@
     <value>取消 正在加载</value>
   </data>
   <data name="Library.Filter.Placeholder" xml:space="preserve">
-    <value>筛选器, 或 使用 艺术家:Name 和 不 Codec:MP3</value>
+    <value>筛选或使用语法，例如 Artist:Name AND NOT Codec:MP3</value>
   </data>
   <data name="Library.Filter.Automation" xml:space="preserve">
     <value>筛选器 库</value>
@@ -1220,7 +1223,10 @@
     <value>已知 元数据 字段</value>
   </data>
   <data name="Library.Columns.CustomFieldPlaceholder" xml:space="preserve">
-    <value>原生 自定义 字段 name</value>
+    <value>原生自定义字段名称</value>
+  </data>
+  <data name="Library.Columns.Width" xml:space="preserve">
+    <value>宽度</value>
   </data>
   <data name="Library.Columns.Action.New" xml:space="preserve">
     <value>新建</value>
@@ -1244,10 +1250,10 @@
     <value>保存 该 当前 筛选器, 列, 和 排序</value>
   </data>
   <data name="Library.SavedViews.NamePlaceholder" xml:space="preserve">
-    <value>视图 name</value>
+    <value>视图名称</value>
   </data>
   <data name="Library.SavedViews.NameAutomation" xml:space="preserve">
-    <value>新建 已保存 视图 name</value>
+    <value>新保存视图的名称</value>
   </data>
   <data name="Library.SavedViews.Action.Save" xml:space="preserve">
     <value>保存 视图</value>
@@ -1257,6 +1263,15 @@
   </data>
   <data name="Library.VisualFilter.Title" xml:space="preserve">
     <value>可视化 筛选器</value>
+  </data>
+  <data name="Library.VisualFilter.MatchMode" xml:space="preserve">
+    <value>匹配方式</value>
+  </data>
+  <data name="Library.VisualFilter.Comparison" xml:space="preserve">
+    <value>比较</value>
+  </data>
+  <data name="Library.VisualFilter.Value" xml:space="preserve">
+    <value>值</value>
   </data>
   <data name="Library.VisualFilter.CloseTooltip" xml:space="preserve">
     <value>关闭 可视化 筛选器</value>
@@ -1283,7 +1298,7 @@
     <value>筛选器语法</value>
   </data>
   <data name="Library.FilterHelp.Description" xml:space="preserve">
-    <value>搜索 全部 可见 元数据 带 普通 文本. 使用 字段:值 用于 一个 字段, 引号 用于 短语, 和 和, 或, 或 不 到 合并 术语.</value>
+    <value>使用普通文本搜索所有可见的元数据。使用 Field:Value 指定字段，使用引号指定短语，并使用 AND、OR 或 NOT 组合搜索词。</value>
   </data>
   <data name="Library.Operations.Title" xml:space="preserve">
     <value>库 操作 和 输出</value>
@@ -1394,7 +1409,7 @@
     <value>粘贴 + 预览</value>
   </data>
   <data name="Library.Operations.PastePreviewTooltip" xml:space="preserve">
-    <value>粘贴 标签-知晓 或 行-分隔 文本 到 该 已选择 范围</value>
+    <value>将标签感知或按行分隔的文本粘贴到所选范围</value>
   </data>
   <data name="Library.Operations.Action.Preview" xml:space="preserve">
     <value>预览</value>
@@ -1463,10 +1478,10 @@
     <value>搜索 Discogs</value>
   </data>
   <data name="Library.Release.Action.LoadDetails" xml:space="preserve">
-    <value>加载 详细信息</value>
+    <value>加载详细信息</value>
   </data>
   <data name="Library.Release.MappingDescription" xml:space="preserve">
-    <value>审阅 每个 文件到音轨 建议 之前 添加 已选择 字段 到 该 正常 预览.</value>
+    <value>将所选字段添加到普通预览前，请审阅每条文件与音轨的映射建议。</value>
   </data>
   <data name="Library.Release.TrackMappingDescription" xml:space="preserve">
     <value>审阅 或 替换 建议 之前 预览.</value>
@@ -1493,7 +1508,7 @@
     <value>编号</value>
   </data>
   <data name="Library.Release.Field.ReleaseDetails" xml:space="preserve">
-    <value>发行版 详细信息</value>
+    <value>发行版详细信息</value>
   </data>
   <data name="Library.Release.Field.GenresStyles" xml:space="preserve">
     <value>流派/风格</value>
@@ -1523,7 +1538,7 @@
     <value>预览 发行版 封面</value>
   </data>
   <data name="Library.Reports.NamePlaceholder" xml:space="preserve">
-    <value>报告 name</value>
+    <value>报告名称</value>
   </data>
   <data name="Library.Reports.OutputPlaceholder" xml:space="preserve">
     <value>输出 文件 或 文件夹</value>
@@ -1559,7 +1574,7 @@
     <value>写入 已审阅 报告</value>
   </data>
   <data name="Library.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>播放列表 name</value>
+    <value>播放列表名称</value>
   </data>
   <data name="Library.Playlists.OutputPlaceholder" xml:space="preserve">
     <value>输出 文件 或 文件夹</value>
@@ -1595,22 +1610,22 @@
     <value>删除</value>
   </data>
   <data name="Library.Tools.NamePlaceholder" xml:space="preserve">
-    <value>工具 name</value>
+    <value>工具名称</value>
   </data>
   <data name="Library.Tools.ExecutablePlaceholder" xml:space="preserve">
-    <value>可执行文件 路径 或 命令 name</value>
+    <value>可执行文件路径或命令名称</value>
   </data>
   <data name="Library.Tools.Action.BrowseExecutable" xml:space="preserve">
     <value>浏览 可执行文件</value>
   </data>
   <data name="Library.Tools.WorkingDirectoryPlaceholder" xml:space="preserve">
-    <value>可选 正在处理 目录 或 {目录}</value>
+    <value>可选的工作目录或 {Directory}</value>
   </data>
   <data name="Library.Tools.Action.BrowseFolder" xml:space="preserve">
     <value>浏览 文件夹</value>
   </data>
   <data name="Library.Tools.ArgumentsDescription" xml:space="preserve">
-    <value>一个 参数 每 行. 支持 占位符: {文件}, {文件}, {目录}, {文件名}, {FileNameWithoutExtension}, {Extension}, {索引}, 和 {计数}.</value>
+    <value>每行输入一个参数。支持的占位符：{Files}、{File}、{Directory}、{FileName}、{FileNameWithoutExtension}、{Extension}、{Index} 和 {Count}。</value>
   </data>
   <data name="Library.Tools.Warning" xml:space="preserve">
     <value>外部工具 运行 不带 一个 外壳 但是 保留 外部 应用程序 恢复. 正在运行 始终 需要 确认.</value>
@@ -1640,7 +1655,7 @@
     <value>每个 已暂存 或 已审阅 元数据 编辑 该 应用 将 验证 之前 写入.</value>
   </data>
   <data name="Library.PendingChanges.CountLabel" xml:space="preserve">
-    <value>待处理 编辑(s)</value>
+    <value>待处理编辑</value>
   </data>
   <data name="Library.PendingChanges.CloseTooltip" xml:space="preserve">
     <value>关闭 待处理更改</value>
@@ -1649,17 +1664,13 @@
     <value>库 待处理更改</value>
   </data>
   <data name="Library.PendingChanges.EmptyTitle" xml:space="preserve">
-    <value>否 待处理更改</value>
+    <value>没有待处理更改</value>
   </data>
   <data name="Library.PendingChanges.EmptyDescription" xml:space="preserve">
-    <value>预览 一个 库 元数据 操作 到 审阅 其 编辑 此处.</value>
+    <value>预览媒体库元数据操作后，可在此查看其编辑内容。</value>
   </data>
-  <data name="Library.PendingChanges.Action.Revert" xml:space="preserve">
-    <value>还原</value>
-  </data>
-  <data name="Library.PendingChanges.RevertTooltip" xml:space="preserve">
-    <value>放弃 此 待处理 预览 不带 更改 文件</value>
-  </data>
+  <data name="Library.PendingChanges.Action.Revert" xml:space="preserve"><value>放弃所有待处理更改</value></data>
+  <data name="Library.PendingChanges.RevertTooltip" xml:space="preserve"><value>放弃所有待处理更改且不修改文件</value></data>
   <data name="Library.PendingChanges.Action.Apply" xml:space="preserve">
     <value>应用</value>
   </data>
@@ -1724,7 +1735,7 @@
     <value>{0} 移动 已计划</value>
   </data>
   <data name="Organize.Subtitle" xml:space="preserve">
-    <value>移动 符合条件 文件 到 该 规范 库 布局 带 回滚 保护.</value>
+    <value>使用回滚保护将符合条件的文件移至规范的库结构。</value>
   </data>
   <data name="Organize.Title" xml:space="preserve">
     <value>整理</value>
@@ -1769,7 +1780,7 @@
     <value>最大值 移除</value>
   </data>
   <data name="Operations.PlaylistName" xml:space="preserve">
-    <value>播放列表 name</value>
+    <value>播放列表名称</value>
   </data>
   <data name="Operations.PurgeReviewed" xml:space="preserve">
     <value>清除 已审阅 恢复 历史记录</value>
@@ -1856,7 +1867,7 @@
     <value>文件 操作 状态</value>
   </data>
   <data name="ReviewedFileOperation.TemplateAutomation" xml:space="preserve">
-    <value>文件 name 模板</value>
+    <value>文件名模板</value>
   </data>
   <data name="Shell.OpenLibraryConfiguration" xml:space="preserve">
     <value>打开 库 配置</value>
@@ -1871,7 +1882,7 @@
     <value>退出 期间 作品 是 正在运行?</value>
   </data>
   <data name="Shell.Quit.Message" xml:space="preserve">
-    <value>一个 库 操作 是 仍然 正在运行. 退出 仅 如果 您 是 已准备 到 检查 其 恢复 状态 该 下一步 时间 该 应用 开始.</value>
+    <value>库操作仍在运行。只有在准备好下次启动应用时检查其恢复状态的情况下，才能退出。</value>
   </data>
   <data name="Shell.Quit.Action" xml:space="preserve">
     <value>退出</value>
@@ -1931,7 +1942,7 @@
     <value>显示语言</value>
   </data>
   <data name="Settings.Appearance.DisplayLanguageDescription" xml:space="preserve">
-    <value>更改 应用程序 文本 立即. 库 元数据, 文件 名称, 区域 格式, 解析, 和 排序 是 不 已更改. 英语 (美国 状态) 是 当前 可用.</value>
+    <value>立即更改应用界面文本。音乐库元数据、文件名、区域格式、解析和排序不会改变。目前可使用英语（美国）。</value>
   </data>
   <data name="Activity.Cancelling" xml:space="preserve">
     <value>正在取消…</value>
@@ -2159,7 +2170,7 @@
     <value>冲突 行为</value>
   </data>
   <data name="Settings.Common.FileNameTemplate" xml:space="preserve">
-    <value>文件-name 模板</value>
+    <value>文件名模板</value>
   </data>
   <data name="Settings.Common.FolderTemplate" xml:space="preserve">
     <value>文件夹 模板</value>
@@ -2171,13 +2182,13 @@
     <value>最大尺寸</value>
   </data>
   <data name="Settings.Common.Name" xml:space="preserve">
-    <value>Name</value>
+    <value>名称</value>
   </data>
   <data name="Settings.Common.StableId" xml:space="preserve">
     <value>稳定 ID</value>
   </data>
   <data name="Settings.Appearance.Description" xml:space="preserve">
-    <value>主题 更改 应用 立即. 系统 跟随 该 运行-系统 首选项; 每个 调色板 保留 其 重音 保留 用于 选择, 焦点, 进度, 和 安全 操作.</value>
+    <value>主题更改会立即应用。“系统”会遵循操作系统设置；每种调色板的强调色仅用于选择、焦点、进度和安全操作。</value>
   </data>
   <data name="Settings.Appearance.ThemeAutomation" xml:space="preserve">
     <value>应用程序 主题</value>
@@ -2222,7 +2233,7 @@
     <value>添加 设置</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensions" xml:space="preserve">
-    <value>交叉-设置 比较 扩展名</value>
+    <value>跨集比较扩展名</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensionsPlaceholder" xml:space="preserve">
     <value>用于 示例: .flac, .m4a</value>
@@ -2378,7 +2389,7 @@
     <value>最大 音轨</value>
   </data>
   <data name="Settings.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>播放列表 name</value>
+    <value>播放列表名称</value>
   </data>
   <data name="Settings.Playlists.NamingArtwork" xml:space="preserve">
     <value>命名 和 封面</value>
@@ -2414,7 +2425,7 @@
     <value>替换 已更改 文件</value>
   </data>
   <data name="Settings.Playlists.SavedViewQuery" xml:space="preserve">
-    <value>已保存-视图 查询</value>
+    <value>已保存视图查询</value>
   </data>
   <data name="Settings.Playlists.Selection" xml:space="preserve">
     <value>选择</value>
@@ -2444,16 +2455,16 @@
     <value>文件 播放列表 源</value>
   </data>
   <data name="Settings.Playlists.SyncNameAutomation" xml:space="preserve">
-    <value>同步 播放列表 name</value>
+    <value>要同步的播放列表名称</value>
   </data>
   <data name="Settings.Playlists.SyncTargetAutomation" xml:space="preserve">
-    <value>交叉-库 同步 目标 根</value>
+    <value>跨音乐库同步目标根目录</value>
   </data>
   <data name="Settings.Playlists.SyncTargetDescription" xml:space="preserve">
-    <value>选择 该 库 根 该 接收 交叉-库 音乐 同步.</value>
+    <value>选择用于接收跨音乐库同步音乐的音乐库根目录。</value>
   </data>
   <data name="Settings.Playlists.SyncTargetTitle" xml:space="preserve">
-    <value>交叉-库 同步 目标</value>
+    <value>跨音乐库同步目标</value>
   </data>
   <data name="Settings.Playlists.SyncTitle" xml:space="preserve">
     <value>同步 播放列表</value>
@@ -2480,10 +2491,10 @@
     <value>选项=值; 选项2=值</value>
   </data>
   <data name="Settings.Playlists.TransportProviderPlaceholder" xml:space="preserve">
-    <value>传输 提供商 (本地-文件系统)</value>
+    <value>传输提供程序（本地文件系统）</value>
   </data>
   <data name="Settings.Playlists.UseNamingCollision" xml:space="preserve">
-    <value>使用 命名-配置文件 冲突 规则</value>
+    <value>使用命名配置文件的冲突规则</value>
   </data>
   <data name="Settings.Playlists.WriteBom" xml:space="preserve">
     <value>写入 BOM</value>
@@ -2495,16 +2506,16 @@
     <value>写入 播放列表 BOM</value>
   </data>
   <data name="Settings.Tools.AcoustIdDescription" xml:space="preserve">
-    <value>AcoustID 需要 一个 应用程序 客户端 键 用于 查找. 此 个人 设置 保留 外部 便携 库 XML. 查找 执行 不 提交 指纹.</value>
+    <value>AcoustID 查找需要应用程序客户端密钥。此个人设置不会保存到便携式库 XML 中。查找不会提交指纹。</value>
   </data>
   <data name="Settings.Tools.AcoustIdKey" xml:space="preserve">
     <value>AcoustID 应用程序 客户端 键</value>
   </data>
   <data name="Settings.Tools.Bindings" xml:space="preserve">
-    <value>计算机-本地 绑定 配套项 (可选)</value>
+    <value>计算机特定的绑定辅助文件（可选）</value>
   </data>
   <data name="Settings.Tools.BindingsAutomation" xml:space="preserve">
-    <value>计算机-本地 绑定 配套项</value>
+    <value>计算机特定的绑定辅助文件</value>
   </data>
   <data name="Settings.Tools.BindingsPlaceholder" xml:space="preserve">
     <value>保留 便携 策略 分开 从 根 和 工具 路径</value>
@@ -2513,13 +2524,13 @@
     <value>元数据 数据库</value>
   </data>
   <data name="Settings.Tools.DiscogsDescription" xml:space="preserve">
-    <value>Discogs 搜索 需要 一个 个人 访问 标记. 该 标记 是 已存储 在 该 运行-系统 凭据 服务 当 可用, 带 会话-仅 存储 作为 一个 回退.</value>
+    <value>Discogs 搜索需要个人访问令牌。可用时会存入操作系统凭据服务；否则只在当前会话中保存。</value>
   </data>
   <data name="Settings.Tools.DiscogsToken" xml:space="preserve">
     <value>Discogs 个人 访问 标记</value>
   </data>
   <data name="Settings.Tools.DiscogsTokenPlaceholder" xml:space="preserve">
-    <value>Enter 一个 新建 标记 到 存储</value>
+    <value>输入要保存的新令牌</value>
   </data>
   <data name="Settings.Tools.Ffmpeg" xml:space="preserve">
     <value>FFmpeg</value>
@@ -2573,7 +2584,7 @@
     <value>封面 分析 阈值</value>
   </data>
   <data name="Settings.Health.DefaultsDescription" xml:space="preserve">
-    <value>分析 默认: 2 MiB 和 2,000 像素. 修复 默认: 225 KiB 和 600 像素. 封面 精确 相等 到 一个 分析 阈值 是 不 已标记.</value>
+    <value>分析默认值：2 MiB 和 2,000 像素。修复默认值：225 KiB 和 600 像素。与分析阈值完全相等的封面不会标记为问题。</value>
   </data>
   <data name="Settings.Health.OversizedDimension" xml:space="preserve">
     <value>过大 宽度 或 高度 (像素)</value>
@@ -2618,7 +2629,7 @@
     <value>存储</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>已构建-在 策略 是 受保护; 重复 一个 到 自定义 它. 分配 策略 到 根 在 该 库 根 选项卡.</value>
+    <value>内置策略受保护。要自定义，请先复制一份。请在“音乐库根目录”选项卡中为根目录分配策略。</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>这些 设置 更改 命名, 元数据, 封面, 健康状况, 和 伴随文件 行为 用于 每个 根 使用 此 配置文件. 现有 预览 变为 无效 和 必须 为 已重新生成.</value>
@@ -2627,7 +2638,7 @@
     <value>合辑令牌</value>
   </data>
   <data name="Settings.RootPolicy.CompletePathLimit" xml:space="preserve">
-    <value>完成-路径 限制 (空白 = 平台 默认)</value>
+    <value>完整路径限制（留空 = 平台默认值）</value>
   </data>
   <data name="Settings.RootPolicy.ComponentLimit" xml:space="preserve">
     <value>组件 限制 (旧版 LengthLimit)</value>
@@ -2645,10 +2656,10 @@
     <value>光盘 策略</value>
   </data>
   <data name="Settings.RootPolicy.DiscStrategyDescription" xml:space="preserve">
-    <value>该 光盘 策略 是 该 目标 表示: 保留 标签 保留 光盘 元数据; 每个 其他 策略 移除 那些 标签 和 表示 该 光盘 在 该 专辑, 文件夹, 文件名, 或 连续 音轨 编号.</value>
+    <value>光盘策略决定目标中的表示方式：“保留标签”会保留光盘元数据；其他策略会移除这些标签，并通过专辑、文件夹、文件名或连续音轨编号表示光盘。</value>
   </data>
   <data name="Settings.RootPolicy.FileNameTemplateAutomation" xml:space="preserve">
-    <value>配置文件 文件 name 模板</value>
+    <value>配置文件的文件名模板</value>
   </data>
   <data name="Settings.RootPolicy.FolderTemplateAutomation" xml:space="preserve">
     <value>配置文件 文件夹 模板</value>
@@ -2657,10 +2668,10 @@
     <value>健康状况 规则</value>
   </data>
   <data name="Settings.RootPolicy.HighResolutionBitDepth" xml:space="preserve">
-    <value>高-分辨率 位 深度</value>
+    <value>高分辨率位深</value>
   </data>
   <data name="Settings.RootPolicy.HighResolutionSampleRate" xml:space="preserve">
-    <value>高-分辨率 采样率 (Hz)</value>
+    <value>高分辨率采样率 (Hz)</value>
   </data>
   <data name="Settings.RootPolicy.IdentityIncludesYear" xml:space="preserve">
     <value>标识 包括 发行版 年份</value>
@@ -2678,7 +2689,7 @@
     <value>推断 旧版 专辑 后缀</value>
   </data>
   <data name="Settings.RootPolicy.InvalidCharacterReplacement" xml:space="preserve">
-    <value>无效-字符 替换</value>
+    <value>无效字符替换</value>
   </data>
   <data name="Settings.RootPolicy.ItunesCanonicalNaming" xml:space="preserve">
     <value>iTunes 规范 命名</value>
@@ -2723,7 +2734,7 @@
     <value>保留 Unicode</value>
   </data>
   <data name="Settings.RootPolicy.ProfileName" xml:space="preserve">
-    <value>配置文件 name</value>
+    <value>配置文件名称</value>
   </data>
   <data name="Settings.RootPolicy.ProfileTitle" xml:space="preserve">
     <value>根 策略 配置文件</value>
@@ -2738,7 +2749,7 @@
     <value>读取 嵌入式 封面 期间 正在索引</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkDescription" xml:space="preserve">
-    <value>当 已启用, 正在索引 需要 更长 和 该 缓存 使用 更多 空间, 但是 封面 是 立即 可用 用于 浏览 和 审核. 当 已禁用, 封面 是 只读 当 它 是 已查看 或 审核.</value>
+    <value>启用后，索引时间会更长，缓存会占用更多空间，但浏览和审核时可以立即使用封面。禁用后，仅在查看或审核封面时读取它。</value>
   </data>
   <data name="Settings.RootPolicy.SelectAutomation" xml:space="preserve">
     <value>根/命名 策略 配置文件</value>
@@ -2750,7 +2761,7 @@
     <value>*.cue, *.pdf</value>
   </data>
   <data name="Settings.RootPolicy.SidecarRules" xml:space="preserve">
-    <value>伴随文件 和 未知-文件 规则</value>
+    <value>伴随文件和未知文件规则</value>
   </data>
   <data name="Settings.RootPolicy.SidecarTemplate" xml:space="preserve">
     <value>伴随文件 模板</value>
@@ -2762,13 +2773,13 @@
     <value>音轨 填充</value>
   </data>
   <data name="Settings.RootPolicy.TrackTotalScope" xml:space="preserve">
-    <value>音轨-总计 范围</value>
+    <value>音轨总数范围</value>
   </data>
   <data name="Settings.RootPolicy.UnicodeNormalization" xml:space="preserve">
     <value>Unicode 规范化</value>
   </data>
   <data name="Settings.RootPolicy.UnknownFileDisposition" xml:space="preserve">
-    <value>未知-文件 处置</value>
+    <value>未知文件处理方式</value>
   </data>
   <data name="Settings.Ingest.AcceptedExtensions" xml:space="preserve">
     <value>已接受 扩展名</value>
@@ -2792,7 +2803,7 @@
     <value>比特率 (kbps; 每 方案)</value>
   </data>
   <data name="Settings.Ingest.CleanupDescription" xml:space="preserve">
-    <value>源处置 上方 控制 源 音频. 这些 兼容性 选项 是 已应用 仅 之后 引入 成功.</value>
+    <value>上面的源文件处置设置控制如何处理源音频。这些兼容性选项仅在引入成功后应用。</value>
   </data>
   <data name="Settings.Ingest.CleanupTitle" xml:space="preserve">
     <value>清理 之后 引入</value>
@@ -2807,7 +2818,7 @@
     <value>引入 方案 目标 根</value>
   </data>
   <data name="Settings.Ingest.DisplayNamePlaceholder" xml:space="preserve">
-    <value>显示 name</value>
+    <value>显示名称</value>
   </data>
   <data name="Settings.Ingest.EnableRecipes" xml:space="preserve">
     <value>启用 引入 方案</value>
@@ -2831,7 +2842,7 @@
     <value>用于 示例: -af "loudnorm=I=-16:LRA=11"</value>
   </data>
   <data name="Settings.Ingest.InputChannels" xml:space="preserve">
-    <value>输入 声道</value>
+    <value>输入声道</value>
   </data>
   <data name="Settings.Ingest.LosslessMatch" xml:space="preserve">
     <value>无损 匹配 (不确定 = 任意)</value>
@@ -2855,7 +2866,7 @@
     <value>输出 声道</value>
   </data>
   <data name="Settings.Ingest.OutputExtension" xml:space="preserve">
-    <value>输出 extension</value>
+    <value>输出扩展名</value>
   </data>
   <data name="Settings.Ingest.OutputExtensionPlaceholder" xml:space="preserve">
     <value>用于 示例 .flac</value>
@@ -2873,7 +2884,7 @@
     <value>保留 伴随文件 按 默认</value>
   </data>
   <data name="Settings.Ingest.ProfileName" xml:space="preserve">
-    <value>引入 配置文件 name</value>
+    <value>引入配置文件名称</value>
   </data>
   <data name="Settings.Ingest.RecipeIdPlaceholder" xml:space="preserve">
     <value>稳定 方案 ID</value>
@@ -2888,7 +2899,7 @@
     <value>需要 无损</value>
   </data>
   <data name="Settings.Ingest.SourceDisposition" xml:space="preserve">
-    <value>源处置</value>
+    <value>源文件处置</value>
   </data>
   <data name="Settings.Ingest.Title" xml:space="preserve">
     <value>引入 配置文件 和 方案</value>
@@ -2897,10 +2908,10 @@
     <value>使用 目标 根 冲突 行为</value>
   </data>
   <data name="Settings.EffectivePolicy.Description" xml:space="preserve">
-    <value>审阅 该 行为 该 每个 预览 将 使用. 离线 路径 是 警告; 无效 策略 引用 和 矛盾 权限 阻止 保存.</value>
+    <value>查看所有预览将使用的行为。离线路径只会产生警告；无效的策略引用和相互矛盾的权限会阻止保存。</value>
   </data>
   <data name="Settings.EffectivePolicy.DetailsAutomation" xml:space="preserve">
-    <value>生效策略 详细信息</value>
+    <value>有效策略详细信息</value>
   </data>
   <data name="Settings.EffectivePolicy.GuidedStep" xml:space="preserve">
     <value>步骤 2 的 2: 验证 路径, 权限, 修复, 引入, 和 集成 之前 创建 该 库.</value>
@@ -2918,19 +2929,19 @@
     <value>规范 字段</value>
   </data>
   <data name="Settings.FieldMappings.Description" xml:space="preserve">
-    <value>覆盖 该 原生 文本 键 已使用 用于 一个 规范 字段 在 一个 格式 系列. 未列出 字段 继续 到 使用 该 已构建-在 解析器 映射.</value>
+    <value>覆盖特定格式系列中规范字段所使用的原生文本键。未列出的字段仍使用内置解析器映射。</value>
   </data>
   <data name="Settings.FieldMappings.Footer" xml:space="preserve">
-    <value>已映射 写入 移除 该 已构建-在 表示 第一个, 然后 写入 该 已配置 原生 键 通过 该 格式's 自己的 解析器. 预览 和 恢复 要求 保留 未更改.</value>
+    <value>映射写入会先移除内置表示，再通过格式自身的解析器写入已配置的原生键。预览和恢复要求保持不变。</value>
   </data>
   <data name="Settings.FieldMappings.FormatFamily" xml:space="preserve">
     <value>格式 系列</value>
   </data>
   <data name="Settings.FieldMappings.NativeField" xml:space="preserve">
-    <value>原生 字段 name</value>
+    <value>原生字段名称</value>
   </data>
   <data name="Settings.FieldMappings.NativeFieldPlaceholder" xml:space="preserve">
-    <value>格式-原生 键</value>
+    <value>格式原生键</value>
   </data>
   <data name="Settings.FieldMappings.Save" xml:space="preserve">
     <value>保存 映射</value>
@@ -2939,16 +2950,16 @@
     <value>映射 是 个人 应用程序 设置 和 应用 到 工作台 和 库 编辑.</value>
   </data>
   <data name="Settings.FieldMappings.Status.Saved.One" xml:space="preserve">
-    <value>已保存 {0:N0} 格式-特定 字段 映射.</value>
+    <value>已保存 {0:N0} 个格式特定的字段映射。</value>
   </data>
   <data name="Settings.FieldMappings.Status.Saved.Other" xml:space="preserve">
-    <value>已保存 {0:N0} 格式-特定 字段 映射.</value>
+    <value>已保存 {0:N0} 个格式特定的字段映射。</value>
   </data>
   <data name="Settings.FieldMappings.Status.SaveFailed" xml:space="preserve">
     <value>可以 不 保存 字段 映射: {0}</value>
   </data>
   <data name="Settings.FieldMappings.Title" xml:space="preserve">
-    <value>规范-到-原生 字段 映射</value>
+    <value>规范字段到原生字段的映射</value>
   </data>
   <data name="Settings.DestinationRoot.Missing" xml:space="preserve">
     <value>缺失 根 ({0:D})</value>
@@ -2984,7 +2995,7 @@
     <value>封面</value>
   </data>
   <data name="Settings.Permissions.CatalogOnly" xml:space="preserve">
-    <value>目录 仅 (读取-仅)</value>
+    <value>仅目录（只读）</value>
   </data>
   <data name="Settings.Permissions.Description.ReadOnly" xml:space="preserve">
     <value>该 应用 仅 目录 此 文件夹 和 将 不 更改 其 文件.</value>
@@ -3005,7 +3016,7 @@
     <value>允许 更改: {0}</value>
   </data>
   <data name="Settings.Permissions.Summary.ReadOnly" xml:space="preserve">
-    <value>目录-仅: 此 根 是 读取-仅.</value>
+    <value>仅目录：此根目录为只读。</value>
   </data>
   <data name="Settings.Permissions.SyncOutput" xml:space="preserve">
     <value>同步 输出</value>
@@ -3017,7 +3028,7 @@
     <value>可以 不 清除 该 Discogs 标记: {0}</value>
   </data>
   <data name="Settings.Discogs.EnterToken" xml:space="preserve">
-    <value>Enter 一个 Discogs 个人 访问 标记.</value>
+    <value>请输入 Discogs 个人访问令牌。</value>
   </data>
   <data name="Settings.Discogs.ExistsPersistent" xml:space="preserve">
     <value>一个 Discogs 标记 是 已存储 在 {0}.</value>
@@ -3146,7 +3157,7 @@
     <value>新建 引入 配置文件</value>
   </data>
   <data name="Settings.Status.ActiveConfigurationChanged" xml:space="preserve">
-    <value>该 活动 配置 已更改, 但是 您的 未保存 编辑器 更改 曾是 已保留. 保存 它们 作为 一个 分开 文件 或 放弃 它们 之前 正在编辑 该 活动 配置.</value>
+    <value>活动配置已更改，但编辑器中未保存的更改已保留。在编辑活动配置之前，请将这些更改另存为文件或将其放弃。</value>
   </data>
   <data name="Settings.Status.ChangesDiscarded" xml:space="preserve">
     <value>未保存 配置 更改 曾是 放弃.</value>
@@ -3170,7 +3181,7 @@
     <value>可以 不 保存 配置: {0}</value>
   </data>
   <data name="Settings.Status.GuidedSetup" xml:space="preserve">
-    <value>引导式 设置: 选择 一个 保留-第一个 配置文件, 添加 该 库 根, 然后 审阅 该 生效策略.</value>
+    <value>引导式设置：选择保留优先的配置文件，添加音乐库根目录，然后审阅有效策略。</value>
   </data>
   <data name="Settings.Status.IngestProfileCreated" xml:space="preserve">
     <value>已创建 引入 配置文件 '{0}'.</value>
@@ -3263,7 +3274,7 @@
     <value>播放列表 目标 '{0}' 必须 允许 在 至少 一个 音轨.</value>
   </data>
   <data name="Settings.Validation.PlaylistUnknownSets" xml:space="preserve">
-    <value>播放列表 目标 '{0}' 引用 未知 扫描 设置(s): {1}</value>
+    <value>播放列表目标“{0}”引用了未知的扫描集：{1}</value>
   </data>
   <data name="Settings.Validation.PlaylistUnsupportedOption" xml:space="preserve">
     <value>播放列表 目标 '{0}' 包含 一个 不支持 输出 选项.</value>
@@ -3416,7 +3427,7 @@
     <value>该 应用 保留 文件 和 文件夹 名称 位置 它们 是.</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.Organized" xml:space="preserve">
-    <value>当 文件 是 整理, 它们 是 名称 如同 “{0}”. 如果 该 name 已经 存在, 该 应用 使用 该 {1} 规则.</value>
+    <value>整理文件时，将按“{0}”的格式命名。如果该名称已存在，应用将使用 {1} 规则。</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Eager" xml:space="preserve">
     <value>封面 是 读取 和 已缓存 期间 正在索引, 因此 浏览 和 封面 审核 是 立即 完成. 正在索引 将 采用 更长 和 该 缓存 将 使用 更多 空间.</value>
@@ -3446,7 +3457,7 @@
     <value>规范化 或 已替换</value>
   </data>
   <data name="Settings.PolicyDetails.NamingParagraph" xml:space="preserve">
-    <value>{0} Unicode 字符 是 {1}. 路径-长度 限制 使用 该 应用程序 和 平台 默认 除非 您 已输入 一个 覆盖.</value>
+    <value>Unicode 字符 {0} 会按 {1} 处理。除非输入了替代值，否则路径长度使用应用和平台默认值。</value>
   </data>
   <data name="Settings.PolicyDetails.QualityParagraph" xml:space="preserve">
     <value>{0} 一个 录音 是 已考虑 高 分辨率 在 {1:N0} Hz 或 {2}-bit.</value>
@@ -3476,10 +3487,10 @@
     <value>文件夹 路径 是 已存储 直接 在 此 配置.</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.MachineBindings" xml:space="preserve">
-    <value>计算机-特定 文件夹 路径 来自 从 “{0}”.</value>
+    <value>计算机特定的文件夹路径来自“{0}”。</value>
   </data>
   <data name="Settings.PolicyDetails.ToolsParagraph" xml:space="preserve">
-    <value>外部工具 使用 FFmpeg 在 “{0}”, WavPack 在 “{1}”, 和 Monkey's Audio MAC 在 “{2}”. {3}</value>
+    <value>外部工具使用“{0}”中的 FFmpeg、“{1}”中的 WavPack 和“{2}”中的 Monkey's Audio MAC。{3}</value>
   </data>
   <data name="Settings.Choice.Theme.System" xml:space="preserve">
     <value>系统</value>
@@ -3548,7 +3559,7 @@
     <value>光盘 文件夹</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FileNamePrefix" xml:space="preserve">
-    <value>文件-name 前缀</value>
+    <value>文件名前缀</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FlattenContinuous" xml:space="preserve">
     <value>连续 音轨 编号</value>
@@ -3959,7 +3970,7 @@
     <value>原始 艺术家</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalFileName" xml:space="preserve">
-    <value>原始 文件 name</value>
+    <value>原始文件名</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalDate" xml:space="preserve">
     <value>原始日期</value>
@@ -4061,7 +4072,7 @@
     <value>作者</value>
   </data>
   <data name="Common.All" xml:space="preserve"><value>全部</value></data>
-  <data name="Common.DiagnosticDetailFormat" xml:space="preserve"><value>技术 详细信息: {0}</value></data>
+  <data name="Common.DiagnosticDetailFormat" xml:space="preserve"><value>技术详细信息：{0}</value></data>
   <data name="Common.Reload" xml:space="preserve"><value>重新加载</value></data>
   <data name="Common.Restore" xml:space="preserve"><value>还原</value></data>
   <data name="Common.Run" xml:space="preserve"><value>运行</value></data>
@@ -4109,7 +4120,7 @@
   <data name="Inspector.Common.None" xml:space="preserve"><value>(无)</value></data>
   <data name="Inspector.Common.Unknown" xml:space="preserve"><value>未知</value></data>
   <data name="Inspector.Diagnostic.PathError" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Inspector.Dialog.ApplyReviewed.Message" xml:space="preserve"><value>{0} 该 已审阅 计划 更改 {1:N0} 文件 和 使用 已过期-文件 检查, 恢复 日志, 和 撤销.</value></data>
+  <data name="Inspector.Dialog.ApplyReviewed.Message" xml:space="preserve"><value>{0} 已审阅计划将更改 {1:N0} 个文件，并使用过期文件检查、恢复日志和撤消功能。</value></data>
   <data name="Inspector.Dialog.ApplyReviewed.Title" xml:space="preserve"><value>应用 已审阅 操作: {0}?</value></data>
   <data name="Inspector.Dialog.DirectWriteWarning" xml:space="preserve"><value>此 写入 该 文件 直接; 否 恢复 日志 是 已创建.</value></data>
   <data name="Inspector.Dialog.Discard.Confirm" xml:space="preserve"><value>放弃 更改</value></data>
@@ -4157,7 +4168,7 @@
   <data name="Inspector.Field.Title" xml:space="preserve"><value>标题</value></data>
   <data name="Inspector.Field.Track" xml:space="preserve"><value>音轨</value></data>
   <data name="Inspector.Field.TrackTotal" xml:space="preserve"><value>音轨总数</value></data>
-  <data name="Inspector.Field.UnverifiedHelp" xml:space="preserve"><value>该 缓存 执行 不 包含 此 字段 用于 每个 已选择 音轨. 其 当前 值 是 不 已显示; 类型 一个 值 将 有意 替换 它 在 该 完整 选择.</value></data>
+  <data name="Inspector.Field.UnverifiedHelp" xml:space="preserve"><value>缓存中不一定包含所有所选音轨的此字段。当前值不会显示；输入值将有意替换整个选择中的此字段。</value></data>
   <data name="Inspector.Field.UnverifiedPlaceholder" xml:space="preserve"><value>不 验证 跨 该 完整 选择 — 类型 到 替换</value></data>
   <data name="Inspector.Operation.EditArtwork" xml:space="preserve"><value>编辑 检查器 封面</value></data>
   <data name="Inspector.Operation.EditFields" xml:space="preserve"><value>编辑 检查器 字段</value></data>
@@ -4192,7 +4203,7 @@
   <data name="Inspector.Size.Megabytes" xml:space="preserve"><value>{0:N1} MB</value></data>
   <data name="Inspector.Status.ArtworkPartialFailure" xml:space="preserve"><value>已更新 {0:N0} 的 {1:N0} 音轨.</value></data>
   <data name="Inspector.Status.ArtworkPartialFailureRetry" xml:space="preserve"><value>已更新 {0:N0} 的 {1:N0} 音轨. 建议 封面 更改 保留 就绪 到 重试.</value></data>
-  <data name="Inspector.Status.ArtworkPreviewUnavailable" xml:space="preserve"><value>该 完整-大小 封面 预览 是 不可用 因为 该 图像 数据 是 缺失 或 无效.</value></data>
+  <data name="Inspector.Status.ArtworkPreviewUnavailable" xml:space="preserve"><value>图像数据缺失或无效，因此无法使用原始尺寸封面预览。</value></data>
   <data name="Inspector.Status.ArtworkReplacementReady" xml:space="preserve"><value>封面 替换 就绪 到 保存.</value></data>
   <data name="Inspector.Status.ArtworkSaved" xml:space="preserve"><value>封面 已保存 到 {0}.</value></data>
   <data name="Inspector.Status.ArtworkSaveFailed" xml:space="preserve"><value>封面 可以 不 为 已保存.</value></data>
@@ -4242,7 +4253,7 @@
   <data name="Library.Choice.OperationScope.SelectedAlbums" xml:space="preserve"><value>已选择 专辑</value></data>
   <data name="Library.Choice.OperationScope.VisibleFilteredResults" xml:space="preserve"><value>可见 筛选器 结果</value></data>
   <data name="Library.Choice.OperationScope.CompleteLibrary" xml:space="preserve"><value>完成 库</value></data>
-  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>运行 '{0}' {1:N0} 时间(s)? 外部工具 可以 更改 文件 和 是 外部 MusicLibraryManager 恢复.</value></data>
+  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>是否运行“{0}”{1:N0} 次？外部工具可能会更改文件，且不在 MusicLibraryManager 恢复范围内。</value></data>
   <data name="Library.Dialog.ExternalTool.Title" xml:space="preserve"><value>运行 外部 工具?</value></data>
   <data name="Library.Dialog.Leave.Confirm" xml:space="preserve"><value>保留</value></data>
   <data name="Library.Dialog.Leave.Message" xml:space="preserve"><value>该 已审阅 操作 或 报告 保留 可用 在 此 库 会话, 但是 有 不 已经 已应用.</value></data>
@@ -4283,10 +4294,10 @@
   <data name="Library.Operation.Artwork.Blockers.Other" xml:space="preserve"><value>封面 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
   <data name="Library.Operation.Artwork.PreviewCancelled" xml:space="preserve"><value>封面 预览 已取消.</value></data>
   <data name="Library.Operation.Artwork.PreviewFailed" xml:space="preserve"><value>封面 预览 失败.</value></data>
-  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>已预览 封面 更改 用于 {0:N0} 的 {1:N0} 文件(s). 无文件 曾是 已更改.</value></data>
+  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>已预览 {1:N0} 个文件中 {0:N0} 个文件的封面更改。未更改任何文件。</value></data>
   <data name="Library.Operation.Artwork.ReleaseReady" xml:space="preserve"><value>该 已选择 正面 封面 曾是 已添加 到 该 正常 元数据 预览. 审阅 每个 封面 更改 之前 正在应用.</value></data>
   <data name="Library.Operation.Audio.DiscoveryCancelled" xml:space="preserve"><value>音频 指纹 发现 已取消.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>指纹 发现: {0:N0} 文件(s), {1:N0} 候选项(s), {2:N0} 警告(s).</value></data>
+  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>指纹搜索：{0:N0} 个文件、{1:N0} 个候选项、{2:N0} 个警告。</value></data>
   <data name="Library.Operation.Audio.DiscoveryFailed" xml:space="preserve"><value>音频 指纹 发现 失败.</value></data>
   <data name="Library.Operation.Audio.IdentifierPreviewCancelled" xml:space="preserve"><value>音频 标识符 预览 已取消.</value></data>
   <data name="Library.Operation.Audio.IdentifierPreviewFailed" xml:space="preserve"><value>音频 标识符 预览 失败.</value></data>
@@ -4295,10 +4306,10 @@
   <data name="Library.Operation.Clipboard.Blockers.One" xml:space="preserve"><value>剪贴板 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
   <data name="Library.Operation.Clipboard.Blockers.Other" xml:space="preserve"><value>剪贴板 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
   <data name="Library.Operation.Clipboard.Cancelled" xml:space="preserve"><value>剪贴板 预览 已取消. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>已预览 {0:N0} 已粘贴 更改(s) 在 {1:N0} 文件(s).</value></data>
+  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>已预览 {1:N0} 个文件中的 {0:N0} 个粘贴更改。</value></data>
   <data name="Library.Operation.Clipboard.Failed" xml:space="preserve"><value>剪贴板 预览 失败.</value></data>
   <data name="Library.Operation.Clipboard.NoText" xml:space="preserve"><value>该 剪贴板 执行 不 包含 文本 元数据.</value></data>
-  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>已复制 {0:N0} 顺序 {1} 值(s) 从 {2} 带 标签 标识.</value></data>
+  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>已从 {2} 复制 {0:N0} 个有序的 {1} 值，并保留标签标识。</value></data>
   <data name="Library.Operation.Copy.NoMetadata" xml:space="preserve"><value>该 已选择 库 范围 包含 否 已缓存 元数据 到 复制.</value></data>
   <data name="Library.Operation.CoverArt.Cancelled" xml:space="preserve"><value>Cover Art Archive 查找 已取消.</value></data>
   <data name="Library.Operation.CoverArt.Failed" xml:space="preserve"><value>Cover Art Archive 查找 失败.</value></data>
@@ -4309,7 +4320,7 @@
   <data name="Library.Operation.Discogs.ArtworkFailed" xml:space="preserve"><value>Discogs 封面 预览 失败.</value></data>
   <data name="Library.Operation.Discogs.ArtworkReady" xml:space="preserve"><value>该 已选择 Discogs 封面 曾是 已添加 到 该 正常 封面 预览. 审阅 每个 更改 之前 正在应用.</value></data>
   <data name="Library.Operation.Discogs.DetailsCancelled" xml:space="preserve"><value>Discogs 发行版 详细信息 查找 已取消.</value></data>
-  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>已加载 Discogs 发行版 {0} 带 {1:N0} 音轨(s). 否 元数据 曾是 已更改.</value></data>
+  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>已加载 Discogs 发行版 {0}，其中包含 {1:N0} 个音轨。未更改元数据。</value></data>
   <data name="Library.Operation.Discogs.DetailsFailed" xml:space="preserve"><value>Discogs 发行版 详细信息 查找 失败.</value></data>
   <data name="Library.Operation.Discogs.MappingCancelled" xml:space="preserve"><value>Discogs 音轨 映射 已取消.</value></data>
   <data name="Library.Operation.Discogs.MappingComplete" xml:space="preserve"><value>建议 {0:N0} 的 {1:N0} Discogs 文件到音轨 映射; {2:N0} 需要 审阅.</value></data>
@@ -4318,11 +4329,11 @@
   <data name="Library.Operation.Discogs.MetadataFailed" xml:space="preserve"><value>Discogs 元数据 预览 失败.</value></data>
   <data name="Library.Operation.Discogs.MetadataReady" xml:space="preserve"><value>已映射 Discogs 字段 曾是 已添加 到 该 正常 元数据 预览. 审阅 每个 更改 之前 正在应用.</value></data>
   <data name="Library.Operation.Discogs.SearchCancelled" xml:space="preserve"><value>Discogs 发行版 搜索 已取消.</value></data>
-  <data name="Library.Operation.Discogs.SearchComplete.One" xml:space="preserve"><value>Discogs 已找到 {0:N0} 发行版 版本. 选择 它 到 加载 其 完成 音轨 和 版本 详细信息.</value></data>
-  <data name="Library.Operation.Discogs.SearchComplete.Other" xml:space="preserve"><value>Discogs 已找到 {0:N0} 发行版 版本. 选择 一个 到 加载 其 完成 音轨 和 版本 详细信息.</value></data>
+  <data name="Library.Operation.Discogs.SearchComplete.One" xml:space="preserve"><value>Discogs 找到 {0:N0} 个发行版本。选择它可加载完整的音轨和版本详细信息。</value></data>
+  <data name="Library.Operation.Discogs.SearchComplete.Other" xml:space="preserve"><value>Discogs 找到 {0:N0} 个发行版本。选择一个可加载完整的音轨和版本详细信息。</value></data>
   <data name="Library.Operation.Discogs.SearchFailed" xml:space="preserve"><value>Discogs 发行版 搜索 失败.</value></data>
-  <data name="Library.Operation.ExternalTool.Blockers.One" xml:space="preserve"><value>外部-工具 预览 有 {0:N0} 阻止项. 无 可以 运行.</value></data>
-  <data name="Library.Operation.ExternalTool.Blockers.Other" xml:space="preserve"><value>外部-工具 预览 有 {0:N0} 阻止项. 无 可以 运行.</value></data>
+  <data name="Library.Operation.ExternalTool.Blockers.One" xml:space="preserve"><value>外部工具预览中有 {0:N0} 个阻止项，无法运行任何操作。</value></data>
+  <data name="Library.Operation.ExternalTool.Blockers.Other" xml:space="preserve"><value>外部工具预览中有 {0:N0} 个阻止项，无法运行任何操作。</value></data>
   <data name="Library.Operation.ExternalTool.Cancelled" xml:space="preserve"><value>外部 工具 已取消. 该 活动 进程 曾是 已停止.</value></data>
   <data name="Library.Operation.ExternalTool.Complete" xml:space="preserve"><value>外部 工具 已完成: {0:N0} 成功, {1:N0} 失败.</value></data>
   <data name="Library.Operation.ExternalTool.Failed" xml:space="preserve"><value>外部 工具 已停止.</value></data>
@@ -4335,8 +4346,8 @@
   <data name="Library.Operation.Import.Blockers.One" xml:space="preserve"><value>导入 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
   <data name="Library.Operation.Import.Blockers.Other" xml:space="preserve"><value>导入 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
   <data name="Library.Operation.Import.Cancelled" xml:space="preserve"><value>导入 预览 已取消. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>已预览 {0:N0} 导入 更改(s) 在 {1:N0} 文件(s). 已映射 {2:N0} 的 {3:N0} 行(s).</value></data>
-  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>已预览 {0:N0} 导入 更改(s) 在 {1:N0} 文件(s). 已映射 {2:N0} 的 {3:N0} 行(s) 带 {4:N0} 警告(s).</value></data>
+  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>已预览 {1:N0} 个文件中的 {0:N0} 个导入更改。已映射 {3:N0} 行中的 {2:N0} 行。</value></data>
+  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>已预览 {1:N0} 个文件中的 {0:N0} 个导入更改。已映射 {3:N0} 行中的 {2:N0} 行，并有 {4:N0} 个警告。</value></data>
   <data name="Library.Operation.Import.Failed" xml:space="preserve"><value>导入 预览 失败.</value></data>
   <data name="Library.Operation.Import.NoRowsMatched" xml:space="preserve"><value>否 导入 行 已匹配 该 已选择 库 范围.</value></data>
   <data name="Library.Operation.MusicBrainz.LookupCancelled" xml:space="preserve"><value>MusicBrainz 发行版 查找 已取消.</value></data>
@@ -4363,10 +4374,10 @@
   <data name="Library.Operation.Playlist.PreviewFailed" xml:space="preserve"><value>播放列表 预览 失败.</value></data>
   <data name="Library.Operation.Playlist.Ready.One" xml:space="preserve"><value>已预览 {0:N0} 播放列表 文件. 审阅 该 目标 之前 正在应用.</value></data>
   <data name="Library.Operation.Playlist.Ready.Other" xml:space="preserve"><value>已预览 {0:N0} 播放列表 文件. 审阅 该 目标 之前 正在应用.</value></data>
-  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>已写入 {0:N0} 播放列表 文件(s) 带 {1:N0} 音轨 引用(s).</value></data>
-  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>已预览 {0:N0} 文件(s) 带 {1:N0} 阻止项(s). 无文件 曾是 已更改.</value></data>
+  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>已写入 {0:N0} 个播放列表文件，其中包含 {1:N0} 个音轨引用。</value></data>
+  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>已预览存在 {1:N0} 个阻止项的 {0:N0} 个文件。未更改任何文件。</value></data>
   <data name="Library.Operation.PreviewCancelled" xml:space="preserve"><value>预览 已取消. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>已预览 {0:N0} 更改(s) 在 {1:N0} 的 {2:N0} 文件(s).</value></data>
+  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>已预览 {2:N0} 个文件中 {1:N0} 个文件的 {0:N0} 个更改。</value></data>
   <data name="Library.Operation.PreviewFailed" xml:space="preserve"><value>预览 失败.</value></data>
   <data name="Library.Operation.PreviewInvalidated" xml:space="preserve"><value>操作 或 范围 已更改. 预览 权威 元数据 再次.</value></data>
   <data name="Library.Operation.Report.Blockers.One" xml:space="preserve"><value>报告 预览 有 {0:N0} 阻止项. 否 输出 曾是 已写入.</value></data>
@@ -4377,7 +4388,7 @@
   <data name="Library.Operation.Report.PreviewFailed" xml:space="preserve"><value>报告 预览 失败.</value></data>
   <data name="Library.Operation.Report.Ready.One" xml:space="preserve"><value>已预览 {0:N0} 报告 文件. 审阅 该 目标 之前 正在应用.</value></data>
   <data name="Library.Operation.Report.Ready.Other" xml:space="preserve"><value>已预览 {0:N0} 报告 文件. 审阅 该 目标 之前 正在应用.</value></data>
-  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>已写入 {0:N0} 报告 文件(s) 带 {1:N0} 行(s).</value></data>
+  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>已写入 {0:N0} 个报告文件，其中包含 {1:N0} 行。</value></data>
   <data name="Library.Operation.Restore.Cancelled" xml:space="preserve"><value>还原 已取消. 任意 已完成 还原 保留 可恢复.</value></data>
   <data name="Library.Operation.Restore.Complete.One" xml:space="preserve"><value>已还原 {0:N0} 文件 从 该 最新 元数据 操作.</value></data>
   <data name="Library.Operation.Restore.Complete.Other" xml:space="preserve"><value>已还原 {0:N0} 文件 从 该 最新 元数据 操作.</value></data>
@@ -4387,7 +4398,7 @@
   <data name="Library.OperationName.DiscogsMetadata" xml:space="preserve"><value>Discogs: {0}</value></data>
   <data name="Library.OperationName.ImportMetadata" xml:space="preserve"><value>导入元数据 从 {0}</value></data>
   <data name="Library.OperationName.MusicBrainzMetadata" xml:space="preserve"><value>MusicBrainz: {0}</value></data>
-  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>粘贴 {0} 值 用于 {1:N0} 文件(s)</value></data>
+  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>将 {0} 值粘贴到 {1:N0} 个文件</value></data>
   <data name="Library.OperationName.RemoveAllArtwork" xml:space="preserve"><value>移除 全部 封面</value></data>
   <data name="Library.OperationName.RemoveFrontCover" xml:space="preserve"><value>移除 正面 封面</value></data>
   <data name="Library.OperationName.ReplaceFrontCover" xml:space="preserve"><value>替换 正面 封面</value></data>
@@ -4396,8 +4407,8 @@
   <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>分隔 元数据</value></data>
   <data name="Library.Picker.ExternalToolDirectory" xml:space="preserve"><value>选择 外部 工具 正在处理 目录</value></data>
   <data name="Library.Picker.ExternalToolExecutable" xml:space="preserve"><value>选择 外部 工具 可执行文件</value></data>
-  <data name="Library.Picker.FrontCover" xml:space="preserve"><value>选择 正面-封面 封面</value></data>
-  <data name="Library.Picker.ImportMetadata.Title" xml:space="preserve"><value>导入元数据 从 CSV 或 分隔 文本</value></data>
+  <data name="Library.Picker.FrontCover" xml:space="preserve"><value>选择正面封面</value></data>
+  <data name="Library.Picker.ImportMetadata.Title" xml:space="preserve"><value>从 CSV 或分隔文本导入元数据</value></data>
   <data name="Library.Picker.PlaylistFolder" xml:space="preserve"><value>选择 播放列表 输出 文件夹</value></data>
   <data name="Library.Picker.PlaylistOutput" xml:space="preserve"><value>选择 播放列表 输出</value></data>
   <data name="Library.Picker.ReportFolder" xml:space="preserve"><value>选择 报告 输出 文件夹</value></data>
@@ -4414,7 +4425,7 @@
   <data name="Library.Progress.BuildingReportPreview" xml:space="preserve"><value>构建 报告 预览</value></data>
   <data name="Library.Progress.FindingCoverArt" xml:space="preserve"><value>发现项 Cover Art Archive 图像</value></data>
   <data name="Library.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>正在加载 封面 缩略图 {0:N0} 的 {1:N0}</value></data>
-  <data name="Library.Progress.LoadingDiscogsDetails" xml:space="preserve"><value>正在加载 Discogs 发行版 详细信息</value></data>
+  <data name="Library.Progress.LoadingDiscogsDetails" xml:space="preserve"><value>正在加载 Discogs 发行版详细信息</value></data>
   <data name="Library.Progress.MappingMetadataImport" xml:space="preserve"><value>映射 元数据 导入</value></data>
   <data name="Library.Progress.MatchingDiscogsTracks" xml:space="preserve"><value>匹配 库 文件 到 Discogs 音轨</value></data>
   <data name="Library.Progress.MatchingReleaseTracks" xml:space="preserve"><value>匹配 库 文件 到 发行版 音轨</value></data>
@@ -4439,8 +4450,8 @@
   <data name="Library.Status.ChooseConfiguration" xml:space="preserve"><value>选择 一个 库 配置 在 设置.</value></data>
   <data name="Library.Status.Filtered" xml:space="preserve"><value>{0:N0} 的 {1:N0} 音轨</value></data>
   <data name="Library.Status.FilteredPreserved" xml:space="preserve"><value>{0:N0} 的 {1:N0} 音轨 · {2:N0} 已选择 带 未保存 更改 已保留 可见</value></data>
-  <data name="Library.Status.HealthFiltered" xml:space="preserve"><value>{0:N0} 健康状况-筛选器 音轨(s) 的 {1:N0} 总计</value></data>
-  <data name="Library.Status.HealthFilteredPreserved" xml:space="preserve"><value>{0:N0} 健康状况-筛选器 音轨(s) 的 {1:N0} 总计 · {2:N0} 已选择 带 未保存 更改 已保留 可见</value></data>
+  <data name="Library.Status.HealthFiltered" xml:space="preserve"><value>共 {1:N0} 个音轨，按健康状况筛选出 {0:N0} 个</value></data>
+  <data name="Library.Status.HealthFilteredPreserved" xml:space="preserve"><value>共 {1:N0} 个音轨，按健康状况筛选出 {0:N0} 个 · 保持显示 {2:N0} 个有未保存更改的所选项</value></data>
   <data name="Library.Status.InvalidFilter" xml:space="preserve"><value>该 筛选器 是 无效.</value></data>
   <data name="Library.Status.LoadConfiguration" xml:space="preserve"><value>加载 一个 配置 到 浏览 您的 库.</value></data>
   <data name="Library.Status.LoadFailed" xml:space="preserve"><value>可以 不 加载 该 已缓存 库.</value></data>
@@ -4454,7 +4465,7 @@
   <data name="Library.VisualFilter.Status.Cleared" xml:space="preserve"><value>可视化 筛选器 已清除.</value></data>
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>该 可视化 筛选器 是 无效.</value></data>
   <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>否 可视化 筛选器 是 活动.</value></data>
-  <data name="Column.TechnicalDetails" xml:space="preserve"><value>技术 详细信息</value></data>
+  <data name="Column.TechnicalDetails" xml:space="preserve"><value>技术详细信息</value></data>
   <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>筛选器 在 库</value></data>
   <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>混合</value></data>
   <data name="Health.Choice.FindingDisposition.None" xml:space="preserve"><value>无</value></data>
@@ -4487,8 +4498,8 @@
   <data name="Health.Run.Name.AlbumRepresentations" xml:space="preserve"><value>专辑 表示</value></data>
   <data name="Health.Run.Name.ArtworkHealth" xml:space="preserve"><value>封面 健康状况</value></data>
   <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>专辑艺术家 冲突 修复</value></data>
-  <data name="Health.Run.Name.CrossSetCheck" xml:space="preserve"><value>交叉-设置 检查</value></data>
-  <data name="Health.Run.Name.DecodedAudioVerification" xml:space="preserve"><value>已解码-音频 验证</value></data>
+  <data name="Health.Run.Name.CrossSetCheck" xml:space="preserve"><value>跨集检查</value></data>
+  <data name="Health.Run.Name.DecodedAudioVerification" xml:space="preserve"><value>解码音频验证</value></data>
   <data name="Health.Run.Name.Duplicates" xml:space="preserve"><value>重复项</value></data>
   <data name="Health.Run.Name.Inconsistencies" xml:space="preserve"><value>不一致</value></data>
   <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>iTunes 库 元数据 修复</value></data>
@@ -4505,8 +4516,8 @@
   <data name="Health.Artwork.Category.File" xml:space="preserve"><value>文件 封面</value></data>
   <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>混合 专辑 封面</value></data>
   <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>保留 该 第一个 图像 和 移除 重复 嵌入式 图像.</value></data>
-  <data name="Health.Artwork.Description.NormalizeAlbum" xml:space="preserve"><value>替换 每个 音轨's 嵌入式-封面 设置 带 该 已选择 专辑 图像.</value></data>
-  <data name="Health.Artwork.Description.NormalizeAlbumWithMissing" xml:space="preserve"><value>替换 每个 已扫描 音轨's 嵌入式-封面 设置 带 该 已选择 专辑 图像, 包括 音轨 其 封面 是 缺失.</value></data>
+  <data name="Health.Artwork.Description.NormalizeAlbum" xml:space="preserve"><value>将每个音轨的嵌入式封面集替换为所选专辑图像。</value></data>
+  <data name="Health.Artwork.Description.NormalizeAlbumWithMissing" xml:space="preserve"><value>将每个已扫描音轨的嵌入式封面集替换为所选专辑图像，包括缺少封面的音轨。</value></data>
   <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>重新编码 该 第一个 图像 范围内 该 已配置 限制 和 移除 重复 嵌入式 图像.</value></data>
   <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>重新编码 该 第一个 图像 范围内 该 已配置 封面 限制.</value></data>
   <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>重新编码 该 第一个 可读 图像 和 替换 该 无效 嵌入式-封面 设置.</value></data>
@@ -4518,17 +4529,17 @@
   <data name="Health.Diagnostic.FileError" xml:space="preserve"><value>{0}: {1}</value></data>
   <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>应用 修复</value></data>
   <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>应用 艺术家 合并</value></data>
-  <data name="Health.Dialog.ArtistMerge.Message" xml:space="preserve"><value>重命名 {0:N0} 已审阅 拼写 变体 跨 {1:N0} 音轨 在 {2:N0} 群集? 文件 是 已写入 直接; 否 恢复 日志 是 已创建.</value></data>
+  <data name="Health.Dialog.ArtistMerge.Message" xml:space="preserve"><value>是否更改 {2:N0} 个群集的 {1:N0} 个音轨中 {0:N0} 项已审阅的拼写变体？文件将直接写入，且不会创建恢复日志。</value></data>
   <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>应用 相似 艺术家 合并</value></data>
   <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>应用 封面 修复</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Message" xml:space="preserve"><value>替换 该 整个 嵌入式-封面 设置 在 {0:N0} 文件 使用 {1:N0} 已审阅 操作? 文件 是 已写入 直接; 否 恢复 日志 是 已创建.</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Message" xml:space="preserve"><value>是否使用 {1:N0} 项已审阅操作替换 {0:N0} 个文件中的整套嵌入式封面？文件将直接写入，且不会创建恢复日志。</value></data>
   <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>应用 封面 修复</value></data>
   <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>应用 文件 修复</value></data>
-  <data name="Health.Dialog.FileRepair.Message" xml:space="preserve"><value>应用 {0:N0} 已审阅 文件 修复 操作? 可恢复 文件 变更 是 已记录 在 该 操作 日志; 元数据-仅 写入 执行 不 有 日志 恢复.</value></data>
+  <data name="Health.Dialog.FileRepair.Message" xml:space="preserve"><value>是否应用 {0:N0} 项已审阅的文件修复操作？可恢复的文件更改会记录在操作日志中；仅写入元数据的操作无法通过日志恢复。</value></data>
   <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>应用 文件 修复</value></data>
   <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>应用 {0:N0} 已选择 修复 到 该 iTunes 库? 一个 备份 复制 将 为 已保留.</value></data>
   <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>应用 iTunes 元数据 修复</value></data>
-  <data name="Health.Dialog.MetadataRepair.Message" xml:space="preserve"><value>写入 {0:N0} 已审阅 元数据 修复 到 该 所选文件? 每个 源 是 检查 用于 更改 已生成 自 预览. 文件 是 已写入 直接; 否 恢复 日志 是 已创建.</value></data>
+  <data name="Health.Dialog.MetadataRepair.Message" xml:space="preserve"><value>是否将 {0:N0} 项已审阅的元数据修复写入所选文件？系统会检查每个源文件在预览后是否发生更改。文件将直接写入，且不会创建恢复日志。</value></data>
   <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>应用 元数据 修复</value></data>
   <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>封面 比较 可以 不 读取 每个 已匹配 文件.</value></data>
   <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>封面 比较 不可用</value></data>
@@ -4574,7 +4585,7 @@
   <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>正在检查 元数据 一致性</value></data>
   <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>正在比较 专辑 封面</value></data>
   <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>正在比较 专辑 表示</value></data>
-  <data name="Health.Progress.Stage.ComparingArtistNames" xml:space="preserve"><value>正在比较 艺术家 名称</value></data>
+  <data name="Health.Progress.Stage.ComparingArtistNames" xml:space="preserve"><value>正在比较艺术家名称</value></data>
   <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>正在解码 音频</value></data>
   <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>分组 封面 修复</value></data>
   <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>正在索引 封面 审核</value></data>
@@ -4589,9 +4600,9 @@
   <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>正在预览 组织 移动</value></data>
   <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>正在预览 表示 派生</value></data>
   <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>正在预览 表示 元数据 复制</value></data>
-  <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>正在读取 艺术家 名称</value></data>
+  <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>正在读取艺术家名称</value></data>
   <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>选择 组织 修复</value></data>
-  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>艺术家-name 比较</value></data>
+  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>艺术家名称比较</value></data>
   <data name="Health.Progress.Unit.Files" xml:space="preserve"><value>文件</value></data>
   <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>发现项</value></data>
   <data name="Health.Progress.Unit.Moves" xml:space="preserve"><value>移动</value></data>
@@ -4636,17 +4647,17 @@
   <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>该 已选择 规范 值 已经 匹配 每个 文件.</value></data>
   <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>已预览 {0:N0} 用户-定向 修复. 审阅, 然后 应用 它.</value></data>
   <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>已预览 {0:N0} 用户-定向 修复. 审阅, 然后 应用 该 已选择 修复.</value></data>
-  <data name="Health.Status.CrossSetCheck.Cancelled" xml:space="preserve"><value>交叉-设置 检查 已取消.</value></data>
-  <data name="Health.Status.CrossSetCheck.Failed" xml:space="preserve"><value>交叉-设置 检查 失败.</value></data>
-  <data name="Health.Status.CrossSetCheck.Findings.One" xml:space="preserve"><value>交叉-设置 检查: {0:N0} 发现项.</value></data>
-  <data name="Health.Status.CrossSetCheck.Findings.Other" xml:space="preserve"><value>交叉-设置 检查: {0:N0} 发现项.</value></data>
-  <data name="Health.Status.CrossSetCheck.None" xml:space="preserve"><value>交叉-设置 检查: 否 差异 (需要 在 至少 两个 已配置 设置).</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Cancelled" xml:space="preserve"><value>已解码-音频 验证 已取消.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Differ.One" xml:space="preserve"><value>已解码-音频 验证: {0:N0} 对 不同.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Differ.Other" xml:space="preserve"><value>已解码-音频 验证: {0:N0} 对 不同.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Failed" xml:space="preserve"><value>已解码-音频 验证 失败.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Match.One" xml:space="preserve"><value>已解码-音频 验证: {0:N0} 兼容 对 匹配项.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Match.Other" xml:space="preserve"><value>已解码-音频 验证: {0:N0} 兼容 对 匹配.</value></data>
+  <data name="Health.Status.CrossSetCheck.Cancelled" xml:space="preserve"><value>跨集检查已取消。</value></data>
+  <data name="Health.Status.CrossSetCheck.Failed" xml:space="preserve"><value>跨集检查失败。</value></data>
+  <data name="Health.Status.CrossSetCheck.Findings.One" xml:space="preserve"><value>跨集检查：{0:N0} 个发现项。</value></data>
+  <data name="Health.Status.CrossSetCheck.Findings.Other" xml:space="preserve"><value>跨集检查：{0:N0} 个发现项。</value></data>
+  <data name="Health.Status.CrossSetCheck.None" xml:space="preserve"><value>跨集检查：没有差异（至少需要两个已配置的集）。</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Cancelled" xml:space="preserve"><value>解码音频验证已取消。</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Differ.One" xml:space="preserve"><value>解码音频验证：{0:N0} 对不同。</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Differ.Other" xml:space="preserve"><value>解码音频验证：{0:N0} 对不同。</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Failed" xml:space="preserve"><value>解码音频验证失败。</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Match.One" xml:space="preserve"><value>解码音频验证：{0:N0} 个兼容对匹配。</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Match.Other" xml:space="preserve"><value>解码音频验证：{0:N0} 个兼容对匹配。</value></data>
   <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>已推迟 封面 扫描 已取消.</value></data>
   <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>已推迟 封面 扫描 失败.</value></data>
   <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>{0:N0} 重复 组.</value></data>
@@ -4691,7 +4702,7 @@
   <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} 失败.</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} 相似 艺术家 群集 已找到 在 阈值 {1:0.00}. 审阅 该 变体, 然后 应用 该 活动 修复.</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} 相似 艺术家 群集 已找到 在 阈值 {1:0.00}. 审阅 该 变体, 然后 应用 该 活动 修复.</value></data>
-  <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>否 相似 艺术家 名称 已找到 在 阈值 {0:0.00}.</value></data>
+  <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>在阈值 {0:0.00} 下未找到相似的艺术家名称。</value></data>
   <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>添加 文件</value></data>
   <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>创建 文件夹</value></data>
   <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>删除 文件夹</value></data>
@@ -4716,22 +4727,22 @@
   <data name="Devices.Activity.Preview.Title" xml:space="preserve"><value>预览 Android 同步</value></data>
   <data name="Devices.Activity.Restore.Title" xml:space="preserve"><value>还原 Android 同步</value></data>
   <data name="Devices.Activity.Starting" xml:space="preserve"><value>正在开始…</value></data>
-  <data name="Devices.Dialog.Apply.DirectMessage" xml:space="preserve"><value>应用 {0:N0} 已计划 操作, 包括 {1:N0} 移除, 和 传输 {2:N0} 字节? 恢复 是 不可用 因为 直接 传输 绕过 暂存.</value></data>
+  <data name="Devices.Dialog.Apply.DirectMessage" xml:space="preserve"><value>是否应用 {0:N0} 项计划操作（包括 {1:N0} 项移除）并传输 {2:N0} 字节？直接传输会绕过暂存，因此无法恢复。</value></data>
   <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>应用 不带 恢复</value></data>
-  <data name="Devices.Dialog.Apply.Message" xml:space="preserve"><value>应用 {0:N0} 已计划 操作, 包括 {1:N0} 移除, 和 传输 {2:N0} 字节? 恢复 是 可用: 已替换 和 已移除 目标 项目 将 为 已隔离 在 一个 恢复 运行.</value></data>
+  <data name="Devices.Dialog.Apply.Message" xml:space="preserve"><value>是否应用 {0:N0} 项计划操作（包括 {1:N0} 项移除）并传输 {2:N0} 字节？可以恢复：已替换和已移除的目标项目将隔离在恢复运行中。</value></data>
   <data name="Devices.Dialog.Apply.Primary" xml:space="preserve"><value>同步</value></data>
   <data name="Devices.Dialog.Apply.Title" xml:space="preserve"><value>应用 Android 同步</value></data>
   <data name="Devices.Dialog.ChooseAdb" xml:space="preserve"><value>选择 adb 可执行文件</value></data>
   <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>选择 该 本地 文件夹 到 镜像</value></data>
-  <data name="Devices.Dialog.Failure.Message" xml:space="preserve"><value>{0} 可以 不 为 已完成. 打开 该 诊断 详细信息 用于 该 底层 错误.</value></data>
+  <data name="Devices.Dialog.Failure.Message" xml:space="preserve"><value>无法完成 {0}。请打开诊断详细信息以查看根本错误。</value></data>
   <data name="Devices.Dialog.Failure.Title" xml:space="preserve"><value>{0} 失败</value></data>
   <data name="Devices.Dialog.Initialize.Adopt" xml:space="preserve"><value>采用</value></data>
-  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>采用 “{0}” 作为 一个 已管理 同步 目标? 现有 内容 将 为 包括 在 该 第一个 预览 和 可能 为 已隔离 当 应用 是 允许.</value></data>
+  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>是否将“{0}”用作托管同步目标？现有内容将包含在首次预览中，并可能在允许应用时被隔离。</value></data>
   <data name="Devices.Dialog.Initialize.AdoptTitle" xml:space="preserve"><value>采用 Android 目标</value></data>
   <data name="Devices.Dialog.Initialize.Create" xml:space="preserve"><value>初始化</value></data>
   <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>初始化 “{0}” 作为 一个 已管理 同步 目标? 该 文件夹 必须 为 新建 或 空.</value></data>
   <data name="Devices.Dialog.Initialize.Title" xml:space="preserve"><value>初始化 Android 目标</value></data>
-  <data name="Devices.Dialog.Restore.Message" xml:space="preserve"><value>还原 恢复 运行 “{0}” 在 “{1}”? 同步 文件 将 为 已移除, 已隔离 原始 将 为 已还原, 和 已移位 当前 内容 将 保留 已保留 在 该 恢复 运行.</value></data>
+  <data name="Devices.Dialog.Restore.Message" xml:space="preserve"><value>是否还原位于“{1}”的恢复运行“{0}”？已同步的文件将被移除，已隔离的原始文件将被还原，被替换的当前内容仍会保留在恢复运行中。</value></data>
   <data name="Devices.Dialog.Restore.Primary" xml:space="preserve"><value>还原</value></data>
   <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>还原 上一个 Android 同步</value></data>
   <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB 可以 不 枚举 Android 设备. 您 可以 仍然 输入 一个 序列号 手动.</value></data>
@@ -4801,11 +4812,11 @@
   <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>{0:N0} 配置 问题 必须 为 已解决 之前 正在预览.</value></data>
   <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>{0:N0} 配置 问题 必须 为 已解决 之前 正在预览.</value></data>
   <data name="Ingest.Configuration.Ready" xml:space="preserve"><value>引入 配置 是 就绪.</value></data>
-  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>导入 {0:N0} 专辑, 创建 {1:N0} 输出 文件, 和 清理 设置 {2:N0} 源 项目? 恢复 是 可用: 已完成 专辑 和 清理 操作 是 已记录 在 操作 日志.</value></data>
+  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>是否导入 {0:N0} 张专辑、创建 {1:N0} 个输出文件并清理 {2:N0} 个源项目？可以恢复：已完成的专辑和清理操作会记录在操作日志中。</value></data>
   <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>应用 引入</value></data>
   <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>应用 引入 计划</value></data>
   <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>选择 传入 音乐 目录</value></data>
-  <data name="Ingest.File.ConflictSummary" xml:space="preserve"><value>冲突 详细信息: {0}</value></data>
+  <data name="Ingest.File.ConflictSummary" xml:space="preserve"><value>冲突详细信息：{0}</value></data>
   <data name="Ingest.File.OutputDestination" xml:space="preserve"><value>目标 → {0}</value></data>
   <data name="Ingest.File.Progress.Complete" xml:space="preserve"><value>✓ 完成</value></data>
   <data name="Ingest.File.Progress.Failed" xml:space="preserve"><value>✕ 不 已完成</value></data>
@@ -4816,17 +4827,17 @@
   <data name="Ingest.File.Type.HiResAlac" xml:space="preserve"><value>高解析度 ALAC</value></data>
   <data name="Ingest.File.Type.HiResFlac" xml:space="preserve"><value>高解析度 FLAC</value></data>
   <data name="Ingest.File.Type.Output" xml:space="preserve"><value>{0} 输出</value></data>
-  <data name="Ingest.File.Type.Unsupported" xml:space="preserve"><value>不支持 或 非-音频</value></data>
-  <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>引入 是 忙碌. 取消 或 完成 该 当前 操作 之前 替换 其 输入.</value></data>
+  <data name="Ingest.File.Type.Unsupported" xml:space="preserve"><value>不受支持或不是音频</value></data>
+  <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>引入正在进行中。请先取消或完成当前操作，再替换输入。</value></data>
   <data name="Ingest.Handoff.CommonTreeRequired" xml:space="preserve"><value>所选文件 必须 共享 一个 源 树 在 一个 卷. 选择 文件 下方 一个 通用 传入 文件夹.</value></data>
-  <data name="Ingest.Handoff.InvalidPaths" xml:space="preserve"><value>该 已选择 路径 是 无效. 打开 该 诊断 详细信息 用于 该 底层 错误.</value></data>
+  <data name="Ingest.Handoff.InvalidPaths" xml:space="preserve"><value>所选路径无效。请打开诊断详细信息以查看根本错误。</value></data>
   <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>选择 一个 或 更多 工作台 文件 第一个.</value></data>
-  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>{0:N0} 工作台-已选择 文件 是 就绪. 运行 预检 或 预览.</value></data>
-  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>{0:N0} 工作台-所选文件 是 就绪. 运行 预检 或 预览.</value></data>
+  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>已准备好 {0:N0} 个在工作台中选择的文件。请运行预检或预览。</value></data>
+  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>已准备好 {0:N0} 个在工作台中选择的文件。请运行预检或预览。</value></data>
   <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>该 已选择 文件 是 不可用: {0}</value></data>
   <data name="Ingest.History.AffectedItems.One" xml:space="preserve"><value>{0:N0} 项目</value></data>
   <data name="Ingest.History.AffectedItems.Other" xml:space="preserve"><value>{0:N0} 项目</value></data>
-  <data name="Ingest.History.OpenForDetails" xml:space="preserve"><value>打开 用于 项目 详细信息</value></data>
+  <data name="Ingest.History.OpenForDetails" xml:space="preserve"><value>打开以查看项目详细信息</value></data>
   <data name="Ingest.History.State.Completed" xml:space="preserve"><value>已完成</value></data>
   <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>已中断 — 恢复 可用</value></data>
   <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>隔离 存在</value></data>
@@ -4870,8 +4881,8 @@
   <data name="Ingest.PreviewFilter.Cleanup" xml:space="preserve"><value>清理</value></data>
   <data name="Ingest.PreviewFilter.Conflicts" xml:space="preserve"><value>冲突</value></data>
   <data name="Ingest.PreviewFilter.Outputs" xml:space="preserve"><value>输出</value></data>
-  <data name="Ingest.SelectedSources.Summary.One" xml:space="preserve"><value>使用 {0:N0} 工作台-已选择 文件 作为 该 引入 源.</value></data>
-  <data name="Ingest.SelectedSources.Summary.Other" xml:space="preserve"><value>使用 {0:N0} 工作台-所选文件 作为 该 引入 源.</value></data>
+  <data name="Ingest.SelectedSources.Summary.One" xml:space="preserve"><value>将 {0:N0} 个在工作台中选择的文件用作引入源。</value></data>
+  <data name="Ingest.SelectedSources.Summary.Other" xml:space="preserve"><value>将 {0:N0} 个在工作台中选择的文件用作引入源。</value></data>
   <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>已取消. 任意 专辑 已经 已提交 保留 安全地 日志.</value></data>
   <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>引入 曾是 已取消. 任意 已完成 作品 保留 安全地 日志.</value></data>
   <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>引入 曾是 不 已应用. 该 已审阅 预览 保留 可用.</value></data>
@@ -4883,7 +4894,7 @@
   <data name="Ingest.Status.ChooseSource" xml:space="preserve"><value>选择 一个 传入 文件夹, 然后 运行 预检 或 预览.</value></data>
   <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>非音乐 清理 已完成.</value></data>
   <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>派生 曾是 已拒绝. 该 整个 运行 曾是 已取消 和 无 曾是 已更改.</value></data>
-  <data name="Ingest.Status.InputsChanged" xml:space="preserve"><value>输入 已更改. 预览 再次 之前 正在应用.</value></data>
+  <data name="Ingest.Status.InputsChanged" xml:space="preserve"><value>输入已更改。请在应用前重新预览。</value></data>
   <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>预检 已取消.</value></data>
   <data name="Ingest.Status.PreflightChecking" xml:space="preserve"><value>正在检查 引入 配置 和 外部工具…</value></data>
   <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>预检 已找到 {0:N0} 阻止 错误.</value></data>
@@ -4908,8 +4919,8 @@
   <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>应用 组织 计划</value></data>
   <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>正在计算 规范 路径</value></data>
   <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>预览 组织</value></data>
-  <data name="Organize.Dialog.Apply.Message.One" xml:space="preserve"><value>应用 {0:N0} 已计划 移动? 恢复 是 可用: 一个 日志 将 为 已写入, 和 该 已完成 移动 将 为 已回滚 背面 如果 该 操作 执行 不 完成.</value></data>
-  <data name="Organize.Dialog.Apply.Message.Other" xml:space="preserve"><value>应用 {0:N0} 已计划 移动? 恢复 是 可用: 一个 日志 将 为 已写入, 和 已完成 移动 将 为 已回滚 背面 如果 该 操作 执行 不 完成.</value></data>
+  <data name="Organize.Dialog.Apply.Message.One" xml:space="preserve"><value>是否应用 {0:N0} 项计划移动？可以恢复：系统将写入日志；如果操作未完成，已完成的移动将回滚。</value></data>
+  <data name="Organize.Dialog.Apply.Message.Other" xml:space="preserve"><value>是否应用 {0:N0} 项计划移动？可以恢复：系统将写入日志；如果操作未完成，已完成的移动将回滚。</value></data>
   <data name="Organize.Dialog.Apply.Primary" xml:space="preserve"><value>应用 移动</value></data>
   <data name="Organize.Dialog.Apply.Title" xml:space="preserve"><value>应用 组织 计划</value></data>
   <data name="Organize.Status.AlreadyCanonical" xml:space="preserve"><value>该 库 是 已经 整理 根据 到 该 当前 策略.</value></data>
@@ -4932,12 +4943,12 @@
   <data name="Inspector.View.ArtworkActions" xml:space="preserve"><value>封面 操作</value></data>
   <data name="Inspector.View.ArtworkDescription" xml:space="preserve"><value>封面 说明</value></data>
   <data name="Inspector.View.ArtworkPreview" xml:space="preserve"><value>封面 预览</value></data>
-  <data name="Inspector.View.ArtworkPreviewHelp" xml:space="preserve"><value>双-单击 或 按 Enter 到 打开 该 完整-大小 封面.</value></data>
+  <data name="Inspector.View.ArtworkPreviewHelp" xml:space="preserve"><value>双击或按 Enter 可按原始尺寸打开封面。</value></data>
   <data name="Inspector.View.ArtworkType" xml:space="preserve"><value>封面 类型</value></data>
   <data name="Inspector.View.Close" xml:space="preserve"><value>关闭 检查器</value></data>
   <data name="Inspector.View.DescriptionPlaceholder" xml:space="preserve"><value>可选 说明</value></data>
-  <data name="Inspector.View.EmptyDescription" xml:space="preserve"><value>选择 一个 或 更多 音轨 到 检查 元数据 和 封面.</value></data>
-  <data name="Inspector.View.EmptyTitle" xml:space="preserve"><value>否 选择</value></data>
+  <data name="Inspector.View.EmptyDescription" xml:space="preserve"><value>选择一个或多个曲目以检查元数据和封面。</value></data>
+  <data name="Inspector.View.EmptyTitle" xml:space="preserve"><value>未选择</value></data>
   <data name="Inspector.View.MaximumDimension" xml:space="preserve"><value>最大尺寸</value></data>
   <data name="Inspector.View.MaximumDimensionAutomation" xml:space="preserve"><value>最大值 封面 尺寸</value></data>
   <data name="Inspector.View.MixedArtwork" xml:space="preserve"><value>混合 封面</value></data>
@@ -4949,7 +4960,7 @@
   <data name="Inspector.View.RemoveArtworkAutomation" xml:space="preserve"><value>移除 封面</value></data>
   <data name="Inspector.View.ReplaceArtwork" xml:space="preserve"><value>替换 封面...</value></data>
   <data name="Inspector.View.ReplaceArtworkAutomation" xml:space="preserve"><value>替换 封面</value></data>
-  <data name="Inspector.View.Revert" xml:space="preserve"><value>还原</value></data>
+  <data name="Inspector.View.Revert" xml:space="preserve"><value>放弃编辑</value></data>
   <data name="Inspector.View.SaveArtworkToFile" xml:space="preserve"><value>保存 到 文件...</value></data>
   <data name="Inspector.View.SaveArtworkToFileAutomation" xml:space="preserve"><value>保存 封面 到 文件</value></data>
   <data name="Inspector.View.SaveTags" xml:space="preserve"><value>保存标签</value></data>
@@ -4985,8 +4996,8 @@
   <data name="ReviewedFileOperation.Choice.Kind.Move" xml:space="preserve"><value>移动</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Quarantine" xml:space="preserve"><value>隔离</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Rename" xml:space="preserve"><value>重命名</value></data>
-  <data name="ReviewedFileOperation.Dialog.Apply.Message.One" xml:space="preserve"><value>应用 该 {0:N0} 已审阅 文件 变更? 一个 持久 日志 将 为 已保留 用于 历史记录 和 符合条件 还原.</value></data>
-  <data name="ReviewedFileOperation.Dialog.Apply.Message.Other" xml:space="preserve"><value>应用 该 {0:N0} 已审阅 文件 变更? 一个 持久 日志 将 为 已保留 用于 历史记录 和 符合条件 还原.</value></data>
+  <data name="ReviewedFileOperation.Dialog.Apply.Message.One" xml:space="preserve"><value>是否应用 {0:N0} 项已审阅的文件更改？系统会保留持久日志，以便记录历史和执行适用的还原。</value></data>
+  <data name="ReviewedFileOperation.Dialog.Apply.Message.Other" xml:space="preserve"><value>是否应用 {0:N0} 项已审阅的文件更改？系统会保留持久日志，以便记录历史和执行适用的还原。</value></data>
   <data name="ReviewedFileOperation.Dialog.Apply.Title" xml:space="preserve"><value>应用 {0}?</value></data>
   <data name="ReviewedFileOperation.Error.PreviewFirst" xml:space="preserve"><value>预览 该 文件 操作 第一个.</value></data>
   <data name="ReviewedFileOperation.Picker.Destination" xml:space="preserve"><value>选择 文件-操作 目标</value></data>
@@ -5008,24 +5019,24 @@
   <data name="ReviewedFileOperation.Target.None" xml:space="preserve"><value>无文件 在 该 当前 范围.</value></data>
   <data name="Workbench.Action.Add" xml:space="preserve"><value>添加</value></data>
   <data name="Workbench.Action.AddFiles" xml:space="preserve"><value>添加文件</value></data>
-  <data name="Workbench.Action.HideInspector" xml:space="preserve"><value>隐藏 检查器</value></data>
+  <data name="Workbench.Action.HideInspector" xml:space="preserve"><value>隐藏检查器</value></data>
   <data name="Workbench.Action.Inspector" xml:space="preserve"><value>检查器</value></data>
   <data name="Workbench.Action.InspectorAutomation" xml:space="preserve"><value>检查器</value></data>
   <data name="Workbench.Action.More" xml:space="preserve"><value>更多</value></data>
   <data name="Workbench.Action.MoreAutomation" xml:space="preserve"><value>更多</value></data>
-  <data name="Workbench.Action.MoveDown" xml:space="preserve"><value>移动 向下</value></data>
-  <data name="Workbench.Action.MoveUp" xml:space="preserve"><value>移动 设置</value></data>
+  <data name="Workbench.Action.MoveDown" xml:space="preserve"><value>下移</value></data>
+  <data name="Workbench.Action.MoveUp" xml:space="preserve"><value>上移</value></data>
   <data name="Workbench.Action.New" xml:space="preserve"><value>新建</value></data>
   <data name="Workbench.Action.Redo" xml:space="preserve"><value>重做</value></data>
-  <data name="Workbench.Action.RepeatRecipe" xml:space="preserve"><value>重复 方案</value></data>
-  <data name="Workbench.Action.Revert" xml:space="preserve"><value>还原</value></data>
-  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>撤销 最后 应用</value></data>
+  <data name="Workbench.Action.RepeatRecipe" xml:space="preserve"><value>重复方案</value></data>
+  <data name="Workbench.Action.Revert" xml:space="preserve"><value>放弃所有待处理更改</value></data>
+  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>撤销上次应用</value></data>
   <data name="Workbench.Activity.ApplyingReviewedChanges" xml:space="preserve"><value>正在应用 已审阅 元数据 更改</value></data>
   <data name="Workbench.Activity.BuildingPlaylistPreview" xml:space="preserve"><value>构建 播放列表 预览</value></data>
   <data name="Workbench.Activity.BuildingPreview" xml:space="preserve"><value>构建 元数据 预览</value></data>
   <data name="Workbench.Activity.BuildingReportPreview" xml:space="preserve"><value>构建 报告 预览</value></data>
   <data name="Workbench.Activity.FindingCoverArt" xml:space="preserve"><value>发现项 Cover Art Archive 图像</value></data>
-  <data name="Workbench.Activity.LoadingDiscogsDetails" xml:space="preserve"><value>正在加载 Discogs 发行版 详细信息</value></data>
+  <data name="Workbench.Activity.LoadingDiscogsDetails" xml:space="preserve"><value>正在加载 Discogs 发行版详细信息</value></data>
   <data name="Workbench.Activity.MappingDiscogsTracks" xml:space="preserve"><value>匹配 工作台 文件 到 Discogs 音轨</value></data>
   <data name="Workbench.Activity.MappingReleaseTracks" xml:space="preserve"><value>匹配 工作台 文件 到 发行版 音轨</value></data>
   <data name="Workbench.Activity.PreparingFingerprint" xml:space="preserve"><value>正在准备 音频 指纹 发现</value></data>
@@ -5040,8 +5051,8 @@
   <data name="Workbench.Activity.WritingReport" xml:space="preserve"><value>写入 已审阅 报告</value></data>
   <data name="Workbench.AllFields.Action.Copy" xml:space="preserve"><value>复制 字段</value></data>
   <data name="Workbench.AllFields.Action.CopyTooltip" xml:space="preserve"><value>复制 字段</value></data>
-  <data name="Workbench.AllFields.Action.NewCustomField" xml:space="preserve"><value>新建 自定义 字段</value></data>
-  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>新建 已知 字段</value></data>
+  <data name="Workbench.AllFields.Action.NewCustomField" xml:space="preserve"><value>新建自定义字段</value></data>
+  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>新建已知字段</value></data>
   <data name="Workbench.AllFields.Action.PastePreview" xml:space="preserve"><value>粘贴 + 预览</value></data>
   <data name="Workbench.AllFields.Action.PastePreviewTooltip" xml:space="preserve"><value>粘贴 + 预览</value></data>
   <data name="Workbench.AllFields.Action.Preview" xml:space="preserve"><value>预览</value></data>
@@ -5050,17 +5061,17 @@
   <data name="Workbench.AllFields.OrderedValues" xml:space="preserve"><value>顺序 值</value></data>
   <data name="Workbench.AllFields.Title" xml:space="preserve"><value>全部 元数据 字段</value></data>
   <data name="Workbench.AllFields.ValueAction" xml:space="preserve"><value>值 操作</value></data>
-  <data name="Workbench.Bulk.Action.AddToRecipe" xml:space="preserve"><value>添加 到 方案</value></data>
-  <data name="Workbench.Bulk.Action.DeleteRecipe" xml:space="preserve"><value>删除 方案</value></data>
-  <data name="Workbench.Bulk.Action.DuplicateStep" xml:space="preserve"><value>重复 步骤</value></data>
-  <data name="Workbench.Bulk.Action.LoadRecipe" xml:space="preserve"><value>加载 方案</value></data>
-  <data name="Workbench.Bulk.Action.MoreRecipeAutomation" xml:space="preserve"><value>更多 方案</value></data>
-  <data name="Workbench.Bulk.Action.NewRecipe" xml:space="preserve"><value>新建 方案</value></data>
-  <data name="Workbench.Bulk.Action.PreviewOperation" xml:space="preserve"><value>预览 操作</value></data>
-  <data name="Workbench.Bulk.Action.RemoveStep" xml:space="preserve"><value>移除 步骤</value></data>
-  <data name="Workbench.Bulk.Action.SaveRecipe" xml:space="preserve"><value>保存 方案</value></data>
-  <data name="Workbench.Bulk.Action.StepActions" xml:space="preserve"><value>步骤 操作</value></data>
-  <data name="Workbench.Bulk.Action.StepActionsAutomation" xml:space="preserve"><value>步骤 操作</value></data>
+  <data name="Workbench.Bulk.Action.AddToRecipe" xml:space="preserve"><value>添加到方案</value></data>
+  <data name="Workbench.Bulk.Action.DeleteRecipe" xml:space="preserve"><value>删除方案</value></data>
+  <data name="Workbench.Bulk.Action.DuplicateStep" xml:space="preserve"><value>复制步骤</value></data>
+  <data name="Workbench.Bulk.Action.LoadRecipe" xml:space="preserve"><value>加载方案</value></data>
+  <data name="Workbench.Bulk.Action.MoreRecipeAutomation" xml:space="preserve"><value>更多方案操作</value></data>
+  <data name="Workbench.Bulk.Action.NewRecipe" xml:space="preserve"><value>新建方案</value></data>
+  <data name="Workbench.Bulk.Action.PreviewOperation" xml:space="preserve"><value>预览操作</value></data>
+  <data name="Workbench.Bulk.Action.RemoveStep" xml:space="preserve"><value>移除步骤</value></data>
+  <data name="Workbench.Bulk.Action.SaveRecipe" xml:space="preserve"><value>保存方案</value></data>
+  <data name="Workbench.Bulk.Action.StepActions" xml:space="preserve"><value>步骤操作</value></data>
+  <data name="Workbench.Bulk.Action.StepActionsAutomation" xml:space="preserve"><value>步骤操作</value></data>
   <data name="Workbench.Bulk.AssignmentPlaceholder" xml:space="preserve"><value>分配</value></data>
   <data name="Workbench.Bulk.CaptureGroup" xml:space="preserve"><value>捕获 组</value></data>
   <data name="Workbench.Bulk.Case" xml:space="preserve"><value>大小写</value></data>
@@ -5081,7 +5092,7 @@
   <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>待处理 操作</value></data>
   <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>待处理 操作</value></data>
   <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>个人 方案</value></data>
-  <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>方案 Name</value></data>
+  <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>方案名称</value></data>
   <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>替换 带</value></data>
   <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>一个 轻量 草稿 预览 更新 作为 您 编辑 该 当前 操作.</value></data>
   <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>代表 草稿</value></data>
@@ -5103,12 +5114,12 @@
   <data name="Workbench.Choice.FieldEditMode.RemoveValues" xml:space="preserve"><value>移除 值</value></data>
   <data name="Workbench.Choice.FieldEditMode.Replace" xml:space="preserve"><value>替换</value></data>
   <data name="Workbench.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>自动</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin1</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>Utf16</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>Utf8</value></data>
-  <data name="Workbench.Choice.Id3Version.V22" xml:space="preserve"><value>V22</value></data>
-  <data name="Workbench.Choice.Id3Version.V23" xml:space="preserve"><value>V23</value></data>
-  <data name="Workbench.Choice.Id3Version.V24" xml:space="preserve"><value>V24</value></data>
+  <data name="Workbench.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin-1</value></data>
+  <data name="Workbench.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>UTF-16</value></data>
+  <data name="Workbench.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>UTF-8</value></data>
+  <data name="Workbench.Choice.Id3Version.V22" xml:space="preserve"><value>ID3v2.2</value></data>
+  <data name="Workbench.Choice.Id3Version.V23" xml:space="preserve"><value>ID3v2.3</value></data>
+  <data name="Workbench.Choice.Id3Version.V24" xml:space="preserve"><value>ID3v2.4</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>忽略</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>保留 空 值</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>移除 字段</value></data>
@@ -5121,21 +5132,21 @@
   <data name="Workbench.Choice.OnlineProvider.MusicBrainz" xml:space="preserve"><value>MusicBrainz</value></data>
   <data name="Workbench.Choice.OnlineScope.AllFiles" xml:space="preserve"><value>全部 文件</value></data>
   <data name="Workbench.Choice.OnlineScope.SelectedFile" xml:space="preserve"><value>已选择 文件</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf16LittleEndian" xml:space="preserve"><value>Utf16 小端 字节序</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8" xml:space="preserve"><value>Utf8</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8WithBom" xml:space="preserve"><value>Utf8 带 Bom</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.CrLf" xml:space="preserve"><value>Cr Lf</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.Lf" xml:space="preserve"><value>Lf</value></data>
+  <data name="Workbench.Choice.PlaylistEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
+  <data name="Workbench.Choice.PlaylistEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
+  <data name="Workbench.Choice.PlaylistEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8（带 BOM）</value></data>
+  <data name="Workbench.Choice.PlaylistLineEnding.CrLf" xml:space="preserve"><value>CRLF</value></data>
+  <data name="Workbench.Choice.PlaylistLineEnding.Lf" xml:space="preserve"><value>LF</value></data>
   <data name="Workbench.Choice.PlaylistLineEnding.Platform" xml:space="preserve"><value>平台</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Absolute" xml:space="preserve"><value>绝对</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.AsProvided" xml:space="preserve"><value>作为 已提供</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Relative" xml:space="preserve"><value>相对</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf16LittleEndian" xml:space="preserve"><value>Utf16 小端 字节序</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8" xml:space="preserve"><value>Utf8</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8WithBom" xml:space="preserve"><value>Utf8 带 Bom</value></data>
-  <data name="Workbench.Choice.ReportFormat.Csv" xml:space="preserve"><value>Csv</value></data>
-  <data name="Workbench.Choice.ReportFormat.Html" xml:space="preserve"><value>Html</value></data>
-  <data name="Workbench.Choice.ReportFormat.Rtf" xml:space="preserve"><value>Rtf</value></data>
+  <data name="Workbench.Choice.ReportEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
+  <data name="Workbench.Choice.ReportEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
+  <data name="Workbench.Choice.ReportEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8（带 BOM）</value></data>
+  <data name="Workbench.Choice.ReportFormat.Csv" xml:space="preserve"><value>CSV</value></data>
+  <data name="Workbench.Choice.ReportFormat.Html" xml:space="preserve"><value>HTML</value></data>
+  <data name="Workbench.Choice.ReportFormat.Rtf" xml:space="preserve"><value>RTF</value></data>
   <data name="Workbench.Choice.ReportFormat.Text" xml:space="preserve"><value>文本</value></data>
   <data name="Workbench.Choice.ReportSortType.DateTime" xml:space="preserve"><value>日期 时间</value></data>
   <data name="Workbench.Choice.ReportSortType.Natural" xml:space="preserve"><value>自然</value></data>
@@ -5151,12 +5162,12 @@
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>已知 字段</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>标签</value></data>
   <data name="Workbench.Columns.Metadata" xml:space="preserve"><value>元数据</value></data>
-  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>选择 一个 已知 字段 或 输入 一个 自定义 字段 name.</value></data>
-  <data name="Workbench.Columns.Status.EnterLabel" xml:space="preserve"><value>Enter 一个 列 标签.</value></data>
+  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>选择已知字段，或输入自定义字段名称。</value></data>
+  <data name="Workbench.Columns.Status.EnterLabel" xml:space="preserve"><value>请输入列标签。</value></data>
   <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>新建 未保存 元数据 列.</value></data>
   <data name="Workbench.Columns.Status.Removed" xml:space="preserve"><value>已移除 元数据 列 '{0}'.</value></data>
   <data name="Workbench.Columns.Status.Saved" xml:space="preserve"><value>已保存 元数据 列 '{0}'.</value></data>
-  <data name="Workbench.Columns.Title" xml:space="preserve"><value>标题</value></data>
+  <data name="Workbench.Columns.Title" xml:space="preserve"><value>列详细信息</value></data>
   <data name="Workbench.Columns.Visible" xml:space="preserve"><value>可见</value></data>
   <data name="Workbench.Common.After" xml:space="preserve"><value>之后</value></data>
   <data name="Workbench.Common.Before" xml:space="preserve"><value>之前</value></data>
@@ -5208,7 +5219,7 @@
   <data name="Workbench.Grid.Header.Label" xml:space="preserve"><value>标签</value></data>
   <data name="Workbench.Grid.Header.Labels" xml:space="preserve"><value>标签</value></data>
   <data name="Workbench.Grid.Header.MatchedPosition" xml:space="preserve"><value>已匹配 位置</value></data>
-  <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>MusicBrainz 录音 Ids</value></data>
+  <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>MusicBrainz 录音 IDs</value></data>
   <data name="Workbench.Grid.Header.MusicBrainzReleaseId" xml:space="preserve"><value>MusicBrainz 发行版 ID</value></data>
   <data name="Workbench.Grid.Header.Operation" xml:space="preserve"><value>操作</value></data>
   <data name="Workbench.Grid.Header.Position" xml:space="preserve"><value>位置</value></data>
@@ -5222,7 +5233,7 @@
   <data name="Workbench.Grid.Header.Status" xml:space="preserve"><value>状态</value></data>
   <data name="Workbench.Grid.Header.Styles" xml:space="preserve"><value>风格</value></data>
   <data name="Workbench.Grid.Header.TagLayers" xml:space="preserve"><value>标签 层</value></data>
-  <data name="Workbench.Grid.Header.TargetDetails" xml:space="preserve"><value>目标 详细信息</value></data>
+  <data name="Workbench.Grid.Header.TargetDetails" xml:space="preserve"><value>目标详细信息</value></data>
   <data name="Workbench.Grid.Header.Thumbnail" xml:space="preserve"><value>缩略图</value></data>
   <data name="Workbench.Grid.Header.Tracks" xml:space="preserve"><value>音轨</value></data>
   <data name="Workbench.Grid.Header.Types" xml:space="preserve"><value>类型</value></data>
@@ -5265,14 +5276,14 @@
   <data name="Workbench.Navigation.Group.Output" xml:space="preserve"><value>输出</value></data>
   <data name="Workbench.Navigation.Group.Workspace" xml:space="preserve"><value>工作区</value></data>
   <data name="Workbench.Navigation.Section.AllFields" xml:space="preserve"><value>所有字段</value></data>
-  <data name="Workbench.Navigation.Section.BulkOperation" xml:space="preserve"><value>批量 操作</value></data>
-  <data name="Workbench.Navigation.Section.Files" xml:space="preserve"><value>文件</value></data>
+  <data name="Workbench.Navigation.Section.BulkOperation" xml:space="preserve"><value>批量编辑</value></data>
+  <data name="Workbench.Navigation.Section.Files" xml:space="preserve"><value>文件操作</value></data>
   <data name="Workbench.Navigation.Section.OnlineMetadata" xml:space="preserve"><value>在线元数据</value></data>
   <data name="Workbench.Navigation.Section.Playlists" xml:space="preserve"><value>播放列表</value></data>
   <data name="Workbench.Navigation.Section.Reports" xml:space="preserve"><value>报告</value></data>
   <data name="Workbench.Navigation.Section.Session" xml:space="preserve"><value>会话</value></data>
   <data name="Workbench.Navigation.Section.Shortcuts" xml:space="preserve"><value>快捷键</value></data>
-  <data name="Workbench.Navigation.Section.Tools" xml:space="preserve"><value>工具</value></data>
+  <data name="Workbench.Navigation.Section.Tools" xml:space="preserve"><value>外部工具</value></data>
   <data name="Workbench.Navigation.SectionAutomation" xml:space="preserve"><value>部分</value></data>
   <data name="Workbench.Online.AddImage" xml:space="preserve"><value>添加 图像</value></data>
   <data name="Workbench.Online.AdvancedIdentifiers" xml:space="preserve"><value>高级 标识符</value></data>
@@ -5291,11 +5302,11 @@
   <data name="Workbench.Online.Description" xml:space="preserve"><value>说明</value></data>
   <data name="Workbench.Online.DiscogsArtworkDescription" xml:space="preserve"><value>Discogs 发行版 {0}</value></data>
   <data name="Workbench.Online.DiscogsEditions" xml:space="preserve"><value>Discogs 版本</value></data>
-  <data name="Workbench.Online.DiscogsEditionsDescription" xml:space="preserve"><value>选择 一个 版本, 加载 其 完整 详细信息, 然后 审阅 该 文件到音轨 映射.</value></data>
+  <data name="Workbench.Online.DiscogsEditionsDescription" xml:space="preserve"><value>选择一个版本，加载其完整详细信息，然后审阅文件与音轨的映射。</value></data>
   <data name="Workbench.Online.DiscogsReleaseIdPlaceholder" xml:space="preserve"><value>Discogs 发行版 ID</value></data>
   <data name="Workbench.Online.Discover" xml:space="preserve"><value>发现</value></data>
   <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>指纹 该 已选择 文件 和 查找 AcoustID 和 MusicBrainz 录音 候选项. 无 是 已提交.</value></data>
-  <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>发现 标题</value></data>
+  <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>识别音频</value></data>
   <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>嵌入式 封面 设置</value></data>
   <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>导出 封面</value></data>
   <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>导出 封面</value></data>
@@ -5303,15 +5314,15 @@
   <data name="Workbench.Online.Field.AlbumDate" xml:space="preserve"><value>专辑 日期</value></data>
   <data name="Workbench.Online.Field.DiscogsReleaseId" xml:space="preserve"><value>Discogs 发行版 ID</value></data>
   <data name="Workbench.Online.Field.GenresStyles" xml:space="preserve"><value>流派 风格</value></data>
-  <data name="Workbench.Online.Field.MusicBrainzIds" xml:space="preserve"><value>MusicBrainz Ids</value></data>
+  <data name="Workbench.Online.Field.MusicBrainzIds" xml:space="preserve"><value>MusicBrainz IDs</value></data>
   <data name="Workbench.Online.Field.Numbering" xml:space="preserve"><value>编号</value></data>
-  <data name="Workbench.Online.Field.ReleaseDetails" xml:space="preserve"><value>发行版 详细信息</value></data>
+  <data name="Workbench.Online.Field.ReleaseDetails" xml:space="preserve"><value>发行版详细信息</value></data>
   <data name="Workbench.Online.Field.Titles" xml:space="preserve"><value>标题</value></data>
   <data name="Workbench.Online.Field.TrackArtists" xml:space="preserve"><value>音轨 艺术家</value></data>
   <data name="Workbench.Online.Field.TrackDiscNumbers" xml:space="preserve"><value>音轨 光盘 编号</value></data>
   <data name="Workbench.Online.FindReleaseArtwork" xml:space="preserve"><value>查找 发行版 封面</value></data>
   <data name="Workbench.Online.FindReleaseEditions" xml:space="preserve"><value>查找 发行版 版本</value></data>
-  <data name="Workbench.Online.LoadDetails" xml:space="preserve"><value>加载 详细信息</value></data>
+  <data name="Workbench.Online.LoadDetails" xml:space="preserve"><value>加载详细信息</value></data>
   <data name="Workbench.Online.MappingReviewDescription" xml:space="preserve"><value>审阅 每个 文件到音轨 建议 之前 添加 已选择 字段 到 该 正常 预览.</value></data>
   <data name="Workbench.Online.MaximumDimension" xml:space="preserve"><value>最大值 宽度 或 高度 用于 预览/应用 (0 保留 大小)</value></data>
   <data name="Workbench.Online.MoveArtworkDown" xml:space="preserve"><value>移动 封面 向下</value></data>
@@ -5323,7 +5334,7 @@
   <data name="Workbench.Online.PreviewCover" xml:space="preserve"><value>预览 封面</value></data>
   <data name="Workbench.Online.PreviewMappedMetadata" xml:space="preserve"><value>预览 已映射 元数据</value></data>
   <data name="Workbench.Online.PreviewReleaseCover" xml:space="preserve"><value>预览 发行版 封面</value></data>
-  <data name="Workbench.Online.PreviewSelectedIds" xml:space="preserve"><value>预览 已选择 Ids</value></data>
+  <data name="Workbench.Online.PreviewSelectedIds" xml:space="preserve"><value>预览所选 IDs</value></data>
   <data name="Workbench.Online.ProviderAutomation" xml:space="preserve"><value>提供商</value></data>
   <data name="Workbench.Online.ReleaseArtworkCandidates" xml:space="preserve"><value>发行版 封面 候选项</value></data>
   <data name="Workbench.Online.ReleaseEditions" xml:space="preserve"><value>发行版 版本</value></data>
@@ -5332,11 +5343,11 @@
   <data name="Workbench.Online.ReplaceArtwork" xml:space="preserve"><value>替换 封面</value></data>
   <data name="Workbench.Online.ReplaceArtworkAutomation" xml:space="preserve"><value>替换 封面</value></data>
   <data name="Workbench.Online.ResultsDescription" xml:space="preserve"><value>选择 一个 候选项, 确认 映射 和 字段, 然后 添加 该 结果 到 待处理更改.</value></data>
-  <data name="Workbench.Online.ResultsTitle" xml:space="preserve"><value>结果 标题</value></data>
+  <data name="Workbench.Online.ResultsTitle" xml:space="preserve"><value>查看匹配项</value></data>
   <data name="Workbench.Online.ScopeAutomation" xml:space="preserve"><value>范围</value></data>
   <data name="Workbench.Online.Search" xml:space="preserve"><value>搜索</value></data>
   <data name="Workbench.Online.SearchDescription" xml:space="preserve"><value>选择 一个 提供商, 搜索, 然后 审阅 和 映射 一个 版本 下方.</value></data>
-  <data name="Workbench.Online.SearchTitle" xml:space="preserve"><value>搜索 标题</value></data>
+  <data name="Workbench.Online.SearchTitle" xml:space="preserve"><value>搜索发行版</value></data>
   <data name="Workbench.Online.SelectedImage" xml:space="preserve"><value>已选择 图像</value></data>
   <data name="Workbench.Online.Source.Cache" xml:space="preserve"><value>缓存</value></data>
   <data name="Workbench.Online.Source.OfflineCache" xml:space="preserve"><value>离线缓存</value></data>
@@ -5368,31 +5379,31 @@
   <data name="Workbench.PendingChanges.Close" xml:space="preserve"><value>关闭</value></data>
   <data name="Workbench.PendingChanges.Count.One" xml:space="preserve"><value>{0:N0} 待处理 编辑</value></data>
   <data name="Workbench.PendingChanges.Count.Other" xml:space="preserve"><value>{0:N0} 待处理 编辑</value></data>
-  <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>审阅 每个 待处理 元数据 编辑 之前 写入 文件.</value></data>
-  <data name="Workbench.PendingChanges.Empty" xml:space="preserve"><value>否 待处理 编辑. 更改 已生成 在 该 网格 或 检查器 将 出现 此处.</value></data>
-  <data name="Workbench.PendingChanges.EmptyDescription" xml:space="preserve"><value>空 说明</value></data>
-  <data name="Workbench.PendingChanges.EmptyTitle" xml:space="preserve"><value>空 标题</value></data>
-  <data name="Workbench.PendingChanges.GridAutomation" xml:space="preserve"><value>网格</value></data>
-  <data name="Workbench.PendingChanges.RevertTooltip" xml:space="preserve"><value>还原</value></data>
-  <data name="Workbench.PendingChanges.Review.One" xml:space="preserve"><value>审阅 {0:N0} 待处理 更改</value></data>
-  <data name="Workbench.PendingChanges.Review.Other" xml:space="preserve"><value>审阅 {0:N0} 待处理更改</value></data>
+  <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>写入前请查看所有待处理编辑和文件操作。</value></data>
+  <data name="Workbench.PendingChanges.Empty" xml:space="preserve"><value>没有待处理更改。网格、检查器、文件操作和转码中的编辑将显示在此处。</value></data>
+  <data name="Workbench.PendingChanges.EmptyDescription" xml:space="preserve"><value>网格、检查器、文件操作和转码中的编辑将在写入前显示在此处。</value></data>
+  <data name="Workbench.PendingChanges.EmptyTitle" xml:space="preserve"><value>没有待处理更改</value></data>
+  <data name="Workbench.PendingChanges.GridAutomation" xml:space="preserve"><value>待处理更改列表</value></data>
+  <data name="Workbench.PendingChanges.RevertTooltip" xml:space="preserve"><value>放弃所有待处理更改</value></data>
+  <data name="Workbench.PendingChanges.Review.One" xml:space="preserve"><value>更改 ({0:N0})</value></data>
+  <data name="Workbench.PendingChanges.Review.Other" xml:space="preserve"><value>更改 ({0:N0})</value></data>
   <data name="Workbench.PendingChanges.ReviewAutomation" xml:space="preserve"><value>审阅</value></data>
-  <data name="Workbench.PendingChanges.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.AddArtwork.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.AddFolder.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.AddSources.Title" xml:space="preserve"><value>标题</value></data>
+  <data name="Workbench.PendingChanges.Title" xml:space="preserve"><value>查看更改</value></data>
+  <data name="Workbench.Picker.AddArtwork.Title" xml:space="preserve"><value>添加封面</value></data>
+  <data name="Workbench.Picker.AddFolder.Title" xml:space="preserve"><value>添加源文件夹</value></data>
+  <data name="Workbench.Picker.AddSources.Title" xml:space="preserve"><value>添加源文件</value></data>
   <data name="Workbench.Picker.ArtworkImages" xml:space="preserve"><value>封面 图像</value></data>
   <data name="Workbench.Picker.DelimitedMetadata" xml:space="preserve"><value>分隔 元数据</value></data>
-  <data name="Workbench.Picker.ExportArtwork.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.ExternalTool.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.ExternalWorkingDirectory.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.FrontCover.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.ImportMetadata.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.PlaylistFolder.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.PlaylistOutput.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.ReplaceArtwork.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.ReportFolder.Title" xml:space="preserve"><value>标题</value></data>
-  <data name="Workbench.Picker.ReportOutput.Title" xml:space="preserve"><value>标题</value></data>
+  <data name="Workbench.Picker.ExportArtwork.Title" xml:space="preserve"><value>导出封面</value></data>
+  <data name="Workbench.Picker.ExternalTool.Title" xml:space="preserve"><value>选择工具可执行文件</value></data>
+  <data name="Workbench.Picker.ExternalWorkingDirectory.Title" xml:space="preserve"><value>选择工作目录</value></data>
+  <data name="Workbench.Picker.FrontCover.Title" xml:space="preserve"><value>选择正面封面</value></data>
+  <data name="Workbench.Picker.ImportMetadata.Title" xml:space="preserve"><value>导入元数据</value></data>
+  <data name="Workbench.Picker.PlaylistFolder.Title" xml:space="preserve"><value>选择播放列表文件夹</value></data>
+  <data name="Workbench.Picker.PlaylistOutput.Title" xml:space="preserve"><value>保存播放列表</value></data>
+  <data name="Workbench.Picker.ReplaceArtwork.Title" xml:space="preserve"><value>替换封面</value></data>
+  <data name="Workbench.Picker.ReportFolder.Title" xml:space="preserve"><value>选择报告文件夹</value></data>
+  <data name="Workbench.Picker.ReportOutput.Title" xml:space="preserve"><value>保存报告</value></data>
   <data name="Workbench.Picker.SupportedSources" xml:space="preserve"><value>支持 源</value></data>
   <data name="Workbench.Playlists.Action.Preview" xml:space="preserve"><value>预览 播放列表</value></data>
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>写入</value></data>
@@ -5400,34 +5411,39 @@
   <data name="Workbench.Playlists.Description" xml:space="preserve"><value>预览 播放列表 目标 和 内容 之前 写入 输出.</value></data>
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>编码</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>扩展 信息</value></data>
-  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
+  <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>行尾</value></data>
+  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>名称</value></data>
   <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>一个 每 组</value></data>
+  <data name="Workbench.Playlists.Grouping" xml:space="preserve"><value>分组</value></data>
   <data name="Workbench.Playlists.PathStyle" xml:space="preserve"><value>路径 样式</value></data>
   <data name="Workbench.Playlists.Reviewed" xml:space="preserve"><value>已审阅</value></data>
   <data name="Workbench.Playlists.Safety" xml:space="preserve"><value>播放列表 输出 是 分开 从 元数据 更改 和 写入 仅 之后 审阅.</value></data>
-  <data name="Workbench.Playlists.Title" xml:space="preserve"><value>标题</value></data>
+  <data name="Workbench.Playlists.Title" xml:space="preserve"><value>播放列表</value></data>
   <data name="Workbench.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>正在加载 封面 缩略图 {0:N0} 的 {1:N0}</value></data>
   <data name="Workbench.Progress.ReadingFile" xml:space="preserve"><value>正在读取 {0}</value></data>
   <data name="Workbench.Progress.Restored.One" xml:space="preserve"><value>已还原 {0:N0} 文件</value></data>
   <data name="Workbench.Progress.Restored.Other" xml:space="preserve"><value>已还原 {0:N0} 文件</value></data>
-  <data name="Workbench.Reports.Action.AddCustom" xml:space="preserve"><value>添加 自定义</value></data>
+  <data name="Workbench.Reports.Action.AddCustom" xml:space="preserve"><value>添加自定义字段</value></data>
   <data name="Workbench.Reports.Action.Preview" xml:space="preserve"><value>预览</value></data>
   <data name="Workbench.Reports.Action.Write" xml:space="preserve"><value>写入</value></data>
   <data name="Workbench.Reports.Columns" xml:space="preserve"><value>列</value></data>
+  <data name="Workbench.Reports.ColumnActions" xml:space="preserve"><value>列 操作</value></data>
   <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>音乐库 报告</value></data>
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>降序</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>选择 字段, 分组, 和 排序, 然后 审阅 每个 输出 目标.</value></data>
   <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>位 每 示例</value></data>
   <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>Codec 类型</value></data>
   <data name="Workbench.Reports.Field.File" xml:space="preserve"><value>文件 - {0}</value></data>
-  <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>文件 Name</value></data>
+  <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>文件名</value></data>
   <data name="Workbench.Reports.Field.FileSize" xml:space="preserve"><value>文件 大小</value></data>
   <data name="Workbench.Reports.Field.MaximumBitrate" xml:space="preserve"><value>最大比特率</value></data>
   <data name="Workbench.Reports.Field.Metadata" xml:space="preserve"><value>元数据 - {0}</value></data>
   <data name="Workbench.Reports.Field.SampleRate" xml:space="preserve"><value>采样率</value></data>
   <data name="Workbench.Reports.Field.Technical" xml:space="preserve"><value>技术 - {0}</value></data>
   <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>组 按</value></data>
-  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
+  <data name="Workbench.Reports.GroupFileNamePattern" xml:space="preserve"><value>组 文件 name 模式</value></data>
+  <data name="Workbench.Reports.GroupFileNameHelp" xml:space="preserve"><value>使用 {Group} 用于 该 已选择 组 值 和 {Format} 用于 该 报告 文件 extension.</value></data>
+  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>名称</value></data>
   <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>否 分组</value></data>
   <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>一个 每 组</value></data>
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>已审阅</value></data>
@@ -5438,7 +5454,7 @@
   <data name="Workbench.Reports.Source.Metadata" xml:space="preserve"><value>元数据: {0}</value></data>
   <data name="Workbench.Reports.Source.Technical" xml:space="preserve"><value>技术: {0}</value></data>
   <data name="Workbench.Reports.SourceOrder" xml:space="preserve"><value>源 顺序</value></data>
-  <data name="Workbench.Reports.Title" xml:space="preserve"><value>标题</value></data>
+  <data name="Workbench.Reports.Title" xml:space="preserve"><value>报告</value></data>
   <data name="Workbench.Representative.Error.NoFile" xml:space="preserve"><value>该 代表 预览 已返回 否 文件.</value></data>
   <data name="Workbench.Representative.Missing" xml:space="preserve"><value>(缺失)</value></data>
   <data name="Workbench.Representative.Status.Blocked" xml:space="preserve"><value>草稿 预览 已阻止.</value></data>
@@ -5469,34 +5485,34 @@
   <data name="Workbench.Section.ToolsAutomation" xml:space="preserve"><value>外部工具</value></data>
   <data name="Workbench.Selection.Files.One" xml:space="preserve"><value>{0:N0} 文件 已选择</value></data>
   <data name="Workbench.Selection.Files.Other" xml:space="preserve"><value>{0:N0} 文件 已选择</value></data>
-  <data name="Workbench.Session.Action.Clear" xml:space="preserve"><value>清除</value></data>
-  <data name="Workbench.Session.Action.RemoveSelected" xml:space="preserve"><value>移除 已选择</value></data>
-  <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>发送 到 引入</value></data>
+  <data name="Workbench.Session.Action.Clear" xml:space="preserve"><value>清空会话</value></data>
+  <data name="Workbench.Session.Action.RemoveSelected" xml:space="preserve"><value>从会话中移除</value></data>
+  <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>发送到引入</value></data>
   <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>{0:N0} 封面</value></data>
   <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>{0:N0} 封面</value></data>
   <data name="Workbench.Session.Columns" xml:space="preserve"><value>列</value></data>
   <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>空 单元格</value></data>
   <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>空 单元格</value></data>
-  <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>空 说明</value></data>
-  <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>空 标题</value></data>
+  <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>添加音频文件或文件夹以开始查看和编辑会话。</value></data>
+  <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>此会话中没有文件</value></data>
   <data name="Workbench.Session.FieldsCount.One" xml:space="preserve"><value>{0:N0} 字段</value></data>
   <data name="Workbench.Session.FieldsCount.Other" xml:space="preserve"><value>{0:N0} 字段</value></data>
   <data name="Workbench.Session.GridAutomation" xml:space="preserve"><value>网格</value></data>
   <data name="Workbench.Session.ImportDelimited" xml:space="preserve"><value>导入 CSV/TSV</value></data>
   <data name="Workbench.Session.SelectionActions" xml:space="preserve"><value>选择 操作</value></data>
   <data name="Workbench.Session.TagsFormat" xml:space="preserve"><value>标签: {0}</value></data>
-  <data name="Workbench.Shortcuts.BindingTitle" xml:space="preserve"><value>绑定 标题</value></data>
+  <data name="Workbench.Shortcuts.BindingTitle" xml:space="preserve"><value>快捷键详细信息</value></data>
   <data name="Workbench.Shortcuts.Command" xml:space="preserve"><value>命令</value></data>
   <data name="Workbench.Shortcuts.Command.AddFiles" xml:space="preserve"><value>添加文件</value></data>
   <data name="Workbench.Shortcuts.Command.AddFolder" xml:space="preserve"><value>添加文件夹</value></data>
-  <data name="Workbench.Shortcuts.Command.ApplyReviewedChanges" xml:space="preserve"><value>应用 已审阅 更改</value></data>
-  <data name="Workbench.Shortcuts.Command.CancelCurrentOperation" xml:space="preserve"><value>取消 当前 操作</value></data>
-  <data name="Workbench.Shortcuts.Command.PreviewCurrentRecipe" xml:space="preserve"><value>预览 当前 方案</value></data>
-  <data name="Workbench.Shortcuts.Command.PreviewInlineEdits" xml:space="preserve"><value>预览 内联 编辑</value></data>
+  <data name="Workbench.Shortcuts.Command.ApplyReviewedChanges" xml:space="preserve"><value>应用已审阅的更改</value></data>
+  <data name="Workbench.Shortcuts.Command.CancelCurrentOperation" xml:space="preserve"><value>取消当前操作</value></data>
+  <data name="Workbench.Shortcuts.Command.PreviewCurrentRecipe" xml:space="preserve"><value>预览当前方案</value></data>
+  <data name="Workbench.Shortcuts.Command.PreviewInlineEdits" xml:space="preserve"><value>预览内联编辑</value></data>
   <data name="Workbench.Shortcuts.Command.Redo" xml:space="preserve"><value>重做</value></data>
-  <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>重复 最后 方案</value></data>
-  <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>撤销 最后 应用</value></data>
-  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>使用 一个 修饰键 和 一个 Avalonia 键 name, 用于 示例 Ctrl+Alt+R, 元+F8, 或 Ctrl+Shift+Enter.</value></data>
+  <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>重复上次方案</value></data>
+  <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>撤销上次应用</value></data>
+  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>请组合使用修饰键和 Avalonia 键名，例如 Ctrl+Alt+R、元+F8 或 Ctrl+Shift+Enter。</value></data>
   <data name="Workbench.Shortcuts.GesturePlaceholder" xml:space="preserve"><value>手势</value></data>
   <data name="Workbench.Shortcuts.InputWarning" xml:space="preserve"><value>快捷键 是 已忽略 期间 一个 文本 或 选项 编辑器 有 焦点. Ctrl+K 和 Ctrl+I 保留 保留 用于 全局 搜索 和 正在索引.</value></data>
   <data name="Workbench.Shortcuts.New" xml:space="preserve"><value>新建</value></data>
@@ -5508,11 +5524,12 @@
   <data name="Workbench.Shortcuts.Status.Removed" xml:space="preserve"><value>已移除 {0}.</value></data>
   <data name="Workbench.Shortcuts.Status.Saved" xml:space="preserve"><value>已保存 {0} 用于 {1}.</value></data>
   <data name="Workbench.Shortcuts.Target.Recipe" xml:space="preserve"><value>方案</value></data>
-  <data name="Workbench.Shortcuts.Title" xml:space="preserve"><value>标题</value></data>
+  <data name="Workbench.Shortcuts.Target" xml:space="preserve"><value>目标</value></data>
+  <data name="Workbench.Shortcuts.Title" xml:space="preserve"><value>快捷键</value></data>
   <data name="Workbench.Shortcuts.Validation.ChooseTarget" xml:space="preserve"><value>选择 一个 快捷键 目标.</value></data>
   <data name="Workbench.Shortcuts.Validation.Conflict" xml:space="preserve"><value>{0} 是 已经 已分配 到 {1}.</value></data>
   <data name="Workbench.Shortcuts.Validation.Invalid" xml:space="preserve"><value>该 快捷键 是 无效.</value></data>
-  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>使用 一个 Avalonia 键 name 此类 作为 P, Enter, 删除, 或 F8.</value></data>
+  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>请使用 P、Enter、删除或 F8 等 Avalonia 键名。</value></data>
   <data name="Workbench.Shortcuts.Validation.ModifierAndKeyExample" xml:space="preserve"><value>使用 在 至少 一个 修饰键 加 一个 键, 此类 作为 Ctrl+Shift+P.</value></data>
   <data name="Workbench.Shortcuts.Validation.ModifierAndKeyRequired" xml:space="preserve"><value>一个 修饰键 和 一个 键 是 必需.</value></data>
   <data name="Workbench.Shortcuts.Validation.OneKey" xml:space="preserve"><value>一个 快捷键 可以 包含 仅 一个 非-修饰键 键.</value></data>
@@ -5556,8 +5573,8 @@
   <data name="Workbench.Status.DiscogsDetailsFailed" xml:space="preserve"><value>Discogs 发行版 详细信息 查找 失败.</value></data>
   <data name="Workbench.Status.DiscogsDetailsLoaded.One" xml:space="preserve"><value>已加载 Discogs 发行版 {1} 带 {0:N0} 音轨. 否 元数据 曾是 已更改.</value></data>
   <data name="Workbench.Status.DiscogsDetailsLoaded.Other" xml:space="preserve"><value>已加载 Discogs 发行版 {1} 带 {0:N0} 音轨. 否 元数据 曾是 已更改.</value></data>
-  <data name="Workbench.Status.DiscogsFound.One" xml:space="preserve"><value>Discogs 已找到 {0:N0} 发行版 版本. 选择 它 到 加载 完成 音轨 和 版本 详细信息.</value></data>
-  <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs 已找到 {0:N0} 发行版 版本. 选择 一个 到 加载 完成 音轨 和 版本 详细信息.</value></data>
+  <data name="Workbench.Status.DiscogsFound.One" xml:space="preserve"><value>Discogs 找到 {0:N0} 个发行版本。选择它可加载完整的音轨和版本详细信息。</value></data>
+  <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs 找到 {0:N0} 个发行版本。选择一个可加载完整的音轨和版本详细信息。</value></data>
   <data name="Workbench.Status.DiscogsMappingCancelled" xml:space="preserve"><value>Discogs 音轨 映射 已取消.</value></data>
   <data name="Workbench.Status.DiscogsMappingFailed" xml:space="preserve"><value>Discogs 音轨 映射 失败.</value></data>
   <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>建议 {0:N0} 的 {1:N0} Discogs 文件到音轨 映射; {2:N0} 需要 审阅.</value></data>
@@ -5634,7 +5651,7 @@
   <data name="Workbench.Status.Restored.One" xml:space="preserve"><value>已还原 {0:N0} 文件 从 该 最新 工作台 操作.</value></data>
   <data name="Workbench.Status.Restored.Other" xml:space="preserve"><value>已还原 {0:N0} 文件 从 该 最新 工作台 操作.</value></data>
   <data name="Workbench.Status.RestoreFailed" xml:space="preserve"><value>还原 失败.</value></data>
-  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>选择 或 name 一个 目标 字段 之前 正在粘贴 纯文本 文本.</value></data>
+  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>粘贴纯文本前，请选择目标字段或为其命名。</value></data>
   <data name="Workbench.Status.SendToIngestFailed" xml:space="preserve"><value>该 所选文件 可以 不 为 已发送 到 引入.</value></data>
   <data name="Workbench.Status.SentToIngest.One" xml:space="preserve"><value>已发送 {0:N0} 已选择 文件 到 引入.</value></data>
   <data name="Workbench.Status.SentToIngest.Other" xml:space="preserve"><value>已发送 {0:N0} 所选文件 到 引入.</value></data>
@@ -5655,13 +5672,14 @@
   <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>外部 工具</value></data>
   <data name="Workbench.Tools.Delete" xml:space="preserve"><value>删除 工具</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>可执行文件</value></data>
+  <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>调用模式</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>加载</value></data>
   <data name="Workbench.Tools.MoreAutomation" xml:space="preserve"><value>更多</value></data>
-  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
+  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>名称</value></data>
   <data name="Workbench.Tools.New" xml:space="preserve"><value>新建 工具</value></data>
-  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>已记录 占位符: {文件} 用于 一个 选择 进程; 或 {文件}, {目录}, {文件名}, {FileNameWithoutExtension}, {Extension}, {索引}, 和 {计数} 用于 一个 进程 每 文件. {文件} 必须 为 其 自己的 参数.</value></data>
+  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>支持的占位符：用一个进程处理所选内容时使用 {Files}；按文件分别处理时使用 {File}、{Directory}、{FileName}、{FileNameWithoutExtension}、{Extension}、{Index} 和 {Count}。{Files} 必须单独作为一个参数。</value></data>
   <data name="Workbench.Tools.Preview" xml:space="preserve"><value>预览 工具</value></data>
-  <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>已审阅 标题</value></data>
+  <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>已查看的调用</value></data>
   <data name="Workbench.Tools.Run" xml:space="preserve"><value>运行</value></data>
   <data name="Workbench.Tools.Safety" xml:space="preserve"><value>否 外壳 是 已使用, 但是 该 已选择 可执行文件 可以 仍然 更改 文件. 外部工具 是 外部 MusicLibraryManager 恢复 和 始终 需要 确认.</value></data>
   <data name="Workbench.Tools.Save" xml:space="preserve"><value>保存 工具</value></data>
@@ -5670,7 +5688,7 @@
   <data name="Workbench.Tools.Status.Loaded" xml:space="preserve"><value>已加载 '{0}'.</value></data>
   <data name="Workbench.Tools.Status.New" xml:space="preserve"><value>新建 未保存 工具.</value></data>
   <data name="Workbench.Tools.Status.Saved" xml:space="preserve"><value>已保存 '{0}' 作为 一个 个人 工具.</value></data>
-  <data name="Workbench.Tools.Title" xml:space="preserve"><value>标题</value></data>
+  <data name="Workbench.Tools.Title" xml:space="preserve"><value>外部工具</value></data>
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>正在处理 目录</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
   <data name="Workbench.Value.SampleRate" xml:space="preserve"><value>{0:N0} Hz</value></data>
@@ -5791,7 +5809,7 @@
   <data name="Operations.Run.NoJournal" xml:space="preserve"><value>否 日志 (文件夹-仅 隔离)</value></data>
   <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>设置 该 iTunes 库 路径 在 该 活动 库 配置.</value></data>
   <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>一个 iTunes 库.itl 路径 是 必需.</value></data>
-  <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>一个 iTunes 播放列表 name 是 必需.</value></data>
+  <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>必须输入 iTunes 播放列表名称。</value></data>
   <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>一个 智能-存储 目标 是 必需.</value></data>
   <data name="Operations.Count.Errors.One" xml:space="preserve"><value>{0:N0} 错误</value></data>
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} 错误</value></data>
@@ -5914,13 +5932,13 @@
   <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>该 预览 已过期. 预览 该 字段 更改 再次.</value></data>
   <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>该 字段-更改 预览 失败. 建议 更改 保留 就绪 到 重试.</value></data>
   <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>该 预览 已找到 否 适用 更改. 无文件 曾是 已更改.</value></data>
-  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>预览 就绪. 文件 带 更改: {0:N0}; 字段 更改: {1:N0}. 应用 使用 已过期-文件 检查, 恢复 日志, 和 撤销. 选择 应用 更改 到 继续.</value></data>
+  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>预览已就绪。发生更改的文件：{0:N0}；字段更改：{1:N0}。尚未写入任何内容。选择“查看更改”可将此预览添加到共享的待处理更改中。</value></data>
   <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>保存 已取消. 建议 字段 更改 保留 就绪 到 重试.</value></data>
   <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>已更新 {0:N0} 文件. 该 原始 是 已保留 用于 撤销.</value></data>
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>已更新 {0:N0} 文件. 原始 是 已保留 用于 撤销.</value></data>
   <data name="Fields.Status.SaveFailed" xml:space="preserve"><value>该 字段 更改 可以 不 为 已保存. 建议 更改 保留 就绪 到 重试.</value></data>
   <data name="Fields.Status.UserStringExists" xml:space="preserve"><value>用户 字符串 “{0}” 是 已经 在 该 列表.</value></data>
-  <data name="Fields.Status.UserStringNameRequired" xml:space="preserve"><value>Enter 一个 用户-字符串 name.</value></data>
+  <data name="Fields.Status.UserStringNameRequired" xml:space="preserve"><value>请输入用户字符串名称。</value></data>
   <data name="Fields.Title.Files.One" xml:space="preserve"><value>编辑 字段 — {0:N0} 文件</value></data>
   <data name="Fields.Title.Files.Other" xml:space="preserve"><value>编辑 字段 — {0:N0} 文件</value></data>
   <data name="Fields.Title.Single" xml:space="preserve"><value>编辑 字段 — {0}</value></data>
@@ -5993,7 +6011,7 @@
   <data name="MetadataEditor.Choice.ConditionOperator.Missing" xml:space="preserve"><value>缺失</value></data>
   <data name="MetadataEditor.Choice.ConditionOperator.Present" xml:space="preserve"><value>存在</value></data>
   <data name="MetadataEditor.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>自动</value></data>
-  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>拉丁-1</value></data>
+  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin-1</value></data>
   <data name="MetadataEditor.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>UTF-16</value></data>
   <data name="MetadataEditor.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>UTF-8</value></data>
   <data name="MetadataEditor.Choice.Operation.Assign" xml:space="preserve"><value>分配</value></data>
@@ -6009,8 +6027,8 @@
   <data name="MetadataEditor.Choice.Operation.Sequence" xml:space="preserve"><value>序列</value></data>
   <data name="MetadataEditor.Choice.Operation.Split" xml:space="preserve"><value>拆分 值</value></data>
   <data name="MetadataEditor.Choice.Operation.TrimWhitespace" xml:space="preserve"><value>规范化 空白</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FileName" xml:space="preserve"><value>文件 name</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>文件 name 不带 extension</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FileName" xml:space="preserve"><value>文件名</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>不含扩展名的文件名</value></data>
   <data name="MetadataEditor.Choice.PathComponent.FullPath" xml:space="preserve"><value>完整 路径</value></data>
   <data name="MetadataEditor.Choice.PathComponent.ParentFolder" xml:space="preserve"><value>父级 文件夹</value></data>
   <data name="MetadataEditor.Choice.ValueOrder.Ascending" xml:space="preserve"><value>升序</value></data>
@@ -6244,4 +6262,42 @@
   <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>选择 Monkey's Audio MAC 可执行文件</value></data>
   <data name="Transcode.Format.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio</value></data>
   <data name="Transcode.Encoder.MonkeysAudioMac" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
+  <data name="Shell.Navigation.Toggle" xml:space="preserve"><value>展开或折叠导航</value></data>
+  <data name="Library.Handoff.Action" xml:space="preserve"><value>在工作台中编辑…</value></data>
+  <data name="Library.Handoff.Automation" xml:space="preserve"><value>选择工作台目标和结果范围</value></data>
+  <data name="Library.Handoff.Scope.Selected" xml:space="preserve"><value>所选文件</value></data>
+  <data name="Library.Handoff.Scope.Visible" xml:space="preserve"><value>可见结果</value></data>
+  <data name="Library.Handoff.Scope.All" xml:space="preserve"><value>所有结果</value></data>
+  <data name="Library.Action.RefreshAffectedPaths" xml:space="preserve"><value>刷新受影响的路径</value></data>
+  <data name="Devices.Action.More" xml:space="preserve"><value>更多</value></data>
+  <data name="Devices.Action.MoreAutomation" xml:space="preserve"><value>更多设备操作</value></data>
+  <data name="Devices.Advanced.Title" xml:space="preserve"><value>高级</value></data>
+  <data name="Operations.Job.OutputLabel" xml:space="preserve"><value>输出和诊断日志</value></data>
+  <data name="Operations.Job.PickerAutomation" xml:space="preserve"><value>操作运行</value></data>
+  <data name="Ingest.PreflightChecks.Title" xml:space="preserve"><value>预检</value></data>
+  <data name="Settings.EffectivePolicy.ProvenanceTitle" xml:space="preserve"><value>技术来源</value></data>
+  <data name="Settings.FieldMappings.SourceLabel" xml:space="preserve"><value>源字段</value></data>
+  <data name="Settings.FieldMappings.TargetLabel" xml:space="preserve"><value>目标字段</value></data>
+  <data name="Inspector.View.ReviewChanges" xml:space="preserve"><value>审阅更改</value></data>
+  <data name="Inspector.View.OptimizeOptions" xml:space="preserve"><value>优化选项</value></data>
+  <data name="Workbench.Common.Advanced" xml:space="preserve"><value>高级</value></data>
+  <data name="Workbench.Inspector.LayerPresent" xml:space="preserve"><value>存在</value></data>
+  <data name="Workbench.Inspector.LayerMissing" xml:space="preserve"><value>缺失</value></data>
+  <data name="Workbench.Inspector.Id3v2Actions" xml:space="preserve"><value>ID3v2 操作</value></data>
+  <data name="Workbench.Inspector.ApeV2Actions" xml:space="preserve"><value>APEv2 操作</value></data>
+  <data name="Workbench.Inspector.Id3v1Actions" xml:space="preserve"><value>ID3v1 操作</value></data>
+  <data name="Transcode.Concurrency.ParallelJobs" xml:space="preserve"><value>并行任务</value></data>
+  <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>已将 {0:N0} 个文件操作添加到“查看更改”。</value></data>
+  <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>已将 {0:N0} 个文件操作添加到“查看更改”。</value></data>
+  <data name="Workbench.Dialog.PendingConflict.Title" xml:space="preserve"><value>待处理更改冲突</value></data>
+  <data name="Workbench.Dialog.PendingConflict.Message" xml:space="preserve"><value>所选源已有不兼容的待处理转码或文件操作。请先放弃该更改，再添加其他更改。</value></data>
+  <data name="Workbench.Dialog.ReplacePendingFileOperation.Title" xml:space="preserve"><value>替换待处理文件操作？</value></data>
+  <data name="Workbench.Dialog.ReplacePendingFileOperation.Message" xml:space="preserve"><value>所选源已有待处理文件操作。是否替换为刚刚预览的操作？</value></data>
+  <data name="Workbench.Dialog.ReplacePendingFileOperation.Confirm" xml:space="preserve"><value>替换</value></data>
+  <data name="Workbench.PendingChanges.FileOperation" xml:space="preserve"><value>文件操作</value></data>
+  <data name="Workbench.PendingChanges.NoDestination" xml:space="preserve"><value>无目标位置</value></data>
+  <data name="Settings.Appearance.Density" xml:space="preserve"><value>内容密度</value></data>
+  <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>紧凑模式可减小行、卡片和表单的间距，但不会缩小导航或图标的点击区域。</value></data>
+  <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>标准</value></data>
+  <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>紧凑</value></data>
 </root>

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using System.Collections.Specialized;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
 
@@ -8,16 +9,27 @@ namespace MusicLibraryManager.Views.WorkbenchSections;
 public partial class WorkbenchPlaylistsSectionView : UserControl
 {
     private readonly ILocalizationService _localization;
+    private readonly WorkbenchViewModel _viewModel;
 
     public WorkbenchPlaylistsSectionView()
     {
         InitializeComponent();
         _localization = App.GetService<ILocalizationService>();
+        _viewModel = App.GetService<WorkbenchViewModel>();
         ConfigureColumns();
         AttachedToVisualTree += (_, _) =>
+        {
             _localization.CultureChanged += OnCultureChanged;
+            _viewModel.PlaylistOutputs.CollectionChanged +=
+                OnPlaylistOutputsChanged;
+            ApplyPreviewVisibility();
+        };
         DetachedFromVisualTree += (_, _) =>
+        {
             _localization.CultureChanged -= OnCultureChanged;
+            _viewModel.PlaylistOutputs.CollectionChanged -=
+                OnPlaylistOutputsChanged;
+        };
         SizeChanged += (_, _) => ApplyResponsiveLayout();
     }
 
@@ -35,6 +47,23 @@ public partial class WorkbenchPlaylistsSectionView : UserControl
 
     private void OnCultureChanged(object? sender, EventArgs e) =>
         PlaylistOutputGrid.RefreshLocalizedHeaders();
+
+    private void OnPlaylistOutputsChanged(
+        object? sender,
+        NotifyCollectionChangedEventArgs e) =>
+        ApplyPreviewVisibility();
+
+    private void ApplyPreviewVisibility()
+    {
+        bool hasPreview =
+            _viewModel.PlaylistOutputs.Count > 0;
+        PlaylistOutputGrid.IsVisible =
+            hasPreview;
+        ReviewedPanel.RowDefinitions[1].Height =
+            hasPreview
+                ? GridLength.Star
+                : new GridLength(0);
+    }
 
     private void ApplyResponsiveLayout()
     {

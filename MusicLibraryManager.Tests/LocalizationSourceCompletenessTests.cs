@@ -59,11 +59,7 @@ public sealed partial class LocalizationSourceCompletenessTests
 
     private static readonly HashSet<InvariantLiteral> InvariantLiterals =
     [
-        new("MainWindow.axaml", "Text", "Ctrl K"),
-        new("MainWindow.axaml", "Text", "\u2699"),
-        new("Views/DialogHost.axaml", "Content", "\u2715"),
-        new("Views/LibraryView.axaml", "Content", "?"),
-        new("Views/LibraryView.axaml", "Content", "\u2715"),
+        new("MainWindow.axaml", "Text", "Ctrl+K"),
         new(
             "Views/LibraryView.axaml",
             "Text",
@@ -72,36 +68,10 @@ public sealed partial class LocalizationSourceCompletenessTests
             "Views/LibraryView.axaml",
             "Text",
             "Album:\"Kind of Blue\""),
-        new(
-            "Views/LibraryView.axaml",
-            "PlaceholderText",
-            "{}{Group}.{Format}"),
-        new(
-            "Views/LibraryView.axaml",
-            "PlaceholderText",
-            "{}{Name} - {Group}"),
-        new(
-            "Views/LibraryView.axaml",
-            "PlaceholderText",
-            "{}{Files}"),
-        new("Views/HealthView.axaml", "PlaceholderText", "0"),
-        new("Views/HealthView.axaml", "Text", "i"),
         new("Views/HomeView.axaml", "Text", "1"),
         new("Views/HomeView.axaml", "Text", "2"),
         new("Views/HomeView.axaml", "Text", "3"),
         new("Views/HomeView.axaml", "Text", "4"),
-        new("Views/IngestView.axaml", "Text", "i"),
-        new("Views/OperationsView.axaml", "Text", "i"),
-        new("Views/DevicesView.axaml", "Text", "i"),
-        new("Views/DevicesView.axaml", "Text", "!"),
-        new(
-            "Views/DevicesView.axaml",
-            "PlaceholderText",
-            "music or /storage/\u2026/Music"),
-        new(
-            "Views/DevicesView.axaml",
-            "PlaceholderText",
-            "**/*.tmp"),
         new(
             "Views/ReviewedFileOperationEditorView.axaml",
             "PlaceholderText",

@@ -8,6 +8,7 @@ using global::Avalonia.Input;
 using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Media;
 using global::Avalonia.Threading;
+using global::Avalonia.VisualTree;
 using System.ComponentModel;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Presentation;
@@ -18,6 +19,18 @@ namespace MusicLibraryManager.Views;
 
 public partial class LibraryView : UserControl
 {
+    private static readonly WorkbenchSection[] HandoffSections =
+    [
+        WorkbenchSection.Session,
+        WorkbenchSection.BulkOperation,
+        WorkbenchSection.AllFields,
+        WorkbenchSection.Files,
+        WorkbenchSection.OnlineMetadata,
+        WorkbenchSection.Reports,
+        WorkbenchSection.Playlists,
+        WorkbenchSection.Tools,
+    ];
+
     private readonly LibraryViewModel _viewModel;
     private readonly GridStateService _gridState;
     private readonly IPlatformService _platform;
@@ -27,12 +40,18 @@ public partial class LibraryView : UserControl
     private LibrarySortState? _sort;
     private bool _restoringSelection;
     private bool _selectionChangePending;
+    private bool _shellRequestedCompact;
     private bool _responsiveCompact;
     private bool _drawerOpen;
+    private Control? _pendingChangesFocusReturn;
+    private Control? _inspectorFocusReturn;
 
     public LibraryView()
     {
         InitializeComponent();
+        InspectorScrim.SetValue(
+            Panel.ZIndexProperty,
+            10);
         _viewModel = App.GetService<LibraryViewModel>();
         _gridState = App.GetService<GridStateService>();
         _platform = App.GetService<IPlatformService>();
@@ -41,333 +60,25 @@ public partial class LibraryView : UserControl
         BuildColumns();
         ApplySnapshot(_gridState.Load());
         ConfigureGrid();
-        LibraryOperationPreviewGrid.ConfigureColumns(
-        [
-            new("File", "File", "File", 200, 130,
-                HeaderResourceKey: "Column.File"),
-            new("Field", "Field", "Field", 140, 90,
-                HeaderResourceKey: "Column.Field"),
-            new("Before", "Before", "Before", 280, 160,
-                HeaderResourceKey: "Column.Before"),
-            new("After", "After", "After", 280, 160,
-                HeaderResourceKey: "Column.After"),
-        ]);
-        LibraryPendingChangesGrid.ConfigureColumns(
-        [
-            new("File", "File", "File", 220, 140,
-                HeaderResourceKey: "Column.File"),
-            new("Field", "Field", "Field", 150, 100,
-                HeaderResourceKey: "Column.Field"),
-            new("Before", "Before", "Before", 320, 180,
-                HeaderResourceKey: "Column.Before"),
-            new("After", "After", "After", 320, 180,
-                HeaderResourceKey: "Column.After"),
-        ]);
-        IDataTemplate audioStatusTemplate =
-            DiagnosticTextTemplate<AudioDiscoveryRow>(
-                nameof(AudioDiscoveryRow.Status),
-                nameof(AudioDiscoveryRow.DiagnosticDetail));
-        LibraryAudioDiscoveryGrid.ConfigureColumns(
-        [
-            new("File", "File", "File", 190, 120,
-                HeaderResourceKey: "Column.File"),
-            new("Duration", "Duration", "Duration", 90, 70,
-                HeaderResourceKey: "Column.Duration"),
-            new("Confidence", "Confidence", "Confidence", 105, 85,
-                HeaderResourceKey: "Column.Confidence"),
-            new("AcoustID", "AcoustID", "AcoustId", 270, 170,
-                HeaderResourceKey: "Column.AcoustId"),
-            new("MusicBrainz", "MusicBrainz recording IDs",
-                "MusicBrainzRecordingIds", 360, 210,
-                HeaderResourceKey: "Column.MusicBrainzRecordingIds"),
-            new("Status", "Status", "Status", 240, 140,
-                CellTemplate: audioStatusTemplate,
-                HeaderResourceKey: "Column.Status"),
-        ]);
-        LibraryReleaseDiscoveryGrid.ConfigureColumns(
-        [
-            new("Title", "Release", "Title", 220, 130,
-                HeaderResourceKey: "Column.Release"),
-            new("Artist", "Artist credit", "Artist", 180, 105,
-                HeaderResourceKey: "Column.ArtistCredit"),
-            new("Date", "Date", "Date", 95, 72,
-                HeaderResourceKey: "Column.Date"),
-            new("Country", "Country", "Country", 75, 62,
-                HeaderResourceKey: "Column.Country"),
-            new("Label", "Label", "Label", 150, 90,
-                HeaderResourceKey: "Column.Label"),
-            new("Catalog", "Catalog no.", "CatalogNumber", 110, 80,
-                HeaderResourceKey: "Column.CatalogNumber"),
-            new("Formats", "Formats", "Formats", 125, 85,
-                HeaderResourceKey: "Column.Formats"),
-            new("Position", "Matched position", "MatchedTrackPositions", 130, 90,
-                HeaderResourceKey: "Column.MatchedPosition"),
-            new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 260, 170,
-                HeaderResourceKey: "Column.MusicBrainzReleaseId"),
-        ]);
-        ConfigureDiscogsGrid(LibraryDiscogsDiscoveryGrid);
-        ConfigureDiscogsTrackMappingGrid(
-            LibraryDiscogsTrackMappingGrid);
-        ConfigureReleaseTrackMappingGrid(LibraryReleaseTrackMappingGrid);
-        ConfigureReleaseArtworkGrid(LibraryReleaseArtworkGrid);
-        LibraryReportOutputGrid.ConfigureColumns(
-        [
-            new("Group", "Group", "Group", 140, 85,
-                HeaderResourceKey: "Column.Group"),
-            new("File", "Destination", "File", 380, 210,
-                HeaderResourceKey: "Column.Destination"),
-            new("Rows", "Rows", "Rows", 75, 58,
-                HeaderResourceKey: "Column.Rows"),
-            new("Bytes", "Bytes", "Bytes", 95, 68,
-                HeaderResourceKey: "Column.Bytes"),
-        ]);
-        LibraryPlaylistOutputGrid.ConfigureColumns(
-        [
-            new("Group", "Group", "Group", 140, 85,
-                HeaderResourceKey: "Column.Group"),
-            new("File", "Destination", "File", 380, 210,
-                HeaderResourceKey: "Column.Destination"),
-            new("Tracks", "Tracks", "Tracks", 75, 58,
-                HeaderResourceKey: "Column.Tracks"),
-            new("Bytes", "Bytes", "Bytes", 95, 68,
-                HeaderResourceKey: "Column.Bytes"),
-        ]);
-        LibraryExternalToolInvocationGrid.ConfigureColumns(
-        [
-            new("Number", "#", "Number", 52, 44,
-                HeaderResourceKey: "Column.NumberSign"),
-            new("Executable", "Executable", "Executable", 175, 110,
-                HeaderResourceKey: "Column.Executable"),
-            new("Arguments", "Arguments", "Arguments", 330, 180,
-                HeaderResourceKey: "Column.Arguments"),
-            new("WorkingDirectory", "Working directory",
-                "WorkingDirectory", 200, 120,
-                HeaderResourceKey: "Column.WorkingDirectory"),
-            new("Files", "Files", "Files", 62, 50,
-                HeaderResourceKey: "Column.Files"),
-        ]);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();
         LibraryGrid.SortChanged += (_, _) => Dispatcher.UIThread.Post(CaptureSortAndPersist);
         InspectorView.CloseRequested += OnInspectorCloseRequested;
-        SizeChanged += (_, _) => ApplyOverlayBounds();
+        InspectorView.ReviewChangesRequested +=
+            OnInspectorReviewChangesRequested;
+        SizeChanged += (_, _) =>
+        {
+            ApplyOverlayBounds();
+            RecalculateResponsiveLayout();
+        };
+        WorkspaceSplit.SizeChanged += (_, _) =>
+            RecalculateResponsiveLayout();
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         if (_viewModel.Rows.Count == 0)
             _ = _viewModel.ReloadAsync();
     }
-
-    private static void ConfigureDiscogsGrid(AppDataGrid grid) =>
-        grid.ConfigureColumns(
-        [
-            new("Title", "Release", "Title", 210, 125,
-                HeaderResourceKey: "Column.Release"),
-            new("Artist", "Artist credit", "Artist", 170, 100,
-                HeaderResourceKey: "Column.ArtistCredit"),
-            new("Year", "Year", "Year", 70, 58,
-                HeaderResourceKey: "Column.Year"),
-            new("Country", "Country", "Country", 72, 60,
-                HeaderResourceKey: "Column.Country"),
-            new("Labels", "Labels", "Labels", 150, 90,
-                HeaderResourceKey: "Column.Labels"),
-            new("Catalog", "Catalog no.", "CatalogNumbers", 125, 82,
-                HeaderResourceKey: "Column.CatalogNumber"),
-            new("Formats", "Formats", "Formats", 140, 88,
-                HeaderResourceKey: "Column.Formats"),
-            new("Genres", "Genres", "Genres", 125, 82,
-                HeaderResourceKey: "Column.Genres"),
-            new("Styles", "Styles", "Styles", 135, 88,
-                HeaderResourceKey: "Column.Styles"),
-            new("Tracks", "Tracks", "TrackCount", 68, 54,
-                HeaderResourceKey: "Column.Tracks"),
-            new("Source", "Source", "Source", 95, 72,
-                HeaderResourceKey: "Column.Source"),
-            new("ReleaseID", "Discogs release ID", "ReleaseId", 145, 95,
-                HeaderResourceKey: "Column.DiscogsReleaseId"),
-        ]);
-
-    private static void ConfigureDiscogsTrackMappingGrid(
-        AppDataGrid grid)
-    {
-        var includeTemplate =
-            new FuncDataTemplate<DiscogsTrackMappingRow>(
-                (_, _) =>
-                {
-                    var check = new CheckBox();
-                    check.Bind(
-                        CheckBox.IsCheckedProperty,
-                        new Binding(
-                            nameof(DiscogsTrackMappingRow.IsIncluded))
-                        {
-                            Mode = BindingMode.TwoWay,
-                        });
-                    return check;
-                });
-        var trackTemplate =
-            new FuncDataTemplate<DiscogsTrackMappingRow>(
-                (_, _) =>
-                {
-                    var combo = new ComboBox
-                    {
-                        DisplayMemberBinding = new Binding(
-                            nameof(DiscogsTrackChoice.Display)),
-                    };
-                    combo.Bind(
-                        ItemsControl.ItemsSourceProperty,
-                        new Binding(
-                            nameof(DiscogsTrackMappingRow.TrackChoices)));
-                    combo.Bind(
-                        ComboBox.SelectedItemProperty,
-                        new Binding(
-                            nameof(DiscogsTrackMappingRow.SelectedTrack))
-                        {
-                            Mode = BindingMode.TwoWay,
-                        });
-                    return combo;
-                });
-        IDataTemplate statusTemplate =
-            DiagnosticTextTemplate<DiscogsTrackMappingRow>(
-                nameof(DiscogsTrackMappingRow.Status),
-                nameof(DiscogsTrackMappingRow.DiagnosticDetail));
-        grid.ConfigureColumns(
-        [
-            new("Include", "Use", null, 58, 48,
-                CellTemplate: includeTemplate, Sortable: false,
-                HeaderResourceKey: "Column.Use"),
-            new("File", "File", "File", 180, 110,
-                HeaderResourceKey: "Column.File"),
-            new("Track", "Discogs track", null, 320, 185,
-                CellTemplate: trackTemplate, Sortable: false,
-                HeaderResourceKey: "Column.DiscogsTrack"),
-            new("Position", "Position", "Position", 78, 60,
-                HeaderResourceKey: "Column.Position"),
-            new("Confidence", "Confidence", "Confidence", 98, 74,
-                HeaderResourceKey: "Column.Confidence"),
-            new("Status", "Reason", "Status", 250, 145,
-                CellTemplate: statusTemplate,
-                HeaderResourceKey: "Column.Reason"),
-        ]);
-    }
-
-    private static void ConfigureReleaseTrackMappingGrid(AppDataGrid grid)
-    {
-        var includeTemplate = new FuncDataTemplate<MusicBrainzTrackMappingRow>(
-            (_, _) =>
-            {
-                var check = new CheckBox();
-                check.Bind(CheckBox.IsCheckedProperty,
-                    new Binding(nameof(MusicBrainzTrackMappingRow.IsIncluded))
-                    {
-                        Mode = BindingMode.TwoWay,
-                    });
-                return check;
-            });
-        var trackTemplate = new FuncDataTemplate<MusicBrainzTrackMappingRow>(
-            (_, _) =>
-            {
-                var combo = new ComboBox
-                {
-                    DisplayMemberBinding =
-                        new Binding(nameof(MusicBrainzTrackChoice.Display)),
-                };
-                combo.Bind(ItemsControl.ItemsSourceProperty,
-                    new Binding(nameof(MusicBrainzTrackMappingRow.TrackChoices)));
-                combo.Bind(ComboBox.SelectedItemProperty,
-                    new Binding(nameof(MusicBrainzTrackMappingRow.SelectedTrack))
-                    {
-                        Mode = BindingMode.TwoWay,
-                    });
-                return combo;
-            });
-        IDataTemplate statusTemplate =
-            DiagnosticTextTemplate<MusicBrainzTrackMappingRow>(
-                nameof(MusicBrainzTrackMappingRow.Status),
-                nameof(MusicBrainzTrackMappingRow.DiagnosticDetail));
-        grid.ConfigureColumns(
-        [
-            new("Include", "Use", null, 58, 48,
-                CellTemplate: includeTemplate, Sortable: false,
-                HeaderResourceKey: "Column.Use"),
-            new("File", "File", "File", 180, 110,
-                HeaderResourceKey: "Column.File"),
-            new("Track", "Release track", null, 330, 190,
-                CellTemplate: trackTemplate, Sortable: false,
-                HeaderResourceKey: "Column.ReleaseTrack"),
-            new("Confidence", "Confidence", "Confidence", 100, 76,
-                HeaderResourceKey: "Column.Confidence"),
-            new("Status", "Reason", "Status", 260, 150,
-                CellTemplate: statusTemplate,
-                HeaderResourceKey: "Column.Reason"),
-        ]);
-    }
-
-    private static void ConfigureReleaseArtworkGrid(AppDataGrid grid)
-    {
-        var thumbnailTemplate = new FuncDataTemplate<CoverArtCandidateRow>(
-            (_, _) =>
-            {
-                var image = new Image
-                {
-                    Width = 64,
-                    Height = 64,
-                    Stretch = Stretch.Uniform,
-                };
-                image.Bind(Image.SourceProperty,
-                    new Binding(nameof(CoverArtCandidateRow.ThumbnailSource)));
-                return image;
-            });
-        IDataTemplate statusTemplate =
-            DiagnosticTextTemplate<CoverArtCandidateRow>(
-                nameof(
-                    CoverArtCandidateRow
-                        .ThumbnailStatus),
-                nameof(
-                    CoverArtCandidateRow
-                        .ThumbnailDiagnosticDetail));
-        grid.RowHeight = 74;
-        grid.ConfigureColumns(
-        [
-            new("Thumbnail", "Preview", null, 82, 72,
-                CellTemplate: thumbnailTemplate, Sortable: false,
-                HeaderResourceKey: "Column.Preview"),
-            new("Roles", "Types", "Roles", 140, 90,
-                HeaderResourceKey: "Column.Types"),
-            new("Front", "Front", "Front", 65, 52,
-                HeaderResourceKey: "Column.Front"),
-            new("Back", "Back", "Back", 65, 52,
-                HeaderResourceKey: "Column.Back"),
-            new("Approved", "Approved", "Approved", 80, 62,
-                HeaderResourceKey: "Column.Approved"),
-            new("Comment", "Comment", "Comment", 200, 120,
-                HeaderResourceKey: "Column.Comment"),
-            new("Status", "Thumbnail", "ThumbnailStatus", 130, 82,
-                CellTemplate: statusTemplate,
-                HeaderResourceKey: "Column.Thumbnail"),
-        ]);
-    }
-
-    private static IDataTemplate DiagnosticTextTemplate<T>(
-        string textProperty,
-        string diagnosticDetailProperty)
-        where T : class =>
-        new FuncDataTemplate<T>(
-            (_, _) =>
-            {
-                var text = new TextBlock
-                {
-                    TextWrapping =
-                        TextWrapping.Wrap,
-                };
-                text.Bind(
-                    TextBlock.TextProperty,
-                    new Binding(textProperty));
-                text.Bind(
-                    ToolTip.TipProperty,
-                    new Binding(
-                        diagnosticDetailProperty));
-                return text;
-            });
 
     private void BuildColumns()
     {
@@ -607,6 +318,7 @@ public partial class LibraryView : UserControl
             }
             _selected = requested;
             UpdateSelectionActions();
+            ApplyInspectorVisibility();
         }
         finally
         {
@@ -631,6 +343,7 @@ public partial class LibraryView : UserControl
     {
         bool open = !ColumnPopover.IsOpen;
         CloseTransientPopups();
+        ApplyOverlayBounds();
         ColumnPopover.IsOpen = open;
         if (open)
             Dispatcher.UIThread.Post(() => CloseColumnsButton.Focus());
@@ -644,6 +357,29 @@ public partial class LibraryView : UserControl
 
     private void OnLibraryKeyDown(object? sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Tab)
+        {
+            bool reverse =
+                e.KeyModifiers.HasFlag(
+                    KeyModifiers.Shift);
+            if (LibraryPendingChangesPopover.IsOpen)
+            {
+                if (TryCyclePendingChangesFocus(
+                        reverse))
+                    e.Handled = true;
+                return;
+            }
+
+            if (_responsiveCompact &&
+                _drawerOpen &&
+                InspectorScrim.IsVisible &&
+                TryCycleInspectorFocus(reverse))
+            {
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (e.Key != Key.Escape)
             return;
         if (ColumnPopover.IsOpen)
@@ -652,16 +388,9 @@ public partial class LibraryView : UserControl
             ColumnsButton.Focus();
             e.Handled = true;
         }
-        else if (LibraryOperationsPopover.IsOpen)
-        {
-            _viewModel.CloseOperationsCommand.Execute(null);
-            LibraryOperationsButton.Focus();
-            e.Handled = true;
-        }
         else if (LibraryPendingChangesPopover.IsOpen)
         {
-            LibraryPendingChangesPopover.IsOpen = false;
-            LibraryPendingChangesButton.Focus();
+            ClosePendingChanges(restoreFocus: true);
             e.Handled = true;
         }
         else if (ViewsPopover.IsOpen)
@@ -685,9 +414,9 @@ public partial class LibraryView : UserControl
         else if (_responsiveCompact &&
                  _drawerOpen)
         {
-            _drawerOpen = false;
-            ApplyInspectorVisibility();
-            InspectorToggle.Focus();
+            CloseCompactInspector(
+                closePreference: false,
+                restoreFocus: true);
             e.Handled = true;
         }
     }
@@ -696,20 +425,140 @@ public partial class LibraryView : UserControl
         object? sender,
         RoutedEventArgs e)
     {
-        bool open = !LibraryPendingChangesPopover.IsOpen;
+        if (LibraryPendingChangesPopover.IsOpen)
+        {
+            ClosePendingChanges(restoreFocus: true);
+            return;
+        }
+
+        OpenPendingChanges();
+    }
+
+    private void OnInspectorReviewChangesRequested(
+        object? sender,
+        EventArgs e) =>
+        OpenPendingChanges();
+
+    private void OpenPendingChanges()
+    {
+        _pendingChangesFocusReturn =
+            TopLevel.GetTopLevel(this)?
+                .FocusManager?
+                .GetFocusedElement() as Control;
         CloseTransientPopups();
-        LibraryPendingChangesPopover.IsOpen = open;
-        if (open)
-            Dispatcher.UIThread.Post(() =>
-                CloseLibraryPendingChangesButton.Focus());
+        ApplyOverlayBounds();
+        LibraryPendingChangesPopover.IsOpen = true;
+        Dispatcher.UIThread.Post(() =>
+            CloseLibraryPendingChangesButton.Focus());
     }
 
     private void OnLibraryPendingChangesClose(
         object? sender,
-        RoutedEventArgs e)
+        RoutedEventArgs e) =>
+        ClosePendingChanges(restoreFocus: true);
+
+    private void ClosePendingChanges(
+        bool restoreFocus)
     {
         LibraryPendingChangesPopover.IsOpen = false;
-        LibraryPendingChangesButton.Focus();
+        if (!restoreFocus)
+            return;
+        Control? target =
+            _pendingChangesFocusReturn is
+            {
+                IsEffectivelyEnabled: true,
+                IsEffectivelyVisible: true,
+            }
+                ? _pendingChangesFocusReturn
+                : LibraryPendingChangesButton;
+        _pendingChangesFocusReturn = null;
+        target.Focus();
+    }
+
+    private bool TryCyclePendingChangesFocus(
+        bool reverse)
+    {
+        Control[] focusable =
+        [
+            .. LibraryPendingChangesSurface
+                .GetVisualDescendants()
+                .OfType<Control>()
+                .Where(control =>
+                    control.Focusable &&
+                    control.IsEffectivelyEnabled &&
+                    control.IsEffectivelyVisible),
+        ];
+        if (focusable.Length == 0)
+            return false;
+
+        object? focused =
+            TopLevel.GetTopLevel(this)?
+                .FocusManager?
+                .GetFocusedElement();
+        int index = Array.IndexOf(
+            focusable,
+            focused);
+        if (index < 0)
+        {
+            (reverse
+                ? focusable[^1]
+                : focusable[0]).Focus();
+            return true;
+        }
+
+        bool atBoundary =
+            reverse
+                ? index == 0
+                : index == focusable.Length - 1;
+        if (!atBoundary)
+            return false;
+        (reverse
+            ? focusable[^1]
+            : focusable[0]).Focus();
+        return true;
+    }
+
+    private bool TryCycleInspectorFocus(
+        bool reverse)
+    {
+        Control[] focusable =
+        [
+            .. InspectorView
+                .GetVisualDescendants()
+                .OfType<Control>()
+                .Where(control =>
+                    control.Focusable &&
+                    control.IsEffectivelyEnabled &&
+                    control.IsEffectivelyVisible),
+        ];
+        if (focusable.Length == 0)
+            return false;
+
+        object? focused =
+            TopLevel.GetTopLevel(this)?
+                .FocusManager?
+                .GetFocusedElement();
+        int index = Array.IndexOf(
+            focusable,
+            focused);
+        if (index < 0)
+        {
+            (reverse
+                ? focusable[^1]
+                : focusable[0]).Focus();
+            return true;
+        }
+
+        bool atBoundary =
+            reverse
+                ? index == 0
+                : index == focusable.Length - 1;
+        if (!atBoundary)
+            return false;
+        (reverse
+            ? focusable[^1]
+            : focusable[0]).Focus();
+        return true;
     }
 
     private void OnVisualFilterClick(
@@ -718,23 +567,184 @@ public partial class LibraryView : UserControl
     {
         bool open = !VisualFilterPopover.IsOpen;
         CloseTransientPopups();
+        ApplyOverlayBounds();
         VisualFilterPopover.IsOpen = open;
+        if (open)
+        {
+            Dispatcher.UIThread.Post(
+                () => CloseVisualFilterButton.Focus());
+        }
     }
 
     private void OnVisualFilterClose(
         object? sender,
-        RoutedEventArgs e) =>
+        RoutedEventArgs e)
+    {
         VisualFilterPopover.IsOpen = false;
+        VisualFilterButton.Focus();
+    }
+
+    private void OnEditInWorkbenchClick(
+        object? sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Control target)
+            return;
+        ContextMenu menu = CreateLibraryActionMenu(
+            includeFileActions: false);
+        menu.Open(target);
+    }
+
+    private void OnLibraryGridPointerPressed(
+        object? sender,
+        PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(LibraryGrid)
+                .Properties.PointerUpdateKind !=
+            PointerUpdateKind.RightButtonPressed)
+            return;
+        DataGridRow? row = (e.Source as Control)?
+            .GetVisualAncestors()
+            .OfType<DataGridRow>()
+            .FirstOrDefault();
+        if (row?.DataContext is not LibraryRow item ||
+            LibraryGrid.SelectedItems.Contains(item))
+            return;
+        _restoringSelection = true;
+        try
+        {
+            LibraryGrid.SelectedItems.Clear();
+            LibraryGrid.SelectedItems.Add(item);
+            LibraryGrid.SelectedItem = item;
+        }
+        finally
+        {
+            _restoringSelection = false;
+        }
+        _selected = [item];
+        UpdateSelectionActions();
+        _ = _viewModel.SelectAsync([item]);
+    }
+
+    private void OnLibraryGridContextRequested(
+        object? sender,
+        ContextRequestedEventArgs e)
+    {
+        Control target = e.Source as Control ??
+            (Control)sender!;
+        ContextMenu menu = CreateLibraryActionMenu(
+            includeFileActions: true);
+        menu.Open(target);
+        e.Handled = true;
+    }
+
+    private ContextMenu CreateLibraryActionMenu(
+        bool includeFileActions)
+    {
+        var items = new List<object>
+        {
+            CreateHandoffScopeMenu(
+                WorkbenchHandoffScopeKind.Selected,
+                "Library.Handoff.Scope.Selected",
+                _viewModel.HasSelection),
+            CreateHandoffScopeMenu(
+                WorkbenchHandoffScopeKind.VisibleResults,
+                "Library.Handoff.Scope.Visible",
+                _viewModel.Rows.Count > 0),
+            CreateHandoffScopeMenu(
+                WorkbenchHandoffScopeKind.AllResults,
+                "Library.Handoff.Scope.All",
+                _viewModel.TotalCount > 0),
+        };
+
+        if (includeFileActions && _selected.Count > 0)
+        {
+            items.Add(new Separator());
+            var copy = new MenuItem
+            {
+                Header = _localization.Get(
+                    "Library.Action.CopyPaths"),
+            };
+            copy.Click += OnCopyPaths;
+            items.Add(copy);
+
+            var reveal = new MenuItem
+            {
+                Header = _localization.Get(
+                    "Library.Action.Reveal"),
+                IsEnabled = _selected.Count == 1,
+            };
+            reveal.Click += OnReveal;
+            items.Add(reveal);
+
+            var refresh = new MenuItem
+            {
+                Header = _localization.Get(
+                    "Library.Action.RefreshAffectedPaths"),
+            };
+            refresh.Click += OnReindex;
+            items.Add(refresh);
+        }
+
+        return new ContextMenu
+        {
+            ItemsSource = items,
+        };
+    }
+
+    private MenuItem CreateHandoffScopeMenu(
+        WorkbenchHandoffScopeKind scope,
+        string headerKey,
+        bool enabled)
+    {
+        var sections = new List<MenuItem>();
+        foreach (WorkbenchSection section in HandoffSections)
+        {
+            var item = new MenuItem
+            {
+                Header = _localization.Get(
+                    $"Workbench.Navigation.Section.{section}"),
+            };
+            item.Click += async (_, _) =>
+                await _viewModel.HandoffToWorkbenchAsync(
+                    section,
+                    scope);
+            sections.Add(item);
+        }
+        return new MenuItem
+        {
+            Header = _localization.Get(headerKey),
+            IsEnabled = enabled,
+            ItemsSource = sections,
+        };
+    }
 
     private void OnInspectorToggle(object? sender, RoutedEventArgs e)
     {
         bool wasDrawerVisible =
             _responsiveCompact &&
             _drawerOpen;
-        if (!_viewModel.IsInspectorOpen)
+        if (wasDrawerVisible)
         {
-            _viewModel.IsInspectorOpen = true;
-            _drawerOpen = true;
+            CloseCompactInspector(
+                closePreference: false,
+                restoreFocus: true);
+            return;
+        }
+
+        if (_responsiveCompact)
+        {
+            _inspectorFocusReturn =
+                TopLevel.GetTopLevel(this)?
+                    .FocusManager?
+                    .GetFocusedElement() as Control;
+        }
+        if (_viewModel.InspectorPreference !=
+            LibraryInspectorPreference.Pinned)
+        {
+            _viewModel.SetInspectorPreference(
+                LibraryInspectorPreference.Pinned);
+            _drawerOpen = _responsiveCompact;
         }
         else if (_responsiveCompact)
         {
@@ -751,17 +761,39 @@ public partial class LibraryView : UserControl
                     InspectorView.CloseButton
                         .Focus());
         }
-        else if (wasDrawerVisible)
-        {
-            InspectorToggle.Focus();
-        }
     }
 
     public void ApplyResponsiveLayout(bool compact)
     {
+        _shellRequestedCompact = compact;
+        RecalculateResponsiveLayout();
+    }
+
+    private void RecalculateResponsiveLayout()
+    {
+        const double minimumCentralTaskWidth = 760;
+        const double minimumInspectorWidth = 320;
+        const double splitDividerWidth = 10;
+        double splitHostWidth =
+            WorkspaceSplit.Bounds.Width;
+        bool compact = splitHostWidth > 0
+            ? splitHostWidth <
+              minimumCentralTaskWidth +
+              splitDividerWidth +
+              minimumInspectorWidth
+            : _shellRequestedCompact ||
+              Bounds.Width < 1138;
+        if (_responsiveCompact == compact)
+        {
+            ApplyInspectorVisibility();
+            return;
+        }
         _responsiveCompact = compact;
         if (!compact)
+        {
             _drawerOpen = false;
+            _inspectorFocusReturn = null;
+        }
         ApplyInspectorVisibility();
     }
 
@@ -830,16 +862,9 @@ public partial class LibraryView : UserControl
         if (e.PropertyName is nameof(LibraryViewModel.Rows) or nameof(LibraryViewModel.SelectedPaths))
             Dispatcher.UIThread.Post(RestoreVisibleSelection);
         else if (e.PropertyName is nameof(LibraryViewModel.IsInspectorOpen) or
+                  nameof(LibraryViewModel.InspectorPreference) or
                   nameof(LibraryViewModel.HasUnsavedSelectionChanges))
             Dispatcher.UIThread.Post(ApplyInspectorVisibility);
-        else if (e.PropertyName == nameof(LibraryViewModel.IsOperationsOpen) &&
-                 _viewModel.IsOperationsOpen)
-            Dispatcher.UIThread.Post(() =>
-            {
-                CloseTransientPopups(includeOperations: false);
-                ApplyOverlayBounds();
-                CloseLibraryOperationsButton.Focus();
-            });
     }
 
     private void RestoreVisibleSelection()
@@ -858,13 +883,18 @@ public partial class LibraryView : UserControl
         }
         _selected = rows;
         UpdateSelectionActions();
+        ApplyInspectorVisibility();
     }
 
     private void UpdateSelectionActions()
     {
         bool hasSelection = _selected.Count > 0;
-        SelectedCountLabel.IsVisible = CopyButton.IsVisible = RevealButton.IsVisible =
-            ReindexButton.IsVisible = hasSelection;
+        SelectedCountLabel.IsVisible =
+            SelectionWorkbenchButton.IsVisible =
+            CopyButton.IsVisible =
+            RevealButton.IsVisible =
+            ReindexButton.IsVisible =
+            hasSelection;
         SelectedCountLabel.Text = _localization.Format(
             "Library.Selection.CountFormat",
             _selected.Count);
@@ -872,15 +902,49 @@ public partial class LibraryView : UserControl
 
     private void OnInspectorCloseRequested(object? sender, EventArgs e)
     {
+        CloseCompactInspector(
+            closePreference: true,
+            restoreFocus: true);
+    }
+
+    private void CloseCompactInspector(
+        bool closePreference,
+        bool restoreFocus)
+    {
         _drawerOpen = false;
-        _viewModel.IsInspectorOpen = false;
+        if (closePreference)
+        {
+            _viewModel.SetInspectorPreference(
+                LibraryInspectorPreference.Closed);
+        }
         ApplyInspectorVisibility();
-        InspectorToggle.Focus();
+        if (!restoreFocus)
+            return;
+
+        Control target =
+            _inspectorFocusReturn is
+            {
+                IsEffectivelyEnabled: true,
+                IsEffectivelyVisible: true,
+            }
+                ? _inspectorFocusReturn
+                : InspectorToggle;
+        _inspectorFocusReturn = null;
+        target.Focus();
     }
 
     private void ApplyInspectorVisibility()
     {
-        bool inspectorOpen = _viewModel.IsInspectorOpen;
+        bool hasSelection =
+            _selected.Count > 0 ||
+            _viewModel.HasUnsavedSelectionChanges;
+        bool inspectorOpen =
+            _viewModel.InspectorPreference switch
+            {
+                LibraryInspectorPreference.Pinned => true,
+                LibraryInspectorPreference.Closed => false,
+                _ => hasSelection && !_responsiveCompact,
+            };
         bool useCompactPresentation = _responsiveCompact || !inspectorOpen;
         WorkspaceSplit.SetCompact(useCompactPresentation);
         ContentPresenter? presenter = WorkspaceSplit.FindControl<ContentPresenter>("RightPresenter");
@@ -911,9 +975,9 @@ public partial class LibraryView : UserControl
 
     private void OnInspectorScrimPressed(object? sender, PointerPressedEventArgs e)
     {
-        _drawerOpen = false;
-        ApplyInspectorVisibility();
-        InspectorToggle.Focus();
+        CloseCompactInspector(
+            closePreference: false,
+            restoreFocus: true);
         e.Handled = true;
     }
 
@@ -937,24 +1001,28 @@ public partial class LibraryView : UserControl
         FilterHelpPopover.IsOpen = open;
     }
 
-    private void CloseTransientPopups(bool includeOperations = true)
+    private void CloseTransientPopups()
     {
         ColumnPopover.IsOpen = false;
         LibraryPendingChangesPopover.IsOpen = false;
         ViewsPopover.IsOpen = false;
         FilterHelpPopover.IsOpen = false;
         VisualFilterPopover.IsOpen = false;
-        if (includeOperations && _viewModel.IsOperationsOpen)
-            _viewModel.CloseOperationsCommand.Execute(null);
     }
 
     private void ApplyOverlayBounds()
     {
         double availableWidth = Math.Max(320, Bounds.Width - 24);
         double availableHeight = Math.Max(320, Bounds.Height - 32);
-        LibraryOperationsSurface.Width = Math.Min(980, availableWidth);
-        LibraryOperationsSurface.Height = Math.Min(690, availableHeight);
-        LibraryPendingChangesSurface.Width = Math.Min(900, availableWidth);
+        LibraryPendingChangesSurface.Width = Math.Min(430, availableWidth);
         LibraryPendingChangesSurface.Height = Math.Min(620, availableHeight);
+        LibraryColumnsSurface.Width =
+            Math.Min(650, availableWidth);
+        LibraryColumnsSurface.MaxHeight =
+            Math.Min(610, availableHeight);
+        LibraryVisualFilterSurface.Width =
+            Math.Min(720, availableWidth);
+        LibraryVisualFilterSurface.MaxHeight =
+            Math.Min(620, availableHeight);
     }
 }

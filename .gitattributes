@@ -11,6 +11,9 @@
 *.sln     text eol=crlf
 *.slnf    text eol=lf
 
+MusicLibraryManager.Presentation/Resources/Strings*.resx text eol=lf
+BuildTools/LocalizationCatalogGenerator/*.xml text eol=lf
+
 *.bin binary
 *.db  binary
 *.gif binary

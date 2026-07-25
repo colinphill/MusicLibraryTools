@@ -2,25 +2,45 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
-  <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+  <controls:AdaptivePage RowDefinitions="Auto,Auto,*" RowSpacing="16">
     <controls:PageHeader Title="{DynamicResource Loc.Organize.Title}"
         Subtitle="{DynamicResource Loc.Organize.Subtitle}">
-      <controls:PageHeader.Actions>
-        <WrapPanel>
-        <Button Classes="app" Content="{DynamicResource Loc.Organize.Action.Preview}" Command="{Binding PreviewCommand}" />
-        <Button Classes="app primary" Margin="8,0,0,0" Content="{DynamicResource Loc.Organize.Action.Apply}" Command="{Binding ApplyCommand}" />
+      <controls:PageHeader.PrimaryAction>
+        <Grid x:Name="OrganizeWorkflowActions">
+          <Button Classes="app"
+                  Classes.primary="{Binding !HasPreview}"
+                  Content="{DynamicResource Loc.Organize.Action.Preview}"
+                  Command="{Binding PreviewCommand}" />
+          <Button Classes="app primary"
+                  IsVisible="{Binding HasPreview}"
+                  Content="{DynamicResource Loc.Organize.Action.Apply}"
+                  Command="{Binding ApplyCommand}" />
+        </Grid>
+      </controls:PageHeader.PrimaryAction>
+      <controls:PageHeader.SecondaryActions>
         <Button Classes="app"
-                Margin="8,0,0,0"
                 Content="{DynamicResource Loc.Common.Cancel}"
                 Command="{Binding CancelCommand}"
                 IsVisible="{Binding IsBusy}" />
-        </WrapPanel>
-      </controls:PageHeader.Actions>
+      </controls:PageHeader.SecondaryActions>
     </controls:PageHeader>
-    <Border Grid.Row="1" Classes="card">
+    <Border x:Name="OrganizeSetupCard" Grid.Row="1" Classes="card" IsVisible="False">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.Empty.Title}" />
+          <TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Empty.Description}" TextWrapping="Wrap" />
+        </StackPanel>
+        <Button Grid.Column="1"
+                Classes="app primary"
+                VerticalAlignment="Center"
+                Content="{DynamicResource Loc.Home.Empty.Action}"
+                Click="OnOpenSettings" />
+      </Grid>
+    </Border>
+    <Border x:Name="OrganizeSummaryCard" Grid.Row="1" Classes="card">
       <Grid x:Name="SummaryLayout" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <Ellipse Width="8" Height="8" Fill="{DynamicResource AppAccentBrush}" />
-        <StackPanel Grid.Column="1" Spacing="3">
+        <StackPanel Grid.Column="1" Spacing="4">
         <TextBlock Text="{DynamicResource Loc.Organize.PreviewReminder}" FontWeight="SemiBold" />
           <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
           <TextBlock Classes="error"
@@ -39,10 +59,10 @@
             Value="{Binding Moves.Count}" />
       </Grid>
     </Border>
-    <Border Grid.Row="2" Classes="card" Padding="0" ClipToBounds="True">
+    <Border x:Name="OrganizeResultsCard" Grid.Row="2" Classes="card" Padding="0" ClipToBounds="True">
       <Grid>
         <controls:AppDataGrid x:Name="MovesGrid" ItemsSource="{Binding Moves}" />
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8"
                     IsVisible="{Binding IsMoveListEmpty}" MaxWidth="420">
           <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Organize.Empty.Title}" />
           <TextBlock Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
@@ -50,5 +70,5 @@
         </StackPanel>
       </Grid>
     </Border>
-  </Grid>
+  </controls:AdaptivePage>
 </UserControl>

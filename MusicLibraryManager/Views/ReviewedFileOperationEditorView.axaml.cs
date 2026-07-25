@@ -41,10 +41,10 @@ public partial class ReviewedFileOperationEditorView :
                 new RowDefinition(
                     GridLength.Auto));
             Grid.SetColumn(
-                ReviewedFileOperationKind,
+                ReviewedFileOperationKindField,
                 0);
             Grid.SetRow(
-                ReviewedFileOperationKind,
+                ReviewedFileOperationKindField,
                 0);
             Grid.SetColumn(
                 DestinationLayout,
@@ -77,19 +77,19 @@ public partial class ReviewedFileOperationEditorView :
                         new RowDefinition(
                             GridLength.Auto));
             Grid.SetColumn(
-                ReviewedFileNameTemplate,
+                ReviewedFileNameTemplateField,
                 0);
             Grid.SetColumnSpan(
-                ReviewedFileNameTemplate,
+                ReviewedFileNameTemplateField,
                 3);
             Grid.SetRow(
-                ReviewedFileNameTemplate,
+                ReviewedFileNameTemplateField,
                 0);
             Grid.SetColumn(
-                ReviewedCollisionPolicy,
+                ReviewedCollisionPolicyField,
                 0);
             Grid.SetRow(
-                ReviewedCollisionPolicy,
+                ReviewedCollisionPolicyField,
                 1);
             Grid.SetColumn(
                 PreserveRelativeFoldersCheckBox,
@@ -100,18 +100,6 @@ public partial class ReviewedFileOperationEditorView :
             Grid.SetRow(
                 PreserveRelativeFoldersCheckBox,
                 1);
-            Grid.SetColumn(
-                PreviewReviewedFileOperationButton,
-                1);
-            Grid.SetRow(
-                PreviewReviewedFileOperationButton,
-                2);
-            Grid.SetColumn(
-                ApplyReviewedFileOperationButton,
-                2);
-            Grid.SetRow(
-                ApplyReviewedFileOperationButton,
-                2);
         }
         else
         {
@@ -128,10 +116,10 @@ public partial class ReviewedFileOperationEditorView :
                 new RowDefinition(
                     GridLength.Auto));
             Grid.SetColumn(
-                ReviewedFileOperationKind,
+                ReviewedFileOperationKindField,
                 0);
             Grid.SetRow(
-                ReviewedFileOperationKind,
+                ReviewedFileOperationKindField,
                 0);
             Grid.SetColumn(
                 DestinationLayout,
@@ -154,29 +142,28 @@ public partial class ReviewedFileOperationEditorView :
                 .ColumnDefinitions.Add(
                     new ColumnDefinition(
                         new GridLength(170)));
-            for (int index = 0; index < 3; index++)
-                TemplateOptionsLayout
-                    .ColumnDefinitions.Add(
-                        new ColumnDefinition(
-                            GridLength.Auto));
+            TemplateOptionsLayout
+                .ColumnDefinitions.Add(
+                    new ColumnDefinition(
+                        GridLength.Auto));
             TemplateOptionsLayout
                 .RowDefinitions.Add(
                     new RowDefinition(
                         GridLength.Auto));
             Grid.SetColumn(
-                ReviewedFileNameTemplate,
+                ReviewedFileNameTemplateField,
                 0);
             Grid.SetColumnSpan(
-                ReviewedFileNameTemplate,
+                ReviewedFileNameTemplateField,
                 1);
             Grid.SetRow(
-                ReviewedFileNameTemplate,
+                ReviewedFileNameTemplateField,
                 0);
             Grid.SetColumn(
-                ReviewedCollisionPolicy,
+                ReviewedCollisionPolicyField,
                 1);
             Grid.SetRow(
-                ReviewedCollisionPolicy,
+                ReviewedCollisionPolicyField,
                 0);
             Grid.SetColumn(
                 PreserveRelativeFoldersCheckBox,
@@ -187,22 +174,12 @@ public partial class ReviewedFileOperationEditorView :
             Grid.SetRow(
                 PreserveRelativeFoldersCheckBox,
                 0);
-            Grid.SetColumn(
-                PreviewReviewedFileOperationButton,
-                3);
-            Grid.SetRow(
-                PreviewReviewedFileOperationButton,
-                0);
-            Grid.SetColumn(
-                ApplyReviewedFileOperationButton,
-                4);
-            Grid.SetRow(
-                ApplyReviewedFileOperationButton,
-                0);
         }
 
-        TargetSummaryText.IsVisible =
-            !compactHeight;
+        SourceOptionsLayout.RowSpacing =
+            narrow ? 8 : 0;
+        TemplateOptionsLayout.RowSpacing =
+            narrow ? 8 : 0;
         EditorLayout.RowSpacing =
             compactHeight
                 ? 7

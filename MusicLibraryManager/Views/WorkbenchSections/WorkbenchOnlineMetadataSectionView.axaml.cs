@@ -1,8 +1,10 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
 
@@ -18,6 +20,7 @@ public partial class WorkbenchOnlineMetadataSectionView :
         InitializeComponent();
         _localization = App.GetService<ILocalizationService>();
         ConfigureColumns();
+        UpdateStepSummaries();
         AttachedToVisualTree += (_, _) =>
             _localization.CultureChanged += OnCultureChanged;
         DetachedFromVisualTree += (_, _) =>
@@ -87,7 +90,7 @@ public partial class WorkbenchOnlineMetadataSectionView :
         bool narrow = Bounds.Width > 0 &&
             Bounds.Width < 880;
         bool compactHeight = Bounds.Height > 0 &&
-            Bounds.Height < 430;
+            Bounds.Height < 620;
         DiscoverySupportingText.IsVisible =
             !compactHeight;
         SearchSupportingText.IsVisible =
@@ -96,10 +99,12 @@ public partial class WorkbenchOnlineMetadataSectionView :
             !compactHeight;
         AudioResultSupportingText.IsVisible =
             !compactHeight;
+        ArtworkResultSupportingText.IsVisible =
+            !compactHeight;
         DiscoveryCard.Padding =
-            new Thickness(compactHeight ? 7 : 10);
+            new Thickness(compactHeight ? 8 : 12);
         SearchCard.Padding =
-            new Thickness(compactHeight ? 7 : 10);
+            new Thickness(compactHeight ? 8 : 12);
         ArtworkEditorLayout.ColumnDefinitions.Clear();
         ArtworkEditorLayout.RowDefinitions.Clear();
         if (narrow)
@@ -143,6 +148,58 @@ public partial class WorkbenchOnlineMetadataSectionView :
         }
     }
 
+    private void OnDiscoveryStepExpanded(
+        object? sender,
+        global::Avalonia.Interactivity
+            .RoutedEventArgs e)
+    {
+        if (SearchStep.IsExpanded)
+            SearchStep.IsExpanded = false;
+        UpdateStepSummaries();
+    }
+
+    private void OnSearchStepExpanded(
+        object? sender,
+        global::Avalonia.Interactivity
+            .RoutedEventArgs e)
+    {
+        if (DiscoveryStep.IsExpanded)
+            DiscoveryStep.IsExpanded = false;
+        UpdateStepSummaries();
+    }
+
+    private void OnDiscoveryStarted(
+        object? sender,
+        global::Avalonia.Interactivity
+            .RoutedEventArgs e)
+    {
+        DiscoveryStep.IsExpanded = false;
+        UpdateStepSummaries();
+    }
+
+    private void OnSearchStarted(
+        object? sender,
+        global::Avalonia.Interactivity
+            .RoutedEventArgs e)
+    {
+        SearchStep.IsExpanded = false;
+        UpdateStepSummaries();
+    }
+
+    private void OnStepCollapsed(
+        object? sender,
+        global::Avalonia.Interactivity
+            .RoutedEventArgs e) =>
+        UpdateStepSummaries();
+
+    private void UpdateStepSummaries()
+    {
+        DiscoveryStepSummary.IsVisible =
+            !DiscoveryStep.IsExpanded;
+        SearchStepSummary.IsVisible =
+            !SearchStep.IsExpanded;
+    }
+
     private void ConfigureDiscogsGrid() =>
         DiscogsDiscoveryGrid.ConfigureColumns(
         [
@@ -175,7 +232,8 @@ public partial class WorkbenchOnlineMetadataSectionView :
             new FuncDataTemplate<DiscogsTrackMappingRow>(
                 (_, _) =>
                 {
-                    var check = new CheckBox();
+                    CheckBox check =
+                        CreateMappingIncludeToggle();
                     check.Bind(
                         CheckBox.IsCheckedProperty,
                         new Binding(
@@ -191,14 +249,13 @@ public partial class WorkbenchOnlineMetadataSectionView :
             new FuncDataTemplate<DiscogsTrackMappingRow>(
                 (_, _) =>
                 {
-                    var combo = new ComboBox
-                    {
-                        DisplayMemberBinding =
-                            new Binding(
-                                nameof(
-                                    DiscogsTrackChoice
-                                        .Display)),
-                    };
+                    ComboBox combo =
+                        CreateMappingTrackChoice();
+                    combo.DisplayMemberBinding =
+                        new Binding(
+                            nameof(
+                                DiscogsTrackChoice
+                                    .Display));
                     combo.Bind(
                         ItemsControl.ItemsSourceProperty,
                         new Binding(
@@ -263,7 +320,8 @@ public partial class WorkbenchOnlineMetadataSectionView :
                 MusicBrainzTrackMappingRow>(
                 (_, _) =>
                 {
-                    var check = new CheckBox();
+                    CheckBox check =
+                        CreateMappingIncludeToggle();
                     check.Bind(
                         CheckBox.IsCheckedProperty,
                         new Binding(
@@ -280,14 +338,13 @@ public partial class WorkbenchOnlineMetadataSectionView :
                 MusicBrainzTrackMappingRow>(
                 (_, _) =>
                 {
-                    var combo = new ComboBox
-                    {
-                        DisplayMemberBinding =
-                            new Binding(
-                                nameof(
-                                    MusicBrainzTrackChoice
-                                        .Display)),
-                    };
+                    ComboBox combo =
+                        CreateMappingTrackChoice();
+                    combo.DisplayMemberBinding =
+                        new Binding(
+                            nameof(
+                                MusicBrainzTrackChoice
+                                    .Display));
                     combo.Bind(
                         ItemsControl.ItemsSourceProperty,
                         new Binding(
@@ -395,6 +452,67 @@ public partial class WorkbenchOnlineMetadataSectionView :
         ]);
     }
 
+    private CheckBox CreateMappingIncludeToggle()
+    {
+        var toggle = new CheckBox
+        {
+            Tag = "online-mapping-include",
+        };
+        toggle.Classes.Add("app");
+        AutomationProperties.SetName(
+            toggle,
+            _localization.Get(
+                "Workbench.Grid.Header.Use"));
+        return toggle;
+    }
+
+    private ComboBox CreateMappingTrackChoice()
+    {
+        var choice = new ComboBox
+        {
+            Tag = "online-mapping-track",
+        };
+        choice.Classes.Add("app");
+        AutomationProperties.SetName(
+            choice,
+            _localization.Get(
+                "Workbench.Online.TrackMapping"));
+        return choice;
+    }
+
+    private void RefreshGeneratedControlAccessibility()
+    {
+        string includeName =
+            _localization.Get(
+                "Workbench.Grid.Header.Use");
+        string trackName =
+            _localization.Get(
+                "Workbench.Online.TrackMapping");
+        foreach (Control control in
+                 DiscogsTrackMappingGrid
+                     .GetVisualDescendants()
+                     .Concat(
+                         ReleaseTrackMappingGrid
+                             .GetVisualDescendants())
+                     .OfType<Control>())
+        {
+            if (string.Equals(
+                    control.Tag as string,
+                    "online-mapping-include",
+                    StringComparison.Ordinal))
+                AutomationProperties.SetName(
+                    control,
+                    includeName);
+            else if (string.Equals(
+                         control.Tag as string,
+                         "online-mapping-track",
+                         StringComparison.Ordinal))
+                AutomationProperties.SetName(
+                    control,
+                    trackName);
+        }
+    }
+
     private LocalizedGridHeader L(string key) =>
         new(_localization.Get(key), key);
 
@@ -430,5 +548,6 @@ public partial class WorkbenchOnlineMetadataSectionView :
         DiscogsTrackMappingGrid.RefreshLocalizedHeaders();
         ReleaseTrackMappingGrid.RefreshLocalizedHeaders();
         ReleaseArtworkGrid.RefreshLocalizedHeaders();
+        RefreshGeneratedControlAccessibility();
     }
 }

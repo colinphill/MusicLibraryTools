@@ -27,7 +27,7 @@
     </Style>
     <Style Selector="Border.about-pill">
       <Setter Property="Padding"
-              Value="10,5" />
+              Value="12,8" />
       <Setter Property="CornerRadius"
               Value="99" />
       <Setter Property="BorderBrush"
@@ -37,10 +37,30 @@
       <Setter Property="Background"
               Value="#22FFFFFF" />
     </Style>
+    <Style Selector="Expander.about-license">
+      <Setter Property="HorizontalContentAlignment"
+              Value="Stretch" />
+      <Setter Property="Margin"
+              Value="0,4,0,0" />
+    </Style>
+    <Style Selector="Expander.about-license /template/ ToggleButton#PART_Header">
+      <Setter Property="MinHeight"
+              Value="40" />
+      <Setter Property="Padding"
+              Value="12,8" />
+      <Setter Property="Background"
+              Value="{DynamicResource AppInsetBrush}" />
+      <Setter Property="BorderBrush"
+              Value="{DynamicResource AppBorderBrush}" />
+      <Setter Property="BorderThickness"
+              Value="1" />
+      <Setter Property="CornerRadius"
+              Value="8" />
+    </Style>
   </UserControl.Styles>
 
-  <Grid Margin="26,22,26,26"
-        RowDefinitions="Auto,14,*">
+  <controls:AdaptivePage x:Name="AboutPageScaffold"
+                         RowDefinitions="Auto,14,*">
     <controls:PageHeader x:Name="AboutHeader"
                          Title="{DynamicResource Loc.About.Title}"
                          Subtitle="{DynamicResource Loc.About.Subtitle}" />
@@ -52,10 +72,10 @@
                   HorizontalContentAlignment="Stretch">
       <StackPanel HorizontalAlignment="Stretch"
                   MaxWidth="1120"
-                  Spacing="18">
+                  Spacing="16">
         <Border x:Name="AboutHero"
-                CornerRadius="18"
-                Padding="30"
+                CornerRadius="12"
+                Padding="24"
                 ClipToBounds="True">
           <Border.Background>
             <LinearGradientBrush StartPoint="0,0"
@@ -91,7 +111,7 @@
                                   AutomationProperties.Name="{DynamicResource Loc.About.BrandAutomation}" />
               <StackPanel Grid.Column="2"
                           VerticalAlignment="Center"
-                          Spacing="9">
+                          Spacing="8">
                 <TextBlock x:Name="AboutProductName"
                            Text="{DynamicResource Loc.App.Title}"
                            Foreground="#FFFFFF"
@@ -105,7 +125,7 @@
                            TextWrapping="Wrap"
                            MaxWidth="720"
                            HorizontalAlignment="Left" />
-                <WrapPanel Margin="0,5,0,0"
+                <WrapPanel Margin="0,8,0,0"
                            Orientation="Horizontal">
                   <Border Classes="about-pill"
                           Margin="0,0,8,8">
@@ -130,10 +150,10 @@
 
         <Border Classes="card">
           <Grid ColumnDefinitions="48,*"
-                ColumnSpacing="14">
+                ColumnSpacing="16">
             <Border Width="44"
                     Height="44"
-                    CornerRadius="22"
+                    CornerRadius="99"
                     Background="{DynamicResource AppAccentSoftBrush}"
                     BorderBrush="{DynamicResource AppAccentBrush}"
                     BorderThickness="1">
@@ -149,7 +169,7 @@
               </Viewbox>
             </Border>
             <StackPanel Grid.Column="1"
-                        Spacing="5">
+                        Spacing="4">
               <TextBlock Classes="section-title"
                          Text="{DynamicResource Loc.About.Mission.Title}" />
               <TextBlock Classes="muted"
@@ -159,8 +179,8 @@
           </Grid>
         </Border>
 
-        <StackPanel Spacing="5"
-                    Margin="2,4,2,0">
+        <StackPanel Spacing="4"
+                    Margin="4,4,4,0">
           <TextBlock Classes="section-title"
                      Text="{DynamicResource Loc.About.OpenSource.Title}" />
           <TextBlock Classes="muted"
@@ -175,7 +195,7 @@
                   Grid.Column="0"
                   Classes="card about-package"
                   VerticalAlignment="Top">
-            <StackPanel Spacing="14">
+            <StackPanel Spacing="16">
               <Grid ColumnDefinitions="Auto,*,Auto"
                     ColumnSpacing="12">
                 <Border Classes="about-package-icon">
@@ -191,7 +211,7 @@
                   </Viewbox>
                 </Border>
                 <StackPanel Grid.Column="1"
-                            Spacing="2"
+                            Spacing="4"
                             VerticalAlignment="Center">
                   <TextBlock x:Name="AvaloniaPackageName"
                              Classes="section-title"
@@ -208,8 +228,7 @@
                         VerticalAlignment="Top">
                   <controls:LocalizedFormatTextBlock ResourceKey="About.Package.VersionFormat"
                                                        Value="{Binding AvaloniaVersion}"
-                                                       Classes="muted"
-                                                       FontSize="12"
+                                                       Classes="caption"
                                                        FontWeight="SemiBold" />
                 </Border>
               </Grid>
@@ -221,15 +240,16 @@
                          FontWeight="SemiBold"
                          TextWrapping="Wrap" />
               <Expander x:Name="AvaloniaLicenseExpander"
-                        Header="{DynamicResource Loc.About.License.Agreement}"
+                         Classes="about-license"
+                         Header="{DynamicResource Loc.About.License.Agreement}"
                         AutomationProperties.Name="{DynamicResource Loc.About.Package.Avalonia.LicenseAutomation}">
-                <Border Margin="0,10,0,0"
-                        Padding="14"
-                        CornerRadius="10"
+                <Border Margin="0,12,0,0"
+                        Padding="16"
+                        CornerRadius="8"
                         Background="{DynamicResource AppInsetBrush}"
                         BorderBrush="{DynamicResource AppBorderBrush}"
                         BorderThickness="1">
-                  <StackPanel Spacing="10">
+                  <StackPanel Spacing="12">
                     <Button x:Name="CopyAvaloniaLicenseButton"
                             Classes="app quiet"
                             HorizontalAlignment="Right"
@@ -240,8 +260,8 @@
                     <SelectableTextBlock x:Name="AvaloniaLicenseBody"
                                          Text="{Binding AvaloniaLicenseText}"
                                          TextWrapping="Wrap"
-                                         FontFamily="Cascadia Mono, Consolas, monospace"
-                                         FontSize="12.5"
+                                          FontFamily="Cascadia Mono, Consolas, monospace"
+                                          FontSize="{DynamicResource AppFontSizeSupporting}"
                                          AutomationProperties.Name="{DynamicResource Loc.About.Package.Avalonia.LicenseTextAutomation}" />
                   </StackPanel>
                 </Border>
@@ -253,7 +273,7 @@
                   Grid.Column="2"
                   Classes="card about-package"
                   VerticalAlignment="Top">
-            <StackPanel Spacing="14">
+            <StackPanel Spacing="16">
               <Grid ColumnDefinitions="Auto,*,Auto"
                     ColumnSpacing="12">
                 <Border Classes="about-package-icon">
@@ -269,7 +289,7 @@
                   </Viewbox>
                 </Border>
                 <StackPanel Grid.Column="1"
-                            Spacing="2"
+                            Spacing="4"
                             VerticalAlignment="Center">
                   <TextBlock x:Name="SkiaSharpPackageName"
                              Classes="section-title"
@@ -286,8 +306,7 @@
                         VerticalAlignment="Top">
                   <controls:LocalizedFormatTextBlock ResourceKey="About.Package.VersionFormat"
                                                        Value="{Binding SkiaSharpVersion}"
-                                                       Classes="muted"
-                                                       FontSize="12"
+                                                       Classes="caption"
                                                        FontWeight="SemiBold" />
                 </Border>
               </Grid>
@@ -299,15 +318,16 @@
                          FontWeight="SemiBold"
                          TextWrapping="Wrap" />
               <Expander x:Name="SkiaSharpLicenseExpander"
-                        Header="{DynamicResource Loc.About.License.Agreement}"
+                         Classes="about-license"
+                         Header="{DynamicResource Loc.About.License.Agreement}"
                         AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.LicenseAutomation}">
-                <Border Margin="0,10,0,0"
-                        Padding="14"
-                        CornerRadius="10"
+                <Border Margin="0,12,0,0"
+                        Padding="16"
+                        CornerRadius="8"
                         Background="{DynamicResource AppInsetBrush}"
                         BorderBrush="{DynamicResource AppBorderBrush}"
                         BorderThickness="1">
-                  <StackPanel Spacing="10">
+                  <StackPanel Spacing="12">
                     <Button x:Name="CopySkiaSharpLicenseButton"
                             Classes="app quiet"
                             HorizontalAlignment="Right"
@@ -318,22 +338,23 @@
                     <SelectableTextBlock x:Name="SkiaSharpLicenseBody"
                                          Text="{Binding SkiaSharpLicenseText}"
                                          TextWrapping="Wrap"
-                                         FontFamily="Cascadia Mono, Consolas, monospace"
-                                         FontSize="12.5"
+                                          FontFamily="Cascadia Mono, Consolas, monospace"
+                                          FontSize="{DynamicResource AppFontSizeSupporting}"
                                          AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.LicenseTextAutomation}" />
                   </StackPanel>
                 </Border>
               </Expander>
               <Expander x:Name="SkiaSharpNoticesExpander"
-                        Header="{DynamicResource Loc.About.Package.SkiaSharp.NoticesName}"
+                         Classes="about-license"
+                         Header="{DynamicResource Loc.About.Package.SkiaSharp.NoticesName}"
                         AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.NoticesAutomation}">
-                <Border Margin="0,10,0,0"
-                        Padding="14"
-                        CornerRadius="10"
+                <Border Margin="0,12,0,0"
+                        Padding="16"
+                        CornerRadius="8"
                         Background="{DynamicResource AppInsetBrush}"
                         BorderBrush="{DynamicResource AppBorderBrush}"
                         BorderThickness="1">
-                  <StackPanel Spacing="10">
+                  <StackPanel Spacing="12">
                     <Button x:Name="CopySkiaSharpNoticesButton"
                             Classes="app quiet"
                             HorizontalAlignment="Right"
@@ -344,8 +365,8 @@
                     <SelectableTextBlock x:Name="SkiaSharpNoticesBody"
                                          Text="{Binding SkiaSharpThirdPartyNoticesText}"
                                          TextWrapping="Wrap"
-                                         FontFamily="Cascadia Mono, Consolas, monospace"
-                                         FontSize="12.5"
+                                          FontFamily="Cascadia Mono, Consolas, monospace"
+                                          FontSize="{DynamicResource AppFontSizeSupporting}"
                                          AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.NoticesTextAutomation}" />
                   </StackPanel>
                 </Border>
@@ -355,11 +376,11 @@
         </Grid>
 
         <TextBlock Classes="faint"
-                   Margin="2,0,2,4"
+                   Margin="4,0,4,4"
                    Text="{DynamicResource Loc.About.Trademarks}"
                    TextWrapping="Wrap"
                    TextAlignment="Center" />
       </StackPanel>
     </ScrollViewer>
-  </Grid>
+  </controls:AdaptivePage>
 </UserControl>

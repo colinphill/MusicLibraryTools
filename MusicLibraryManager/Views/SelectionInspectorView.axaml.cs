@@ -19,6 +19,7 @@ public partial class SelectionInspectorView : UserControl
     }
 
     public event EventHandler? CloseRequested;
+    public event EventHandler? ReviewChangesRequested;
 
     public Control CloseButton =>
         InspectorCloseButton;
@@ -28,6 +29,13 @@ public partial class SelectionInspectorView : UserControl
         App.GetService<SelectionInspectorViewModel>();
 
     private void OnClose(object? sender, RoutedEventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnReviewChanges(
+        object? sender,
+        RoutedEventArgs e) =>
+        ReviewChangesRequested?.Invoke(
+            this,
+            EventArgs.Empty);
 
     private async void OnReplaceArtwork(object? sender, RoutedEventArgs e)
     {

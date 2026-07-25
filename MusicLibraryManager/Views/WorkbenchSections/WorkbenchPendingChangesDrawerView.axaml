@@ -3,29 +3,30 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
   <Grid x:Name="WorkbenchPendingChangesLayout"
-        Margin="12,10,10,12"
+        Margin="12,12,12,12"
         RowDefinitions="Auto,Auto,*,Auto"
-        RowSpacing="10">
+        RowSpacing="12">
     <Grid ColumnDefinitions="*,Auto">
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="4">
         <TextBlock Text="{DynamicResource Loc.Workbench.PendingChanges.Title}"
                    FontSize="16"
                    FontWeight="SemiBold" />
         <TextBlock x:Name="SupportingText"
-                   Classes="muted"
+                   Classes="supporting"
                    Text="{DynamicResource Loc.Workbench.PendingChanges.Description}"
                    TextWrapping="Wrap" />
       </StackPanel>
       <Button x:Name="WorkbenchPendingChangesCloseButton"
               Grid.Column="1"
-              Classes="app"
-              Width="30"
-              Height="30"
+              Classes="app icon"
+              Width="36"
+              Height="36"
               Padding="0"
-              Content="&#x2715;"
               ToolTip.Tip="{DynamicResource Loc.Workbench.PendingChanges.Close}"
               AutomationProperties.Name="{DynamicResource Loc.Workbench.PendingChanges.Close}"
-              Click="OnClose" />
+              Click="OnClose">
+        <controls:AppVectorIcon Kind="Close" />
+      </Button>
     </Grid>
 
     <controls:LocalizedFormatTextBlock
@@ -36,16 +37,70 @@
         Value="{Binding PendingChanges.Count}" />
 
     <Grid Grid.Row="2">
-      <controls:AppDataGrid
+      <ListBox
           x:Name="WorkbenchPendingChangesGrid"
+          Classes="virtualized-results"
           MinHeight="180"
           ItemsSource="{Binding PendingChanges}"
-          AutomationProperties.Name="{DynamicResource Loc.Workbench.PendingChanges.GridAutomation}" />
-      <Border Background="{DynamicResource AppInsetBrush}"
+          AutomationProperties.Name="{DynamicResource Loc.Workbench.PendingChanges.GridAutomation}">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Border Classes="card dense-card"
+                    Margin="0,0,8,8">
+              <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="8">
+                  <TextBlock FontWeight="SemiBold"
+                             Text="{Binding File}"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{Binding File}" />
+                  <TextBlock Grid.Column="1"
+                             Classes="muted"
+                             Text="{Binding Field}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto,*"
+                      ColumnSpacing="8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="faint"
+                               FontSize="{DynamicResource AppFontSizeCaption}"
+                               Text="{DynamicResource Loc.Workbench.Common.Before}" />
+                    <TextBlock Text="{Binding Before}"
+                               TextWrapping="Wrap"
+                               MaxLines="3" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="1"
+                             VerticalAlignment="Center"
+                             Classes="muted"
+                             FontSize="18"
+                             Text="&#x2192;" />
+                  <StackPanel Grid.Column="2"
+                              Spacing="4">
+                    <TextBlock Classes="faint"
+                               FontSize="{DynamicResource AppFontSizeCaption}"
+                               Text="{DynamicResource Loc.Workbench.Common.After}" />
+                    <TextBlock Text="{Binding After}"
+                               TextWrapping="Wrap"
+                               MaxLines="3" />
+                  </StackPanel>
+                </Grid>
+                <Expander Header="{DynamicResource Loc.Column.TechnicalDetails}"
+                          IsVisible="{Binding DiagnosticDetail}"
+                          AutomationProperties.Name="{DynamicResource Loc.Column.TechnicalDetails}">
+                  <TextBlock Classes="supporting"
+                             Margin="0,8,0,0"
+                             Text="{Binding DiagnosticDetail}"
+                             TextWrapping="Wrap" />
+                </Expander>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <Border Classes="empty-state"
               IsVisible="{Binding !PendingChanges.Count}">
         <StackPanel HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Spacing="6">
+                    Spacing="8">
           <TextBlock FontWeight="SemiBold"
                      Text="{DynamicResource Loc.Workbench.PendingChanges.EmptyTitle}" />
           <TextBlock Classes="muted"
@@ -55,27 +110,29 @@
       </Border>
     </Grid>
 
-    <Grid Grid.Row="3"
-          ColumnDefinitions="*,Auto,Auto"
-          ColumnSpacing="8">
-      <TextBlock x:Name="StatusText"
-                 Classes="muted"
-                 VerticalAlignment="Center"
-                 Text="{Binding StatusText}"
-                 ToolTip.Tip="{Binding StatusDiagnosticDetail}"
-                 TextTrimming="CharacterEllipsis" />
-      <Button x:Name="WorkbenchRevertPendingChangesButton"
-              Grid.Column="1"
-              Classes="app"
-              Content="{DynamicResource Loc.Workbench.Action.Revert}"
-              ToolTip.Tip="{DynamicResource Loc.Workbench.PendingChanges.RevertTooltip}"
-              Command="{Binding RevertPendingChangesCommand}" />
-      <Button x:Name="WorkbenchApplyPendingChangesButton"
-              Grid.Column="2"
-              Classes="app primary"
-              Content="{DynamicResource Loc.Common.Apply}"
-              ToolTip.Tip="{DynamicResource Loc.Workbench.PendingChanges.ApplyTooltip}"
-              Command="{Binding ApplyCommand}" />
-    </Grid>
+    <Border Grid.Row="3"
+            Classes="sticky-footer">
+      <Grid ColumnDefinitions="*,Auto,Auto"
+            ColumnSpacing="8">
+        <TextBlock x:Name="StatusText"
+                   Classes="compact-status"
+                   VerticalAlignment="Center"
+                   Text="{Binding StatusText}"
+                   ToolTip.Tip="{Binding StatusDiagnosticDetail}"
+                   TextTrimming="CharacterEllipsis" />
+        <Button x:Name="WorkbenchRevertPendingChangesButton"
+                Grid.Column="1"
+                Classes="app danger"
+                Content="{DynamicResource Loc.Workbench.Action.Revert}"
+                IsEnabled="{Binding HasPendingChanges}"
+                Command="{Binding RevertPendingChangesCommand}" />
+        <Button x:Name="WorkbenchApplyPendingChangesButton"
+                Grid.Column="2"
+                Classes="app primary"
+                Content="{DynamicResource Loc.Common.Apply}"
+                IsEnabled="{Binding HasPendingChanges}"
+                Command="{Binding ApplyCommand}" />
+      </Grid>
+    </Border>
   </Grid>
 </UserControl>

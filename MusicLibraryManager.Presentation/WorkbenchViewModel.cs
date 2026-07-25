@@ -55,7 +55,15 @@ public enum WorkbenchOnlineMetadataResultStep
 public sealed record WorkbenchSectionOption(
     WorkbenchSection Section,
     string Group,
-    string Label);
+    string Label)
+{
+    public bool HasGroupHeader => Section is
+        WorkbenchSection.Session or
+        WorkbenchSection.BulkOperation or
+        WorkbenchSection.OnlineMetadata or
+        WorkbenchSection.Reports or
+        WorkbenchSection.Tools;
+}
 
 public sealed record WorkbenchOnlineMetadataScopeOption(
     WorkbenchOnlineMetadataScope Scope,
@@ -121,7 +129,13 @@ public partial class WorkbenchViewModel :
     private readonly INavigationService? _navigation;
     private readonly ILocalizationService? _localization;
     private readonly IAudioTranscodeService? _transcodes;
+    private readonly IReviewedFileOperationService?
+        _fileOperations;
     private readonly IReviewedChangeHistoryService? _reviewedHistory;
+    private readonly List<ReviewedFileOperationPlan>
+        _fileOperationPlans = [];
+    private readonly List<ReviewedMetadataMutationIntent>
+        _metadataIntents = [];
     private string? _statusTextKey;
     private object?[] _statusTextArguments = [];
     private long? _statusTextCount;
@@ -408,21 +422,18 @@ public partial class WorkbenchViewModel :
         _navigation = navigation;
         _localization = localization;
         _transcodes = transcodes;
+        _fileOperations = fileOperations;
         _reviewedHistory = reviewedHistory;
         ReleaseSearch = new(localization);
         DiscogsSearch = new(localization);
         if (_inspector is not null)
         {
-            _inspector.FilesChanged += OnInspectorFilesChanged;
             _inspector.PropertyChanged += (_, args) =>
             {
                 if (args.PropertyName is
                     nameof(SelectionInspectorViewModel.HasUnsavedChanges) or
                     nameof(SelectionInspectorViewModel.PendingChangesVersion))
                 {
-                    if (_inspector.HasUnsavedChanges &&
-                        _plan is not null)
-                        CancelPlan();
                     RebuildPendingChanges();
                     OnPropertyChanged(nameof(HasUnsavedChanges));
                     ApplyCommand.NotifyCanExecuteChanged();
@@ -443,13 +454,11 @@ public partial class WorkbenchViewModel :
             : new(
                 fileOperations,
                 files,
-                dialogs,
                 () => EditTargets
                     .Select(file => file.Path)
                     .ToArray(),
-                FileOperationPreflightMessage,
-                RefreshAfterFileOperationAsync,
-                localization);
+                AddPendingFileOperationAsync,
+                localization: localization);
         if (FileOperations is not null)
             FileOperations.PropertyChanged +=
                 (_, args) =>
@@ -523,6 +532,11 @@ public partial class WorkbenchViewModel :
     public ObservableCollection<WorkbenchTrackViewModel> Files { get; } = [];
     public ObservableCollection<MetadataPreviewRow> PreviewChanges { get; } = [];
     public ObservableCollection<MetadataPreviewRow> PendingChanges { get; } = [];
+    public bool HasPendingChanges =>
+        PendingChanges.Count > 0;
+    public ImmutableArray<ReviewedMediaMutationUnit>
+        PendingMutationUnits =>
+        BuildPendingMutationUnits();
     public ObservableCollection<PendingMetadataOperationRow>
         PendingOperations { get; } = [];
     public ObservableCollection<WorkbenchMetadataFieldRow> MetadataFields { get; } = [];
@@ -640,6 +654,7 @@ public partial class WorkbenchViewModel :
         _artworkDrafts.Count > 0 ||
         _inspector?.HasUnsavedChanges == true ||
         FileOperations?.HasUnsavedChanges == true ||
+        _fileOperationPlans.Count > 0 ||
         _transcodePlans.Count > 0 ||
         Files.Any(file => file.HasChanges);
     public bool CanUndoLatest =>
@@ -651,6 +666,8 @@ public partial class WorkbenchViewModel :
     public bool CanRepeatLatest =>
         _history.Entries.FirstOrDefault()?.Recipe is not null &&
         Files.Count > 0 && !IsBusy;
+
+    public event EventHandler? ReviewChangesRequested;
 
     public async Task ExecuteShortcutAsync(
         WorkbenchShortcutBinding binding)
@@ -702,8 +719,12 @@ public partial class WorkbenchViewModel :
                     await PreviewOperationCommand.ExecuteAsync(null);
                 break;
             case WorkbenchShortcutCommand.ApplyReviewedChanges:
-                if (ApplyCommand.CanExecute(null))
-                    await ApplyCommand.ExecuteAsync(null);
+                if (!IsBusy &&
+                    (PendingChanges.Count > 0 ||
+                     HasUnsavedChanges))
+                    ReviewChangesRequested?.Invoke(
+                        this,
+                        EventArgs.Empty);
                 break;
             case WorkbenchShortcutCommand.UndoLastApply:
                 if (UndoCommand.CanExecute(null))
@@ -799,6 +820,131 @@ public partial class WorkbenchViewModel :
         await TranscodeEditor.OpenAsync(
             EditTargets.Select(file => file.Path),
             ct);
+        return true;
+    }
+
+    public Task<bool> AddPendingMutationAsync(
+        ReviewedMediaMutationIntent intent,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(intent);
+        return intent switch
+        {
+            ReviewedTranscodeMutationIntent transcode =>
+                AddPendingTranscodeAsync(
+                    transcode.Plan,
+                    ct),
+            ReviewedFileOperationMutationIntent fileOperation =>
+                AddPendingFileOperationPlanAsync(
+                    fileOperation.Plan,
+                    ct),
+            ReviewedMetadataMutationIntent metadata =>
+                AddPendingMetadataPlanAsync(
+                    metadata,
+                    ct),
+            _ => Task.FromResult(false),
+        };
+    }
+
+    private async Task<bool> AddPendingMetadataPlanAsync(
+        ReviewedMetadataMutationIntent intent,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if (_plan is not null &&
+            MetadataPlansConflict(
+                _plan,
+                intent.Plan))
+        {
+            await _dialogs.ShowMessageAsync(
+                L("Workbench.Dialog.PendingConflict.Title"),
+                L("Workbench.Dialog.PendingConflict.Message"));
+            return false;
+        }
+        if (_plan is not null &&
+            MetadataPlanFullyRepresents(
+                _plan,
+                intent.Plan))
+            return true;
+
+        _metadataIntents.Add(intent);
+        RecomposeMetadataPlan();
+        NotifySessionChanged();
+        return true;
+    }
+
+    private Task<bool> AddPendingFileOperationAsync(
+        ReviewedFileOperationPlan plan) =>
+        AddPendingMutationAsync(
+            ReviewedFileOperationMutationIntent.Create(plan));
+
+    private async Task<bool> AddPendingFileOperationPlanAsync(
+        ReviewedFileOperationPlan plan,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ct.ThrowIfCancellationRequested();
+        HashSet<string> incoming = plan.Items
+            .Select(item => item.SourcePath)
+            .ToHashSet(PathComparer);
+        bool overlaps = _fileOperationPlans.Any(existing =>
+            existing.Items.Any(item =>
+                incoming.Contains(item.SourcePath)));
+        if (overlaps &&
+            !await _dialogs.ConfirmAsync(
+                L("Workbench.Dialog.ReplacePendingFileOperation.Title"),
+                L("Workbench.Dialog.ReplacePendingFileOperation.Message"),
+                L("Workbench.Dialog.ReplacePendingFileOperation.Confirm")))
+            return false;
+
+        for (int index = _fileOperationPlans.Count - 1;
+             index >= 0;
+             index--)
+        {
+            ReviewedFileOperationPlan existing =
+                _fileOperationPlans[index];
+            ReviewedFileOperationItem[] retainedItems =
+            [
+                .. existing.Items.Where(item =>
+                    !incoming.Contains(item.SourcePath)),
+            ];
+            if (retainedItems.Length == 0)
+            {
+                _fileOperationPlans.RemoveAt(index);
+                continue;
+            }
+            FileMutationAction[] retainedActions =
+            [
+                .. existing.MutationPlan.Actions.Where(action =>
+                    !incoming.Contains(action.SourcePath)),
+            ];
+            _fileOperationPlans[index] =
+                existing with
+                {
+                    Request = existing.Request with
+                    {
+                        SourcePaths =
+                        [
+                            .. retainedItems.Select(item =>
+                                item.SourcePath),
+                        ],
+                    },
+                    Items = retainedItems,
+                    MutationPlan =
+                        existing.MutationPlan with
+                        {
+                            Actions = retainedActions,
+                        },
+                };
+        }
+
+        _fileOperationPlans.Add(plan);
+        RebuildPendingChanges();
+        HasApplicablePreview = true;
+        SetCountStatus(
+            "ReviewedFileOperation.Status.AddedToReview",
+            plan.MutationPlan.Actions.Count);
+        NotifySessionChanged();
         return true;
     }
 
@@ -1009,6 +1155,32 @@ public partial class WorkbenchViewModel :
         }
     }
 
+    public async Task<bool> AcceptHandoffAsync(
+        WorkbenchHandoffRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.CapturedPaths.IsDefaultOrEmpty || IsBusy)
+            return false;
+
+        await AddSourcesAsync(request.CapturedPaths);
+
+        var requestedPaths = request.CapturedPaths
+            .ToHashSet(PathComparer);
+        WorkbenchTrackViewModel[] capturedFiles =
+        [
+            .. Files.Where(file =>
+                requestedPaths.Contains(file.Path)),
+        ];
+        if (capturedFiles.Length == 0)
+            return false;
+
+        if (!await TrySetSelectedFilesAsync(capturedFiles))
+            return false;
+
+        SelectedSection = request.DestinationSection;
+        return true;
+    }
+
     [RelayCommand(CanExecute = nameof(CanRemoveCurrent))]
     private void RemoveCurrent()
     {
@@ -1081,7 +1253,7 @@ public partial class WorkbenchViewModel :
     {
         if (Files.Count == 0)
             return;
-        if (HasUnsavedChanges && !await _dialogs.ConfirmAsync(
+        if (HasUnsavedChanges && !await _dialogs.ConfirmDestructiveAsync(
                 L("Workbench.Dialog.Clear.Title"),
                 L("Workbench.Dialog.Clear.Message"),
                 L("Common.Clear")))
@@ -1097,8 +1269,11 @@ public partial class WorkbenchViewModel :
         PreviewChanges.Clear();
         PendingChanges.Clear();
         PendingOperations.Clear();
+        _metadataIntents.Clear();
         _plan = null;
+        _fileOperationPlans.Clear();
         _transcodePlans.Clear();
+        RebuildPendingChanges();
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
@@ -1390,7 +1565,8 @@ public partial class WorkbenchViewModel :
                     action,
                     layerName),
                 progress,
-                ct));
+                ct),
+            ReviewedMediaMutationKind.TagLayers);
     }
 
     private bool CanPreviewAddId3Layer() =>
@@ -1440,7 +1616,8 @@ public partial class WorkbenchViewModel :
                     "Workbench.Operation.ConvertId3Version",
                     (int)TargetId3Version),
                 progress,
-                ct));
+                ct),
+            ReviewedMediaMutationKind.TagLayers);
     }
 
     private bool CanPreviewId3Version() =>
@@ -1477,7 +1654,8 @@ public partial class WorkbenchViewModel :
                     source,
                     target),
                 progress,
-                ct));
+                ct),
+            ReviewedMediaMutationKind.TagLayers);
     }
 
     private bool CanPreviewId3v2ToId3v1() =>
@@ -1512,7 +1690,8 @@ public partial class WorkbenchViewModel :
                     L(
                         $"Workbench.Choice.Id3EncodingPolicy.{SelectedId3EncodingPolicy}")),
                 progress,
-                ct));
+                ct),
+            ReviewedMediaMutationKind.TagLayers);
     }
 
     private bool CanPreviewId3Encoding() =>
@@ -1523,23 +1702,27 @@ public partial class WorkbenchViewModel :
 
     private async Task PreviewAsync(
         Func<IProgress<OperationProgress>, CancellationToken,
-            Task<MetadataOperationPlan>> action)
+            Task<MetadataOperationPlan>> action,
+        ReviewedMediaMutationKind mutationKind =
+            ReviewedMediaMutationKind.Metadata)
     {
         BeginOperation(L("Workbench.Activity.BuildingPreview"));
         try
         {
             MetadataOperationPlan plan = await action(
                 CreateProgress(), _cancellation!.Token);
-            _plan = plan;
-            MetadataPreviewRowBuilder.Populate(
-                PreviewChanges,
-                plan,
-                _localization);
-            PendingMetadataOperationRowBuilder.Populate(
-                PendingOperations,
-                plan,
-                _localization);
-            HasApplicablePreview = plan.CanApply;
+            bool accepted = await AddPendingMutationAsync(
+                ReviewedMetadataMutationIntent.Create(
+                    plan,
+                    mutationKind),
+                _cancellation.Token);
+            if (!accepted)
+            {
+                SetFailure(
+                    "Workbench.Status.PendingChangesBlocked",
+                    L("Workbench.Dialog.PendingConflict.Message"));
+                return;
+            }
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue => issue.Severity == OperationIssueSeverity.Blocker);
             if (blockers > 0)
@@ -1554,12 +1737,10 @@ public partial class WorkbenchViewModel :
         }
         catch (OperationCanceledException)
         {
-            CancelPlan();
             SetStatus("Workbench.Status.PreviewCancelled");
         }
         catch (Exception error)
         {
-            CancelPlan();
             SetFailure(
                 "Workbench.Status.PreviewFailed",
                 error.Message);
@@ -1576,22 +1757,72 @@ public partial class WorkbenchViewModel :
     {
         if (_plan is null &&
             !HasDirectPendingChanges &&
+            _fileOperationPlans.Count == 0 &&
             _transcodePlans.Count == 0)
             return;
+        if (!TryPrevalidatePendingMutations(
+                out string? preflightFailure))
+        {
+            SetFailure(
+                "Workbench.Status.PendingChangesBlocked",
+                preflightFailure);
+            return;
+        }
         BeginOperation(
             L("Workbench.Activity.ApplyingReviewedChanges"));
         MetadataOperationStageResult? metadataStage = null;
         try
         {
             IProgress<OperationProgress> progress = CreateProgress();
+            if (_fileOperationPlans.Count > 0)
+            {
+                await RefreshPendingFileOperationPlansAsync(
+                    progress,
+                    _cancellation!.Token);
+                if (!TryPrevalidatePendingMutations(
+                        out preflightFailure))
+                {
+                    SetFailure(
+                        "Workbench.Status.PendingChangesBlocked",
+                        preflightFailure);
+                    return;
+                }
+            }
             int changed = 0;
             if (_plan is not null ||
                 HasDirectPendingChanges)
             {
-                _plan ??=
-                    await PreviewDirectPendingChangesAsync(
-                        progress,
-                        _cancellation!.Token);
+                if (HasDirectPendingChanges)
+                {
+                    MetadataOperationPlan? directPlan =
+                        await PreviewDirectPendingChangesAsync(
+                            progress,
+                            _cancellation!.Token);
+                    if (directPlan is not null)
+                    {
+                        bool accepted =
+                            await AddPendingMutationAsync(
+                            ReviewedMetadataMutationIntent.Create(
+                                directPlan),
+                            _cancellation.Token);
+                        if (!accepted)
+                        {
+                            SetFailure(
+                                "Workbench.Status.PendingChangesBlocked",
+                                L(
+                                    "Workbench.Dialog.PendingConflict.Message"));
+                            return;
+                        }
+                    }
+                }
+                if (!TryPrevalidatePendingMutations(
+                        out preflightFailure))
+                {
+                    SetFailure(
+                        "Workbench.Status.PendingChangesBlocked",
+                        preflightFailure);
+                    return;
+                }
                 if (_plan is not null)
                 {
                     MetadataPreviewRowBuilder.Populate(
@@ -1650,6 +1881,7 @@ public partial class WorkbenchViewModel :
                             await _inspector.LoadAsync(
                                 _inspector.Selection);
                         changed += result.ChangedFiles;
+                        _metadataIntents.Clear();
                         _plan = null;
                         PreviewChanges.Clear();
                         PendingOperations.Clear();
@@ -1713,18 +1945,22 @@ public partial class WorkbenchViewModel :
                             !applied.Contains(
                                 file.Path)),
                     ];
-                    _plan = retained.Length == 0
-                        ? null
-                        : _plan with
-                        {
-                            Files = retained,
-                        };
+                    RetainMetadataPlansForPaths(
+                        retained.Select(file =>
+                            file.Path));
                 }
             }
 
+            if (_fileOperationPlans.Count > 0)
+                changed +=
+                    await ApplyPendingFileOperationsAsync(
+                        progress,
+                        _cancellation!.Token);
+
             RebuildPendingChanges();
             HasApplicablePreview =
-                _transcodePlans.Count > 0;
+                _transcodePlans.Count > 0 ||
+                _fileOperationPlans.Count > 0;
             SetCountStatus(
                 "Workbench.Status.Applied",
                 changed);
@@ -1750,6 +1986,467 @@ public partial class WorkbenchViewModel :
         }
     }
 
+    private bool TryPrevalidatePendingMutations(
+        out string? failure)
+    {
+        failure = null;
+        if (_fileOperationPlans.Count > 0 &&
+            _fileOperations is null)
+        {
+            failure =
+                L("Workbench.Dialog.PendingConflict.Message");
+            return false;
+        }
+        if (_transcodePlans.Count > 0 &&
+            _transcodes is null)
+        {
+            failure =
+                L("Workbench.Dialog.PendingConflict.Message");
+            return false;
+        }
+        OperationIssue? metadataBlocker = _plan?.Files
+            .SelectMany(file => file.Issues)
+            .FirstOrDefault(issue =>
+                issue.Severity ==
+                OperationIssueSeverity.Blocker);
+        if (metadataBlocker is not null)
+        {
+            failure = metadataBlocker.Message;
+            return false;
+        }
+
+        foreach (ReviewedFileOperationPlan plan in
+                 OrderedFileOperationPlans())
+        {
+            OperationIssue? blocker = plan.MutationPlan.Issues
+                .FirstOrDefault(issue =>
+                    issue.Severity ==
+                    OperationIssueSeverity.Blocker);
+            if (blocker is not null ||
+                !plan.CanApply ||
+                plan.MutationPlan.Actions.Count == 0)
+            {
+                failure = blocker?.Message ??
+                    L("Workbench.Dialog.PendingConflict.Message");
+                return false;
+            }
+            foreach (FileMutationAction action in
+                     plan.MutationPlan.Actions)
+            {
+                if (!SnapshotMatches(
+                        action.ExpectedSource) ||
+                    !SnapshotMatches(
+                        action.ExpectedDestination))
+                {
+                    failure =
+                        $"A reviewed path changed before apply: " +
+                        $"{action.SourcePath}";
+                    return false;
+                }
+            }
+            if (!PolicyMatches(
+                    plan.MutationPlan))
+            {
+                failure =
+                    "The library policy changed after preview. " +
+                    "Preview the operation again before applying it.";
+                return false;
+            }
+        }
+
+        foreach (AudioTranscodePlan plan in
+                 OrderedTranscodePlans())
+        {
+            OperationIssue? blocker = plan.Issues
+                .Concat(plan.Items.SelectMany(item =>
+                    item.Issues))
+                .FirstOrDefault(issue =>
+                    issue.Severity ==
+                    OperationIssueSeverity.Blocker);
+            if (blocker is not null ||
+                plan.Items.Any(item =>
+                    !item.CanApply))
+            {
+                failure = blocker?.Message ??
+                    L("Workbench.Dialog.PendingConflict.Message");
+                return false;
+            }
+            foreach (AudioTranscodePlanItem item in
+                     plan.Items)
+            {
+                if (!SnapshotMatches(
+                        item.SourceSnapshot) ||
+                    !SnapshotMatches(
+                        item.DestinationSnapshot) ||
+                    (!item.Sidecars.IsDefaultOrEmpty &&
+                     item.Sidecars.Any(sidecar =>
+                         !SnapshotMatches(
+                             sidecar.DestinationSnapshot))))
+                {
+                    failure =
+                        $"A reviewed path changed before apply: " +
+                        $"{item.SourcePath}";
+                    return false;
+                }
+            }
+        }
+
+        foreach (ReviewedMediaMutationUnit unit in
+                 PendingMutationUnits)
+        {
+            if (!unit.MutationKinds.Contains(
+                    ReviewedMediaMutationKind
+                        .FileOperation) ||
+                !unit.MutationKinds.Contains(
+                    ReviewedMediaMutationKind
+                        .Transcode))
+                continue;
+            AudioTranscodePlan? transcode =
+                _transcodePlans.FirstOrDefault(plan =>
+                    plan.Items.Any(item =>
+                        PathComparer.Equals(
+                            item.SourcePath,
+                            unit.SourcePath)));
+            if (transcode?.Request.Destination.Mode ==
+                AudioTranscodeDestinationMode
+                    .ReplaceOriginal)
+            {
+                failure =
+                    L("Workbench.Dialog.PendingConflict.Message");
+                return false;
+            }
+        }
+
+        var destinations = new HashSet<string>(
+            PathComparer);
+        foreach (string destination in
+                 _fileOperationPlans
+                     .SelectMany(plan =>
+                         plan.MutationPlan.Actions)
+                     .Where(action =>
+                         action.Kind is
+                             FileMutationKind.Copy or
+                             FileMutationKind.Move or
+                             FileMutationKind.Replace or
+                             FileMutationKind.Write or
+                             FileMutationKind
+                                 .ReplaceGenerated)
+                     .Select(action =>
+                         action.DestinationPath)
+                     .Concat(
+                         _transcodePlans
+                             .SelectMany(plan =>
+                                 plan.Items)
+                             .SelectMany(item =>
+                                 new[]
+                                 {
+                                     item.DestinationPath,
+                                 }.Concat(
+                                     item.Sidecars.IsDefaultOrEmpty
+                                         ? []
+                                         : item.Sidecars.Select(
+                                             sidecar =>
+                                                 sidecar
+                                                     .DestinationPath)))))
+        {
+            string normalized =
+                Path.GetFullPath(destination);
+            if (!destinations.Add(normalized))
+            {
+                failure =
+                    $"More than one reviewed change targets " +
+                    $"'{normalized}'.";
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private ImmutableArray<ReviewedMediaMutationUnit>
+        BuildPendingMutationUnits()
+    {
+        var kindsByPath = new Dictionary<
+            string,
+            HashSet<ReviewedMediaMutationKind>>(
+            PathComparer);
+        foreach (ReviewedMetadataMutationIntent intent in
+                 _metadataIntents)
+        {
+            foreach (string path in intent.Paths)
+                Add(path, intent.MutationKind);
+        }
+        foreach (WorkbenchTrackViewModel file in
+                 Files.Where(file => file.HasChanges))
+            Add(
+                file.Path,
+                ReviewedMediaMutationKind.Metadata);
+        if (_inspector?.HasUnsavedChanges == true)
+        {
+            foreach (string path in
+                     _inspector.Selection.Paths)
+                Add(
+                    path,
+                    ReviewedMediaMutationKind.Metadata);
+        }
+        foreach (ReviewedFileOperationItem item in
+                 _fileOperationPlans.SelectMany(plan =>
+                     plan.Items))
+            Add(
+                item.SourcePath,
+                ReviewedMediaMutationKind.FileOperation);
+        foreach (AudioTranscodePlanItem item in
+                 _transcodePlans.SelectMany(plan =>
+                     plan.Items))
+            Add(
+                item.SourcePath,
+                ReviewedMediaMutationKind.Transcode);
+
+        return
+        [
+            .. kindsByPath
+                .OrderBy(pair =>
+                    pair.Key,
+                    PathComparer)
+                .Select(pair =>
+                    new ReviewedMediaMutationUnit(
+                        pair.Key,
+                        [
+                            .. pair.Value.OrderBy(kind =>
+                                (int)kind),
+                        ])),
+        ];
+
+        void Add(
+            string path,
+            ReviewedMediaMutationKind kind)
+        {
+            string normalized =
+                Path.GetFullPath(path);
+            if (!kindsByPath.TryGetValue(
+                    normalized,
+                    out HashSet<
+                        ReviewedMediaMutationKind>? kinds))
+            {
+                kinds = [];
+                kindsByPath[normalized] = kinds;
+            }
+            kinds.Add(kind);
+        }
+    }
+
+    private IEnumerable<ReviewedFileOperationPlan>
+        OrderedFileOperationPlans() =>
+        _fileOperationPlans
+            .OrderBy(
+                plan => plan.Items
+                    .Select(item =>
+                        Path.GetFullPath(
+                            item.SourcePath))
+                    .OrderBy(path =>
+                        path,
+                        PathComparer)
+                    .FirstOrDefault() ?? "",
+                PathComparer)
+            .ThenBy(
+                plan => plan.Request.Kind);
+
+    private IEnumerable<AudioTranscodePlan>
+        OrderedTranscodePlans() =>
+        _transcodePlans
+            .OrderBy(
+                plan => plan.Items
+                    .Select(item =>
+                        Path.GetFullPath(
+                            item.SourcePath))
+                    .OrderBy(path =>
+                        path,
+                        PathComparer)
+                    .FirstOrDefault() ?? "",
+                PathComparer)
+            .ThenBy(plan =>
+                plan.Request.Settings.FormatId,
+                StringComparer.Ordinal);
+
+    private bool PolicyMatches(
+        FileMutationPlan plan)
+    {
+        if (plan.PolicyFingerprint is null)
+            return true;
+        AppConfigurationSnapshot snapshot =
+            _settings.GetSnapshot();
+        return snapshot.Configuration is
+            { } configuration &&
+            (plan.LibraryId is not Guid libraryId ||
+             configuration.LibraryId == libraryId) &&
+            StringComparer.Ordinal.Equals(
+                plan.PolicyFingerprint,
+                configuration.PolicySnapshot.Fingerprint);
+    }
+
+    private static bool SnapshotMatches(
+        OperationPathSnapshot? snapshot)
+    {
+        if (snapshot?.Path is not { } path)
+            return true;
+        bool fileExists = File.Exists(path);
+        bool directoryExists =
+            Directory.Exists(path);
+        bool exists =
+            fileExists || directoryExists;
+        if (exists != snapshot.Exists)
+            return false;
+        if (!exists)
+            return true;
+        if (directoryExists !=
+            snapshot.IsDirectory)
+            return false;
+        if (directoryExists)
+            return Directory
+                .GetLastWriteTimeUtc(path) ==
+                snapshot.LastWriteTimeUtc;
+        var info = new FileInfo(path);
+        return info.Length == snapshot.Length &&
+            info.LastWriteTimeUtc ==
+                snapshot.LastWriteTimeUtc;
+    }
+
+    private async Task RefreshPendingFileOperationPlansAsync(
+        IProgress<OperationProgress> progress,
+        CancellationToken ct)
+    {
+        if (_fileOperations is null ||
+            _fileOperationPlans.Count == 0)
+            return;
+
+        ReviewedFileOperationPlan[] requested =
+        [
+            .. OrderedFileOperationPlans(),
+        ];
+        var refreshed =
+            new List<ReviewedFileOperationPlan>(
+                requested.Length);
+        foreach (ReviewedFileOperationPlan plan in requested)
+            refreshed.Add(
+                await _fileOperations.PreviewAsync(
+                    plan.Request,
+                    progress,
+                    ct));
+
+        _fileOperationPlans.Clear();
+        _fileOperationPlans.AddRange(refreshed);
+        RebuildPendingChanges();
+    }
+
+    private async Task<int>
+        ApplyPendingFileOperationsAsync(
+            IProgress<OperationProgress> progress,
+            CancellationToken ct)
+    {
+        if (_fileOperations is null ||
+            _fileOperationPlans.Count == 0)
+            return 0;
+
+        ReviewedFileOperationPlan[] requested =
+        [
+            .. OrderedFileOperationPlans(),
+        ];
+        var refreshed =
+            new List<ReviewedFileOperationPlan>(
+                requested.Length);
+        // Earlier kinds in a composed unit can intentionally change the
+        // source timestamp. Re-preview every semantic file request after
+        // those stages commit, and validate the complete refreshed set
+        // before the first file-operation write.
+        foreach (ReviewedFileOperationPlan plan in
+                 requested)
+        {
+            ReviewedFileOperationPlan current =
+                await _fileOperations.PreviewAsync(
+                    plan.Request,
+                    progress,
+                    ct);
+            OperationIssue? blocker =
+                current.MutationPlan.Issues
+                    .FirstOrDefault(issue =>
+                        issue.Severity ==
+                        OperationIssueSeverity.Blocker);
+            if (!current.CanApply ||
+                current.MutationPlan.Actions.Count == 0)
+                throw new InvalidOperationException(
+                    blocker?.Message ??
+                    L(
+                        "Workbench.Dialog.PendingConflict.Message"));
+            refreshed.Add(current);
+        }
+
+        ReviewedFileOperationPlan[] pending =
+        [
+            .. refreshed,
+        ];
+        ReviewedFileOperationPlan first = pending[0];
+        ReviewedFileOperationItem[] items =
+        [
+            .. pending.SelectMany(plan => plan.Items)
+                .OrderBy(item =>
+                    item.SourcePath,
+                    PathComparer)
+                .ThenBy(item =>
+                    item.DestinationPath ?? "",
+                    PathComparer),
+        ];
+        FileMutationAction[] actions =
+        [
+            .. pending.SelectMany(plan =>
+                    plan.MutationPlan.Actions)
+                .OrderBy(action =>
+                    action.SourcePath,
+                    PathComparer)
+                .ThenBy(action =>
+                    action.DestinationPath,
+                    PathComparer)
+                .ThenBy(action =>
+                    action.Kind),
+        ];
+        OperationIssue[] issues =
+        [
+            .. pending.SelectMany(plan =>
+                    plan.MutationPlan.Issues)
+                .OrderBy(issue =>
+                    issue.Path ?? "",
+                    PathComparer)
+                .ThenBy(issue =>
+                    issue.Code,
+                    StringComparer.Ordinal),
+        ];
+        var combined = first with
+        {
+            Request = first.Request with
+            {
+                SourcePaths =
+                [
+                    .. items.Select(item =>
+                        item.SourcePath),
+                ],
+            },
+            Items = items,
+            MutationPlan =
+                first.MutationPlan with
+                {
+                    Actions = actions,
+                    Issues = issues,
+                },
+        };
+
+        await _fileOperations.ApplyAsync(
+            combined,
+            progress,
+            ct);
+        foreach (ReviewedFileOperationPlan plan in pending)
+            await RefreshAfterFileOperationAsync(plan);
+        _fileOperationPlans.Clear();
+        return actions.Length;
+    }
+
     private async Task<PendingTranscodeApplyOutcome>
         ApplyPendingTranscodesAsync(
         IProgress<OperationProgress> progress,
@@ -1765,7 +2462,7 @@ public partial class WorkbenchViewModel :
         try
         {
             foreach (AudioTranscodePlan plan in
-                     _transcodePlans)
+                     OrderedTranscodePlans())
                 stages.Add(
                     sourceOverrides is { Count: > 0 }
                         ? await _transcodes
@@ -2058,6 +2755,7 @@ public partial class WorkbenchViewModel :
     {
         if (_plan is null &&
             PendingChanges.Count == 0 &&
+            _fileOperationPlans.Count == 0 &&
             _transcodePlans.Count == 0)
             return;
 
@@ -2066,13 +2764,16 @@ public partial class WorkbenchViewModel :
             file.RevertPendingChanges();
         if (_inspector?.HasUnsavedChanges == true)
             await _inspector.DiscardPendingChangesAsync();
+        _fileOperationPlans.Clear();
         _transcodePlans.Clear();
         CancelPlan();
         SetStatus("Workbench.Status.PendingReverted");
         NotifySessionChanged();
     }
 
-    private bool CanRevertPendingChanges() => !IsBusy;
+    private bool CanRevertPendingChanges() =>
+        !IsBusy &&
+        HasPendingChanges;
 
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task UndoAsync()
@@ -2659,7 +3360,7 @@ public partial class WorkbenchViewModel :
                     releaseTitle),
                 progress,
                 ct);
-        });
+        }, ReviewedMediaMutationKind.Artwork);
         if (_plan is not null)
         {
             SetStatus(
@@ -3120,7 +3821,7 @@ public partial class WorkbenchViewModel :
                     releaseTitle),
                 progress,
                 ct);
-        });
+        }, ReviewedMediaMutationKind.Artwork);
         if (_plan is not null)
         {
             SetStatus(
@@ -3165,7 +3866,7 @@ public partial class WorkbenchViewModel :
                 L("Workbench.Operation.ReplaceFrontCover"),
                 progress,
                 ct);
-        });
+        }, ReviewedMediaMutationKind.Artwork);
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewSelectedArtwork))]
@@ -3184,7 +3885,8 @@ public partial class WorkbenchViewModel :
                 edits,
                 L("Workbench.Operation.RemoveFrontCover"),
                 progress,
-                ct));
+                ct),
+            ReviewedMediaMutationKind.Artwork);
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewSelectedArtwork))]
@@ -3202,7 +3904,8 @@ public partial class WorkbenchViewModel :
                 edits,
                 L("Workbench.Operation.RemoveAllArtwork"),
                 progress,
-                ct));
+                ct),
+            ReviewedMediaMutationKind.Artwork);
     }
 
     [RelayCommand(CanExecute = nameof(CanAddStagedArtwork))]
@@ -3343,7 +4046,8 @@ public partial class WorkbenchViewModel :
                     "Workbench.Operation.EditEmbeddedArtwork",
                     targets.Count),
                 progress,
-                ct));
+                ct),
+            ReviewedMediaMutationKind.Artwork);
     }
 
     [RelayCommand(CanExecute = nameof(CanBuildReleaseMapping))]
@@ -3489,7 +4193,7 @@ public partial class WorkbenchViewModel :
     {
         if (!HasUnsavedChanges)
             return Task.FromResult(true);
-        return _dialogs.ConfirmAsync(
+        return _dialogs.ConfirmDestructiveAsync(
             L("Workbench.Dialog.Leave.Title"),
             L("Workbench.Dialog.Leave.Message"),
             L("Workbench.Dialog.Leave.Confirm"));
@@ -3525,45 +4229,6 @@ public partial class WorkbenchViewModel :
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
-    }
-
-    private void OnInspectorFilesChanged()
-    {
-        if (_inspector is null || _inspector.Selection.Paths.Count == 0 ||
-            IsBusy)
-            return;
-        _ = ReloadAfterInspectorSaveAsync(
-            _inspector.Selection.Paths.ToArray());
-    }
-
-    private async Task ReloadAfterInspectorSaveAsync(
-        IReadOnlyList<string> paths)
-    {
-        BeginOperation(
-            L("Workbench.Activity.ReloadingInspectorChanges"));
-        try
-        {
-            await ReloadAsync(paths, CreateProgress(), _cancellation!.Token);
-            SetCountStatus(
-                "Workbench.Status.InspectorChangesReloaded",
-                paths.Count);
-        }
-        catch (OperationCanceledException)
-        {
-            SetStatus(
-                "Workbench.Status.InspectorReloadCancelled");
-        }
-        catch (Exception error)
-        {
-            SetFailure(
-                "Workbench.Status.InspectorReloadFailed",
-                error.Message);
-        }
-        finally
-        {
-            EndOperation();
-            NotifySessionChanged();
-        }
     }
 
     private void AddTrack(WorkbenchTrackViewModel track)
@@ -3974,7 +4639,7 @@ public partial class WorkbenchViewModel :
     {
         if (e.PropertyName == nameof(WorkbenchTrackViewModel.HasChanges))
         {
-            CancelPlan();
+            RebuildPendingChanges();
             ClearReleaseTrackMappings();
             NotifySessionChanged();
         }
@@ -3982,12 +4647,261 @@ public partial class WorkbenchViewModel :
 
     private void CancelPlan()
     {
-        _plan = null;
-        PreviewChanges.Clear();
-        PendingOperations.Clear();
+        _metadataIntents.Clear();
+        RecomposeMetadataPlan();
+    }
+
+    private void RecomposeMetadataPlan()
+    {
+        _plan = _metadataIntents.Count switch
+        {
+            0 => null,
+            1 => _metadataIntents[0].Plan,
+            _ => MetadataOperationPlanComposer.Combine(
+                L("Workbench.Operation.PendingChanges"),
+                [
+                    .. _metadataIntents.Select(intent =>
+                        intent.Plan),
+                ]),
+        };
+        if (_plan is null)
+        {
+            PreviewChanges.Clear();
+            PendingOperations.Clear();
+        }
+        else
+        {
+            MetadataPreviewRowBuilder.Populate(
+                PreviewChanges,
+                _plan,
+                _localization);
+            PendingMetadataOperationRowBuilder.Populate(
+                PendingOperations,
+                _plan,
+                _localization);
+        }
         HasApplicablePreview =
-            _transcodePlans.Count > 0;
+            _plan?.CanApply == true ||
+            _transcodePlans.Count > 0 ||
+            _fileOperationPlans.Count > 0;
         RebuildPendingChanges();
+    }
+
+    private void RetainMetadataPlansForPaths(
+        IEnumerable<string> paths)
+    {
+        HashSet<string> retained =
+            paths.ToHashSet(PathComparer);
+        for (int index = _metadataIntents.Count - 1;
+             index >= 0;
+             index--)
+        {
+            ReviewedMetadataMutationIntent intent =
+                _metadataIntents[index];
+            ImmutableArray<MetadataFilePlan> files =
+            [
+                .. intent.Plan.Files.Where(file =>
+                    retained.Contains(file.Path)),
+            ];
+            if (files.IsDefaultOrEmpty)
+            {
+                _metadataIntents.RemoveAt(index);
+                continue;
+            }
+            MetadataOperationPlan plan =
+                intent.Plan with
+                {
+                    Files = files,
+                };
+            _metadataIntents[index] =
+                intent with
+                {
+                    Paths =
+                    [
+                        .. files.Select(file =>
+                            file.Path),
+                    ],
+                    Plan = plan,
+                };
+        }
+        RecomposeMetadataPlan();
+    }
+
+    private static bool MetadataPlansConflict(
+        MetadataOperationPlan existing,
+        MetadataOperationPlan incoming)
+    {
+        Dictionary<
+            string,
+            Dictionary<string, string>> existingMutations =
+                BuildMetadataMutationMap(existing);
+        foreach ((string path,
+                     Dictionary<string, string> incomingSlots)
+                 in BuildMetadataMutationMap(incoming))
+        {
+            if (!existingMutations.TryGetValue(
+                    path,
+                    out Dictionary<string, string>?
+                        existingSlots))
+                continue;
+            foreach ((string slot, string fingerprint)
+                     in incomingSlots)
+            {
+                if (existingSlots.TryGetValue(
+                        slot,
+                        out string? existingFingerprint) &&
+                    !StringComparer.Ordinal.Equals(
+                        existingFingerprint,
+                        fingerprint))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool MetadataPlanFullyRepresents(
+        MetadataOperationPlan existing,
+        MetadataOperationPlan incoming)
+    {
+        Dictionary<
+            string,
+            Dictionary<string, string>> existingMutations =
+                BuildMetadataMutationMap(existing);
+        Dictionary<
+            string,
+            Dictionary<string, string>> incomingMutations =
+                BuildMetadataMutationMap(incoming);
+        bool foundMutation = false;
+        foreach ((string path,
+                     Dictionary<string, string> incomingSlots)
+                 in incomingMutations)
+        {
+            if (!existingMutations.TryGetValue(
+                    path,
+                    out Dictionary<string, string>?
+                        existingSlots))
+                return false;
+            foreach ((string slot, string fingerprint)
+                     in incomingSlots)
+            {
+                foundMutation = true;
+                if (!existingSlots.TryGetValue(
+                        slot,
+                        out string? existingFingerprint) ||
+                    !StringComparer.Ordinal.Equals(
+                        existingFingerprint,
+                        fingerprint))
+                    return false;
+            }
+        }
+        return foundMutation;
+    }
+
+    private static Dictionary<
+        string,
+        Dictionary<string, string>>
+        BuildMetadataMutationMap(
+            MetadataOperationPlan plan)
+    {
+        var result = new Dictionary<
+            string,
+            Dictionary<string, string>>(
+            PathComparer);
+        foreach (MetadataFilePlan file in
+                 plan.Files.Where(file =>
+                     file.HasChanges))
+        {
+            if (!result.TryGetValue(
+                    file.Path,
+                    out Dictionary<string, string>? slots))
+            {
+                slots = new(
+                    StringComparer.OrdinalIgnoreCase);
+                result[file.Path] = slots;
+            }
+
+            foreach (MetadataFieldDifference difference in
+                     file.Differences)
+                slots[
+                    "field:" +
+                    MetadataGridValueKey.For(
+                        difference.Field)] =
+                    JsonSerializer.Serialize(
+                        difference.After);
+            foreach (MetadataValueEdit edit in file.Edits)
+                slots[
+                    "field:" +
+                    MetadataGridValueKey.For(
+                        edit.Field)] =
+                    JsonSerializer.Serialize(
+                        edit.Values);
+
+            if (file.ArtworkEdit is { } artwork)
+            {
+                slots["artwork"] =
+                    JsonSerializer.Serialize(
+                        artwork.Images.Select(image =>
+                            new
+                            {
+                                image.Type,
+                                image.MimeType,
+                                image.Description,
+                                Hash =
+                                    Convert.ToHexString(
+                                        System.Security.Cryptography
+                                            .SHA256.HashData(
+                                                image.Data)),
+                            }));
+            }
+            else if (file.ArtworkDifference is { } artworkDifference)
+            {
+                slots["artwork"] =
+                    JsonSerializer.Serialize(
+                        artworkDifference.After.Select(image =>
+                            new
+                            {
+                                image.Type,
+                                image.MimeType,
+                                image.Description,
+                                image.Size,
+                                image.Hash,
+                            }));
+            }
+
+            if (!file.TagLayerEdits.IsDefaultOrEmpty)
+            {
+                foreach (TagLayerEdit edit in
+                         file.TagLayerEdits)
+                    slots[$"tag-layer:{edit.Kind}"] =
+                        JsonSerializer.Serialize(
+                            new
+                            {
+                                edit.Mode,
+                                edit.CopyMode,
+                            });
+            }
+            if (!file.TagLayerConversions.IsDefaultOrEmpty)
+            {
+                foreach (TagLayerConversionEdit conversion in
+                         file.TagLayerConversions)
+                {
+                    string fingerprint =
+                        JsonSerializer.Serialize(
+                            conversion);
+                    slots[
+                        $"tag-layer:{conversion.Source}"] =
+                        fingerprint;
+                    slots[
+                        $"tag-layer:{conversion.Target}"] =
+                        fingerprint;
+                }
+            }
+            if (file.Id3VersionEdit is { } id3)
+                slots[
+                    $"tag-layer:{TagLayerKind.Id3v2}"] =
+                    JsonSerializer.Serialize(id3);
+        }
+        return result;
     }
 
     private bool HasDirectPendingChanges =>
@@ -3997,33 +4911,98 @@ public partial class WorkbenchViewModel :
     private void RebuildPendingChanges()
     {
         PendingChanges.Clear();
-        if (PreviewChanges.Count > 0)
+        foreach (MetadataPreviewRow row in PreviewChanges)
+            PendingChanges.Add(row);
+        foreach (MetadataPreviewRow row in Files
+                     .Where(file => file.HasChanges)
+                     .SelectMany(file =>
+                         file.CreatePendingChangeRows()))
         {
-            foreach (MetadataPreviewRow row in PreviewChanges)
+            if (!PendingChanges.Any(existing =>
+                    PendingRowsAreEquivalent(existing, row)))
                 PendingChanges.Add(row);
         }
-        else
+        if (_inspector is not null)
         {
-            foreach (MetadataPreviewRow row in Files
-                         .Where(file => file.HasChanges)
-                         .SelectMany(file =>
-                             file.CreatePendingChangeRows()))
-                PendingChanges.Add(row);
-            if (_inspector is not null)
-            {
-                foreach (MetadataPreviewRow row in
+            foreach (MetadataPreviewRow row in
                          _inspector.CreatePendingChangeRows())
+                if (!PendingChanges.Any(existing =>
+                        PendingRowsAreEquivalent(existing, row)))
                     PendingChanges.Add(row);
-            }
         }
+        foreach (ReviewedFileOperationItem item in
+                 OrderedFileOperationPlans()
+                     .SelectMany(plan =>
+                         plan.Items)
+                     .OrderBy(item =>
+                         item.SourcePath,
+                         PathComparer)
+                     .ThenBy(item =>
+                         item.DestinationPath ?? "",
+                         PathComparer))
+            PendingChanges.Add(new(
+                Path.GetFileName(item.SourcePath),
+                L("Workbench.PendingChanges.FileOperation"),
+                item.SourcePath,
+                item.DestinationPath ??
+                L("Workbench.PendingChanges.NoDestination"),
+                FormatPendingDiagnostics(item.Issues)));
         foreach (AudioTranscodePlanItem item in
-                 _transcodePlans.SelectMany(plan =>
-                     plan.Items))
+                 OrderedTranscodePlans()
+                     .SelectMany(plan =>
+                         plan.Items)
+                     .OrderBy(item =>
+                         item.SourcePath,
+                         PathComparer)
+                     .ThenBy(item =>
+                         item.DestinationPath,
+                         PathComparer))
             PendingChanges.Add(new(
                 Path.GetFileName(item.SourcePath),
                 L("Transcode.Pending.Field"),
                 item.SourcePath,
-                item.DestinationPath));
+                item.DestinationPath,
+                FormatPendingDiagnostics(item.Issues)));
+        OnPropertyChanged(
+            nameof(HasPendingChanges));
+        OnPropertyChanged(
+            nameof(PendingMutationUnits));
+        RevertPendingChangesCommand
+            .NotifyCanExecuteChanged();
+    }
+
+    private static bool PendingRowsAreEquivalent(
+        MetadataPreviewRow left,
+        MetadataPreviewRow right) =>
+        StringComparer.OrdinalIgnoreCase.Equals(
+            left.File,
+            right.File) &&
+        StringComparer.OrdinalIgnoreCase.Equals(
+            left.Field,
+            right.Field) &&
+        StringComparer.Ordinal.Equals(
+            left.Before,
+            right.Before) &&
+        StringComparer.Ordinal.Equals(
+            left.After,
+            right.After);
+
+    private static string? FormatPendingDiagnostics(
+        IEnumerable<OperationIssue> issues)
+    {
+        string[] messages =
+        [
+            .. issues
+                .Select(issue => issue.Message)
+                .Where(message =>
+                    !string.IsNullOrWhiteSpace(message))
+                .Distinct(StringComparer.Ordinal),
+        ];
+        return messages.Length == 0
+            ? null
+            : string.Join(
+                Environment.NewLine,
+                messages);
     }
 
     private async Task<MetadataOperationPlan?>
@@ -4143,16 +5122,6 @@ public partial class WorkbenchViewModel :
         RemoveCurrentCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
-    }
-
-    private string? FileOperationPreflightMessage()
-    {
-        if (_plan is not null ||
-            _stagedArtworkDirty ||
-            EditTargets.Any(file => file.HasChanges))
-            return L(
-                "Workbench.FileOperations.PendingMetadataPreflight");
-        return null;
     }
 
     private async Task RefreshAfterFileOperationAsync(
@@ -4434,6 +5403,7 @@ public partial class WorkbenchViewModel :
         !IsBusy &&
         (HasApplicablePreview && _plan is not null ||
          HasDirectPendingChanges ||
+         _fileOperationPlans.Count > 0 ||
          _transcodePlans.Count > 0);
     private bool CanUndo() =>
         !IsBusy &&

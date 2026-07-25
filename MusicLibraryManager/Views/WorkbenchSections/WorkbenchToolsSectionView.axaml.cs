@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using System.Collections.Specialized;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
 
@@ -8,16 +9,27 @@ namespace MusicLibraryManager.Views.WorkbenchSections;
 public partial class WorkbenchToolsSectionView : UserControl
 {
     private readonly ILocalizationService _localization;
+    private readonly WorkbenchViewModel _viewModel;
 
     public WorkbenchToolsSectionView()
     {
         InitializeComponent();
         _localization = App.GetService<ILocalizationService>();
+        _viewModel = App.GetService<WorkbenchViewModel>();
         ConfigureColumns();
         AttachedToVisualTree += (_, _) =>
+        {
             _localization.CultureChanged += OnCultureChanged;
+            _viewModel.ExternalToolInvocations.CollectionChanged +=
+                OnExternalToolInvocationsChanged;
+            ApplyPreviewVisibility();
+        };
         DetachedFromVisualTree += (_, _) =>
+        {
             _localization.CultureChanged -= OnCultureChanged;
+            _viewModel.ExternalToolInvocations.CollectionChanged -=
+                OnExternalToolInvocationsChanged;
+        };
         SizeChanged += (_, _) => ApplyResponsiveLayout();
     }
 
@@ -41,6 +53,23 @@ public partial class WorkbenchToolsSectionView : UserControl
 
     private void OnCultureChanged(object? sender, EventArgs e) =>
         ExternalToolInvocationGrid.RefreshLocalizedHeaders();
+
+    private void OnExternalToolInvocationsChanged(
+        object? sender,
+        NotifyCollectionChangedEventArgs e) =>
+        ApplyPreviewVisibility();
+
+    private void ApplyPreviewVisibility()
+    {
+        bool hasPreview =
+            _viewModel.ExternalToolInvocations.Count > 0;
+        ExternalToolInvocationGrid.IsVisible =
+            hasPreview;
+        ReviewedPanel.RowDefinitions[1].Height =
+            hasPreview
+                ? GridLength.Star
+                : new GridLength(0);
+    }
 
     private void ApplyResponsiveLayout()
     {

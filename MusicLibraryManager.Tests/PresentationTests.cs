@@ -575,7 +575,7 @@ public sealed class PresentationTests
     }
 
     [Fact]
-    public async Task Selection_inspector_detects_mixed_values_and_writes_only_modified_fields()
+    public async Task Selection_inspector_detects_mixed_values_and_previews_only_modified_fields()
     {
         var media = new FakeMediaService(
             Model(@"C:\one.flac", "One", "Artist A"),
@@ -594,9 +594,14 @@ public sealed class PresentationTests
         Assert.True(artist.IsMixed);
 
         artist.Value = "Canonical Artist";
-        await inspector.SaveTagsCommand.ExecuteAsync(null);
+        MetadataOperationPlan? plan =
+            await inspector.PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current.CancellationToken);
 
         Assert.Null(writer.Edits);
+        Assert.NotNull(plan);
+        Assert.Null(operations.AppliedPlan);
         Assert.Equal(2, operations.PreviewedValueEdits.Count);
         MetadataValueEdit edit = Assert.Single(
             operations.PreviewedValueEdits[
@@ -607,9 +612,7 @@ public sealed class PresentationTests
         Assert.Equal(
             ["Canonical Artist"],
             edit.Values);
-        AppActivity activity = Assert.Single(activities.Activities);
-        Assert.Equal(AppActivityState.Completed, activity.State);
-        Assert.False(activity.CanCancel);
+        Assert.Empty(activities.Activities);
     }
 
     [Fact]
@@ -833,10 +836,13 @@ public sealed class PresentationTests
             .Select(index => Track("Shared artist", "Album", $"Track {index}", "FLAC", $@"C:\Music\{index}.flac"))
             .ToArray();
         var writer = new FakeTagWriter();
+        var operations =
+            new FakeMetadataOperationService();
         var inspector = new SelectionInspectorViewModel(
             new FakeMediaService(), new FakeLibrary(records), writer, new FakeArtworkService(),
             new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
             new FakeThumbnails(), new AppActivityService(),
+            operations,
             metadataDocuments:
                 new FakeMetadataDocumentService());
 
@@ -852,11 +858,19 @@ public sealed class PresentationTests
         Assert.False(genre.IsModified);
 
         genre.Value = "Ambient";
-        await inspector.SaveTagsCommand.ExecuteAsync(null);
+        MetadataOperationPlan? plan =
+            await inspector.PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current.CancellationToken);
 
-        TagEdit edit = Assert.Single(writer.Edits!);
-        Assert.Equal(TagFields.Genre, edit.Field);
-        Assert.Equal("Ambient", edit.Value);
+        Assert.NotNull(plan);
+        Assert.Null(writer.Edits);
+        Assert.Null(operations.AppliedPlan);
+        MetadataValueEdit edit = Assert.Single(
+            operations.PreviewedValueEdits[
+                records[0].Path]);
+        Assert.Equal(TagFields.Genre, edit.Field.KnownField);
+        Assert.Equal(["Ambient"], edit.Values);
     }
 
     [Fact]
@@ -1188,7 +1202,7 @@ public sealed class PresentationTests
     }
 
     [Fact]
-    public async Task Selection_inspector_saves_description_edits_and_individual_removals()
+    public async Task Selection_inspector_previews_description_edits_and_individual_removals()
     {
         const string path = @"C:\one.flac";
         var library = new FakeLibrary([]);
@@ -1214,9 +1228,13 @@ public sealed class PresentationTests
         ArtworkPreviewItem front = inspector.ArtworkItems[0];
         front.Description = "Restored front scan";
         inspector.RemoveArtworkItem(inspector.ArtworkItems[1]);
-        Assert.True(inspector.SaveTagsCommand.CanExecute(null));
-        await inspector.SaveTagsCommand.ExecuteAsync(null);
+        MetadataOperationPlan? plan =
+            await inspector.PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current.CancellationToken);
 
+        Assert.NotNull(plan);
+        Assert.Null(operations.AppliedPlan);
         Assert.Null(artworkService.SavedImages);
         ArtworkInput saved = Assert.Single(
             operations.PreviewedArtworkSets[
@@ -1227,7 +1245,7 @@ public sealed class PresentationTests
     }
 
     [Fact]
-    public async Task Selection_inspector_saves_tags_and_artwork_as_one_reviewed_plan()
+    public async Task Selection_inspector_previews_tags_and_artwork_as_one_reviewed_plan()
     {
         const string path = @"C:\one.flac";
         var library = new FakeLibrary([]);
@@ -1273,10 +1291,12 @@ public sealed class PresentationTests
         Assert.Single(inspector.ArtworkItems)
             .Description = "Reviewed cover";
 
-        Assert.True(
-            inspector.SaveTagsCommand.CanExecute(null));
-        await inspector.SaveTagsCommand.ExecuteAsync(null);
+        MetadataOperationPlan? plan =
+            await inspector.PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current.CancellationToken);
 
+        Assert.NotNull(plan);
         Assert.Equal(
             ["Reviewed title"],
             Assert.Single(
@@ -1287,12 +1307,13 @@ public sealed class PresentationTests
             Assert.Single(
                 operations.PreviewedArtworkSets[path]
                     .Images).Description);
-        MetadataFilePlan applied =
+        MetadataFilePlan previewed =
             Assert.Single(
-                operations.AppliedPlan!.Files);
-        Assert.Single(applied.Edits);
-        Assert.NotNull(applied.ArtworkEdit);
-        Assert.NotNull(applied.ArtworkDifference);
+                plan!.Files);
+        Assert.Single(previewed.Edits);
+        Assert.NotNull(previewed.ArtworkEdit);
+        Assert.NotNull(previewed.ArtworkDifference);
+        Assert.Null(operations.AppliedPlan);
     }
 
     [Fact]
@@ -1356,7 +1377,7 @@ public sealed class PresentationTests
     }
 
     [Fact]
-    public async Task Selection_inspector_routes_artwork_shortcuts_through_reviewed_plans()
+    public async Task Selection_inspector_artwork_shortcuts_create_drafts_without_applying()
     {
         const string path = @"C:\one.flac";
         var library = new FakeLibrary([]);
@@ -1400,18 +1421,19 @@ public sealed class PresentationTests
         await inspector.LoadAsync(
             new SelectionContext([path]));
 
-        await inspector.ReplaceArtworkCommand
-            .ExecuteAsync(null);
-
-        Assert.Equal(
-            ArtworkValueEditMode.ReplaceFrontCover,
-            operations.PreviewedArtworkEdits[
-                path].Mode);
-
         inspector.ArtworkMaxDimension = 512;
         await inspector.ScrubArtworkCommand
             .ExecuteAsync(null);
 
+        Assert.True(inspector.HasPendingArtworkChanges);
+        Assert.Null(operations.AppliedPlan);
+        Assert.Empty(operations.PreviewedArtworkSets);
+        MetadataOperationPlan? optimizePlan =
+            await inspector.PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current.CancellationToken);
+
+        Assert.NotNull(optimizePlan);
         Assert.Equal(
             512,
             operations.PreviewedArtworkSets[
@@ -1419,14 +1441,25 @@ public sealed class PresentationTests
         Assert.Single(
             operations.PreviewedArtworkSets[
                 path].Images);
+        Assert.Null(operations.AppliedPlan);
 
+        await inspector.DiscardPendingChangesAsync();
         await inspector.RemoveArtworkCommand
             .ExecuteAsync(null);
 
-        Assert.Equal(
-            ArtworkValueEditMode.RemoveAll,
-            operations.PreviewedArtworkEdits[
-                path].Mode);
+        Assert.Empty(inspector.ArtworkItems);
+        Assert.True(inspector.HasPendingArtworkChanges);
+        Assert.Null(operations.AppliedPlan);
+        MetadataOperationPlan? removePlan =
+            await inspector.PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current.CancellationToken);
+
+        Assert.NotNull(removePlan);
+        Assert.Empty(
+            operations.PreviewedArtworkSets[
+                path].Images);
+        Assert.Null(operations.AppliedPlan);
     }
 
     [Fact]
@@ -1447,7 +1480,8 @@ public sealed class PresentationTests
         ArtworkPreviewItem added = Assert.Single(inspector.ArtworkItems);
         Assert.Equal(ID3v2Util.APICType.FrontCover, added.Type);
         Assert.Equal([7, 8, 9], added.Data);
-        Assert.True(inspector.SaveArtworkSetCommand.CanExecute(null));
+        Assert.True(inspector.HasUnsavedChanges);
+        Assert.Single(inspector.CreatePendingChangeRows());
     }
 
     [Fact]
@@ -1483,7 +1517,8 @@ public sealed class PresentationTests
         Assert.Equal("Original booklet scan", item.Description);
         Assert.Equal("image/jpeg", item.MimeType);
         Assert.Equal([9, 8, 7], item.Data);
-        Assert.True(inspector.SaveArtworkSetCommand.CanExecute(null));
+        Assert.True(inspector.HasUnsavedChanges);
+        Assert.Single(inspector.CreatePendingChangeRows());
     }
 
     [Fact]
@@ -2176,7 +2211,8 @@ public sealed class PresentationTests
         var viewModel = new FieldsDialogViewModel(
             documents,
             operations,
-            [@"C:\one.flac", @"C:\two.flac"]);
+            [@"C:\one.flac", @"C:\two.flac"],
+            (_, _) => Task.FromResult(true));
         await viewModel.Loading;
 
         FieldRow grouping =
@@ -2216,7 +2252,13 @@ public sealed class PresentationTests
             "field changes: 5",
             viewModel.StatusMessage);
         Assert.Contains(
-            "recovery journals",
+            "Nothing has been written",
+            viewModel.StatusMessage);
+        Assert.Contains(
+            "Review changes",
+            viewModel.StatusMessage);
+        Assert.Contains(
+            "shared pending-changes drawer",
             viewModel.StatusMessage);
         await viewModel.SaveCommand.ExecuteAsync(null);
 
@@ -2815,17 +2857,33 @@ public sealed class PresentationTests
         editor.GestureText = "CTRL+SHIFT+P";
         editor.SelectedCommand = editor.Commands.Single(choice =>
             choice.Command == WorkbenchShortcutCommand.Redo);
-        editor.SaveShortcutCommand.Execute(null);
 
         Assert.Single(store.Bindings);
-        Assert.Contains("already assigned", editor.Status,
+        Assert.Contains(
+            "already assigned",
+            editor.GestureValidationMessage,
             StringComparison.OrdinalIgnoreCase);
+        Assert.False(
+            editor.SaveShortcutCommand
+                .CanExecute(null));
 
         editor.GestureText = "Ctrl+K";
-        editor.SaveShortcutCommand.Execute(null);
 
         Assert.Single(store.Bindings);
-        Assert.Contains("reserved", editor.Status,
+        Assert.Contains(
+            "reserved",
+            editor.GestureValidationMessage,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.False(
+            editor.SaveShortcutCommand
+                .CanExecute(null));
+
+        editor.GestureText = "Ctrl+";
+        Assert.True(
+            editor.HasGestureValidationError);
+        Assert.Contains(
+            "modifier",
+            editor.GestureValidationMessage,
             StringComparison.OrdinalIgnoreCase);
     }
 

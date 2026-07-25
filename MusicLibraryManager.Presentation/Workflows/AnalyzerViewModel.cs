@@ -99,6 +99,18 @@ public partial class AnalyzerViewModel : ViewModelBase
     [ObservableProperty]
     private AnalysisRunViewModel? _selectedRun;
 
+    [ObservableProperty]
+    private DuplicateGroup? _selectedDuplicate;
+
+    [ObservableProperty]
+    private ArtistGroupViewModel? _selectedArtistGroup;
+
+    [ObservableProperty]
+    private AlbumMetadataMatrix? _selectedMatrix;
+
+    [ObservableProperty]
+    private ArtworkRepairItemViewModel? _selectedArtworkRepairItem;
+
     /// <summary>Fuzzy-distance threshold for the similar-artist check (AnalyzeMetadata's checkartists thresh).</summary>
     [ObservableProperty]
     private double _artistThreshold = 0.2;
@@ -277,7 +289,11 @@ public partial class AnalyzerViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _selectedArtworkRepairNode, value))
+            {
                 OnPropertyChanged(nameof(DisplayedArtworkRepairItems));
+                SelectedArtworkRepairItem =
+                    DisplayedArtworkRepairItems.FirstOrDefault();
+            }
         }
     }
 
@@ -551,6 +567,11 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(DisplayedRepairItems));
         OnPropertyChanged(nameof(DisplayedRepresentationItems));
         OnPropertyChanged(nameof(DisplayedItlRepairItems));
+        SelectedDuplicate = Duplicates.FirstOrDefault();
+        SelectedArtistGroup = ArtistGroups.FirstOrDefault();
+        SelectedMatrix = Matrices.FirstOrDefault();
+        SelectedArtworkRepairItem =
+            DisplayedArtworkRepairItems.FirstOrDefault();
         NotifySectionVisibility();
 
         if (value is not null)

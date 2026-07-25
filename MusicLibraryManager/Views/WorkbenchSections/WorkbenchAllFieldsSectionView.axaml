@@ -8,8 +8,23 @@
     <Grid x:Name="FieldListPanel"
           RowDefinitions="Auto,*"
           RowSpacing="8">
-      <TextBlock Classes="section-title"
-                 Text="{DynamicResource Loc.Workbench.AllFields.Title}" />
+      <Grid ColumnDefinitions="*,Auto"
+            ColumnSpacing="8">
+        <TextBlock Classes="section-title"
+                   Text="{DynamicResource Loc.Workbench.AllFields.Title}" />
+        <Button Grid.Column="1"
+                Classes="app"
+                Content="{DynamicResource Loc.Workbench.Action.New}">
+          <Button.Flyout>
+            <MenuFlyout>
+              <MenuItem Header="{DynamicResource Loc.Workbench.AllFields.Action.NewKnownField}"
+                        Click="OnBeginNewKnownField" />
+              <MenuItem Header="{DynamicResource Loc.Workbench.AllFields.Action.NewCustomField}"
+                        Click="OnBeginNewCustomField" />
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
+      </Grid>
       <controls:AppDataGrid x:Name="MetadataFieldsGrid"
                             Grid.Row="1"
                             MinHeight="180"
@@ -20,17 +35,23 @@
     <ScrollViewer x:Name="EditorScroll"
                   Grid.Column="2"
                   VerticalScrollBarVisibility="Auto">
-      <StackPanel Spacing="10">
+      <StackPanel Classes="content-stack">
+        <Button x:Name="AllFieldsBackButton"
+                Classes="app"
+                HorizontalAlignment="Left"
+                IsVisible="False"
+                Content="{DynamicResource Loc.Column.Back}"
+                Click="OnBackToFields" />
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.AllFields.OrderedValues}" />
         <TextBlock x:Name="SupportingText"
-                   Classes="muted"
+                   Classes="supporting"
                    TextWrapping="Wrap"
                    Text="{DynamicResource Loc.Workbench.AllFields.Description}" />
-        <StackPanel Spacing="4">
-          <TextBlock Classes="muted"
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
                      Text="{DynamicResource Loc.Workbench.AllFields.ExistingField}"
-                     FontSize="12"
+                     FontSize="{DynamicResource AppFontSizeCaption}"
                      FontWeight="SemiBold" />
           <TextBlock Text="{Binding SelectedMetadataField.Name}"
                      FontWeight="SemiBold" />
@@ -39,64 +60,74 @@
           <ComboBox Classes="app"
                     ItemsSource="{Binding KnownFieldChoices}"
                     DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding SelectedNewKnownField, Mode=TwoWay}" />
+                    SelectedItem="{Binding SelectedNewKnownField, Mode=TwoWay}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.AllFields.ExistingField}" />
           <Button Grid.Column="1"
                   Classes="app"
                   Content="{DynamicResource Loc.Workbench.AllFields.Action.NewKnownField}"
-                  Command="{Binding BeginNewKnownFieldCommand}" />
+                  Click="OnBeginNewKnownField" />
         </Grid>
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <TextBox Classes="app"
-                   Text="{Binding CustomFieldName, Mode=TwoWay}"
-                   PlaceholderText="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
-          <Button Grid.Column="1"
-                  Classes="app"
-                  Content="{DynamicResource Loc.Workbench.AllFields.Action.NewCustomField}"
-                  Command="{Binding BeginNewCustomFieldCommand}" />
-        </Grid>
-        <StackPanel Spacing="4">
-          <TextBlock Classes="muted"
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Classes="app"
+                     Text="{Binding CustomFieldName, Mode=TwoWay}"
+                     PlaceholderText="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
+            <Button Grid.Column="1"
+                    Classes="app"
+                    Content="{DynamicResource Loc.Workbench.AllFields.Action.NewCustomField}"
+                    Click="OnBeginNewCustomField" />
+          </Grid>
+        </StackPanel>
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
                      Text="{DynamicResource Loc.Workbench.AllFields.ValueAction}"
-                     FontSize="12"
+                     FontSize="{DynamicResource AppFontSizeCaption}"
                      FontWeight="SemiBold" />
           <ComboBox Classes="app"
                     ItemsSource="{Binding FieldEditModeChoices}"
                     DisplayMemberBinding="{Binding Label}"
                     SelectedValueBinding="{Binding Value}"
-                    SelectedValue="{Binding SelectedFieldEditMode, Mode=TwoWay}" />
+                    SelectedValue="{Binding SelectedFieldEditMode, Mode=TwoWay}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.AllFields.ValueAction}" />
         </StackPanel>
-        <TextBox x:Name="WorkbenchFieldValuesEditor"
-                 Classes="app"
-                 MinHeight="150"
-                 AcceptsReturn="True"
-                 TextWrapping="NoWrap"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                 Text="{Binding FieldValuesText, Mode=TwoWay}" />
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.AllFields.OrderedValues}" />
+          <TextBox x:Name="WorkbenchFieldValuesEditor"
+                   Classes="app"
+                   MinHeight="150"
+                   AcceptsReturn="True"
+                   TextWrapping="NoWrap"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   Text="{Binding FieldValuesText, Mode=TwoWay}"
+                   AutomationProperties.Name="{DynamicResource Loc.Workbench.AllFields.OrderedValues}" />
+        </StackPanel>
         <WrapPanel>
           <Button x:Name="CopyWorkbenchMetadataFieldButton"
                   Classes="app"
-                  Margin="0,0,8,6"
+                  Margin="0,0,8,8"
                   Content="{DynamicResource Loc.Workbench.AllFields.Action.Copy}"
-                  ToolTip.Tip="{DynamicResource Loc.Workbench.AllFields.Action.CopyTooltip}"
                   Command="{Binding CopyMetadataFieldCommand}" />
           <Button x:Name="PasteWorkbenchMetadataFieldButton"
                   Classes="app"
-                  Margin="0,0,8,6"
+                  Margin="0,0,8,8"
                   Content="{DynamicResource Loc.Workbench.AllFields.Action.PastePreview}"
-                  ToolTip.Tip="{DynamicResource Loc.Workbench.AllFields.Action.PastePreviewTooltip}"
                   Command="{Binding PasteMetadataFieldCommand}" />
           <Button Classes="app primary"
-                  Margin="0,0,8,6"
+                  Margin="0,0,8,8"
                   Content="{DynamicResource Loc.Workbench.AllFields.Action.Preview}"
                   Command="{Binding PreviewFieldValuesCommand}" />
         </WrapPanel>
         <Border Classes="status-banner info">
-          <StackPanel Spacing="2">
+          <StackPanel Spacing="4">
             <TextBlock Text="{Binding StatusText}"
                        TextWrapping="Wrap" />
             <controls:LocalizedFormatTextBlock
                 Classes="muted"
-                FontSize="11"
+                FontSize="{DynamicResource AppFontSizeCaption}"
                 TextWrapping="Wrap"
                 ResourceKey="Common.DiagnosticDetailFormat"
                 Value="{Binding StatusDiagnosticDetail}"

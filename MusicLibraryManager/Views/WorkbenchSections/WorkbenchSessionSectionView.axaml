@@ -3,32 +3,49 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
   <Grid Margin="0,4,0,0"
-        RowDefinitions="Auto,*,Auto,Auto"
+        RowDefinitions="Auto,*,Auto"
         RowSpacing="8">
     <WrapPanel>
       <Button x:Name="WorkbenchColumnsButton"
               Classes="app"
-              Margin="0,0,8,6"
+              Margin="0,0,8,8"
               Content="{DynamicResource Loc.Workbench.Session.Columns}"
               Click="OnColumnsClick" />
-      <Button x:Name="ImportDelimitedMetadataButton"
-              Classes="app"
-              Margin="0,0,8,6"
-              Content="{DynamicResource Loc.Workbench.Session.ImportDelimited}"
-              Command="{Binding ImportDelimitedMetadataCommand}" />
-      <ComboBox x:Name="ImportEmptyCellMode"
-                Classes="app"
-                Width="145"
-                Margin="0,0,8,6"
-                ItemsSource="{Binding ImportEmptyCellModeChoices}"
-                DisplayMemberBinding="{Binding Label}"
-                SelectedValueBinding="{Binding Value}"
-                SelectedValue="{Binding ImportEmptyCellMode, Mode=TwoWay}"
-                ToolTip.Tip="{DynamicResource Loc.Workbench.Session.EmptyCellTooltip}"
-                AutomationProperties.Name="{DynamicResource Loc.Workbench.Session.EmptyCellAutomation}" />
+      <SplitButton x:Name="ImportDelimitedMetadataButton"
+                   Classes="app"
+                   Margin="0,0,8,8"
+                   Content="{DynamicResource Loc.Workbench.Session.ImportDelimited}"
+                   Command="{Binding ImportDelimitedMetadataCommand}">
+        <SplitButton.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <Border Width="320"
+                    Classes="card dense-card">
+              <StackPanel Classes="content-stack">
+                <TextBlock Classes="field-label"
+                           FontWeight="SemiBold"
+                           Text="{DynamicResource Loc.Workbench.Session.EmptyCellAutomation}" />
+                <TextBlock Classes="muted"
+                           TextWrapping="Wrap"
+                           Text="{DynamicResource Loc.Workbench.Session.EmptyCellTooltip}" />
+                <ComboBox x:Name="ImportEmptyCellMode"
+                          Classes="app"
+                          ItemsSource="{Binding ImportEmptyCellModeChoices}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedValueBinding="{Binding Value}"
+                          SelectedValue="{Binding ImportEmptyCellMode, Mode=TwoWay}"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Session.EmptyCellAutomation}" />
+                <Button Classes="app primary"
+                        HorizontalContentAlignment="Left"
+                        Content="{DynamicResource Loc.Workbench.Session.ImportDelimited}"
+                        Command="{Binding ImportDelimitedMetadataCommand}" />
+              </StackPanel>
+            </Border>
+          </Flyout>
+        </SplitButton.Flyout>
+      </SplitButton>
       <Button x:Name="WorkbenchSessionActionsButton"
               Classes="app"
-              Margin="0,0,8,6"
+              Margin="0,0,8,8"
               Content="{DynamicResource Loc.Workbench.Session.SelectionActions}"
               AutomationProperties.Name="{DynamicResource Loc.Workbench.Session.SelectionActions}">
         <Button.Flyout>
@@ -79,67 +96,75 @@
           </ContextMenu>
         </controls:AppDataGrid.ContextMenu>
       </controls:AppDataGrid>
-      <StackPanel HorizontalAlignment="Center"
-                  VerticalAlignment="Center"
-                  Spacing="7"
-                  IsVisible="{Binding !HasFiles}"
-                  MaxWidth="430">
-        <TextBlock HorizontalAlignment="Center"
-                   FontSize="18"
-                   FontWeight="SemiBold"
-                   Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
-        <TextBlock x:Name="EmptyStateSupportingText"
-                   Classes="muted"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap"
-                   Text="{DynamicResource Loc.Workbench.Session.EmptyDescription}" />
-      </StackPanel>
+      <Border Classes="empty-state"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              IsVisible="{Binding !HasFiles}"
+              MaxWidth="430">
+        <StackPanel Spacing="8">
+          <TextBlock HorizontalAlignment="Center"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
+          <TextBlock x:Name="EmptyStateSupportingText"
+                     Classes="supporting"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap"
+                     Text="{DynamicResource Loc.Workbench.Session.EmptyDescription}" />
+        </StackPanel>
+      </Border>
     </Grid>
 
     <Border Grid.Row="2"
-            Classes="status-banner info"
+            Classes="inset-card"
             AutomationProperties.LiveSetting="Polite">
-      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-        <TextBlock Classes="status-icon" Text="i" />
-        <StackPanel Grid.Column="1" Spacing="2">
+      <Grid ColumnDefinitions="Auto,*"
+            RowDefinitions="Auto,Auto"
+            ColumnSpacing="8"
+            RowSpacing="4">
+        <controls:AppVectorIcon Kind="Information" />
+        <StackPanel Grid.Column="1" Spacing="4">
           <TextBlock Text="{Binding StatusText}"
-                     TextWrapping="Wrap" />
+                     TextTrimming="CharacterEllipsis"
+                     ToolTip.Tip="{Binding StatusText}" />
           <controls:LocalizedFormatTextBlock
+              x:Name="StatusDiagnosticText"
               Classes="muted"
-              FontSize="11"
-              TextWrapping="Wrap"
+              FontSize="{DynamicResource AppFontSizeCaption}"
+              TextTrimming="CharacterEllipsis"
               ResourceKey="Common.DiagnosticDetailFormat"
               Value="{Binding StatusDiagnosticDetail}"
               IsVisible="{Binding HasStatusDiagnosticDetail}" />
         </StackPanel>
+        <Grid x:Name="SessionSummary"
+              Grid.Row="1"
+              Grid.ColumnSpan="2"
+              Margin="0,4,0,0"
+              ColumnDefinitions="*,Auto,Auto,Auto"
+              ColumnSpacing="12"
+              IsVisible="{Binding SelectedFile}">
+          <TextBlock Classes="muted"
+                     Text="{Binding FieldSelectionSummary}"
+                     TextTrimming="CharacterEllipsis" />
+          <controls:LocalizedFormatTextBlock
+              Grid.Column="1"
+              Classes="summary-label"
+              ResourceKey="Workbench.Session.TagsFormat"
+              Value="{Binding SelectedFile.LayerSummary}" />
+          <controls:LocalizedFormatTextBlock
+              Grid.Column="2"
+              Classes="summary-label"
+              ResourceKey="Workbench.Session.ArtworkCount"
+              UseCountVariant="True"
+              Value="{Binding SelectedFile.ArtworkCount}" />
+          <controls:LocalizedFormatTextBlock
+              Grid.Column="3"
+              Classes="summary-label"
+              ResourceKey="Workbench.Session.FieldsCount"
+              UseCountVariant="True"
+              Value="{Binding SelectedFile.FieldCount}" />
+        </Grid>
       </Grid>
     </Border>
-
-    <Grid x:Name="SessionSummary"
-          Grid.Row="3"
-          ColumnDefinitions="*,Auto,Auto,Auto"
-          ColumnSpacing="16"
-          IsVisible="{Binding SelectedFile}">
-      <TextBlock Classes="muted"
-                 Text="{Binding FieldSelectionSummary}"
-                 TextTrimming="CharacterEllipsis" />
-      <controls:LocalizedFormatTextBlock
-          Grid.Column="1"
-          Classes="summary-label"
-          ResourceKey="Workbench.Session.TagsFormat"
-          Value="{Binding SelectedFile.LayerSummary}" />
-      <controls:LocalizedFormatTextBlock
-          Grid.Column="2"
-          Classes="summary-label"
-          ResourceKey="Workbench.Session.ArtworkCount"
-          UseCountVariant="True"
-          Value="{Binding SelectedFile.ArtworkCount}" />
-      <controls:LocalizedFormatTextBlock
-          Grid.Column="3"
-          Classes="summary-label"
-          ResourceKey="Workbench.Session.FieldsCount"
-          UseCountVariant="True"
-          Value="{Binding SelectedFile.FieldCount}" />
-    </Grid>
   </Grid>
 </UserControl>

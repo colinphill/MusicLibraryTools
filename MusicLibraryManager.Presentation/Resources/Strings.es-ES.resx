@@ -95,49 +95,52 @@
     <value>{0:0.##} MB</value>
   </data>
   <data name="Common.ApplyReviewedPlan" xml:space="preserve">
-    <value>aplicar el plan revisado</value>
+    <value>Aplicar plan revisado</value>
   </data>
   <data name="Common.Apply" xml:space="preserve">
-    <value>aplicar</value>
+    <value>Aplicar</value>
   </data>
   <data name="Common.Beta" xml:space="preserve">
     <value>Beta</value>
   </data>
+  <data name="Common.Back" xml:space="preserve">
+    <value>posterior</value>
+  </data>
   <data name="Common.Browse" xml:space="preserve">
-    <value>examinar</value>
+    <value>Examinar</value>
   </data>
   <data name="Common.Cancel" xml:space="preserve">
-    <value>cancelar</value>
+    <value>Cancelar</value>
   </data>
   <data name="Common.Clear" xml:space="preserve">
-    <value>borrar</value>
+    <value>Borrar</value>
   </data>
   <data name="Common.CloseDialog" xml:space="preserve">
-    <value>cerrar diálogo</value>
+    <value>Cerrar cuadro de diálogo</value>
   </data>
   <data name="Common.Dismiss" xml:space="preserve">
-    <value>descartar</value>
+    <value>Cerrar</value>
   </data>
   <data name="Common.Open" xml:space="preserve">
-    <value>abrir</value>
+    <value>Abrir</value>
   </data>
   <data name="Common.Preview" xml:space="preserve">
-    <value>vista previa</value>
+    <value>Previsualizar</value>
   </data>
   <data name="Common.Refresh" xml:space="preserve">
-    <value>actualizar</value>
+    <value>Actualizar</value>
   </data>
   <data name="Common.Remove" xml:space="preserve">
-    <value>quitar</value>
+    <value>Quitar</value>
   </data>
   <data name="Common.Scan" xml:space="preserve">
-    <value>analizar</value>
+    <value>Analizar</value>
   </data>
   <data name="Common.Ok" xml:space="preserve">
-    <value>OK</value>
+    <value>Aceptar</value>
   </data>
   <data name="Common.ResizePanes" xml:space="preserve">
-    <value>cambiar tamaño paneles</value>
+    <value>Cambiar tamaño de paneles</value>
   </data>
   <data name="Column.AcoustId" xml:space="preserve">
     <value>AcoustID</value>
@@ -212,7 +215,7 @@
     <value>país</value>
   </data>
   <data name="Column.CurrentLocation" xml:space="preserve">
-    <value>actual ubicación</value>
+    <value>Ubicación actual</value>
   </data>
   <data name="Column.Date" xml:space="preserve">
     <value>fecha</value>
@@ -221,7 +224,7 @@
     <value>destino</value>
   </data>
   <data name="Column.DestinationPath" xml:space="preserve">
-    <value>destino ruta</value>
+    <value>Ruta de destino</value>
   </data>
   <data name="Column.Directory" xml:space="preserve">
     <value>directorio</value>
@@ -239,7 +242,7 @@
     <value>Discogs pista</value>
   </data>
   <data name="Column.Disposition" xml:space="preserve">
-    <value>disposición</value>
+    <value>Tratamiento</value>
   </data>
   <data name="Column.Duration" xml:space="preserve">
     <value>duración</value>
@@ -263,7 +266,7 @@
     <value>archivos</value>
   </data>
   <data name="Column.FileSize" xml:space="preserve">
-    <value>archivo tamaño</value>
+    <value>Tamaño de archivo</value>
   </data>
   <data name="Column.Formats" xml:space="preserve">
     <value>formatos</value>
@@ -305,7 +308,7 @@
     <value>MusicBrainz lanzamiento ID</value>
   </data>
   <data name="Column.NewLocation" xml:space="preserve">
-    <value>nuevo ubicación</value>
+    <value>Nueva ubicación</value>
   </data>
   <data name="Column.NumberSign" xml:space="preserve">
     <value>#</value>
@@ -410,10 +413,10 @@
     <value>detectar automáticamente adb</value>
   </data>
   <data name="Devices.AdoptDescription" xml:space="preserve">
-    <value>adopción confía el actual destino contenidos y incluye ellos en el primero sincronización vista previa.</value>
+    <value>La adopción confía en el contenido actual del destino y lo incluye en la primera vista previa de sincronización.</value>
   </data>
   <data name="Devices.AdoptExisting" xml:space="preserve">
-    <value>adoptar un existente no-vacío destino</value>
+    <value>Adoptar un destino existente que no esté vacío</value>
   </data>
   <data name="Devices.AndroidDestination" xml:space="preserve">
     <value>Android destino</value>
@@ -425,7 +428,7 @@
     <value>eliminación y recuperación</value>
   </data>
   <data name="Devices.DeleteExtras" xml:space="preserve">
-    <value>eliminar destino-solo entradas</value>
+    <value>Eliminar entradas que solo están en el destino</value>
   </data>
   <data name="Devices.DeviceDiscoveryFailed" xml:space="preserve">
     <value>dispositivo detección fallido</value>
@@ -437,7 +440,7 @@
     <value>dispositivo serie (opcional)</value>
   </data>
   <data name="Devices.DeviceSerialPlaceholder" xml:space="preserve">
-    <value>automático-seleccionar el solo listo dispositivo</value>
+    <value>Seleccionar automáticamente el único dispositivo listo</value>
   </data>
   <data name="Devices.DirectTransfer" xml:space="preserve">
     <value>directo transferir (avanzado; no preparación o recuperación)</value>
@@ -446,10 +449,10 @@
     <value>directo transferir es más rápido pero no puede ser restaurado. vista previa y revisar el final confirmación cuidadosamente.</value>
   </data>
   <data name="Devices.PlannedCount.One" xml:space="preserve">
-    <value>{0} acción planificado</value>
+    <value>{0} acción planificada</value>
   </data>
   <data name="Devices.PlannedCount.Other" xml:space="preserve">
-    <value>{0} acciones planificado</value>
+    <value>{0} acciones planificadas</value>
   </data>
   <data name="Devices.DiscoveringAutomation" xml:space="preserve">
     <value>detectando Android dispositivos</value>
@@ -521,10 +524,10 @@
     <value>este dispositivo es no disponible. autorizar o reconectar ello, entonces actualizar antes sincronizar.</value>
   </data>
   <data name="Dialog.AutomationName" xml:space="preserve">
-    <value>diálogo</value>
+    <value>Cuadro de diálogo</value>
   </data>
   <data name="Dialog.LayerAutomationName" xml:space="preserve">
-    <value>diálogo capa</value>
+    <value>Capa del cuadro de diálogo</value>
   </data>
   <data name="Dialog.Tone.Danger" xml:space="preserve">
     <value>peligro</value>
@@ -554,7 +557,7 @@
     <value>mixto valores; uno valor por línea</value>
   </data>
   <data name="FieldsEditor.UserStringName" xml:space="preserve">
-    <value>usuario-cadena name</value>
+    <value>Nombre de la cadena de usuario</value>
   </data>
   <data name="Home.Action.OpenHealth" xml:space="preserve">
     <value>abrir estado</value>
@@ -575,7 +578,7 @@
     <value>elegir o crear configuración</value>
   </data>
   <data name="Home.Empty.Description" xml:space="preserve">
-    <value>conectar un configuración antes examinar, auditoría, o organizar música. su existente archivos son no cambiado durante configuración.</value>
+    <value>Conecte una configuración antes de explorar, auditar u organizar música. Los archivos existentes no se modifican durante la configuración.</value>
   </data>
   <data name="Home.Empty.Title" xml:space="preserve">
     <value>establecer configurar su biblioteca musical</value>
@@ -683,7 +686,7 @@
     <value>fecha</value>
   </data>
   <data name="Health.AlbumMatrix.Description" xml:space="preserve">
-    <value>solo álbum carpetas con un problema son mostrado. ámbar celdas identificar ausente o conflicto artista, álbum, fecha, pista/disco número, o total valores; pasar el cursor un celda para su motivo. álbumes con el igual name son separado cuando sus carpeta rutas diferir.</value>
+    <value>Solo se muestran las carpetas de álbum que tienen algún problema. Las celdas ámbar indican datos de artista, álbum, fecha, número de pista/disco o totales ausentes o en conflicto; pasa el puntero sobre una celda para ver el motivo. Los álbumes con el mismo nombre se mantienen separados si sus rutas de carpeta son distintas.</value>
   </data>
   <data name="Health.AlbumMatrix.Disc" xml:space="preserve">
     <value>disco</value>
@@ -698,7 +701,7 @@
     <value>por qué ello era marcado</value>
   </data>
   <data name="Health.AlbumMatrix.ReadOnly" xml:space="preserve">
-    <value>leer-solo álbum coherencia auditoría</value>
+    <value>Auditoría de coherencia de álbumes de solo lectura</value>
   </data>
   <data name="Health.AlbumMatrix.Track" xml:space="preserve">
     <value>pista</value>
@@ -710,16 +713,16 @@
     <value>total de pistas</value>
   </data>
   <data name="Health.Artist.CanonicalName" xml:space="preserve">
-    <value>canónico name</value>
+    <value>Nombre canónico</value>
   </data>
   <data name="Health.Artist.CanonicalNameAutomation" xml:space="preserve">
-    <value>canónico artista name</value>
+    <value>Nombre canónico del artista</value>
   </data>
   <data name="Health.Artist.CanonicalTarget" xml:space="preserve">
     <value>canónico destino</value>
   </data>
   <data name="Health.Artist.Description" xml:space="preserve">
-    <value>elegir el canónico name para cada grupo, entonces marcar solo el variantes usted querer renombrado activo. filtro enviar un variante's pistas a biblioteca.</value>
+    <value>Elige el nombre canónico de cada grupo y marca como Activas solo las variantes que quieras renombrar. El filtro envía las pistas de una variante a la Biblioteca.</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
     <value>{0} pista seleccionado entre activo variantes</value>
@@ -752,7 +755,7 @@
     <value>archivos ({0})</value>
   </data>
   <data name="Health.Artist.Empty" xml:space="preserve">
-    <value>no similar artista nombre eran encontrado en el seleccionado umbral.</value>
+    <value>No se encontraron nombres de artista similares con el umbral seleccionado.</value>
   </data>
   <data name="Health.Artist.ReviewTitle" xml:space="preserve">
     <value>revisar artista ortografía variantes</value>
@@ -767,25 +770,25 @@
     <value>máximo normalizar editar distancia. minúsculas valores son más estricto; 0 permitir solo equivalente normalizado ortografías.</value>
   </data>
   <data name="Health.Artwork.Description" xml:space="preserve">
-    <value>elegir un carátula para mixto álbumes, marcar el reparaciones usted querer activo, entonces aplicar. cada acción usa el separado reparar tamaño y dimensión destino de configuración.</value>
+    <value>En los álbumes con carátulas distintas, elija una carátula, marque como activas las reparaciones que desee y aplíquelas. Cada acción utiliza los límites independientes de tamaño y dimensiones de reparación definidos en Configuración.</value>
   </data>
   <data name="Health.Artwork.ChooseCanonicalAutomation" xml:space="preserve">
     <value>elegir canónico álbum carátula</value>
   </data>
   <data name="Health.Artwork.Action.SelectFirst" xml:space="preserve">
-    <value>seleccionar primero imagen y marcar activo</value>
+    <value>Seleccionar la primera imagen y marcarla como activa</value>
   </data>
   <data name="Health.Artwork.Action.SelectHighestResolution" xml:space="preserve">
-    <value>seleccionar más alto resolución y marcar activo</value>
+    <value>Seleccionar la imagen de mayor resolución y marcarla como activa</value>
   </data>
   <data name="Health.Artwork.Action.SelectLargestFile" xml:space="preserve">
-    <value>seleccionar más grande archivo y marcar activo</value>
+    <value>Seleccionar el archivo más grande y marcarlo como activo</value>
   </data>
   <data name="Health.Artwork.Selection.NoneChanged" xml:space="preserve">
     <value>no elegible mixto-carátula reparaciones eran cambiado.</value>
   </data>
   <data name="Health.Artwork.Selection.ChangedFormat" xml:space="preserve">
-    <value>seleccionado carátula y marcar {0:N0} reparar(s) activo.</value>
+    <value>Se seleccionó la carátula y se marcaron {0:N0} reparaciones como activas.</value>
   </data>
   <data name="Health.Artwork.SelectedCount.One" xml:space="preserve">
     <value>{0} reparar acción seleccionado</value>
@@ -830,58 +833,58 @@
     <value>metadatos inconsistencias</value>
   </data>
   <data name="Health.Audit.Menu.VerifyAudio" xml:space="preserve">
-    <value>verificar decodificado audio</value>
+    <value>Verificar audio decodificado</value>
   </data>
   <data name="Health.Audit.Run" xml:space="preserve">
-    <value>ejecutar auditoría…</value>
+    <value>Ejecutar auditoría…</value>
   </data>
   <data name="Health.Audit.RunAutomation" xml:space="preserve">
-    <value>elegir un auditoría a ejecutar</value>
+    <value>Elegir una auditoría para ejecutar</value>
   </data>
   <data name="Health.Audit.Title" xml:space="preserve">
-    <value>auditoría</value>
+    <value>Auditoría</value>
   </data>
   <data name="Health.Deferred.Description" xml:space="preserve">
-    <value>el auditoría usado el metadatos caché y hizo no leer estos archivos. forzar analizar leer sus incrustado carátula ahora y actualizar el resultados.</value>
+    <value>La auditoría usó metadatos en caché y no leyó estos archivos. Fuerza el análisis para leer ahora sus carátulas incrustadas y actualizar los resultados.</value>
   </data>
   <data name="Health.Deferred.Count.One" xml:space="preserve">
-    <value>{0} carátula archivo era aplazado</value>
+    <value>Se aplazó {0} archivo de carátula</value>
   </data>
   <data name="Health.Deferred.Count.Other" xml:space="preserve">
-    <value>{0} carátula archivos eran aplazado</value>
+    <value>Se aplazaron {0} archivos de carátula</value>
   </data>
   <data name="Health.Disposition.AllArtists" xml:space="preserve">
-    <value>disposición para todos artista variantes</value>
+    <value>Acción para todas las variantes de artista</value>
   </data>
   <data name="Health.Disposition.AllArtworkRepairs" xml:space="preserve">
-    <value>disposición para todos carátula reparaciones</value>
+    <value>Acción para todas las reparaciones de carátula</value>
   </data>
   <data name="Health.Disposition.AllFileRepairs" xml:space="preserve">
-    <value>disposición para todos archivo reparaciones</value>
+    <value>Acción para todas las reparaciones de archivos</value>
   </data>
   <data name="Health.Disposition.AllFindings" xml:space="preserve">
-    <value>disposición para todos hallazgos</value>
+    <value>Acción para todos los hallazgos</value>
   </data>
   <data name="Health.Disposition.AllItunesRepairs" xml:space="preserve">
-    <value>disposición para todos iTunes reparaciones</value>
+    <value>Acción para todas las reparaciones de iTunes</value>
   </data>
   <data name="Health.Disposition.AllMetadataRepairs" xml:space="preserve">
-    <value>disposición para todos metadatos reparaciones</value>
+    <value>Acción para todas las reparaciones de metadatos</value>
   </data>
   <data name="Health.Disposition.ArtistCluster" xml:space="preserve">
-    <value>disposición para artista grupo</value>
+    <value>Acción para el grupo de artistas</value>
   </data>
   <data name="Health.Disposition.ArtistVariant" xml:space="preserve">
-    <value>disposición para artista ortografía variante</value>
+    <value>Acción para la variante ortográfica del artista</value>
   </data>
   <data name="Health.Disposition.ArtworkRepair" xml:space="preserve">
-    <value>disposición para carátula reparar</value>
+    <value>Acción para la reparación de carátula</value>
   </data>
   <data name="Health.Duplicates.Empty" xml:space="preserve">
-    <value>no duplicado grupo eran encontrado.</value>
+    <value>No se encontraron grupos duplicados.</value>
   </data>
   <data name="Health.Conflicts.Empty" xml:space="preserve">
-    <value>no álbum-artista conflictos eran encontrado.</value>
+    <value>No se encontraron conflictos entre el álbum y el artista del álbum.</value>
   </data>
   <data name="Health.Findings.All" xml:space="preserve">
     <value>todos hallazgos</value>
@@ -923,7 +926,7 @@
     <value>cambiar tamaño metadatos reparar jerarquía</value>
   </data>
   <data name="Health.NoSelection.Description" xml:space="preserve">
-    <value>ejecutar un auditoría o preparar reparaciones comando a revisar su resultados aquí.</value>
+    <value>Ejecuta una auditoría o prepara reparaciones para revisar aquí los resultados.</value>
   </data>
   <data name="Health.NoSelection.Title" xml:space="preserve">
     <value>no análisis seleccionado</value>
@@ -950,7 +953,7 @@
     <value>habilitado directiva metadatos reparaciones</value>
   </data>
   <data name="Health.Repair.Menu.SimilarArtists" xml:space="preserve">
-    <value>similar artista nombre</value>
+    <value>Nombres de artista similares</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
     <value>preparar reparaciones…</value>
@@ -1025,7 +1028,7 @@
     <value>borrar archivos seleccionados</value>
   </data>
   <data name="Ingest.Action.More" xml:space="preserve">
-    <value>más…</value>
+    <value>Más</value>
   </data>
   <data name="Ingest.Action.MoreAutomation" xml:space="preserve">
     <value>más ingesta acciones</value>
@@ -1139,7 +1142,7 @@
     <value>inspector (sin guardar)</value>
   </data>
   <data name="Library.Action.More" xml:space="preserve">
-    <value>más…</value>
+    <value>Más</value>
   </data>
   <data name="Library.Action.MoreAutomation" xml:space="preserve">
     <value>más biblioteca acciones</value>
@@ -1157,7 +1160,7 @@
     <value>cancelar cargando</value>
   </data>
   <data name="Library.Filter.Placeholder" xml:space="preserve">
-    <value>filtro, o usar artista:Name y no Codec:MP3</value>
+    <value>Filtrar o usar sintaxis, por ejemplo Artist:Name AND NOT Codec:MP3</value>
   </data>
   <data name="Library.Filter.Automation" xml:space="preserve">
     <value>filtro biblioteca</value>
@@ -1220,7 +1223,10 @@
     <value>conocido metadatos campo</value>
   </data>
   <data name="Library.Columns.CustomFieldPlaceholder" xml:space="preserve">
-    <value>nativo personalizado campo name</value>
+    <value>Nombre del campo personalizado nativo</value>
+  </data>
+  <data name="Library.Columns.Width" xml:space="preserve">
+    <value>Ancho</value>
   </data>
   <data name="Library.Columns.Action.New" xml:space="preserve">
     <value>nuevo</value>
@@ -1244,10 +1250,10 @@
     <value>guardar el actual filtro, columnas, y ordenar</value>
   </data>
   <data name="Library.SavedViews.NamePlaceholder" xml:space="preserve">
-    <value>vista name</value>
+    <value>Nombre de la vista</value>
   </data>
   <data name="Library.SavedViews.NameAutomation" xml:space="preserve">
-    <value>nuevo guardado vista name</value>
+    <value>Nombre de la nueva vista guardada</value>
   </data>
   <data name="Library.SavedViews.Action.Save" xml:space="preserve">
     <value>guardar vista</value>
@@ -1257,6 +1263,15 @@
   </data>
   <data name="Library.VisualFilter.Title" xml:space="preserve">
     <value>visual filtro</value>
+  </data>
+  <data name="Library.VisualFilter.MatchMode" xml:space="preserve">
+    <value>Modo de coincidencia</value>
+  </data>
+  <data name="Library.VisualFilter.Comparison" xml:space="preserve">
+    <value>Comparación</value>
+  </data>
+  <data name="Library.VisualFilter.Value" xml:space="preserve">
+    <value>Valor</value>
   </data>
   <data name="Library.VisualFilter.CloseTooltip" xml:space="preserve">
     <value>cerrar visual filtro</value>
@@ -1283,7 +1298,7 @@
     <value>sintaxis del filtro</value>
   </data>
   <data name="Library.FilterHelp.Description" xml:space="preserve">
-    <value>buscar todos visible metadatos con normal texto. usar campo:valor para un campo, comilla para frases, y y, o, o no a combinar términos.</value>
+    <value>Busque en todos los metadatos visibles con texto normal. Use Field:Value para un campo, comillas para las frases y AND, OR o NOT para combinar términos.</value>
   </data>
   <data name="Library.Operations.Title" xml:space="preserve">
     <value>biblioteca operaciones y salida</value>
@@ -1394,7 +1409,7 @@
     <value>pegar + vista previa</value>
   </data>
   <data name="Library.Operations.PastePreviewTooltip" xml:space="preserve">
-    <value>pegar etiqueta-consciente o línea-delimitado texto en el seleccionado ámbito</value>
+    <value>Pegar texto por líneas o compatible con etiquetas en el ámbito seleccionado</value>
   </data>
   <data name="Library.Operations.Action.Preview" xml:space="preserve">
     <value>vista previa</value>
@@ -1463,10 +1478,10 @@
     <value>buscar Discogs</value>
   </data>
   <data name="Library.Release.Action.LoadDetails" xml:space="preserve">
-    <value>cargar detalles</value>
+    <value>Cargar detalles</value>
   </data>
   <data name="Library.Release.MappingDescription" xml:space="preserve">
-    <value>revisar cada archivo a pista sugerencia antes añadir seleccionado campos a el normal vista previa.</value>
+    <value>Revisa cada propuesta de asignación entre archivo y pista antes de añadir los campos seleccionados a la vista previa normal.</value>
   </data>
   <data name="Library.Release.TrackMappingDescription" xml:space="preserve">
     <value>revisar o reemplazar sugerencias antes vista previa.</value>
@@ -1493,7 +1508,7 @@
     <value>numeración</value>
   </data>
   <data name="Library.Release.Field.ReleaseDetails" xml:space="preserve">
-    <value>lanzamiento detalles</value>
+    <value>Detalles del lanzamiento</value>
   </data>
   <data name="Library.Release.Field.GenresStyles" xml:space="preserve">
     <value>géneros/estilos</value>
@@ -1523,7 +1538,7 @@
     <value>vista previa lanzamiento carátula</value>
   </data>
   <data name="Library.Reports.NamePlaceholder" xml:space="preserve">
-    <value>informe name</value>
+    <value>Nombre del informe</value>
   </data>
   <data name="Library.Reports.OutputPlaceholder" xml:space="preserve">
     <value>salida archivo o carpeta</value>
@@ -1559,7 +1574,7 @@
     <value>escribir revisado informe</value>
   </data>
   <data name="Library.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>lista de reproducción name</value>
+    <value>Nombre de la lista de reproducción</value>
   </data>
   <data name="Library.Playlists.OutputPlaceholder" xml:space="preserve">
     <value>salida archivo o carpeta</value>
@@ -1595,22 +1610,22 @@
     <value>eliminar</value>
   </data>
   <data name="Library.Tools.NamePlaceholder" xml:space="preserve">
-    <value>herramienta name</value>
+    <value>Nombre de la herramienta</value>
   </data>
   <data name="Library.Tools.ExecutablePlaceholder" xml:space="preserve">
-    <value>ejecutable ruta o comando name</value>
+    <value>Ruta del ejecutable o nombre del comando</value>
   </data>
   <data name="Library.Tools.Action.BrowseExecutable" xml:space="preserve">
     <value>examinar ejecutable</value>
   </data>
   <data name="Library.Tools.WorkingDirectoryPlaceholder" xml:space="preserve">
-    <value>opcional trabajando directorio o {directorio}</value>
+    <value>Directorio de trabajo opcional o {Directory}</value>
   </data>
   <data name="Library.Tools.Action.BrowseFolder" xml:space="preserve">
     <value>examinar carpeta</value>
   </data>
   <data name="Library.Tools.ArgumentsDescription" xml:space="preserve">
-    <value>uno argumento por línea. compatible marcadores: {archivos}, {archivo}, {directorio}, {nombre de archivo}, {FileNameWithoutExtension}, {Extension}, {indexar}, y {cantidad}.</value>
+    <value>Un argumento por línea. Marcadores admitidos: {Files}, {File}, {Directory}, {FileName}, {FileNameWithoutExtension}, {Extension}, {Index} y {Count}.</value>
   </data>
   <data name="Library.Tools.Warning" xml:space="preserve">
     <value>herramientas externas ejecutar sin un intérprete pero permanecer fuera aplicación recuperación. ejecutando siempre requerir confirmación.</value>
@@ -1640,7 +1655,7 @@
     <value>cada preparado o revisado metadatos editar ese aplicar se validar antes escribir.</value>
   </data>
   <data name="Library.PendingChanges.CountLabel" xml:space="preserve">
-    <value>pendiente editar(s)</value>
+    <value>Ediciones pendientes</value>
   </data>
   <data name="Library.PendingChanges.CloseTooltip" xml:space="preserve">
     <value>cerrar cambios pendientes</value>
@@ -1649,17 +1664,13 @@
     <value>biblioteca cambios pendientes</value>
   </data>
   <data name="Library.PendingChanges.EmptyTitle" xml:space="preserve">
-    <value>no cambios pendientes</value>
+    <value>No hay cambios pendientes</value>
   </data>
   <data name="Library.PendingChanges.EmptyDescription" xml:space="preserve">
-    <value>vista previa un biblioteca metadatos operación a revisar su editar aquí.</value>
+    <value>Previsualiza una operación de metadatos de la biblioteca para revisar aquí sus ediciones.</value>
   </data>
-  <data name="Library.PendingChanges.Action.Revert" xml:space="preserve">
-    <value>revertir</value>
-  </data>
-  <data name="Library.PendingChanges.RevertTooltip" xml:space="preserve">
-    <value>descartar este pendiente vista previa sin cambio archivos</value>
-  </data>
+  <data name="Library.PendingChanges.Action.Revert" xml:space="preserve"><value>Descartar todos los cambios pendientes</value></data>
+  <data name="Library.PendingChanges.RevertTooltip" xml:space="preserve"><value>Descartar todos los cambios pendientes sin modificar archivos</value></data>
   <data name="Library.PendingChanges.Action.Apply" xml:space="preserve">
     <value>aplicar</value>
   </data>
@@ -1724,7 +1735,7 @@
     <value>{0} movimientos planificado</value>
   </data>
   <data name="Organize.Subtitle" xml:space="preserve">
-    <value>mover elegible archivos en el canónico biblioteca diseño con reversión protección.</value>
+    <value>Mueva los archivos aptos a la estructura canónica de la biblioteca con protección de reversión.</value>
   </data>
   <data name="Organize.Title" xml:space="preserve">
     <value>organizar</value>
@@ -1769,7 +1780,7 @@
     <value>máximo eliminaciones</value>
   </data>
   <data name="Operations.PlaylistName" xml:space="preserve">
-    <value>lista de reproducción name</value>
+    <value>Nombre de la lista de reproducción</value>
   </data>
   <data name="Operations.PurgeReviewed" xml:space="preserve">
     <value>purgar revisado recuperación historial</value>
@@ -1856,7 +1867,7 @@
     <value>archivo operación estado</value>
   </data>
   <data name="ReviewedFileOperation.TemplateAutomation" xml:space="preserve">
-    <value>archivo name plantilla</value>
+    <value>Plantilla de nombre de archivo</value>
   </data>
   <data name="Shell.OpenLibraryConfiguration" xml:space="preserve">
     <value>abrir biblioteca configuración</value>
@@ -1871,7 +1882,7 @@
     <value>salir mientras obra es ejecutando?</value>
   </data>
   <data name="Shell.Quit.Message" xml:space="preserve">
-    <value>un biblioteca operación es todavía ejecutando. salir solo si usted son preparado a inspeccionar su recuperación estado el siguiente tiempo el aplicación iniciar.</value>
+    <value>Todavía se está ejecutando una operación de biblioteca. Salga solo si está preparado para revisar su estado de recuperación la próxima vez que se inicie la aplicación.</value>
   </data>
   <data name="Shell.Quit.Action" xml:space="preserve">
     <value>salir</value>
@@ -1931,7 +1942,7 @@
     <value>idioma de visualización</value>
   </data>
   <data name="Settings.Appearance.DisplayLanguageDescription" xml:space="preserve">
-    <value>cambios aplicación texto inmediatamente. biblioteca metadatos, archivo nombre, regional formato, análisis, y ordenar son no cambiado. inglés (unidos estado) es actual disponible.</value>
+    <value>Cambia de inmediato el texto de la aplicación. No modifica los metadatos de la biblioteca, los nombres de archivo, el formato regional, el análisis ni la ordenación. Actualmente está disponible Inglés (Estados Unidos).</value>
   </data>
   <data name="Activity.Cancelling" xml:space="preserve">
     <value>cancelando…</value>
@@ -2159,7 +2170,7 @@
     <value>conflicto comportamiento</value>
   </data>
   <data name="Settings.Common.FileNameTemplate" xml:space="preserve">
-    <value>archivo-name plantilla</value>
+    <value>Plantilla de nombre de archivo</value>
   </data>
   <data name="Settings.Common.FolderTemplate" xml:space="preserve">
     <value>carpeta plantilla</value>
@@ -2171,13 +2182,13 @@
     <value>dimensión máxima</value>
   </data>
   <data name="Settings.Common.Name" xml:space="preserve">
-    <value>Name</value>
+    <value>Nombre</value>
   </data>
   <data name="Settings.Common.StableId" xml:space="preserve">
     <value>estable ID</value>
   </data>
   <data name="Settings.Appearance.Description" xml:space="preserve">
-    <value>tema cambios aplicar inmediatamente. sistema seguir el operativo-sistema preferencia; cada paleta conservar su acento reservado para selección, foco, progreso, y seguro acciones.</value>
+    <value>Los cambios de tema se aplican de inmediato. Sistema sigue la preferencia del sistema operativo; cada paleta reserva el color de acento para selección, foco, progreso y acciones seguras.</value>
   </data>
   <data name="Settings.Appearance.ThemeAutomation" xml:space="preserve">
     <value>aplicación tema</value>
@@ -2222,7 +2233,7 @@
     <value>añadir establecer</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensions" xml:space="preserve">
-    <value>cruzado-establecer comparación extensiones</value>
+    <value>Extensiones para comparar conjuntos</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensionsPlaceholder" xml:space="preserve">
     <value>para ejemplo: .flac, .m4a</value>
@@ -2378,7 +2389,7 @@
     <value>máximo pistas</value>
   </data>
   <data name="Settings.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>lista de reproducción name</value>
+    <value>Nombre de la lista de reproducción</value>
   </data>
   <data name="Settings.Playlists.NamingArtwork" xml:space="preserve">
     <value>nomenclatura y carátula</value>
@@ -2414,7 +2425,7 @@
     <value>reemplazar cambiado archivos</value>
   </data>
   <data name="Settings.Playlists.SavedViewQuery" xml:space="preserve">
-    <value>guardado-vista consulta</value>
+    <value>Consulta de vista guardada</value>
   </data>
   <data name="Settings.Playlists.Selection" xml:space="preserve">
     <value>selección</value>
@@ -2444,16 +2455,16 @@
     <value>archivo lista de reproducción orígenes</value>
   </data>
   <data name="Settings.Playlists.SyncNameAutomation" xml:space="preserve">
-    <value>sincronizar lista de reproducción name</value>
+    <value>Nombre de la lista de reproducción que se sincronizará</value>
   </data>
   <data name="Settings.Playlists.SyncTargetAutomation" xml:space="preserve">
-    <value>cruzado-biblioteca sincronizar destino raíz</value>
+    <value>Raíz de destino para sincronización entre bibliotecas</value>
   </data>
   <data name="Settings.Playlists.SyncTargetDescription" xml:space="preserve">
-    <value>elegir el biblioteca raíz ese recibe cruzado-biblioteca música sincronización.</value>
+    <value>Elige la raíz de la biblioteca que recibirá la música sincronizada entre bibliotecas.</value>
   </data>
   <data name="Settings.Playlists.SyncTargetTitle" xml:space="preserve">
-    <value>cruzado-biblioteca sincronizar destino</value>
+    <value>Destino de sincronización entre bibliotecas</value>
   </data>
   <data name="Settings.Playlists.SyncTitle" xml:space="preserve">
     <value>sincronizar listas de reproducción</value>
@@ -2480,10 +2491,10 @@
     <value>opción=valor; opción2=valor</value>
   </data>
   <data name="Settings.Playlists.TransportProviderPlaceholder" xml:space="preserve">
-    <value>transporte proveedor (local-sistema de archivos)</value>
+    <value>Proveedor de transporte (sistema de archivos local)</value>
   </data>
   <data name="Settings.Playlists.UseNamingCollision" xml:space="preserve">
-    <value>usar nomenclatura-perfil conflicto regla</value>
+    <value>Usar la regla de conflicto del perfil de nombres</value>
   </data>
   <data name="Settings.Playlists.WriteBom" xml:space="preserve">
     <value>escribir BOM</value>
@@ -2495,16 +2506,16 @@
     <value>escribir lista de reproducción BOM</value>
   </data>
   <data name="Settings.Tools.AcoustIdDescription" xml:space="preserve">
-    <value>AcoustID requerir un aplicación cliente clave para búsqueda. este personal ajuste permanecer fuera portátil biblioteca XML. búsquedas hacer no enviar huella.</value>
+    <value>Las consultas de AcoustID requieren una clave de cliente de aplicación. Este ajuste personal se mantiene fuera del XML de biblioteca portátil. Las consultas no envían huellas digitales.</value>
   </data>
   <data name="Settings.Tools.AcoustIdKey" xml:space="preserve">
     <value>AcoustID aplicación cliente clave</value>
   </data>
   <data name="Settings.Tools.Bindings" xml:space="preserve">
-    <value>equipo-local enlaces complemento (opcional)</value>
+    <value>Complemento de enlaces local del equipo (opcional)</value>
   </data>
   <data name="Settings.Tools.BindingsAutomation" xml:space="preserve">
-    <value>equipo-local enlaces complemento</value>
+    <value>Complemento de enlaces local del equipo</value>
   </data>
   <data name="Settings.Tools.BindingsPlaceholder" xml:space="preserve">
     <value>conservar portátil directiva separado de raíz y herramienta rutas</value>
@@ -2513,13 +2524,13 @@
     <value>metadatos base de datos</value>
   </data>
   <data name="Settings.Tools.DiscogsDescription" xml:space="preserve">
-    <value>Discogs buscar requerir un personal acceso token. el token es almacenado en el operativo-sistema credencial servicio cuando disponible, con sesión-solo almacenamiento como un alternativa.</value>
+    <value>La búsqueda en Discogs requiere un token de acceso personal. Cuando es posible, se guarda en el servicio de credenciales del sistema operativo; de lo contrario, solo durante la sesión.</value>
   </data>
   <data name="Settings.Tools.DiscogsToken" xml:space="preserve">
     <value>Discogs personal acceso token</value>
   </data>
   <data name="Settings.Tools.DiscogsTokenPlaceholder" xml:space="preserve">
-    <value>Enter un nuevo token a almacenar</value>
+    <value>Escribe un token nuevo para guardarlo</value>
   </data>
   <data name="Settings.Tools.Ffmpeg" xml:space="preserve">
     <value>FFmpeg</value>
@@ -2573,7 +2584,7 @@
     <value>carátula análisis umbral</value>
   </data>
   <data name="Settings.Health.DefaultsDescription" xml:space="preserve">
-    <value>análisis predeterminado: 2 MiB y 2,000 píxeles. reparar predeterminado: 225 KiB y 600 píxeles. carátula exacto igual a un análisis umbral es no marcado.</value>
+    <value>Valores predeterminados de análisis: 2 MiB y 2000 píxeles. Valores predeterminados de reparación: 225 KiB y 600 píxeles. Las carátulas que coinciden exactamente con un umbral de análisis no se marcan.</value>
   </data>
   <data name="Settings.Health.OversizedDimension" xml:space="preserve">
     <value>sobredimensionado ancho o alto (píxeles)</value>
@@ -2618,7 +2629,7 @@
     <value>almacenamiento</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>compilado-en directivas son protegido; duplicado uno a personalizar ello. asignar directivas a raíces en el biblioteca raíces pestaña.</value>
+    <value>Las políticas integradas están protegidas. Duplica una para personalizarla. Asigna las políticas a las raíces en la pestaña Raíces de la biblioteca.</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>estos configuración modificar nomenclatura, metadatos, carátula, estado, y archivo asociado comportamiento para cada raíz usando este perfil. existente vista previa convertirse no válido y debe ser regenerado.</value>
@@ -2627,7 +2638,7 @@
     <value>token de recopilación</value>
   </data>
   <data name="Settings.RootPolicy.CompletePathLimit" xml:space="preserve">
-    <value>completo-ruta límite (en blanco = plataforma predeterminado)</value>
+    <value>Límite de ruta completa (en blanco = valor predeterminado de la plataforma)</value>
   </data>
   <data name="Settings.RootPolicy.ComponentLimit" xml:space="preserve">
     <value>componente límite (heredado LengthLimit)</value>
@@ -2645,10 +2656,10 @@
     <value>disco estrategia</value>
   </data>
   <data name="Settings.RootPolicy.DiscStrategyDescription" xml:space="preserve">
-    <value>el disco estrategia es el destino representación: conservar etiquetas conservar disco metadatos; cada otro estrategia quitar esos etiquetas y representa el disco en el álbum, carpeta, nombre de archivo, o continuo pista número.</value>
+    <value>La estrategia de disco determina cómo se representa el disco en el destino: Conservar etiquetas mantiene sus metadatos; las demás estrategias quitan esas etiquetas y representan el disco mediante el álbum, la carpeta, el nombre de archivo o la numeración continua de pistas.</value>
   </data>
   <data name="Settings.RootPolicy.FileNameTemplateAutomation" xml:space="preserve">
-    <value>perfil archivo name plantilla</value>
+    <value>Plantilla de nombre de archivo del perfil</value>
   </data>
   <data name="Settings.RootPolicy.FolderTemplateAutomation" xml:space="preserve">
     <value>perfil carpeta plantilla</value>
@@ -2657,10 +2668,10 @@
     <value>estado reglas</value>
   </data>
   <data name="Settings.RootPolicy.HighResolutionBitDepth" xml:space="preserve">
-    <value>alto-resolución bit profundidad</value>
+    <value>Profundidad de bits de alta resolución</value>
   </data>
   <data name="Settings.RootPolicy.HighResolutionSampleRate" xml:space="preserve">
-    <value>alto-resolución frecuencia de muestreo (Hz)</value>
+    <value>Frecuencia de muestreo de alta resolución (Hz)</value>
   </data>
   <data name="Settings.RootPolicy.IdentityIncludesYear" xml:space="preserve">
     <value>identidad incluye lanzamiento año</value>
@@ -2678,7 +2689,7 @@
     <value>inferir heredado álbum sufijos</value>
   </data>
   <data name="Settings.RootPolicy.InvalidCharacterReplacement" xml:space="preserve">
-    <value>no válido-carácter reemplazo</value>
+    <value>Sustitución de caracteres no válidos</value>
   </data>
   <data name="Settings.RootPolicy.ItunesCanonicalNaming" xml:space="preserve">
     <value>iTunes canónico nomenclatura</value>
@@ -2723,7 +2734,7 @@
     <value>conservar Unicode</value>
   </data>
   <data name="Settings.RootPolicy.ProfileName" xml:space="preserve">
-    <value>perfil name</value>
+    <value>Nombre del perfil</value>
   </data>
   <data name="Settings.RootPolicy.ProfileTitle" xml:space="preserve">
     <value>raíz directiva perfil</value>
@@ -2738,7 +2749,7 @@
     <value>leer incrustado carátula durante indexando</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkDescription" xml:space="preserve">
-    <value>cuando habilitado, indexando requiere más largo y el caché usa más espacio, pero carátula es inmediatamente disponible para examinar y auditoría. cuando deshabilitado, carátula es solo lectura cuando ello es visto o auditoría.</value>
+    <value>Si se activa, la indexación tarda más y la caché ocupa más espacio, pero las carátulas quedan disponibles de inmediato para explorarlas y auditarlas. Si se desactiva, las carátulas solo se leen al verlas o auditarlas.</value>
   </data>
   <data name="Settings.RootPolicy.SelectAutomation" xml:space="preserve">
     <value>raíz/nomenclatura directiva perfil</value>
@@ -2750,7 +2761,7 @@
     <value>*.cue, *.pdf</value>
   </data>
   <data name="Settings.RootPolicy.SidecarRules" xml:space="preserve">
-    <value>archivo asociado y desconocido-archivo reglas</value>
+    <value>Reglas de archivos auxiliares y desconocidos</value>
   </data>
   <data name="Settings.RootPolicy.SidecarTemplate" xml:space="preserve">
     <value>archivo asociado plantilla</value>
@@ -2762,13 +2773,13 @@
     <value>pista relleno</value>
   </data>
   <data name="Settings.RootPolicy.TrackTotalScope" xml:space="preserve">
-    <value>pista-total ámbito</value>
+    <value>Ámbito del total de pistas</value>
   </data>
   <data name="Settings.RootPolicy.UnicodeNormalization" xml:space="preserve">
     <value>Unicode normalización</value>
   </data>
   <data name="Settings.RootPolicy.UnknownFileDisposition" xml:space="preserve">
-    <value>desconocido-archivo disposición</value>
+    <value>Tratamiento de archivos desconocidos</value>
   </data>
   <data name="Settings.Ingest.AcceptedExtensions" xml:space="preserve">
     <value>aceptado extensiones</value>
@@ -2792,7 +2803,7 @@
     <value>tasa de bits (kbps; por receta)</value>
   </data>
   <data name="Settings.Ingest.CleanupDescription" xml:space="preserve">
-    <value>disposición de origen arriba control origen audio. estos compatibilidad opciones son aplicado solo después ingesta correcto.</value>
+    <value>La disposición del origen indicada arriba controla el audio de origen. Estas opciones de compatibilidad solo se aplican después de completar correctamente la ingesta.</value>
   </data>
   <data name="Settings.Ingest.CleanupTitle" xml:space="preserve">
     <value>limpieza después ingesta</value>
@@ -2807,7 +2818,7 @@
     <value>ingesta receta destino raíz</value>
   </data>
   <data name="Settings.Ingest.DisplayNamePlaceholder" xml:space="preserve">
-    <value>visualización name</value>
+    <value>Nombre para mostrar</value>
   </data>
   <data name="Settings.Ingest.EnableRecipes" xml:space="preserve">
     <value>habilitar ingesta recetas</value>
@@ -2831,7 +2842,7 @@
     <value>para ejemplo: -af "loudnorm=I=-16:LRA=11"</value>
   </data>
   <data name="Settings.Ingest.InputChannels" xml:space="preserve">
-    <value>entrada canales</value>
+    <value>Canales de entrada</value>
   </data>
   <data name="Settings.Ingest.LosslessMatch" xml:space="preserve">
     <value>sin pérdida coincidencia (indeterminado = cualquiera)</value>
@@ -2855,7 +2866,7 @@
     <value>salida canales</value>
   </data>
   <data name="Settings.Ingest.OutputExtension" xml:space="preserve">
-    <value>salida extension</value>
+    <value>Extensión de salida</value>
   </data>
   <data name="Settings.Ingest.OutputExtensionPlaceholder" xml:space="preserve">
     <value>para ejemplo .flac</value>
@@ -2873,7 +2884,7 @@
     <value>conservar archivo asociado por predeterminado</value>
   </data>
   <data name="Settings.Ingest.ProfileName" xml:space="preserve">
-    <value>ingesta perfil name</value>
+    <value>Nombre del perfil de ingesta</value>
   </data>
   <data name="Settings.Ingest.RecipeIdPlaceholder" xml:space="preserve">
     <value>estable receta ID</value>
@@ -2888,7 +2899,7 @@
     <value>requerir sin pérdida</value>
   </data>
   <data name="Settings.Ingest.SourceDisposition" xml:space="preserve">
-    <value>disposición de origen</value>
+    <value>Disposición del origen</value>
   </data>
   <data name="Settings.Ingest.Title" xml:space="preserve">
     <value>ingesta perfil y recetas</value>
@@ -2897,10 +2908,10 @@
     <value>usar destino raíz conflicto comportamiento</value>
   </data>
   <data name="Settings.EffectivePolicy.Description" xml:space="preserve">
-    <value>revisar el comportamiento ese cada vista previa se usar. sin conexión rutas son advertencias; no válido directiva referencias y contradictorio permisos bloquear guardar.</value>
+    <value>Revise el comportamiento que se usará en todas las vistas previas. Las rutas sin conexión generan advertencias; las referencias de directivas no válidas y los permisos contradictorios impiden guardar.</value>
   </data>
   <data name="Settings.EffectivePolicy.DetailsAutomation" xml:space="preserve">
-    <value>directiva efectiva detalles</value>
+    <value>Detalles de la política efectiva</value>
   </data>
   <data name="Settings.EffectivePolicy.GuidedStep" xml:space="preserve">
     <value>paso 2 de 2: verificar rutas, permisos, reparaciones, ingesta, y integraciones antes crear el biblioteca.</value>
@@ -2918,19 +2929,19 @@
     <value>canónico campo</value>
   </data>
   <data name="Settings.FieldMappings.Description" xml:space="preserve">
-    <value>anular el nativo texto clave usado para un canónico campo en uno formato familia. no listado campos continuar a usar el compilado-en analizador asignación.</value>
+    <value>Reemplaza la clave de texto nativa usada para un campo canónico en una familia de formatos. Los campos no incluidos siguen usando la asignación del analizador integrado.</value>
   </data>
   <data name="Settings.FieldMappings.Footer" xml:space="preserve">
-    <value>asignado escribir quitar el compilado-en representación primero, entonces escribir el configurado nativo clave mediante el formato's propio analizador. vista previa y recuperación requisitos permanecer sin cambios.</value>
+    <value>Las escrituras asignadas quitan primero la representación integrada y después escriben la clave nativa configurada mediante el analizador propio del formato. Los requisitos de vista previa y recuperación no cambian.</value>
   </data>
   <data name="Settings.FieldMappings.FormatFamily" xml:space="preserve">
     <value>formato familia</value>
   </data>
   <data name="Settings.FieldMappings.NativeField" xml:space="preserve">
-    <value>nativo campo name</value>
+    <value>Nombre del campo nativo</value>
   </data>
   <data name="Settings.FieldMappings.NativeFieldPlaceholder" xml:space="preserve">
-    <value>formato-nativo clave</value>
+    <value>Clave nativa del formato</value>
   </data>
   <data name="Settings.FieldMappings.Save" xml:space="preserve">
     <value>guardar asignaciones</value>
@@ -2939,16 +2950,16 @@
     <value>asignaciones son personal aplicación configuración y aplicar a área de trabajo y biblioteca editar.</value>
   </data>
   <data name="Settings.FieldMappings.Status.Saved.One" xml:space="preserve">
-    <value>guardado {0:N0} formato-específico campo asignación.</value>
+    <value>Se guardó {0:N0} asignación de campo específica del formato.</value>
   </data>
   <data name="Settings.FieldMappings.Status.Saved.Other" xml:space="preserve">
-    <value>guardado {0:N0} formato-específico campo asignaciones.</value>
+    <value>Se guardaron {0:N0} asignaciones de campos específicas del formato.</value>
   </data>
   <data name="Settings.FieldMappings.Status.SaveFailed" xml:space="preserve">
     <value>podría no guardar campo asignaciones: {0}</value>
   </data>
   <data name="Settings.FieldMappings.Title" xml:space="preserve">
-    <value>canónico-a-nativo campo asignaciones</value>
+    <value>Asignaciones de campos canónicos a nativos</value>
   </data>
   <data name="Settings.DestinationRoot.Missing" xml:space="preserve">
     <value>ausente raíz ({0:D})</value>
@@ -2984,7 +2995,7 @@
     <value>carátula</value>
   </data>
   <data name="Settings.Permissions.CatalogOnly" xml:space="preserve">
-    <value>catálogo solo (leer-solo)</value>
+    <value>Solo catálogo (solo lectura)</value>
   </data>
   <data name="Settings.Permissions.Description.ReadOnly" xml:space="preserve">
     <value>el aplicación solo catálogo este carpeta y se no cambio su archivos.</value>
@@ -3005,7 +3016,7 @@
     <value>permitir cambios: {0}</value>
   </data>
   <data name="Settings.Permissions.Summary.ReadOnly" xml:space="preserve">
-    <value>catálogo-solo: este raíz es leer-solo.</value>
+    <value>Solo catálogo: esta raíz es de solo lectura.</value>
   </data>
   <data name="Settings.Permissions.SyncOutput" xml:space="preserve">
     <value>sincronizar salida</value>
@@ -3017,7 +3028,7 @@
     <value>podría no borrar el Discogs token: {0}</value>
   </data>
   <data name="Settings.Discogs.EnterToken" xml:space="preserve">
-    <value>Enter un Discogs personal acceso token.</value>
+    <value>Escribe un token de acceso personal de Discogs.</value>
   </data>
   <data name="Settings.Discogs.ExistsPersistent" xml:space="preserve">
     <value>un Discogs token es almacenado en {0}.</value>
@@ -3146,7 +3157,7 @@
     <value>nuevo ingesta perfil</value>
   </data>
   <data name="Settings.Status.ActiveConfigurationChanged" xml:space="preserve">
-    <value>el activo configuración cambiado, pero su sin guardar editor cambios eran retenido. guardar ellos como un separado archivo o descartar ellos antes edición el activo configuración.</value>
+    <value>La configuración activa ha cambiado, pero se conservaron los cambios sin guardar del editor. Guárdelos como un archivo independiente o descártelos antes de editar la configuración activa.</value>
   </data>
   <data name="Settings.Status.ChangesDiscarded" xml:space="preserve">
     <value>sin guardar configuración cambios eran descartar.</value>
@@ -3170,7 +3181,7 @@
     <value>podría no guardar configuración: {0}</value>
   </data>
   <data name="Settings.Status.GuidedSetup" xml:space="preserve">
-    <value>guiado configuración: elegir un conservación-primero perfil, añadir el biblioteca raíz, entonces revisar el directiva efectiva.</value>
+    <value>Configuración guiada: elige un perfil centrado en la conservación, añade la raíz de la biblioteca y revisa la política efectiva.</value>
   </data>
   <data name="Settings.Status.IngestProfileCreated" xml:space="preserve">
     <value>creado ingesta perfil '{0}'.</value>
@@ -3263,7 +3274,7 @@
     <value>lista de reproducción destino '{0}' debe permitir en mínimo uno pista.</value>
   </data>
   <data name="Settings.Validation.PlaylistUnknownSets" xml:space="preserve">
-    <value>lista de reproducción destino '{0}' referencias desconocido analizar establecer(s): {1}</value>
+    <value>El destino de lista de reproducción «{0}» hace referencia a conjuntos de análisis desconocidos: {1}</value>
   </data>
   <data name="Settings.Validation.PlaylistUnsupportedOption" xml:space="preserve">
     <value>lista de reproducción destino '{0}' contiene un no compatible salida opción.</value>
@@ -3416,7 +3427,7 @@
     <value>el aplicación dejar archivo y carpeta nombre dónde ellos son.</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.Organized" xml:space="preserve">
-    <value>cuando archivos son organizar, ellos son nombre como “{0}”. si ese name ya existe, el aplicación usa el {1} regla.</value>
+    <value>Al organizar los archivos, se les asigna un nombre como «{0}». Si ese nombre ya existe, la aplicación usa la regla {1}.</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Eager" xml:space="preserve">
     <value>carátula es leer y en caché durante indexando, por tanto examinar y carátula auditoría son inmediatamente completo. indexando se tomar más largo y el caché se usar más espacio.</value>
@@ -3446,7 +3457,7 @@
     <value>normalizar o reemplazado</value>
   </data>
   <data name="Settings.PolicyDetails.NamingParagraph" xml:space="preserve">
-    <value>{0} Unicode caracteres son {1}. ruta-longitud límite usar el aplicación y plataforma predeterminado a menos que usted introducido un anular.</value>
+    <value>Los caracteres Unicode {0} se tratan como {1}. Los límites de longitud de ruta usan los valores predeterminados de la aplicación y la plataforma, salvo que hayas indicado otro valor.</value>
   </data>
   <data name="Settings.PolicyDetails.QualityParagraph" xml:space="preserve">
     <value>{0} un grabación es considerado alto resolución en {1:N0} Hz o {2}-bit.</value>
@@ -3476,10 +3487,10 @@
     <value>carpeta rutas son almacenado directamente en este configuración.</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.MachineBindings" xml:space="preserve">
-    <value>equipo-específico carpeta rutas provenir de “{0}”.</value>
+    <value>Las rutas de carpetas específicas del equipo proceden de «{0}».</value>
   </data>
   <data name="Settings.PolicyDetails.ToolsParagraph" xml:space="preserve">
-    <value>herramientas externas usar FFmpeg en “{0}”, WavPack en “{1}”, y Monkey's Audio MAC en “{2}”. {3}</value>
+    <value>Las herramientas externas usan FFmpeg en «{0}», WavPack en «{1}» y Monkey's Audio MAC en «{2}». {3}</value>
   </data>
   <data name="Settings.Choice.Theme.System" xml:space="preserve">
     <value>sistema</value>
@@ -3548,7 +3559,7 @@
     <value>disco carpeta</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FileNamePrefix" xml:space="preserve">
-    <value>archivo-name prefijo</value>
+    <value>Prefijo del nombre de archivo</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FlattenContinuous" xml:space="preserve">
     <value>continuo pista número</value>
@@ -3959,7 +3970,7 @@
     <value>original artista</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalFileName" xml:space="preserve">
-    <value>original archivo name</value>
+    <value>Nombre original del archivo</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalDate" xml:space="preserve">
     <value>fecha original</value>
@@ -4060,12 +4071,12 @@
   <data name="Settings.Choice.TagFields.Writer" xml:space="preserve">
     <value>autor</value>
   </data>
-  <data name="Common.All" xml:space="preserve"><value>todos</value></data>
-  <data name="Common.DiagnosticDetailFormat" xml:space="preserve"><value>técnico detalles: {0}</value></data>
-  <data name="Common.Reload" xml:space="preserve"><value>recargar</value></data>
-  <data name="Common.Restore" xml:space="preserve"><value>restaurar</value></data>
-  <data name="Common.Run" xml:space="preserve"><value>ejecutar</value></data>
-  <data name="Common.Save" xml:space="preserve"><value>guardar</value></data>
+  <data name="Common.All" xml:space="preserve"><value>Todo</value></data>
+  <data name="Common.DiagnosticDetailFormat" xml:space="preserve"><value>Detalles técnicos: {0}</value></data>
+  <data name="Common.Reload" xml:space="preserve"><value>Volver a cargar</value></data>
+  <data name="Common.Restore" xml:space="preserve"><value>Restaurar</value></data>
+  <data name="Common.Run" xml:space="preserve"><value>Ejecutar</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>Guardar</value></data>
   <data name="Inspector.Activity.OptimizeArtwork" xml:space="preserve"><value>optimizar carátula</value></data>
   <data name="Inspector.Activity.PreviewingTracks.One" xml:space="preserve"><value>previsualizando {0:N0} pista</value></data>
   <data name="Inspector.Activity.PreviewingTracks.Other" xml:space="preserve"><value>previsualizando {0:N0} pistas</value></data>
@@ -4109,7 +4120,7 @@
   <data name="Inspector.Common.None" xml:space="preserve"><value>(ninguno)</value></data>
   <data name="Inspector.Common.Unknown" xml:space="preserve"><value>desconocido</value></data>
   <data name="Inspector.Diagnostic.PathError" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Inspector.Dialog.ApplyReviewed.Message" xml:space="preserve"><value>{0} el revisado plan cambios {1:N0} archivos y usa obsoleto-archivo comprobación, recuperación diario, y deshacer.</value></data>
+  <data name="Inspector.Dialog.ApplyReviewed.Message" xml:space="preserve"><value>{0} El plan revisado modifica {1:N0} archivos y utiliza comprobaciones de archivos obsoletos, diarios de recuperación y la función de deshacer.</value></data>
   <data name="Inspector.Dialog.ApplyReviewed.Title" xml:space="preserve"><value>aplicar revisado operación: {0}?</value></data>
   <data name="Inspector.Dialog.DirectWriteWarning" xml:space="preserve"><value>este escribir el archivos directamente; no recuperación diario es creado.</value></data>
   <data name="Inspector.Dialog.Discard.Confirm" xml:space="preserve"><value>descartar cambios</value></data>
@@ -4157,7 +4168,7 @@
   <data name="Inspector.Field.Title" xml:space="preserve"><value>título</value></data>
   <data name="Inspector.Field.Track" xml:space="preserve"><value>pista</value></data>
   <data name="Inspector.Field.TrackTotal" xml:space="preserve"><value>total de pistas</value></data>
-  <data name="Inspector.Field.UnverifiedHelp" xml:space="preserve"><value>el caché hace no contener este campo para cada seleccionado pista. su actual valor es no mostrado; tipo un valor se intencionalmente reemplazar ello en el completo selección.</value></data>
+  <data name="Inspector.Field.UnverifiedHelp" xml:space="preserve"><value>La caché no contiene este campo para todas las pistas seleccionadas. No se muestra su valor actual; al escribir un valor, el campo se reemplazará de forma intencionada en toda la selección.</value></data>
   <data name="Inspector.Field.UnverifiedPlaceholder" xml:space="preserve"><value>no verificar entre el completo selección — tipo a reemplazar</value></data>
   <data name="Inspector.Operation.EditArtwork" xml:space="preserve"><value>editar inspector carátula</value></data>
   <data name="Inspector.Operation.EditFields" xml:space="preserve"><value>editar inspector campos</value></data>
@@ -4192,7 +4203,7 @@
   <data name="Inspector.Size.Megabytes" xml:space="preserve"><value>{0:N1} MB</value></data>
   <data name="Inspector.Status.ArtworkPartialFailure" xml:space="preserve"><value>actualizado {0:N0} de {1:N0} pistas.</value></data>
   <data name="Inspector.Status.ArtworkPartialFailureRetry" xml:space="preserve"><value>actualizado {0:N0} de {1:N0} pistas. propuesto carátula cambios permanecer listo a reintentar.</value></data>
-  <data name="Inspector.Status.ArtworkPreviewUnavailable" xml:space="preserve"><value>el completo-tamaño carátula vista previa es no disponible porque el imagen datos es ausente o no válido.</value></data>
+  <data name="Inspector.Status.ArtworkPreviewUnavailable" xml:space="preserve"><value>La vista previa de la carátula a tamaño completo no está disponible porque faltan los datos de imagen o no son válidos.</value></data>
   <data name="Inspector.Status.ArtworkReplacementReady" xml:space="preserve"><value>carátula reemplazo listo a guardar.</value></data>
   <data name="Inspector.Status.ArtworkSaved" xml:space="preserve"><value>carátula guardado a {0}.</value></data>
   <data name="Inspector.Status.ArtworkSaveFailed" xml:space="preserve"><value>carátula podría no ser guardado.</value></data>
@@ -4242,7 +4253,7 @@
   <data name="Library.Choice.OperationScope.SelectedAlbums" xml:space="preserve"><value>seleccionado álbumes</value></data>
   <data name="Library.Choice.OperationScope.VisibleFilteredResults" xml:space="preserve"><value>visible filtro resultados</value></data>
   <data name="Library.Choice.OperationScope.CompleteLibrary" xml:space="preserve"><value>completo biblioteca</value></data>
-  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>ejecutar '{0}' {1:N0} tiempo(s)? herramientas externas puede cambio archivos y son fuera MusicLibraryManager recuperación.</value></data>
+  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>¿Ejecutar «{0}» {1:N0} veces? Las herramientas externas pueden cambiar archivos y quedan fuera de la recuperación de MusicLibraryManager.</value></data>
   <data name="Library.Dialog.ExternalTool.Title" xml:space="preserve"><value>ejecutar externo herramienta?</value></data>
   <data name="Library.Dialog.Leave.Confirm" xml:space="preserve"><value>dejar</value></data>
   <data name="Library.Dialog.Leave.Message" xml:space="preserve"><value>el revisado operación o informe permanecer disponible en este biblioteca sesión, pero tiene no sido aplicado.</value></data>
@@ -4283,10 +4294,10 @@
   <data name="Library.Operation.Artwork.Blockers.Other" xml:space="preserve"><value>carátula vista previa tiene {0:N0} bloqueo. sin archivos eran cambiado.</value></data>
   <data name="Library.Operation.Artwork.PreviewCancelled" xml:space="preserve"><value>carátula vista previa cancelado.</value></data>
   <data name="Library.Operation.Artwork.PreviewFailed" xml:space="preserve"><value>carátula vista previa fallido.</value></data>
-  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>previsualizado carátula cambios para {0:N0} de {1:N0} archivo(s). sin archivos eran cambiado.</value></data>
+  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>Se previsualizaron cambios de carátula para {0:N0} de {1:N0} archivos. No se cambió ningún archivo.</value></data>
   <data name="Library.Operation.Artwork.ReleaseReady" xml:space="preserve"><value>el seleccionado frontal carátula era añadido a el normal metadatos vista previa. revisar cada carátula cambio antes aplicando.</value></data>
   <data name="Library.Operation.Audio.DiscoveryCancelled" xml:space="preserve"><value>audio huella detección cancelado.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>huella detección: {0:N0} archivo(s), {1:N0} candidato(s), {2:N0} advertencia(s).</value></data>
+  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>Detección por huella: {0:N0} archivos, {1:N0} candidatos y {2:N0} advertencias.</value></data>
   <data name="Library.Operation.Audio.DiscoveryFailed" xml:space="preserve"><value>audio huella detección fallido.</value></data>
   <data name="Library.Operation.Audio.IdentifierPreviewCancelled" xml:space="preserve"><value>audio identificador vista previa cancelado.</value></data>
   <data name="Library.Operation.Audio.IdentifierPreviewFailed" xml:space="preserve"><value>audio identificador vista previa fallido.</value></data>
@@ -4295,10 +4306,10 @@
   <data name="Library.Operation.Clipboard.Blockers.One" xml:space="preserve"><value>portapapeles vista previa tiene {0:N0} bloqueo. sin archivos eran cambiado.</value></data>
   <data name="Library.Operation.Clipboard.Blockers.Other" xml:space="preserve"><value>portapapeles vista previa tiene {0:N0} bloqueo. sin archivos eran cambiado.</value></data>
   <data name="Library.Operation.Clipboard.Cancelled" xml:space="preserve"><value>portapapeles vista previa cancelado. sin archivos eran cambiado.</value></data>
-  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>previsualizado {0:N0} pegado cambio(s) en {1:N0} archivo(s).</value></data>
+  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>Se previsualizaron {0:N0} cambios pegados en {1:N0} archivos.</value></data>
   <data name="Library.Operation.Clipboard.Failed" xml:space="preserve"><value>portapapeles vista previa fallido.</value></data>
   <data name="Library.Operation.Clipboard.NoText" xml:space="preserve"><value>el portapapeles hace no contener texto metadatos.</value></data>
-  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>copiado {0:N0} orden {1} valor(s) de {2} con etiqueta identidad.</value></data>
+  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>Se copiaron {0:N0} valores ordenados de {1} desde {2} con identidad de etiqueta.</value></data>
   <data name="Library.Operation.Copy.NoMetadata" xml:space="preserve"><value>el seleccionado biblioteca ámbito contiene no en caché metadatos a copiar.</value></data>
   <data name="Library.Operation.CoverArt.Cancelled" xml:space="preserve"><value>Cover Art Archive búsqueda cancelado.</value></data>
   <data name="Library.Operation.CoverArt.Failed" xml:space="preserve"><value>Cover Art Archive búsqueda fallido.</value></data>
@@ -4309,7 +4320,7 @@
   <data name="Library.Operation.Discogs.ArtworkFailed" xml:space="preserve"><value>Discogs carátula vista previa fallido.</value></data>
   <data name="Library.Operation.Discogs.ArtworkReady" xml:space="preserve"><value>el seleccionado Discogs carátula era añadido a el normal carátula vista previa. revisar cada cambio antes aplicando.</value></data>
   <data name="Library.Operation.Discogs.DetailsCancelled" xml:space="preserve"><value>Discogs lanzamiento detalle búsqueda cancelado.</value></data>
-  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>cargado Discogs lanzamiento {0} con {1:N0} pista(s). no metadatos era cambiado.</value></data>
+  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>Se cargó el lanzamiento de Discogs {0} con {1:N0} pistas. No se cambió ningún metadato.</value></data>
   <data name="Library.Operation.Discogs.DetailsFailed" xml:space="preserve"><value>Discogs lanzamiento detalle búsqueda fallido.</value></data>
   <data name="Library.Operation.Discogs.MappingCancelled" xml:space="preserve"><value>Discogs pista asignación cancelado.</value></data>
   <data name="Library.Operation.Discogs.MappingComplete" xml:space="preserve"><value>sugerido {0:N0} de {1:N0} Discogs archivo a pista asignaciones; {2:N0} necesitan revisar.</value></data>
@@ -4318,11 +4329,11 @@
   <data name="Library.Operation.Discogs.MetadataFailed" xml:space="preserve"><value>Discogs metadatos vista previa fallido.</value></data>
   <data name="Library.Operation.Discogs.MetadataReady" xml:space="preserve"><value>asignado Discogs campos eran añadido a el normal metadatos vista previa. revisar cada cambio antes aplicando.</value></data>
   <data name="Library.Operation.Discogs.SearchCancelled" xml:space="preserve"><value>Discogs lanzamiento buscar cancelado.</value></data>
-  <data name="Library.Operation.Discogs.SearchComplete.One" xml:space="preserve"><value>Discogs encontrado {0:N0} lanzamiento edición. seleccionar ello a cargar su completo pista y edición detalles.</value></data>
-  <data name="Library.Operation.Discogs.SearchComplete.Other" xml:space="preserve"><value>Discogs encontrado {0:N0} lanzamiento ediciones. seleccionar uno a cargar su completo pista y edición detalles.</value></data>
+  <data name="Library.Operation.Discogs.SearchComplete.One" xml:space="preserve"><value>Discogs encontró {0:N0} edición del lanzamiento. Selecciónala para cargar todos los detalles de las pistas y de la edición.</value></data>
+  <data name="Library.Operation.Discogs.SearchComplete.Other" xml:space="preserve"><value>Discogs encontró {0:N0} ediciones del lanzamiento. Selecciona una para cargar todos los detalles de las pistas y de la edición.</value></data>
   <data name="Library.Operation.Discogs.SearchFailed" xml:space="preserve"><value>Discogs lanzamiento buscar fallido.</value></data>
-  <data name="Library.Operation.ExternalTool.Blockers.One" xml:space="preserve"><value>externo-herramienta vista previa tiene {0:N0} bloqueo. nada puede ejecutar.</value></data>
-  <data name="Library.Operation.ExternalTool.Blockers.Other" xml:space="preserve"><value>externo-herramienta vista previa tiene {0:N0} bloqueo. nada puede ejecutar.</value></data>
+  <data name="Library.Operation.ExternalTool.Blockers.One" xml:space="preserve"><value>La vista previa de la herramienta externa tiene {0:N0} bloqueo. No se puede ejecutar nada.</value></data>
+  <data name="Library.Operation.ExternalTool.Blockers.Other" xml:space="preserve"><value>La vista previa de la herramienta externa tiene {0:N0} bloqueos. No se puede ejecutar nada.</value></data>
   <data name="Library.Operation.ExternalTool.Cancelled" xml:space="preserve"><value>externo herramienta cancelado. el activo proceso era detenido.</value></data>
   <data name="Library.Operation.ExternalTool.Complete" xml:space="preserve"><value>externo herramienta finalizado: {0:N0} correcto, {1:N0} fallido.</value></data>
   <data name="Library.Operation.ExternalTool.Failed" xml:space="preserve"><value>externo herramienta detenido.</value></data>
@@ -4335,8 +4346,8 @@
   <data name="Library.Operation.Import.Blockers.One" xml:space="preserve"><value>importar vista previa tiene {0:N0} bloqueo. sin archivos eran cambiado.</value></data>
   <data name="Library.Operation.Import.Blockers.Other" xml:space="preserve"><value>importar vista previa tiene {0:N0} bloqueo. sin archivos eran cambiado.</value></data>
   <data name="Library.Operation.Import.Cancelled" xml:space="preserve"><value>importar vista previa cancelado. sin archivos eran cambiado.</value></data>
-  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>previsualizado {0:N0} importar cambio(s) en {1:N0} archivo(s). asignado {2:N0} de {3:N0} fila(s).</value></data>
-  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>previsualizado {0:N0} importar cambio(s) en {1:N0} archivo(s). asignado {2:N0} de {3:N0} fila(s) con {4:N0} advertencia(s).</value></data>
+  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>Se previsualizaron {0:N0} cambios importados en {1:N0} archivos. Se asignaron {2:N0} de {3:N0} filas.</value></data>
+  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>Se previsualizaron {0:N0} cambios importados en {1:N0} archivos. Se asignaron {2:N0} de {3:N0} filas con {4:N0} advertencias.</value></data>
   <data name="Library.Operation.Import.Failed" xml:space="preserve"><value>importar vista previa fallido.</value></data>
   <data name="Library.Operation.Import.NoRowsMatched" xml:space="preserve"><value>no importar filas coincidente el seleccionado biblioteca ámbito.</value></data>
   <data name="Library.Operation.MusicBrainz.LookupCancelled" xml:space="preserve"><value>MusicBrainz lanzamiento búsqueda cancelado.</value></data>
@@ -4363,10 +4374,10 @@
   <data name="Library.Operation.Playlist.PreviewFailed" xml:space="preserve"><value>lista de reproducción vista previa fallido.</value></data>
   <data name="Library.Operation.Playlist.Ready.One" xml:space="preserve"><value>previsualizado {0:N0} lista de reproducción archivo. revisar el destino antes aplicando.</value></data>
   <data name="Library.Operation.Playlist.Ready.Other" xml:space="preserve"><value>previsualizado {0:N0} lista de reproducción archivos. revisar el destinos antes aplicando.</value></data>
-  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>escrito {0:N0} lista de reproducción archivo(s) con {1:N0} pista referencia(s).</value></data>
-  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>previsualizado {0:N0} archivo(s) con {1:N0} bloqueo(s). sin archivos eran cambiado.</value></data>
+  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>Se escribieron {0:N0} archivos de lista de reproducción con {1:N0} referencias de pista.</value></data>
+  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>Se previsualizaron {0:N0} archivos con {1:N0} bloqueos. No se cambió ningún archivo.</value></data>
   <data name="Library.Operation.PreviewCancelled" xml:space="preserve"><value>vista previa cancelado. sin archivos eran cambiado.</value></data>
-  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>previsualizado {0:N0} cambio(s) en {1:N0} de {2:N0} archivo(s).</value></data>
+  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>Se previsualizaron {0:N0} cambios en {1:N0} de {2:N0} archivos.</value></data>
   <data name="Library.Operation.PreviewFailed" xml:space="preserve"><value>vista previa fallido.</value></data>
   <data name="Library.Operation.PreviewInvalidated" xml:space="preserve"><value>operación o ámbito cambiado. vista previa autoritativo metadatos de nuevo.</value></data>
   <data name="Library.Operation.Report.Blockers.One" xml:space="preserve"><value>informe vista previa tiene {0:N0} bloqueo. no salida era escrito.</value></data>
@@ -4377,7 +4388,7 @@
   <data name="Library.Operation.Report.PreviewFailed" xml:space="preserve"><value>informe vista previa fallido.</value></data>
   <data name="Library.Operation.Report.Ready.One" xml:space="preserve"><value>previsualizado {0:N0} informe archivo. revisar el destino antes aplicando.</value></data>
   <data name="Library.Operation.Report.Ready.Other" xml:space="preserve"><value>previsualizado {0:N0} informe archivos. revisar el destinos antes aplicando.</value></data>
-  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>escrito {0:N0} informe archivo(s) con {1:N0} fila(s).</value></data>
+  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>Se escribieron {0:N0} archivos de informe con {1:N0} filas.</value></data>
   <data name="Library.Operation.Restore.Cancelled" xml:space="preserve"><value>restaurar cancelado. cualquiera completado restaurar permanecer recuperable.</value></data>
   <data name="Library.Operation.Restore.Complete.One" xml:space="preserve"><value>restaurado {0:N0} archivo de el más reciente metadatos operación.</value></data>
   <data name="Library.Operation.Restore.Complete.Other" xml:space="preserve"><value>restaurado {0:N0} archivos de el más reciente metadatos operación.</value></data>
@@ -4387,7 +4398,7 @@
   <data name="Library.OperationName.DiscogsMetadata" xml:space="preserve"><value>Discogs: {0}</value></data>
   <data name="Library.OperationName.ImportMetadata" xml:space="preserve"><value>importar metadatos de {0}</value></data>
   <data name="Library.OperationName.MusicBrainzMetadata" xml:space="preserve"><value>MusicBrainz: {0}</value></data>
-  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>pegar {0} valores para {1:N0} archivo(s)</value></data>
+  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>Pegar valores de {0} en {1:N0} archivos</value></data>
   <data name="Library.OperationName.RemoveAllArtwork" xml:space="preserve"><value>quitar todos carátula</value></data>
   <data name="Library.OperationName.RemoveFrontCover" xml:space="preserve"><value>quitar frontal carátula</value></data>
   <data name="Library.OperationName.ReplaceFrontCover" xml:space="preserve"><value>reemplazar frontal carátula</value></data>
@@ -4396,8 +4407,8 @@
   <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>delimitado metadatos</value></data>
   <data name="Library.Picker.ExternalToolDirectory" xml:space="preserve"><value>elegir externo herramienta trabajando directorio</value></data>
   <data name="Library.Picker.ExternalToolExecutable" xml:space="preserve"><value>elegir externo herramienta ejecutable</value></data>
-  <data name="Library.Picker.FrontCover" xml:space="preserve"><value>elegir frontal-carátula carátula</value></data>
-  <data name="Library.Picker.ImportMetadata.Title" xml:space="preserve"><value>importar metadatos de CSV o delimitado texto</value></data>
+  <data name="Library.Picker.FrontCover" xml:space="preserve"><value>Elegir carátula frontal</value></data>
+  <data name="Library.Picker.ImportMetadata.Title" xml:space="preserve"><value>Importar metadatos desde CSV o texto delimitado</value></data>
   <data name="Library.Picker.PlaylistFolder" xml:space="preserve"><value>elegir lista de reproducción salida carpeta</value></data>
   <data name="Library.Picker.PlaylistOutput" xml:space="preserve"><value>elegir lista de reproducción salida</value></data>
   <data name="Library.Picker.ReportFolder" xml:space="preserve"><value>elegir informe salida carpeta</value></data>
@@ -4414,7 +4425,7 @@
   <data name="Library.Progress.BuildingReportPreview" xml:space="preserve"><value>compilar informe vista previa</value></data>
   <data name="Library.Progress.FindingCoverArt" xml:space="preserve"><value>hallazgo Cover Art Archive imágenes</value></data>
   <data name="Library.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>cargando carátula miniatura {0:N0} de {1:N0}</value></data>
-  <data name="Library.Progress.LoadingDiscogsDetails" xml:space="preserve"><value>cargando Discogs lanzamiento detalles</value></data>
+  <data name="Library.Progress.LoadingDiscogsDetails" xml:space="preserve"><value>Cargando detalles del lanzamiento de Discogs</value></data>
   <data name="Library.Progress.MappingMetadataImport" xml:space="preserve"><value>asignación metadatos importar</value></data>
   <data name="Library.Progress.MatchingDiscogsTracks" xml:space="preserve"><value>coincidencia biblioteca archivos a Discogs pistas</value></data>
   <data name="Library.Progress.MatchingReleaseTracks" xml:space="preserve"><value>coincidencia biblioteca archivos a lanzamiento pistas</value></data>
@@ -4439,8 +4450,8 @@
   <data name="Library.Status.ChooseConfiguration" xml:space="preserve"><value>elegir un biblioteca configuración en configuración.</value></data>
   <data name="Library.Status.Filtered" xml:space="preserve"><value>{0:N0} de {1:N0} pistas</value></data>
   <data name="Library.Status.FilteredPreserved" xml:space="preserve"><value>{0:N0} de {1:N0} pistas · {2:N0} seleccionado con sin guardar cambios conservado visible</value></data>
-  <data name="Library.Status.HealthFiltered" xml:space="preserve"><value>{0:N0} estado-filtro pista(s) de {1:N0} total</value></data>
-  <data name="Library.Status.HealthFilteredPreserved" xml:space="preserve"><value>{0:N0} estado-filtro pista(s) de {1:N0} total · {2:N0} seleccionado con sin guardar cambios conservado visible</value></data>
+  <data name="Library.Status.HealthFiltered" xml:space="preserve"><value>{0:N0} de {1:N0} pistas filtradas por Estado</value></data>
+  <data name="Library.Status.HealthFilteredPreserved" xml:space="preserve"><value>{0:N0} de {1:N0} pistas filtradas por Estado · {2:N0} seleccionadas con cambios sin guardar permanecen visibles</value></data>
   <data name="Library.Status.InvalidFilter" xml:space="preserve"><value>el filtro es no válido.</value></data>
   <data name="Library.Status.LoadConfiguration" xml:space="preserve"><value>cargar un configuración a examinar su biblioteca.</value></data>
   <data name="Library.Status.LoadFailed" xml:space="preserve"><value>podría no cargar el en caché biblioteca.</value></data>
@@ -4454,7 +4465,7 @@
   <data name="Library.VisualFilter.Status.Cleared" xml:space="preserve"><value>visual filtro borrado.</value></data>
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>el visual filtro es no válido.</value></data>
   <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>no visual filtro es activo.</value></data>
-  <data name="Column.TechnicalDetails" xml:space="preserve"><value>técnico detalles</value></data>
+  <data name="Column.TechnicalDetails" xml:space="preserve"><value>Detalles técnicos</value></data>
   <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>filtro en biblioteca</value></data>
   <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>mixto</value></data>
   <data name="Health.Choice.FindingDisposition.None" xml:space="preserve"><value>ninguno</value></data>
@@ -4487,8 +4498,8 @@
   <data name="Health.Run.Name.AlbumRepresentations" xml:space="preserve"><value>álbum representaciones</value></data>
   <data name="Health.Run.Name.ArtworkHealth" xml:space="preserve"><value>carátula estado</value></data>
   <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>artista del álbum conflicto reparaciones</value></data>
-  <data name="Health.Run.Name.CrossSetCheck" xml:space="preserve"><value>cruzado-establecer comprobación</value></data>
-  <data name="Health.Run.Name.DecodedAudioVerification" xml:space="preserve"><value>decodificado-audio verificación</value></data>
+  <data name="Health.Run.Name.CrossSetCheck" xml:space="preserve"><value>Comprobación entre conjuntos</value></data>
+  <data name="Health.Run.Name.DecodedAudioVerification" xml:space="preserve"><value>Verificación de audio decodificado</value></data>
   <data name="Health.Run.Name.Duplicates" xml:space="preserve"><value>duplicados</value></data>
   <data name="Health.Run.Name.Inconsistencies" xml:space="preserve"><value>inconsistencias</value></data>
   <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>iTunes biblioteca metadatos reparaciones</value></data>
@@ -4505,8 +4516,8 @@
   <data name="Health.Artwork.Category.File" xml:space="preserve"><value>archivo carátula</value></data>
   <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>mixto álbum carátula</value></data>
   <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>conservar el primero imagen y quitar duplicado incrustado imágenes.</value></data>
-  <data name="Health.Artwork.Description.NormalizeAlbum" xml:space="preserve"><value>reemplazar cada pista's incrustado-carátula establecer con el seleccionado álbum imagen.</value></data>
-  <data name="Health.Artwork.Description.NormalizeAlbumWithMissing" xml:space="preserve"><value>reemplazar cada analizado pista's incrustado-carátula establecer con el seleccionado álbum imagen, incluir pistas cuyo carátula es ausente.</value></data>
+  <data name="Health.Artwork.Description.NormalizeAlbum" xml:space="preserve"><value>Reemplazar el conjunto de carátulas incrustadas de cada pista por la imagen de álbum seleccionada.</value></data>
+  <data name="Health.Artwork.Description.NormalizeAlbumWithMissing" xml:space="preserve"><value>Reemplazar el conjunto de carátulas incrustadas de cada pista analizada por la imagen de álbum seleccionada, incluidas las pistas sin carátula.</value></data>
   <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>recodificar el primero imagen dentro de el configurado límite y quitar duplicado incrustado imágenes.</value></data>
   <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>recodificar el primero imagen dentro de el configurado carátula límite.</value></data>
   <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>recodificar el primero legible imagen y reemplazar el no válido incrustado-carátula establecer.</value></data>
@@ -4518,17 +4529,17 @@
   <data name="Health.Diagnostic.FileError" xml:space="preserve"><value>{0}: {1}</value></data>
   <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>aplicar reparaciones</value></data>
   <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>aplicar artista combinaciones</value></data>
-  <data name="Health.Dialog.ArtistMerge.Message" xml:space="preserve"><value>cambiar nombre {0:N0} revisado ortografía variantes entre {1:N0} pistas en {2:N0} grupos? archivos son escrito directamente; no recuperación diario es creado.</value></data>
+  <data name="Health.Dialog.ArtistMerge.Message" xml:space="preserve"><value>¿Cambiar el nombre de {0:N0} variantes ortográficas revisadas en {1:N0} pistas de {2:N0} grupos? Los archivos se escriben directamente; no se crea ningún diario de recuperación.</value></data>
   <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>aplicar similar artista combinaciones</value></data>
   <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>aplicar carátula reparaciones</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Message" xml:space="preserve"><value>reemplazar el completo incrustado-carátula establecer en {0:N0} archivos usando {1:N0} revisado acciones? archivos son escrito directamente; no recuperación diario es creado.</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Message" xml:space="preserve"><value>¿Reemplazar todo el conjunto de carátulas incrustadas en {0:N0} archivos mediante {1:N0} acciones revisadas? Los archivos se escriben directamente; no se crea ningún diario de recuperación.</value></data>
   <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>aplicar carátula reparaciones</value></data>
   <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>aplicar archivo reparaciones</value></data>
-  <data name="Health.Dialog.FileRepair.Message" xml:space="preserve"><value>aplicar {0:N0} revisado archivo reparar acciones? recuperable archivo mutaciones son registrado en el operación diario; metadatos-solo escribir hacer no tener diario recuperación.</value></data>
+  <data name="Health.Dialog.FileRepair.Message" xml:space="preserve"><value>¿Aplicar {0:N0} acciones revisadas de reparación de archivos? Las modificaciones recuperables se registran en el diario de operaciones; las escrituras exclusivas de metadatos no disponen de recuperación mediante el diario.</value></data>
   <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>aplicar archivo reparaciones</value></data>
   <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>aplicar {0:N0} seleccionado reparaciones a el iTunes biblioteca? un copia de seguridad copiar se ser retenido.</value></data>
   <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>aplicar iTunes metadatos reparaciones</value></data>
-  <data name="Health.Dialog.MetadataRepair.Message" xml:space="preserve"><value>escribir {0:N0} revisado metadatos reparaciones a el archivos seleccionados? cada origen es comprobación para cambios hecho desde vista previa. archivos son escrito directamente; no recuperación diario es creado.</value></data>
+  <data name="Health.Dialog.MetadataRepair.Message" xml:space="preserve"><value>¿Escribir {0:N0} reparaciones de metadatos revisadas en los archivos seleccionados? Se comprueba si cada origen ha cambiado desde la vista previa. Los archivos se escriben directamente; no se crea ningún diario de recuperación.</value></data>
   <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>aplicar metadatos reparaciones</value></data>
   <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>carátula comparación podría no leer cada coincidente archivo.</value></data>
   <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>carátula comparación no disponible</value></data>
@@ -4574,7 +4585,7 @@
   <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>comprobando metadatos coherencia</value></data>
   <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>comparando álbum carátula</value></data>
   <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>comparando álbum representaciones</value></data>
-  <data name="Health.Progress.Stage.ComparingArtistNames" xml:space="preserve"><value>comparando artista nombre</value></data>
+  <data name="Health.Progress.Stage.ComparingArtistNames" xml:space="preserve"><value>Comparando nombres de artista</value></data>
   <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>decodificando audio</value></data>
   <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>agrupación carátula reparaciones</value></data>
   <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>indexando carátula auditoría</value></data>
@@ -4589,9 +4600,9 @@
   <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>previsualizando organización movimientos</value></data>
   <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>previsualizando representación derivaciones</value></data>
   <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>previsualizando representación metadatos copiar</value></data>
-  <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>leyendo artista nombre</value></data>
+  <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>Leyendo nombres de artista</value></data>
   <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>seleccionar organización reparaciones</value></data>
-  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>artista-name comparaciones</value></data>
+  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>comparaciones de nombres de artista</value></data>
   <data name="Health.Progress.Unit.Files" xml:space="preserve"><value>archivos</value></data>
   <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>hallazgos</value></data>
   <data name="Health.Progress.Unit.Moves" xml:space="preserve"><value>movimientos</value></data>
@@ -4636,17 +4647,17 @@
   <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>el seleccionado canónico valores ya coincidencia cada archivo.</value></data>
   <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>previsualizado {0:N0} usuario-dirigido reparar. revisar, entonces aplicar ello.</value></data>
   <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>previsualizado {0:N0} usuario-dirigido reparaciones. revisar, entonces aplicar el seleccionado reparaciones.</value></data>
-  <data name="Health.Status.CrossSetCheck.Cancelled" xml:space="preserve"><value>cruzado-establecer comprobación cancelado.</value></data>
-  <data name="Health.Status.CrossSetCheck.Failed" xml:space="preserve"><value>cruzado-establecer comprobación fallido.</value></data>
-  <data name="Health.Status.CrossSetCheck.Findings.One" xml:space="preserve"><value>cruzado-establecer comprobación: {0:N0} hallazgo.</value></data>
-  <data name="Health.Status.CrossSetCheck.Findings.Other" xml:space="preserve"><value>cruzado-establecer comprobación: {0:N0} hallazgos.</value></data>
-  <data name="Health.Status.CrossSetCheck.None" xml:space="preserve"><value>cruzado-establecer comprobación: no diferencias (requerir en mínimo dos configurado establecer).</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Cancelled" xml:space="preserve"><value>decodificado-audio verificación cancelado.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Differ.One" xml:space="preserve"><value>decodificado-audio verificación: {0:N0} par difiere.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Differ.Other" xml:space="preserve"><value>decodificado-audio verificación: {0:N0} pares diferir.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Failed" xml:space="preserve"><value>decodificado-audio verificación fallido.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Match.One" xml:space="preserve"><value>decodificado-audio verificación: {0:N0} compatible par coincidencias.</value></data>
-  <data name="Health.Status.DecodedAudioVerification.Match.Other" xml:space="preserve"><value>decodificado-audio verificación: {0:N0} compatible pares coincidencia.</value></data>
+  <data name="Health.Status.CrossSetCheck.Cancelled" xml:space="preserve"><value>Se canceló la comprobación entre conjuntos.</value></data>
+  <data name="Health.Status.CrossSetCheck.Failed" xml:space="preserve"><value>Falló la comprobación entre conjuntos.</value></data>
+  <data name="Health.Status.CrossSetCheck.Findings.One" xml:space="preserve"><value>Comprobación entre conjuntos: {0:N0} hallazgo.</value></data>
+  <data name="Health.Status.CrossSetCheck.Findings.Other" xml:space="preserve"><value>Comprobación entre conjuntos: {0:N0} hallazgos.</value></data>
+  <data name="Health.Status.CrossSetCheck.None" xml:space="preserve"><value>Comprobación entre conjuntos: sin diferencias (se necesitan al menos dos conjuntos configurados).</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Cancelled" xml:space="preserve"><value>Se canceló la verificación de audio decodificado.</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Differ.One" xml:space="preserve"><value>Verificación de audio decodificado: {0:N0} par es diferente.</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Differ.Other" xml:space="preserve"><value>Verificación de audio decodificado: {0:N0} pares son diferentes.</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Failed" xml:space="preserve"><value>Falló la verificación de audio decodificado.</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Match.One" xml:space="preserve"><value>Verificación de audio decodificado: coincide {0:N0} par compatible.</value></data>
+  <data name="Health.Status.DecodedAudioVerification.Match.Other" xml:space="preserve"><value>Verificación de audio decodificado: coinciden {0:N0} pares compatibles.</value></data>
   <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>aplazado carátula analizar cancelado.</value></data>
   <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>aplazado carátula analizar fallido.</value></data>
   <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>{0:N0} duplicado grupo.</value></data>
@@ -4691,7 +4702,7 @@
   <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} fallido.</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} similar artista grupo encontrado en umbral {1:0.00}. revisar el variantes, entonces aplicar el activo reparar.</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} similar artista grupos encontrado en umbral {1:0.00}. revisar el variantes, entonces aplicar el activo reparaciones.</value></data>
-  <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>no similar artista nombre encontrado en umbral {0:0.00}.</value></data>
+  <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>No se encontraron nombres de artista similares con el umbral {0:0.00}.</value></data>
   <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>añadir archivo</value></data>
   <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>crear carpeta</value></data>
   <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>eliminar carpeta</value></data>
@@ -4716,22 +4727,22 @@
   <data name="Devices.Activity.Preview.Title" xml:space="preserve"><value>vista previa Android sincronización</value></data>
   <data name="Devices.Activity.Restore.Title" xml:space="preserve"><value>restaurar Android sincronización</value></data>
   <data name="Devices.Activity.Starting" xml:space="preserve"><value>iniciando…</value></data>
-  <data name="Devices.Dialog.Apply.DirectMessage" xml:space="preserve"><value>aplicar {0:N0} planificado acciones, incluir {1:N0} eliminaciones, y transferir {2:N0} bytes? recuperación es no disponible porque directo transferir omite preparación.</value></data>
+  <data name="Devices.Dialog.Apply.DirectMessage" xml:space="preserve"><value>¿Aplicar {0:N0} acciones planificadas, incluidas {1:N0} eliminaciones, y transferir {2:N0} bytes? La recuperación no está disponible porque la transferencia directa omite el almacenamiento provisional.</value></data>
   <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>aplicar sin recuperación</value></data>
-  <data name="Devices.Dialog.Apply.Message" xml:space="preserve"><value>aplicar {0:N0} planificado acciones, incluir {1:N0} eliminaciones, y transferir {2:N0} bytes? recuperación es disponible: reemplazado y quitado destino elementos se ser en cuarentena en un recuperación ejecutar.</value></data>
+  <data name="Devices.Dialog.Apply.Message" xml:space="preserve"><value>¿Aplicar {0:N0} acciones planificadas, incluidas {1:N0} eliminaciones, y transferir {2:N0} bytes? La recuperación está disponible: los elementos de destino reemplazados y eliminados se pondrán en cuarentena en una ejecución de recuperación.</value></data>
   <data name="Devices.Dialog.Apply.Primary" xml:space="preserve"><value>sincronizar</value></data>
   <data name="Devices.Dialog.Apply.Title" xml:space="preserve"><value>aplicar Android sincronización</value></data>
   <data name="Devices.Dialog.ChooseAdb" xml:space="preserve"><value>elegir adb ejecutable</value></data>
   <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>elegir el local carpeta a reflejar</value></data>
-  <data name="Devices.Dialog.Failure.Message" xml:space="preserve"><value>{0} podría no ser completado. abrir el diagnóstico detalles para el subyacente error.</value></data>
+  <data name="Devices.Dialog.Failure.Message" xml:space="preserve"><value>No se pudo completar {0}. Abre los detalles de diagnóstico para consultar el error subyacente.</value></data>
   <data name="Devices.Dialog.Failure.Title" xml:space="preserve"><value>{0} fallido</value></data>
   <data name="Devices.Dialog.Initialize.Adopt" xml:space="preserve"><value>adoptar</value></data>
-  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>adoptar “{0}” como un administrado sincronizar destino? existente contenidos se ser incluir en el primero vista previa y puede ser en cuarentena cuando aplicar es permitir.</value></data>
+  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>¿Adoptar «{0}» como destino de sincronización administrado? El contenido existente se incluirá en la primera vista previa y puede ponerse en cuarentena cuando se permita aplicar.</value></data>
   <data name="Devices.Dialog.Initialize.AdoptTitle" xml:space="preserve"><value>adoptar Android destino</value></data>
   <data name="Devices.Dialog.Initialize.Create" xml:space="preserve"><value>inicializar</value></data>
   <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>inicializar “{0}” como un administrado sincronizar destino? el carpeta debe ser nuevo o vacío.</value></data>
   <data name="Devices.Dialog.Initialize.Title" xml:space="preserve"><value>inicializar Android destino</value></data>
-  <data name="Devices.Dialog.Restore.Message" xml:space="preserve"><value>restaurar recuperación ejecutar “{0}” en “{1}”? sincronizar archivos se ser quitado, en cuarentena original se ser restaurado, y desplazado actual contenido se permanecer conservado en el recuperación ejecutar.</value></data>
+  <data name="Devices.Dialog.Restore.Message" xml:space="preserve"><value>¿Restaurar la ejecución de recuperación «{0}» en «{1}»? Se quitarán los archivos sincronizados, se restaurarán los originales en cuarentena y el contenido actual desplazado seguirá conservado en la ejecución de recuperación.</value></data>
   <data name="Devices.Dialog.Restore.Primary" xml:space="preserve"><value>restaurar</value></data>
   <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>restaurar anterior Android sincronización</value></data>
   <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB podría no enumerar Android dispositivos. usted puede todavía introducir un serie manual.</value></data>
@@ -4801,11 +4812,11 @@
   <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>{0:N0} configuración problema debe ser resuelto antes previsualizando.</value></data>
   <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>{0:N0} configuración problemas debe ser resuelto antes previsualizando.</value></data>
   <data name="Ingest.Configuration.Ready" xml:space="preserve"><value>ingesta configuración es listo.</value></data>
-  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>importar {0:N0} álbumes, crear {1:N0} salida archivos, y limpiar configurar {2:N0} origen elementos? recuperación es disponible: completado álbumes y limpieza acciones son registrado en operación diario.</value></data>
+  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>¿Importar {0:N0} álbumes, crear {1:N0} archivos de salida y limpiar {2:N0} elementos de origen? La recuperación está disponible: los álbumes completados y las acciones de limpieza se registran en los diarios de operaciones.</value></data>
   <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>aplicar ingesta</value></data>
   <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>aplicar ingesta plan</value></data>
   <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>seleccionar entrante música directorio</value></data>
-  <data name="Ingest.File.ConflictSummary" xml:space="preserve"><value>conflicto detalles: {0}</value></data>
+  <data name="Ingest.File.ConflictSummary" xml:space="preserve"><value>Detalles del conflicto: {0}</value></data>
   <data name="Ingest.File.OutputDestination" xml:space="preserve"><value>destino → {0}</value></data>
   <data name="Ingest.File.Progress.Complete" xml:space="preserve"><value>✓ completo</value></data>
   <data name="Ingest.File.Progress.Failed" xml:space="preserve"><value>✕ no completado</value></data>
@@ -4816,17 +4827,17 @@
   <data name="Ingest.File.Type.HiResAlac" xml:space="preserve"><value>alta resolución ALAC</value></data>
   <data name="Ingest.File.Type.HiResFlac" xml:space="preserve"><value>alta resolución FLAC</value></data>
   <data name="Ingest.File.Type.Output" xml:space="preserve"><value>{0} salida</value></data>
-  <data name="Ingest.File.Type.Unsupported" xml:space="preserve"><value>no compatible o no-audio</value></data>
-  <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>ingesta es ocupado. cancelar o finalizar el actual operación antes reemplazar su entrada.</value></data>
+  <data name="Ingest.File.Type.Unsupported" xml:space="preserve"><value>No compatible o no es audio</value></data>
+  <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>Ingesta está ocupada. Cancela o termina la operación actual antes de reemplazar sus entradas.</value></data>
   <data name="Ingest.Handoff.CommonTreeRequired" xml:space="preserve"><value>archivos seleccionados debe compartir un origen árbol en uno volumen. elegir archivos debajo un común entrante carpeta.</value></data>
-  <data name="Ingest.Handoff.InvalidPaths" xml:space="preserve"><value>el seleccionado rutas son no válido. abrir el diagnóstico detalles para el subyacente error.</value></data>
+  <data name="Ingest.Handoff.InvalidPaths" xml:space="preserve"><value>Las rutas seleccionadas no son válidas. Abre los detalles de diagnóstico para consultar el error subyacente.</value></data>
   <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>seleccionar uno o más área de trabajo archivos primero.</value></data>
-  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>{0:N0} área de trabajo-seleccionado archivo es listo. ejecutar comprobación previa o vista previa.</value></data>
-  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>{0:N0} área de trabajo-archivos seleccionados son listo. ejecutar comprobación previa o vista previa.</value></data>
+  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>Está listo {0:N0} archivo seleccionado en el área de trabajo. Ejecuta Comprobaciones previas o Previsualizar.</value></data>
+  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>Están listos {0:N0} archivos seleccionados en el área de trabajo. Ejecuta Comprobaciones previas o Previsualizar.</value></data>
   <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>el seleccionado archivo es no disponible: {0}</value></data>
   <data name="Ingest.History.AffectedItems.One" xml:space="preserve"><value>{0:N0} elemento</value></data>
   <data name="Ingest.History.AffectedItems.Other" xml:space="preserve"><value>{0:N0} elementos</value></data>
-  <data name="Ingest.History.OpenForDetails" xml:space="preserve"><value>abrir para elemento detalles</value></data>
+  <data name="Ingest.History.OpenForDetails" xml:space="preserve"><value>Abrir para ver los detalles del elemento</value></data>
   <data name="Ingest.History.State.Completed" xml:space="preserve"><value>completado</value></data>
   <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>interrumpido — recuperación disponible</value></data>
   <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>cuarentena presente</value></data>
@@ -4870,8 +4881,8 @@
   <data name="Ingest.PreviewFilter.Cleanup" xml:space="preserve"><value>limpieza</value></data>
   <data name="Ingest.PreviewFilter.Conflicts" xml:space="preserve"><value>conflictos</value></data>
   <data name="Ingest.PreviewFilter.Outputs" xml:space="preserve"><value>salidas</value></data>
-  <data name="Ingest.SelectedSources.Summary.One" xml:space="preserve"><value>usando {0:N0} área de trabajo-seleccionado archivo como el ingesta origen.</value></data>
-  <data name="Ingest.SelectedSources.Summary.Other" xml:space="preserve"><value>usando {0:N0} área de trabajo-archivos seleccionados como el ingesta origen.</value></data>
+  <data name="Ingest.SelectedSources.Summary.One" xml:space="preserve"><value>Se usa {0:N0} archivo seleccionado en el área de trabajo como origen de ingesta.</value></data>
+  <data name="Ingest.SelectedSources.Summary.Other" xml:space="preserve"><value>Se usan {0:N0} archivos seleccionados en el área de trabajo como origen de ingesta.</value></data>
   <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>cancelado. cualquiera álbum ya confirmado permanecer de forma segura diario.</value></data>
   <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>ingesta era cancelado. cualquiera completado obra permanecer de forma segura diario.</value></data>
   <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>ingesta era no aplicado. el revisado vista previa permanecer disponible.</value></data>
@@ -4883,7 +4894,7 @@
   <data name="Ingest.Status.ChooseSource" xml:space="preserve"><value>elegir un entrante carpeta, entonces ejecutar comprobación previa o vista previa.</value></data>
   <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>no musical limpieza completado.</value></data>
   <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>derivación era rechazado. el completo ejecutar era cancelado y nada era cambiado.</value></data>
-  <data name="Ingest.Status.InputsChanged" xml:space="preserve"><value>entrada cambiado. vista previa de nuevo antes aplicando.</value></data>
+  <data name="Ingest.Status.InputsChanged" xml:space="preserve"><value>Las entradas cambiaron. Vuelve a previsualizar antes de aplicar.</value></data>
   <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>comprobación previa cancelado.</value></data>
   <data name="Ingest.Status.PreflightChecking" xml:space="preserve"><value>comprobando ingesta configuración y herramientas externas…</value></data>
   <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>comprobación previa encontrado {0:N0} bloqueante error.</value></data>
@@ -4908,8 +4919,8 @@
   <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>aplicar organización plan</value></data>
   <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>calculando canónico rutas</value></data>
   <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>vista previa organización</value></data>
-  <data name="Organize.Dialog.Apply.Message.One" xml:space="preserve"><value>aplicar {0:N0} planificado mover? recuperación es disponible: un diario se ser escrito, y el completado mover se ser revertido posterior si el operación hace no finalizar.</value></data>
-  <data name="Organize.Dialog.Apply.Message.Other" xml:space="preserve"><value>aplicar {0:N0} planificado movimientos? recuperación es disponible: un diario se ser escrito, y completado movimientos se ser revertido posterior si el operación hace no finalizar.</value></data>
+  <data name="Organize.Dialog.Apply.Message.One" xml:space="preserve"><value>¿Aplicar {0:N0} movimiento planificado? La recuperación está disponible: se escribirá un diario y el movimiento completado se revertirá si la operación no finaliza.</value></data>
+  <data name="Organize.Dialog.Apply.Message.Other" xml:space="preserve"><value>¿Aplicar {0:N0} movimientos planificados? La recuperación está disponible: se escribirá un diario y los movimientos completados se revertirán si la operación no finaliza.</value></data>
   <data name="Organize.Dialog.Apply.Primary" xml:space="preserve"><value>aplicar movimientos</value></data>
   <data name="Organize.Dialog.Apply.Title" xml:space="preserve"><value>aplicar organización plan</value></data>
   <data name="Organize.Status.AlreadyCanonical" xml:space="preserve"><value>el biblioteca es ya organizar según a el actual directiva.</value></data>
@@ -4932,12 +4943,12 @@
   <data name="Inspector.View.ArtworkActions" xml:space="preserve"><value>carátula acciones</value></data>
   <data name="Inspector.View.ArtworkDescription" xml:space="preserve"><value>carátula descripción</value></data>
   <data name="Inspector.View.ArtworkPreview" xml:space="preserve"><value>carátula vista previa</value></data>
-  <data name="Inspector.View.ArtworkPreviewHelp" xml:space="preserve"><value>doble-hacer clic o pulsar Enter a abrir el completo-tamaño carátula.</value></data>
+  <data name="Inspector.View.ArtworkPreviewHelp" xml:space="preserve"><value>Haz doble clic o pulsa Enter para abrir la carátula a tamaño completo.</value></data>
   <data name="Inspector.View.ArtworkType" xml:space="preserve"><value>carátula tipo</value></data>
   <data name="Inspector.View.Close" xml:space="preserve"><value>cerrar inspector</value></data>
   <data name="Inspector.View.DescriptionPlaceholder" xml:space="preserve"><value>opcional descripción</value></data>
-  <data name="Inspector.View.EmptyDescription" xml:space="preserve"><value>seleccionar uno o más pistas a inspeccionar metadatos y carátula.</value></data>
-  <data name="Inspector.View.EmptyTitle" xml:space="preserve"><value>no selección</value></data>
+  <data name="Inspector.View.EmptyDescription" xml:space="preserve"><value>Selecciona una o varias pistas para inspeccionar sus metadatos y carátulas.</value></data>
+  <data name="Inspector.View.EmptyTitle" xml:space="preserve"><value>Sin selección</value></data>
   <data name="Inspector.View.MaximumDimension" xml:space="preserve"><value>dimensión máxima</value></data>
   <data name="Inspector.View.MaximumDimensionAutomation" xml:space="preserve"><value>máximo carátula dimensión</value></data>
   <data name="Inspector.View.MixedArtwork" xml:space="preserve"><value>mixto carátula</value></data>
@@ -4949,7 +4960,7 @@
   <data name="Inspector.View.RemoveArtworkAutomation" xml:space="preserve"><value>quitar carátula</value></data>
   <data name="Inspector.View.ReplaceArtwork" xml:space="preserve"><value>reemplazar carátula...</value></data>
   <data name="Inspector.View.ReplaceArtworkAutomation" xml:space="preserve"><value>reemplazar carátula</value></data>
-  <data name="Inspector.View.Revert" xml:space="preserve"><value>revertir</value></data>
+  <data name="Inspector.View.Revert" xml:space="preserve"><value>Descartar ediciones</value></data>
   <data name="Inspector.View.SaveArtworkToFile" xml:space="preserve"><value>guardar a archivo...</value></data>
   <data name="Inspector.View.SaveArtworkToFileAutomation" xml:space="preserve"><value>guardar carátula a archivo</value></data>
   <data name="Inspector.View.SaveTags" xml:space="preserve"><value>guardar etiquetas</value></data>
@@ -4985,8 +4996,8 @@
   <data name="ReviewedFileOperation.Choice.Kind.Move" xml:space="preserve"><value>mover</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Quarantine" xml:space="preserve"><value>cuarentena</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Rename" xml:space="preserve"><value>cambiar nombre</value></data>
-  <data name="ReviewedFileOperation.Dialog.Apply.Message.One" xml:space="preserve"><value>aplicar el {0:N0} revisado archivo mutación? un duradero diario se ser retenido para historial y elegible restaurar.</value></data>
-  <data name="ReviewedFileOperation.Dialog.Apply.Message.Other" xml:space="preserve"><value>aplicar el {0:N0} revisado archivo mutaciones? un duradero diario se ser retenido para historial y elegible restaurar.</value></data>
+  <data name="ReviewedFileOperation.Dialog.Apply.Message.One" xml:space="preserve"><value>¿Aplicar la {0:N0} modificación de archivo revisada? Se conservará un diario duradero para el historial y las restauraciones compatibles.</value></data>
+  <data name="ReviewedFileOperation.Dialog.Apply.Message.Other" xml:space="preserve"><value>¿Aplicar las {0:N0} modificaciones de archivo revisadas? Se conservará un diario duradero para el historial y las restauraciones compatibles.</value></data>
   <data name="ReviewedFileOperation.Dialog.Apply.Title" xml:space="preserve"><value>aplicar {0}?</value></data>
   <data name="ReviewedFileOperation.Error.PreviewFirst" xml:space="preserve"><value>vista previa el archivo operación primero.</value></data>
   <data name="ReviewedFileOperation.Picker.Destination" xml:space="preserve"><value>elegir archivo-operación destino</value></data>
@@ -5007,25 +5018,25 @@
   <data name="ReviewedFileOperation.Target.Files.Other" xml:space="preserve"><value>{0:N0} archivos en el actual ámbito.</value></data>
   <data name="ReviewedFileOperation.Target.None" xml:space="preserve"><value>sin archivos en el actual ámbito.</value></data>
   <data name="Workbench.Action.Add" xml:space="preserve"><value>añadir</value></data>
-  <data name="Workbench.Action.AddFiles" xml:space="preserve"><value>añadir archivos</value></data>
-  <data name="Workbench.Action.HideInspector" xml:space="preserve"><value>ocultar inspector</value></data>
+  <data name="Workbench.Action.AddFiles" xml:space="preserve"><value>Añadir archivos</value></data>
+  <data name="Workbench.Action.HideInspector" xml:space="preserve"><value>Ocultar inspector</value></data>
   <data name="Workbench.Action.Inspector" xml:space="preserve"><value>inspector</value></data>
   <data name="Workbench.Action.InspectorAutomation" xml:space="preserve"><value>inspector</value></data>
   <data name="Workbench.Action.More" xml:space="preserve"><value>más</value></data>
   <data name="Workbench.Action.MoreAutomation" xml:space="preserve"><value>más</value></data>
-  <data name="Workbench.Action.MoveDown" xml:space="preserve"><value>mover abajo</value></data>
-  <data name="Workbench.Action.MoveUp" xml:space="preserve"><value>mover configurar</value></data>
+  <data name="Workbench.Action.MoveDown" xml:space="preserve"><value>Mover hacia abajo</value></data>
+  <data name="Workbench.Action.MoveUp" xml:space="preserve"><value>Mover hacia arriba</value></data>
   <data name="Workbench.Action.New" xml:space="preserve"><value>nuevo</value></data>
   <data name="Workbench.Action.Redo" xml:space="preserve"><value>rehacer</value></data>
-  <data name="Workbench.Action.RepeatRecipe" xml:space="preserve"><value>repetir receta</value></data>
-  <data name="Workbench.Action.Revert" xml:space="preserve"><value>revertir</value></data>
-  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>deshacer último aplicar</value></data>
+  <data name="Workbench.Action.RepeatRecipe" xml:space="preserve"><value>Repetir receta</value></data>
+  <data name="Workbench.Action.Revert" xml:space="preserve"><value>Descartar todos los cambios pendientes</value></data>
+  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>Deshacer la última aplicación</value></data>
   <data name="Workbench.Activity.ApplyingReviewedChanges" xml:space="preserve"><value>aplicando revisado metadatos cambios</value></data>
   <data name="Workbench.Activity.BuildingPlaylistPreview" xml:space="preserve"><value>compilar lista de reproducción vista previa</value></data>
   <data name="Workbench.Activity.BuildingPreview" xml:space="preserve"><value>compilar metadatos vista previa</value></data>
   <data name="Workbench.Activity.BuildingReportPreview" xml:space="preserve"><value>compilar informe vista previa</value></data>
   <data name="Workbench.Activity.FindingCoverArt" xml:space="preserve"><value>hallazgo Cover Art Archive imágenes</value></data>
-  <data name="Workbench.Activity.LoadingDiscogsDetails" xml:space="preserve"><value>cargando Discogs lanzamiento detalles</value></data>
+  <data name="Workbench.Activity.LoadingDiscogsDetails" xml:space="preserve"><value>Cargando detalles del lanzamiento de Discogs</value></data>
   <data name="Workbench.Activity.MappingDiscogsTracks" xml:space="preserve"><value>coincidencia área de trabajo archivos a Discogs pistas</value></data>
   <data name="Workbench.Activity.MappingReleaseTracks" xml:space="preserve"><value>coincidencia área de trabajo archivos a lanzamiento pistas</value></data>
   <data name="Workbench.Activity.PreparingFingerprint" xml:space="preserve"><value>preparando audio huella detección</value></data>
@@ -5040,8 +5051,8 @@
   <data name="Workbench.Activity.WritingReport" xml:space="preserve"><value>escribir revisado informe</value></data>
   <data name="Workbench.AllFields.Action.Copy" xml:space="preserve"><value>copiar campo</value></data>
   <data name="Workbench.AllFields.Action.CopyTooltip" xml:space="preserve"><value>copiar campo</value></data>
-  <data name="Workbench.AllFields.Action.NewCustomField" xml:space="preserve"><value>nuevo personalizado campo</value></data>
-  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>nuevo conocido campo</value></data>
+  <data name="Workbench.AllFields.Action.NewCustomField" xml:space="preserve"><value>Nuevo campo personalizado</value></data>
+  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>Nuevo campo conocido</value></data>
   <data name="Workbench.AllFields.Action.PastePreview" xml:space="preserve"><value>pegar + vista previa</value></data>
   <data name="Workbench.AllFields.Action.PastePreviewTooltip" xml:space="preserve"><value>pegar + vista previa</value></data>
   <data name="Workbench.AllFields.Action.Preview" xml:space="preserve"><value>vista previa</value></data>
@@ -5050,17 +5061,17 @@
   <data name="Workbench.AllFields.OrderedValues" xml:space="preserve"><value>orden valores</value></data>
   <data name="Workbench.AllFields.Title" xml:space="preserve"><value>todos metadatos campos</value></data>
   <data name="Workbench.AllFields.ValueAction" xml:space="preserve"><value>valor acción</value></data>
-  <data name="Workbench.Bulk.Action.AddToRecipe" xml:space="preserve"><value>añadir a receta</value></data>
-  <data name="Workbench.Bulk.Action.DeleteRecipe" xml:space="preserve"><value>eliminar receta</value></data>
-  <data name="Workbench.Bulk.Action.DuplicateStep" xml:space="preserve"><value>duplicado paso</value></data>
-  <data name="Workbench.Bulk.Action.LoadRecipe" xml:space="preserve"><value>cargar receta</value></data>
-  <data name="Workbench.Bulk.Action.MoreRecipeAutomation" xml:space="preserve"><value>más receta</value></data>
-  <data name="Workbench.Bulk.Action.NewRecipe" xml:space="preserve"><value>nuevo receta</value></data>
-  <data name="Workbench.Bulk.Action.PreviewOperation" xml:space="preserve"><value>vista previa operación</value></data>
-  <data name="Workbench.Bulk.Action.RemoveStep" xml:space="preserve"><value>quitar paso</value></data>
-  <data name="Workbench.Bulk.Action.SaveRecipe" xml:space="preserve"><value>guardar receta</value></data>
-  <data name="Workbench.Bulk.Action.StepActions" xml:space="preserve"><value>paso acciones</value></data>
-  <data name="Workbench.Bulk.Action.StepActionsAutomation" xml:space="preserve"><value>paso acciones</value></data>
+  <data name="Workbench.Bulk.Action.AddToRecipe" xml:space="preserve"><value>Añadir a la receta</value></data>
+  <data name="Workbench.Bulk.Action.DeleteRecipe" xml:space="preserve"><value>Eliminar receta</value></data>
+  <data name="Workbench.Bulk.Action.DuplicateStep" xml:space="preserve"><value>Duplicar paso</value></data>
+  <data name="Workbench.Bulk.Action.LoadRecipe" xml:space="preserve"><value>Cargar receta</value></data>
+  <data name="Workbench.Bulk.Action.MoreRecipeAutomation" xml:space="preserve"><value>Más acciones de receta</value></data>
+  <data name="Workbench.Bulk.Action.NewRecipe" xml:space="preserve"><value>Nueva receta</value></data>
+  <data name="Workbench.Bulk.Action.PreviewOperation" xml:space="preserve"><value>Previsualizar operación</value></data>
+  <data name="Workbench.Bulk.Action.RemoveStep" xml:space="preserve"><value>Quitar paso</value></data>
+  <data name="Workbench.Bulk.Action.SaveRecipe" xml:space="preserve"><value>Guardar receta</value></data>
+  <data name="Workbench.Bulk.Action.StepActions" xml:space="preserve"><value>Acciones del paso</value></data>
+  <data name="Workbench.Bulk.Action.StepActionsAutomation" xml:space="preserve"><value>Acciones del paso</value></data>
   <data name="Workbench.Bulk.AssignmentPlaceholder" xml:space="preserve"><value>asignación</value></data>
   <data name="Workbench.Bulk.CaptureGroup" xml:space="preserve"><value>captura grupo</value></data>
   <data name="Workbench.Bulk.Case" xml:space="preserve"><value>mayúsculas y minúsculas</value></data>
@@ -5081,7 +5092,7 @@
   <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>pendiente operaciones</value></data>
   <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>pendiente operaciones</value></data>
   <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>personal recetas</value></data>
-  <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>receta Name</value></data>
+  <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>Nombre de la receta</value></data>
   <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>reemplazar con</value></data>
   <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>un ligero borrador vista previa actualizar como usted editar el actual operación.</value></data>
   <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>representativo borrador</value></data>
@@ -5103,12 +5114,12 @@
   <data name="Workbench.Choice.FieldEditMode.RemoveValues" xml:space="preserve"><value>quitar valores</value></data>
   <data name="Workbench.Choice.FieldEditMode.Replace" xml:space="preserve"><value>reemplazar</value></data>
   <data name="Workbench.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>automático</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin1</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>Utf16</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>Utf8</value></data>
-  <data name="Workbench.Choice.Id3Version.V22" xml:space="preserve"><value>V22</value></data>
-  <data name="Workbench.Choice.Id3Version.V23" xml:space="preserve"><value>V23</value></data>
-  <data name="Workbench.Choice.Id3Version.V24" xml:space="preserve"><value>V24</value></data>
+  <data name="Workbench.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin-1</value></data>
+  <data name="Workbench.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>UTF-16</value></data>
+  <data name="Workbench.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>UTF-8</value></data>
+  <data name="Workbench.Choice.Id3Version.V22" xml:space="preserve"><value>ID3v2.2</value></data>
+  <data name="Workbench.Choice.Id3Version.V23" xml:space="preserve"><value>ID3v2.3</value></data>
+  <data name="Workbench.Choice.Id3Version.V24" xml:space="preserve"><value>ID3v2.4</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>ignorar</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>conservar vacío valor</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>quitar campo</value></data>
@@ -5121,21 +5132,21 @@
   <data name="Workbench.Choice.OnlineProvider.MusicBrainz" xml:space="preserve"><value>MusicBrainz</value></data>
   <data name="Workbench.Choice.OnlineScope.AllFiles" xml:space="preserve"><value>todos archivos</value></data>
   <data name="Workbench.Choice.OnlineScope.SelectedFile" xml:space="preserve"><value>seleccionado archivo</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf16LittleEndian" xml:space="preserve"><value>Utf16 little-endian orden de bytes</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8" xml:space="preserve"><value>Utf8</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8WithBom" xml:space="preserve"><value>Utf8 con Bom</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.CrLf" xml:space="preserve"><value>Cr Lf</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.Lf" xml:space="preserve"><value>Lf</value></data>
+  <data name="Workbench.Choice.PlaylistEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
+  <data name="Workbench.Choice.PlaylistEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
+  <data name="Workbench.Choice.PlaylistEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8 con BOM</value></data>
+  <data name="Workbench.Choice.PlaylistLineEnding.CrLf" xml:space="preserve"><value>CRLF</value></data>
+  <data name="Workbench.Choice.PlaylistLineEnding.Lf" xml:space="preserve"><value>LF</value></data>
   <data name="Workbench.Choice.PlaylistLineEnding.Platform" xml:space="preserve"><value>plataforma</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Absolute" xml:space="preserve"><value>absoluto</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.AsProvided" xml:space="preserve"><value>como proporcionado</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Relative" xml:space="preserve"><value>relativo</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf16LittleEndian" xml:space="preserve"><value>Utf16 little-endian orden de bytes</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8" xml:space="preserve"><value>Utf8</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8WithBom" xml:space="preserve"><value>Utf8 con Bom</value></data>
-  <data name="Workbench.Choice.ReportFormat.Csv" xml:space="preserve"><value>Csv</value></data>
-  <data name="Workbench.Choice.ReportFormat.Html" xml:space="preserve"><value>Html</value></data>
-  <data name="Workbench.Choice.ReportFormat.Rtf" xml:space="preserve"><value>Rtf</value></data>
+  <data name="Workbench.Choice.ReportEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
+  <data name="Workbench.Choice.ReportEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
+  <data name="Workbench.Choice.ReportEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8 con BOM</value></data>
+  <data name="Workbench.Choice.ReportFormat.Csv" xml:space="preserve"><value>CSV</value></data>
+  <data name="Workbench.Choice.ReportFormat.Html" xml:space="preserve"><value>HTML</value></data>
+  <data name="Workbench.Choice.ReportFormat.Rtf" xml:space="preserve"><value>RTF</value></data>
   <data name="Workbench.Choice.ReportFormat.Text" xml:space="preserve"><value>texto</value></data>
   <data name="Workbench.Choice.ReportSortType.DateTime" xml:space="preserve"><value>fecha tiempo</value></data>
   <data name="Workbench.Choice.ReportSortType.Natural" xml:space="preserve"><value>natural</value></data>
@@ -5151,12 +5162,12 @@
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>conocido campo</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>etiqueta</value></data>
   <data name="Workbench.Columns.Metadata" xml:space="preserve"><value>metadatos</value></data>
-  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>elegir un conocido campo o introducir un personalizado campo name.</value></data>
-  <data name="Workbench.Columns.Status.EnterLabel" xml:space="preserve"><value>Enter un columna etiqueta.</value></data>
+  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>Elige un campo conocido o escribe el nombre de un campo personalizado.</value></data>
+  <data name="Workbench.Columns.Status.EnterLabel" xml:space="preserve"><value>Escribe una etiqueta de columna.</value></data>
   <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>nuevo sin guardar metadatos columna.</value></data>
   <data name="Workbench.Columns.Status.Removed" xml:space="preserve"><value>quitado metadatos columna '{0}'.</value></data>
   <data name="Workbench.Columns.Status.Saved" xml:space="preserve"><value>guardado metadatos columna '{0}'.</value></data>
-  <data name="Workbench.Columns.Title" xml:space="preserve"><value>título</value></data>
+  <data name="Workbench.Columns.Title" xml:space="preserve"><value>Detalles de la columna</value></data>
   <data name="Workbench.Columns.Visible" xml:space="preserve"><value>visible</value></data>
   <data name="Workbench.Common.After" xml:space="preserve"><value>después</value></data>
   <data name="Workbench.Common.Before" xml:space="preserve"><value>antes</value></data>
@@ -5208,7 +5219,7 @@
   <data name="Workbench.Grid.Header.Label" xml:space="preserve"><value>etiqueta</value></data>
   <data name="Workbench.Grid.Header.Labels" xml:space="preserve"><value>etiquetas</value></data>
   <data name="Workbench.Grid.Header.MatchedPosition" xml:space="preserve"><value>coincidente posición</value></data>
-  <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>MusicBrainz grabación Ids</value></data>
+  <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>IDs de grabación de MusicBrainz</value></data>
   <data name="Workbench.Grid.Header.MusicBrainzReleaseId" xml:space="preserve"><value>MusicBrainz lanzamiento ID</value></data>
   <data name="Workbench.Grid.Header.Operation" xml:space="preserve"><value>operación</value></data>
   <data name="Workbench.Grid.Header.Position" xml:space="preserve"><value>posición</value></data>
@@ -5222,7 +5233,7 @@
   <data name="Workbench.Grid.Header.Status" xml:space="preserve"><value>estado</value></data>
   <data name="Workbench.Grid.Header.Styles" xml:space="preserve"><value>estilos</value></data>
   <data name="Workbench.Grid.Header.TagLayers" xml:space="preserve"><value>etiqueta capas</value></data>
-  <data name="Workbench.Grid.Header.TargetDetails" xml:space="preserve"><value>destino detalles</value></data>
+  <data name="Workbench.Grid.Header.TargetDetails" xml:space="preserve"><value>Detalles del destino</value></data>
   <data name="Workbench.Grid.Header.Thumbnail" xml:space="preserve"><value>miniatura</value></data>
   <data name="Workbench.Grid.Header.Tracks" xml:space="preserve"><value>pistas</value></data>
   <data name="Workbench.Grid.Header.Types" xml:space="preserve"><value>tipos</value></data>
@@ -5265,14 +5276,14 @@
   <data name="Workbench.Navigation.Group.Output" xml:space="preserve"><value>salida</value></data>
   <data name="Workbench.Navigation.Group.Workspace" xml:space="preserve"><value>espacio de trabajo</value></data>
   <data name="Workbench.Navigation.Section.AllFields" xml:space="preserve"><value>todos los campos</value></data>
-  <data name="Workbench.Navigation.Section.BulkOperation" xml:space="preserve"><value>masivo operación</value></data>
-  <data name="Workbench.Navigation.Section.Files" xml:space="preserve"><value>archivos</value></data>
+  <data name="Workbench.Navigation.Section.BulkOperation" xml:space="preserve"><value>Edición masiva</value></data>
+  <data name="Workbench.Navigation.Section.Files" xml:space="preserve"><value>Operaciones de archivo</value></data>
   <data name="Workbench.Navigation.Section.OnlineMetadata" xml:space="preserve"><value>metadatos en línea</value></data>
   <data name="Workbench.Navigation.Section.Playlists" xml:space="preserve"><value>listas de reproducción</value></data>
   <data name="Workbench.Navigation.Section.Reports" xml:space="preserve"><value>informes</value></data>
   <data name="Workbench.Navigation.Section.Session" xml:space="preserve"><value>sesión</value></data>
   <data name="Workbench.Navigation.Section.Shortcuts" xml:space="preserve"><value>atajos</value></data>
-  <data name="Workbench.Navigation.Section.Tools" xml:space="preserve"><value>herramientas</value></data>
+  <data name="Workbench.Navigation.Section.Tools" xml:space="preserve"><value>Herramientas externas</value></data>
   <data name="Workbench.Navigation.SectionAutomation" xml:space="preserve"><value>sección</value></data>
   <data name="Workbench.Online.AddImage" xml:space="preserve"><value>añadir imagen</value></data>
   <data name="Workbench.Online.AdvancedIdentifiers" xml:space="preserve"><value>avanzado identificadores</value></data>
@@ -5291,11 +5302,11 @@
   <data name="Workbench.Online.Description" xml:space="preserve"><value>descripción</value></data>
   <data name="Workbench.Online.DiscogsArtworkDescription" xml:space="preserve"><value>Discogs lanzamiento {0}</value></data>
   <data name="Workbench.Online.DiscogsEditions" xml:space="preserve"><value>Discogs ediciones</value></data>
-  <data name="Workbench.Online.DiscogsEditionsDescription" xml:space="preserve"><value>seleccionar un edición, cargar su completo detalles, entonces revisar el archivo a pista asignación.</value></data>
+  <data name="Workbench.Online.DiscogsEditionsDescription" xml:space="preserve"><value>Selecciona una edición, carga todos sus detalles y revisa la asignación de archivos a pistas.</value></data>
   <data name="Workbench.Online.DiscogsReleaseIdPlaceholder" xml:space="preserve"><value>Discogs lanzamiento ID</value></data>
   <data name="Workbench.Online.Discover" xml:space="preserve"><value>detectar</value></data>
   <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>huella el elegido archivos y buscar AcoustID y MusicBrainz grabación candidatos. nada es enviado.</value></data>
-  <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>detectar título</value></data>
+  <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>Identificar audio</value></data>
   <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>incrustado carátula establecer</value></data>
   <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>exportar carátula</value></data>
   <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>exportar carátula</value></data>
@@ -5303,15 +5314,15 @@
   <data name="Workbench.Online.Field.AlbumDate" xml:space="preserve"><value>álbum fecha</value></data>
   <data name="Workbench.Online.Field.DiscogsReleaseId" xml:space="preserve"><value>Discogs lanzamiento ID</value></data>
   <data name="Workbench.Online.Field.GenresStyles" xml:space="preserve"><value>géneros estilos</value></data>
-  <data name="Workbench.Online.Field.MusicBrainzIds" xml:space="preserve"><value>MusicBrainz Ids</value></data>
+  <data name="Workbench.Online.Field.MusicBrainzIds" xml:space="preserve"><value>MusicBrainz IDs</value></data>
   <data name="Workbench.Online.Field.Numbering" xml:space="preserve"><value>numeración</value></data>
-  <data name="Workbench.Online.Field.ReleaseDetails" xml:space="preserve"><value>lanzamiento detalles</value></data>
+  <data name="Workbench.Online.Field.ReleaseDetails" xml:space="preserve"><value>Detalles del lanzamiento</value></data>
   <data name="Workbench.Online.Field.Titles" xml:space="preserve"><value>títulos</value></data>
   <data name="Workbench.Online.Field.TrackArtists" xml:space="preserve"><value>pista artistas</value></data>
   <data name="Workbench.Online.Field.TrackDiscNumbers" xml:space="preserve"><value>pista disco número</value></data>
   <data name="Workbench.Online.FindReleaseArtwork" xml:space="preserve"><value>buscar lanzamiento carátula</value></data>
   <data name="Workbench.Online.FindReleaseEditions" xml:space="preserve"><value>buscar lanzamiento ediciones</value></data>
-  <data name="Workbench.Online.LoadDetails" xml:space="preserve"><value>cargar detalles</value></data>
+  <data name="Workbench.Online.LoadDetails" xml:space="preserve"><value>Cargar detalles</value></data>
   <data name="Workbench.Online.MappingReviewDescription" xml:space="preserve"><value>revisar cada archivo a pista sugerencia antes añadir seleccionado campos a el normal vista previa.</value></data>
   <data name="Workbench.Online.MaximumDimension" xml:space="preserve"><value>máximo ancho o alto para vista previa/aplicar (0 conservar tamaño)</value></data>
   <data name="Workbench.Online.MoveArtworkDown" xml:space="preserve"><value>mover carátula abajo</value></data>
@@ -5323,7 +5334,7 @@
   <data name="Workbench.Online.PreviewCover" xml:space="preserve"><value>vista previa carátula</value></data>
   <data name="Workbench.Online.PreviewMappedMetadata" xml:space="preserve"><value>vista previa asignado metadatos</value></data>
   <data name="Workbench.Online.PreviewReleaseCover" xml:space="preserve"><value>vista previa lanzamiento carátula</value></data>
-  <data name="Workbench.Online.PreviewSelectedIds" xml:space="preserve"><value>vista previa seleccionado Ids</value></data>
+  <data name="Workbench.Online.PreviewSelectedIds" xml:space="preserve"><value>Previsualizar los IDs seleccionados</value></data>
   <data name="Workbench.Online.ProviderAutomation" xml:space="preserve"><value>proveedor</value></data>
   <data name="Workbench.Online.ReleaseArtworkCandidates" xml:space="preserve"><value>lanzamiento carátula candidatos</value></data>
   <data name="Workbench.Online.ReleaseEditions" xml:space="preserve"><value>lanzamiento ediciones</value></data>
@@ -5332,11 +5343,11 @@
   <data name="Workbench.Online.ReplaceArtwork" xml:space="preserve"><value>reemplazar carátula</value></data>
   <data name="Workbench.Online.ReplaceArtworkAutomation" xml:space="preserve"><value>reemplazar carátula</value></data>
   <data name="Workbench.Online.ResultsDescription" xml:space="preserve"><value>elegir un candidato, confirmar asignaciones y campos, entonces añadir el resultado a cambios pendientes.</value></data>
-  <data name="Workbench.Online.ResultsTitle" xml:space="preserve"><value>resultados título</value></data>
+  <data name="Workbench.Online.ResultsTitle" xml:space="preserve"><value>Revisar coincidencias</value></data>
   <data name="Workbench.Online.ScopeAutomation" xml:space="preserve"><value>ámbito</value></data>
   <data name="Workbench.Online.Search" xml:space="preserve"><value>buscar</value></data>
   <data name="Workbench.Online.SearchDescription" xml:space="preserve"><value>elegir un proveedor, buscar, entonces revisar y asignar un edición abajo.</value></data>
-  <data name="Workbench.Online.SearchTitle" xml:space="preserve"><value>buscar título</value></data>
+  <data name="Workbench.Online.SearchTitle" xml:space="preserve"><value>Buscar publicaciones</value></data>
   <data name="Workbench.Online.SelectedImage" xml:space="preserve"><value>seleccionado imagen</value></data>
   <data name="Workbench.Online.Source.Cache" xml:space="preserve"><value>caché</value></data>
   <data name="Workbench.Online.Source.OfflineCache" xml:space="preserve"><value>caché sin conexión</value></data>
@@ -5368,31 +5379,31 @@
   <data name="Workbench.PendingChanges.Close" xml:space="preserve"><value>cerrar</value></data>
   <data name="Workbench.PendingChanges.Count.One" xml:space="preserve"><value>{0:N0} pendiente editar</value></data>
   <data name="Workbench.PendingChanges.Count.Other" xml:space="preserve"><value>{0:N0} pendiente editar</value></data>
-  <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>revisar cada pendiente metadatos editar antes escribir archivos.</value></data>
-  <data name="Workbench.PendingChanges.Empty" xml:space="preserve"><value>no pendiente editar. cambios hecho en el cuadrícula o inspector se aparecer aquí.</value></data>
-  <data name="Workbench.PendingChanges.EmptyDescription" xml:space="preserve"><value>vacío descripción</value></data>
-  <data name="Workbench.PendingChanges.EmptyTitle" xml:space="preserve"><value>vacío título</value></data>
-  <data name="Workbench.PendingChanges.GridAutomation" xml:space="preserve"><value>cuadrícula</value></data>
-  <data name="Workbench.PendingChanges.RevertTooltip" xml:space="preserve"><value>revertir</value></data>
-  <data name="Workbench.PendingChanges.Review.One" xml:space="preserve"><value>revisar {0:N0} pendiente cambio</value></data>
-  <data name="Workbench.PendingChanges.Review.Other" xml:space="preserve"><value>revisar {0:N0} cambios pendientes</value></data>
+  <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>Revisa cada edición y operación de archivo pendiente antes de escribir nada.</value></data>
+  <data name="Workbench.PendingChanges.Empty" xml:space="preserve"><value>No hay cambios pendientes. Las ediciones de la cuadrícula, el Inspector, las operaciones de archivo y las transcodificaciones aparecerán aquí.</value></data>
+  <data name="Workbench.PendingChanges.EmptyDescription" xml:space="preserve"><value>Las ediciones de la cuadrícula, el Inspector, las operaciones de archivo y las transcodificaciones aparecerán aquí antes de escribir nada.</value></data>
+  <data name="Workbench.PendingChanges.EmptyTitle" xml:space="preserve"><value>No hay cambios pendientes</value></data>
+  <data name="Workbench.PendingChanges.GridAutomation" xml:space="preserve"><value>Lista de cambios pendientes</value></data>
+  <data name="Workbench.PendingChanges.RevertTooltip" xml:space="preserve"><value>Descartar todos los cambios pendientes</value></data>
+  <data name="Workbench.PendingChanges.Review.One" xml:space="preserve"><value>Cambios ({0:N0})</value></data>
+  <data name="Workbench.PendingChanges.Review.Other" xml:space="preserve"><value>Cambios ({0:N0})</value></data>
   <data name="Workbench.PendingChanges.ReviewAutomation" xml:space="preserve"><value>revisar</value></data>
-  <data name="Workbench.PendingChanges.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.AddArtwork.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.AddFolder.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.AddSources.Title" xml:space="preserve"><value>título</value></data>
+  <data name="Workbench.PendingChanges.Title" xml:space="preserve"><value>Revisar cambios</value></data>
+  <data name="Workbench.Picker.AddArtwork.Title" xml:space="preserve"><value>Añadir carátula</value></data>
+  <data name="Workbench.Picker.AddFolder.Title" xml:space="preserve"><value>Añadir una carpeta de origen</value></data>
+  <data name="Workbench.Picker.AddSources.Title" xml:space="preserve"><value>Añadir archivos de origen</value></data>
   <data name="Workbench.Picker.ArtworkImages" xml:space="preserve"><value>carátula imágenes</value></data>
   <data name="Workbench.Picker.DelimitedMetadata" xml:space="preserve"><value>delimitado metadatos</value></data>
-  <data name="Workbench.Picker.ExportArtwork.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.ExternalTool.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.ExternalWorkingDirectory.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.FrontCover.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.ImportMetadata.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.PlaylistFolder.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.PlaylistOutput.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.ReplaceArtwork.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.ReportFolder.Title" xml:space="preserve"><value>título</value></data>
-  <data name="Workbench.Picker.ReportOutput.Title" xml:space="preserve"><value>título</value></data>
+  <data name="Workbench.Picker.ExportArtwork.Title" xml:space="preserve"><value>Exportar carátula</value></data>
+  <data name="Workbench.Picker.ExternalTool.Title" xml:space="preserve"><value>Elegir el ejecutable de una herramienta</value></data>
+  <data name="Workbench.Picker.ExternalWorkingDirectory.Title" xml:space="preserve"><value>Elegir un directorio de trabajo</value></data>
+  <data name="Workbench.Picker.FrontCover.Title" xml:space="preserve"><value>Elegir la carátula frontal</value></data>
+  <data name="Workbench.Picker.ImportMetadata.Title" xml:space="preserve"><value>Importar metadatos</value></data>
+  <data name="Workbench.Picker.PlaylistFolder.Title" xml:space="preserve"><value>Elegir una carpeta de listas de reproducción</value></data>
+  <data name="Workbench.Picker.PlaylistOutput.Title" xml:space="preserve"><value>Guardar lista de reproducción</value></data>
+  <data name="Workbench.Picker.ReplaceArtwork.Title" xml:space="preserve"><value>Reemplazar carátula</value></data>
+  <data name="Workbench.Picker.ReportFolder.Title" xml:space="preserve"><value>Elegir una carpeta de informes</value></data>
+  <data name="Workbench.Picker.ReportOutput.Title" xml:space="preserve"><value>Guardar informe</value></data>
   <data name="Workbench.Picker.SupportedSources" xml:space="preserve"><value>compatible orígenes</value></data>
   <data name="Workbench.Playlists.Action.Preview" xml:space="preserve"><value>vista previa lista de reproducción</value></data>
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>escribir</value></data>
@@ -5400,34 +5411,39 @@
   <data name="Workbench.Playlists.Description" xml:space="preserve"><value>vista previa lista de reproducción destinos y contenidos antes escribir salida.</value></data>
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>codificación</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>extendido información</value></data>
-  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
+  <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>Finales de línea</value></data>
+  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>Nombre</value></data>
   <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>uno por grupo</value></data>
+  <data name="Workbench.Playlists.Grouping" xml:space="preserve"><value>Agrupación</value></data>
   <data name="Workbench.Playlists.PathStyle" xml:space="preserve"><value>ruta estilo</value></data>
   <data name="Workbench.Playlists.Reviewed" xml:space="preserve"><value>revisado</value></data>
   <data name="Workbench.Playlists.Safety" xml:space="preserve"><value>lista de reproducción salida es separado de metadatos cambios y escribir solo después revisar.</value></data>
-  <data name="Workbench.Playlists.Title" xml:space="preserve"><value>título</value></data>
+  <data name="Workbench.Playlists.Title" xml:space="preserve"><value>Listas de reproducción</value></data>
   <data name="Workbench.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>cargando carátula miniatura {0:N0} de {1:N0}</value></data>
   <data name="Workbench.Progress.ReadingFile" xml:space="preserve"><value>leyendo {0}</value></data>
   <data name="Workbench.Progress.Restored.One" xml:space="preserve"><value>restaurado {0:N0} archivo</value></data>
   <data name="Workbench.Progress.Restored.Other" xml:space="preserve"><value>restaurado {0:N0} archivos</value></data>
-  <data name="Workbench.Reports.Action.AddCustom" xml:space="preserve"><value>añadir personalizado</value></data>
+  <data name="Workbench.Reports.Action.AddCustom" xml:space="preserve"><value>Añadir campo personalizado</value></data>
   <data name="Workbench.Reports.Action.Preview" xml:space="preserve"><value>vista previa</value></data>
   <data name="Workbench.Reports.Action.Write" xml:space="preserve"><value>escribir</value></data>
   <data name="Workbench.Reports.Columns" xml:space="preserve"><value>columnas</value></data>
+  <data name="Workbench.Reports.ColumnActions" xml:space="preserve"><value>columna acciones</value></data>
   <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>biblioteca musical informe</value></data>
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>descendente</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>elegir campos, agrupación, y ordenar, entonces revisar cada salida destino.</value></data>
   <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>bits por muestra</value></data>
   <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>Codec tipo</value></data>
   <data name="Workbench.Reports.Field.File" xml:space="preserve"><value>archivo - {0}</value></data>
-  <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>archivo Name</value></data>
+  <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>Nombre de archivo</value></data>
   <data name="Workbench.Reports.Field.FileSize" xml:space="preserve"><value>archivo tamaño</value></data>
   <data name="Workbench.Reports.Field.MaximumBitrate" xml:space="preserve"><value>tasa de bits máxima</value></data>
   <data name="Workbench.Reports.Field.Metadata" xml:space="preserve"><value>metadatos - {0}</value></data>
   <data name="Workbench.Reports.Field.SampleRate" xml:space="preserve"><value>frecuencia de muestreo</value></data>
   <data name="Workbench.Reports.Field.Technical" xml:space="preserve"><value>técnico - {0}</value></data>
   <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>grupo por</value></data>
-  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
+  <data name="Workbench.Reports.GroupFileNamePattern" xml:space="preserve"><value>grupo archivo name patrón</value></data>
+  <data name="Workbench.Reports.GroupFileNameHelp" xml:space="preserve"><value>usar {Group} para el seleccionado grupo valor y {Format} para el informe archivo extension.</value></data>
+  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>Nombre</value></data>
   <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>no agrupación</value></data>
   <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>uno por grupo</value></data>
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>revisado</value></data>
@@ -5438,7 +5454,7 @@
   <data name="Workbench.Reports.Source.Metadata" xml:space="preserve"><value>metadatos: {0}</value></data>
   <data name="Workbench.Reports.Source.Technical" xml:space="preserve"><value>técnico: {0}</value></data>
   <data name="Workbench.Reports.SourceOrder" xml:space="preserve"><value>origen orden</value></data>
-  <data name="Workbench.Reports.Title" xml:space="preserve"><value>título</value></data>
+  <data name="Workbench.Reports.Title" xml:space="preserve"><value>Informes</value></data>
   <data name="Workbench.Representative.Error.NoFile" xml:space="preserve"><value>el representativo vista previa devuelto no archivo.</value></data>
   <data name="Workbench.Representative.Missing" xml:space="preserve"><value>(ausente)</value></data>
   <data name="Workbench.Representative.Status.Blocked" xml:space="preserve"><value>borrador vista previa bloqueado.</value></data>
@@ -5469,34 +5485,34 @@
   <data name="Workbench.Section.ToolsAutomation" xml:space="preserve"><value>herramientas externas</value></data>
   <data name="Workbench.Selection.Files.One" xml:space="preserve"><value>{0:N0} archivo seleccionado</value></data>
   <data name="Workbench.Selection.Files.Other" xml:space="preserve"><value>{0:N0} archivos seleccionado</value></data>
-  <data name="Workbench.Session.Action.Clear" xml:space="preserve"><value>borrar</value></data>
-  <data name="Workbench.Session.Action.RemoveSelected" xml:space="preserve"><value>quitar seleccionado</value></data>
-  <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>enviar a ingesta</value></data>
+  <data name="Workbench.Session.Action.Clear" xml:space="preserve"><value>Vaciar sesión</value></data>
+  <data name="Workbench.Session.Action.RemoveSelected" xml:space="preserve"><value>Quitar de la sesión</value></data>
+  <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>Enviar a Ingesta</value></data>
   <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>{0:N0} carátula</value></data>
   <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>{0:N0} carátulas</value></data>
   <data name="Workbench.Session.Columns" xml:space="preserve"><value>columnas</value></data>
   <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>vacío celda</value></data>
   <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>vacío celda</value></data>
-  <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>vacío descripción</value></data>
-  <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>vacío título</value></data>
+  <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>Añade archivos de audio o una carpeta para empezar a revisar y editar una sesión.</value></data>
+  <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>No hay archivos en esta sesión</value></data>
   <data name="Workbench.Session.FieldsCount.One" xml:space="preserve"><value>{0:N0} campo</value></data>
   <data name="Workbench.Session.FieldsCount.Other" xml:space="preserve"><value>{0:N0} campos</value></data>
   <data name="Workbench.Session.GridAutomation" xml:space="preserve"><value>cuadrícula</value></data>
   <data name="Workbench.Session.ImportDelimited" xml:space="preserve"><value>importar CSV/TSV</value></data>
   <data name="Workbench.Session.SelectionActions" xml:space="preserve"><value>selección acciones</value></data>
   <data name="Workbench.Session.TagsFormat" xml:space="preserve"><value>etiquetas: {0}</value></data>
-  <data name="Workbench.Shortcuts.BindingTitle" xml:space="preserve"><value>enlace título</value></data>
+  <data name="Workbench.Shortcuts.BindingTitle" xml:space="preserve"><value>Detalles del atajo</value></data>
   <data name="Workbench.Shortcuts.Command" xml:space="preserve"><value>comando</value></data>
-  <data name="Workbench.Shortcuts.Command.AddFiles" xml:space="preserve"><value>añadir archivos</value></data>
-  <data name="Workbench.Shortcuts.Command.AddFolder" xml:space="preserve"><value>añadir carpeta</value></data>
-  <data name="Workbench.Shortcuts.Command.ApplyReviewedChanges" xml:space="preserve"><value>aplicar revisado cambios</value></data>
-  <data name="Workbench.Shortcuts.Command.CancelCurrentOperation" xml:space="preserve"><value>cancelar actual operación</value></data>
-  <data name="Workbench.Shortcuts.Command.PreviewCurrentRecipe" xml:space="preserve"><value>vista previa actual receta</value></data>
-  <data name="Workbench.Shortcuts.Command.PreviewInlineEdits" xml:space="preserve"><value>vista previa en línea editar</value></data>
-  <data name="Workbench.Shortcuts.Command.Redo" xml:space="preserve"><value>rehacer</value></data>
-  <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>repetir último receta</value></data>
-  <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>deshacer último aplicar</value></data>
-  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>usar un modificador y un Avalonia clave name, para ejemplo Ctrl+Alt+R, meta+F8, o Ctrl+Shift+Enter.</value></data>
+  <data name="Workbench.Shortcuts.Command.AddFiles" xml:space="preserve"><value>Añadir archivos</value></data>
+  <data name="Workbench.Shortcuts.Command.AddFolder" xml:space="preserve"><value>Añadir carpeta</value></data>
+  <data name="Workbench.Shortcuts.Command.ApplyReviewedChanges" xml:space="preserve"><value>Aplicar cambios revisados</value></data>
+  <data name="Workbench.Shortcuts.Command.CancelCurrentOperation" xml:space="preserve"><value>Cancelar operación actual</value></data>
+  <data name="Workbench.Shortcuts.Command.PreviewCurrentRecipe" xml:space="preserve"><value>Previsualizar receta actual</value></data>
+  <data name="Workbench.Shortcuts.Command.PreviewInlineEdits" xml:space="preserve"><value>Previsualizar ediciones directas</value></data>
+  <data name="Workbench.Shortcuts.Command.Redo" xml:space="preserve"><value>Rehacer</value></data>
+  <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>Repetir última receta</value></data>
+  <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>Deshacer la última aplicación</value></data>
+  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>Usa una tecla modificadora y un nombre de tecla de Avalonia, por ejemplo Ctrl+Alt+R, Meta+F8 o Ctrl+Shift+Enter.</value></data>
   <data name="Workbench.Shortcuts.GesturePlaceholder" xml:space="preserve"><value>gesto</value></data>
   <data name="Workbench.Shortcuts.InputWarning" xml:space="preserve"><value>atajos son ignorado mientras un texto o opción editor tiene foco. Ctrl+K y Ctrl+I permanecer reservado para global buscar y indexando.</value></data>
   <data name="Workbench.Shortcuts.New" xml:space="preserve"><value>nuevo</value></data>
@@ -5508,11 +5524,12 @@
   <data name="Workbench.Shortcuts.Status.Removed" xml:space="preserve"><value>quitado {0}.</value></data>
   <data name="Workbench.Shortcuts.Status.Saved" xml:space="preserve"><value>guardado {0} para {1}.</value></data>
   <data name="Workbench.Shortcuts.Target.Recipe" xml:space="preserve"><value>receta</value></data>
-  <data name="Workbench.Shortcuts.Title" xml:space="preserve"><value>título</value></data>
+  <data name="Workbench.Shortcuts.Target" xml:space="preserve"><value>Destino</value></data>
+  <data name="Workbench.Shortcuts.Title" xml:space="preserve"><value>Atajos</value></data>
   <data name="Workbench.Shortcuts.Validation.ChooseTarget" xml:space="preserve"><value>elegir un atajo destino.</value></data>
   <data name="Workbench.Shortcuts.Validation.Conflict" xml:space="preserve"><value>{0} es ya asignado a {1}.</value></data>
   <data name="Workbench.Shortcuts.Validation.Invalid" xml:space="preserve"><value>el atajo es no válido.</value></data>
-  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>usar un Avalonia clave name tal como P, Enter, eliminar, o F8.</value></data>
+  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>Usa un nombre de tecla de Avalonia, como P, Enter, Delete o F8.</value></data>
   <data name="Workbench.Shortcuts.Validation.ModifierAndKeyExample" xml:space="preserve"><value>usar en mínimo uno modificador más un clave, tal como Ctrl+Shift+P.</value></data>
   <data name="Workbench.Shortcuts.Validation.ModifierAndKeyRequired" xml:space="preserve"><value>un modificador y un clave son obligatorio.</value></data>
   <data name="Workbench.Shortcuts.Validation.OneKey" xml:space="preserve"><value>un atajo puede contener solo uno no-modificador clave.</value></data>
@@ -5556,8 +5573,8 @@
   <data name="Workbench.Status.DiscogsDetailsFailed" xml:space="preserve"><value>Discogs lanzamiento detalle búsqueda fallido.</value></data>
   <data name="Workbench.Status.DiscogsDetailsLoaded.One" xml:space="preserve"><value>cargado Discogs lanzamiento {1} con {0:N0} pista. no metadatos era cambiado.</value></data>
   <data name="Workbench.Status.DiscogsDetailsLoaded.Other" xml:space="preserve"><value>cargado Discogs lanzamiento {1} con {0:N0} pistas. no metadatos era cambiado.</value></data>
-  <data name="Workbench.Status.DiscogsFound.One" xml:space="preserve"><value>Discogs encontrado {0:N0} lanzamiento edición. seleccionar ello a cargar completo pista y edición detalles.</value></data>
-  <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs encontrado {0:N0} lanzamiento ediciones. seleccionar uno a cargar completo pista y edición detalles.</value></data>
+  <data name="Workbench.Status.DiscogsFound.One" xml:space="preserve"><value>Discogs encontró {0:N0} edición del lanzamiento. Selecciónala para cargar todos los detalles de las pistas y de la edición.</value></data>
+  <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs encontró {0:N0} ediciones del lanzamiento. Selecciona una para cargar todos los detalles de las pistas y de la edición.</value></data>
   <data name="Workbench.Status.DiscogsMappingCancelled" xml:space="preserve"><value>Discogs pista asignación cancelado.</value></data>
   <data name="Workbench.Status.DiscogsMappingFailed" xml:space="preserve"><value>Discogs pista asignación fallido.</value></data>
   <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>sugerido {0:N0} de {1:N0} Discogs archivo a pista asignaciones; {2:N0} necesitan revisar.</value></data>
@@ -5634,7 +5651,7 @@
   <data name="Workbench.Status.Restored.One" xml:space="preserve"><value>restaurado {0:N0} archivo de el más reciente área de trabajo operación.</value></data>
   <data name="Workbench.Status.Restored.Other" xml:space="preserve"><value>restaurado {0:N0} archivos de el más reciente área de trabajo operación.</value></data>
   <data name="Workbench.Status.RestoreFailed" xml:space="preserve"><value>restaurar fallido.</value></data>
-  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>seleccionar o name un destino campo antes pegando simple texto.</value></data>
+  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>Selecciona un campo de destino o asígnale un nombre antes de pegar texto sin formato.</value></data>
   <data name="Workbench.Status.SendToIngestFailed" xml:space="preserve"><value>el archivos seleccionados podría no ser enviado a ingesta.</value></data>
   <data name="Workbench.Status.SentToIngest.One" xml:space="preserve"><value>enviado {0:N0} seleccionado archivo a ingesta.</value></data>
   <data name="Workbench.Status.SentToIngest.Other" xml:space="preserve"><value>enviado {0:N0} archivos seleccionados a ingesta.</value></data>
@@ -5655,13 +5672,14 @@
   <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>externo herramienta</value></data>
   <data name="Workbench.Tools.Delete" xml:space="preserve"><value>eliminar herramienta</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>ejecutable</value></data>
+  <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>Modo de invocación</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>cargar</value></data>
   <data name="Workbench.Tools.MoreAutomation" xml:space="preserve"><value>más</value></data>
-  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
+  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>Nombre</value></data>
   <data name="Workbench.Tools.New" xml:space="preserve"><value>nuevo herramienta</value></data>
-  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>documentado marcadores: {archivos} para uno selección proceso; o {archivo}, {directorio}, {nombre de archivo}, {FileNameWithoutExtension}, {Extension}, {indexar}, y {cantidad} para uno proceso por archivo. {archivos} debe ser su propio argumento.</value></data>
+  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>Marcadores documentados: {Files} para un proceso de selección; o {File}, {Directory}, {FileName}, {FileNameWithoutExtension}, {Extension}, {Index} y {Count} para un proceso por archivo. {Files} debe ser un argumento independiente.</value></data>
   <data name="Workbench.Tools.Preview" xml:space="preserve"><value>vista previa herramienta</value></data>
-  <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>revisado título</value></data>
+  <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>Invocación revisada</value></data>
   <data name="Workbench.Tools.Run" xml:space="preserve"><value>ejecutar</value></data>
   <data name="Workbench.Tools.Safety" xml:space="preserve"><value>no intérprete es usado, pero el seleccionado ejecutable puede todavía cambio archivos. herramientas externas son fuera MusicLibraryManager recuperación y siempre requerir confirmación.</value></data>
   <data name="Workbench.Tools.Save" xml:space="preserve"><value>guardar herramienta</value></data>
@@ -5670,7 +5688,7 @@
   <data name="Workbench.Tools.Status.Loaded" xml:space="preserve"><value>cargado '{0}'.</value></data>
   <data name="Workbench.Tools.Status.New" xml:space="preserve"><value>nuevo sin guardar herramienta.</value></data>
   <data name="Workbench.Tools.Status.Saved" xml:space="preserve"><value>guardado '{0}' como un personal herramienta.</value></data>
-  <data name="Workbench.Tools.Title" xml:space="preserve"><value>título</value></data>
+  <data name="Workbench.Tools.Title" xml:space="preserve"><value>Herramientas externas</value></data>
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>trabajando directorio</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
   <data name="Workbench.Value.SampleRate" xml:space="preserve"><value>{0:N0} Hz</value></data>
@@ -5791,7 +5809,7 @@
   <data name="Operations.Run.NoJournal" xml:space="preserve"><value>no diario (carpeta-solo cuarentena)</value></data>
   <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>establecer el iTunes biblioteca ruta en el activo biblioteca configuración.</value></data>
   <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>un iTunes biblioteca.itl ruta es obligatorio.</value></data>
-  <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>un iTunes lista de reproducción name es obligatorio.</value></data>
+  <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>Se necesita un nombre para la lista de reproducción de iTunes.</value></data>
   <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>un inteligente-almacenamiento destino es obligatorio.</value></data>
   <data name="Operations.Count.Errors.One" xml:space="preserve"><value>{0:N0} error</value></data>
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} errores</value></data>
@@ -5877,8 +5895,8 @@
   <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>analizando {0:N0} raíces para operación diario…</value></data>
   <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>mostrar {0:N0} detectar operación ejecutar.</value></data>
   <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>mostrar {0:N0} detectar operación ejecuciones.</value></data>
-  <data name="Common.No" xml:space="preserve"><value>no</value></data>
-  <data name="Common.Yes" xml:space="preserve"><value>sí</value></data>
+  <data name="Common.No" xml:space="preserve"><value>No</value></data>
+  <data name="Common.Yes" xml:space="preserve"><value>Sí</value></data>
   <data name="Fields.Action.ApplyChanges" xml:space="preserve"><value>aplicar cambios</value></data>
   <data name="Fields.Action.CancelSave" xml:space="preserve"><value>cancelar guardar</value></data>
   <data name="Fields.Action.DiscardChanges" xml:space="preserve"><value>descartar cambios</value></data>
@@ -5914,13 +5932,13 @@
   <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>el vista previa caducado. vista previa el campo cambios de nuevo.</value></data>
   <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>el campo-cambio vista previa fallido. propuesto cambios permanecer listo a reintentar.</value></data>
   <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>el vista previa encontrado no aplicable cambios. sin archivos eran cambiado.</value></data>
-  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>vista previa listo. archivos con cambios: {0:N0}; campo cambios: {1:N0}. aplicar usa obsoleto-archivo comprobación, recuperación diario, y deshacer. elegir aplicar cambios a continuar.</value></data>
+  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>La vista previa está lista. Archivos con cambios: {0:N0}; cambios de campos: {1:N0}. Todavía no se ha escrito nada. Elija Revisar cambios para añadir esta vista previa a los cambios pendientes compartidos.</value></data>
   <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>guardar cancelado. propuesto campo cambios permanecer listo a reintentar.</value></data>
   <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>actualizado {0:N0} archivo. el original es retenido para deshacer.</value></data>
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>actualizado {0:N0} archivos. original son retenido para deshacer.</value></data>
   <data name="Fields.Status.SaveFailed" xml:space="preserve"><value>el campo cambios podría no ser guardado. propuesto cambios permanecer listo a reintentar.</value></data>
   <data name="Fields.Status.UserStringExists" xml:space="preserve"><value>usuario cadena “{0}” es ya en el lista.</value></data>
-  <data name="Fields.Status.UserStringNameRequired" xml:space="preserve"><value>Enter un usuario-cadena name.</value></data>
+  <data name="Fields.Status.UserStringNameRequired" xml:space="preserve"><value>Escribe un nombre para la cadena de usuario.</value></data>
   <data name="Fields.Title.Files.One" xml:space="preserve"><value>editar campos — {0:N0} archivo</value></data>
   <data name="Fields.Title.Files.Other" xml:space="preserve"><value>editar campos — {0:N0} archivos</value></data>
   <data name="Fields.Title.Single" xml:space="preserve"><value>editar campos — {0}</value></data>
@@ -5993,7 +6011,7 @@
   <data name="MetadataEditor.Choice.ConditionOperator.Missing" xml:space="preserve"><value>ausente</value></data>
   <data name="MetadataEditor.Choice.ConditionOperator.Present" xml:space="preserve"><value>presente</value></data>
   <data name="MetadataEditor.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>automático</value></data>
-  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>latino-1</value></data>
+  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin-1</value></data>
   <data name="MetadataEditor.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>UTF-16</value></data>
   <data name="MetadataEditor.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>UTF-8</value></data>
   <data name="MetadataEditor.Choice.Operation.Assign" xml:space="preserve"><value>asignar</value></data>
@@ -6009,8 +6027,8 @@
   <data name="MetadataEditor.Choice.Operation.Sequence" xml:space="preserve"><value>secuencia</value></data>
   <data name="MetadataEditor.Choice.Operation.Split" xml:space="preserve"><value>dividir valores</value></data>
   <data name="MetadataEditor.Choice.Operation.TrimWhitespace" xml:space="preserve"><value>normalizar espacios</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FileName" xml:space="preserve"><value>archivo name</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>archivo name sin extension</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FileName" xml:space="preserve"><value>Nombre de archivo</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>Nombre de archivo sin extensión</value></data>
   <data name="MetadataEditor.Choice.PathComponent.FullPath" xml:space="preserve"><value>completo ruta</value></data>
   <data name="MetadataEditor.Choice.PathComponent.ParentFolder" xml:space="preserve"><value>principal carpeta</value></data>
   <data name="MetadataEditor.Choice.ValueOrder.Ascending" xml:space="preserve"><value>ascendente</value></data>
@@ -6158,7 +6176,7 @@
   <data name="Transcode.Destination.ReplaceOriginal" xml:space="preserve"><value>Reemplazar originales</value></data>
   <data name="Transcode.Destination.ChosenFolder" xml:space="preserve"><value>Carpeta elegida</value></data>
   <data name="Transcode.Destination.Folder" xml:space="preserve"><value>Carpeta de salida</value></data>
-  <data name="Transcode.Destination.PickerTitle" xml:space="preserve"><value>Elegir carpeta de salida de transcodificación</value></data>
+  <data name="Transcode.Destination.PickerTitle" xml:space="preserve"><value>Elegir la carpeta de salida de la transcodificación</value></data>
   <data name="Transcode.Destination.PreserveLayout" xml:space="preserve"><value>Conservar estructura relativa de origen</value></data>
   <data name="Transcode.Destination.Flatten" xml:space="preserve"><value>Aplanar en una carpeta</value></data>
   <data name="Transcode.Naming.Label" xml:space="preserve"><value>Nombres de archivo</value></data>
@@ -6244,4 +6262,42 @@
   <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>elegir Monkey's Audio MAC ejecutable</value></data>
   <data name="Transcode.Format.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio</value></data>
   <data name="Transcode.Encoder.MonkeysAudioMac" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
+  <data name="Shell.Navigation.Toggle" xml:space="preserve"><value>Expandir o contraer la navegación</value></data>
+  <data name="Library.Handoff.Action" xml:space="preserve"><value>Editar en el área de trabajo…</value></data>
+  <data name="Library.Handoff.Automation" xml:space="preserve"><value>Elegir destino del área de trabajo y ámbito de resultados</value></data>
+  <data name="Library.Handoff.Scope.Selected" xml:space="preserve"><value>Archivos seleccionados</value></data>
+  <data name="Library.Handoff.Scope.Visible" xml:space="preserve"><value>Resultados visibles</value></data>
+  <data name="Library.Handoff.Scope.All" xml:space="preserve"><value>Todos los resultados</value></data>
+  <data name="Library.Action.RefreshAffectedPaths" xml:space="preserve"><value>Actualizar rutas afectadas</value></data>
+  <data name="Devices.Action.More" xml:space="preserve"><value>Más</value></data>
+  <data name="Devices.Action.MoreAutomation" xml:space="preserve"><value>Más acciones de dispositivo</value></data>
+  <data name="Devices.Advanced.Title" xml:space="preserve"><value>Opciones avanzadas</value></data>
+  <data name="Operations.Job.OutputLabel" xml:space="preserve"><value>Salida y registro de diagnóstico</value></data>
+  <data name="Operations.Job.PickerAutomation" xml:space="preserve"><value>Ejecución de operación</value></data>
+  <data name="Ingest.PreflightChecks.Title" xml:space="preserve"><value>Comprobaciones previas</value></data>
+  <data name="Settings.EffectivePolicy.ProvenanceTitle" xml:space="preserve"><value>Procedencia técnica</value></data>
+  <data name="Settings.FieldMappings.SourceLabel" xml:space="preserve"><value>Campo de origen</value></data>
+  <data name="Settings.FieldMappings.TargetLabel" xml:space="preserve"><value>Campo de destino</value></data>
+  <data name="Inspector.View.ReviewChanges" xml:space="preserve"><value>Revisar cambios</value></data>
+  <data name="Inspector.View.OptimizeOptions" xml:space="preserve"><value>Opciones de optimización</value></data>
+  <data name="Workbench.Common.Advanced" xml:space="preserve"><value>Opciones avanzadas</value></data>
+  <data name="Workbench.Inspector.LayerPresent" xml:space="preserve"><value>Presente</value></data>
+  <data name="Workbench.Inspector.LayerMissing" xml:space="preserve"><value>Ausente</value></data>
+  <data name="Workbench.Inspector.Id3v2Actions" xml:space="preserve"><value>Acciones de ID3v2</value></data>
+  <data name="Workbench.Inspector.ApeV2Actions" xml:space="preserve"><value>Acciones de APEv2</value></data>
+  <data name="Workbench.Inspector.Id3v1Actions" xml:space="preserve"><value>Acciones de ID3v1</value></data>
+  <data name="Transcode.Concurrency.ParallelJobs" xml:space="preserve"><value>Trabajos en paralelo</value></data>
+  <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>Se añadió {0:N0} operación de archivo a Revisar cambios.</value></data>
+  <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>Se añadieron {0:N0} operaciones de archivo a Revisar cambios.</value></data>
+  <data name="Workbench.Dialog.PendingConflict.Title" xml:space="preserve"><value>Cambio pendiente incompatible</value></data>
+  <data name="Workbench.Dialog.PendingConflict.Message" xml:space="preserve"><value>Un origen seleccionado ya tiene una transcodificación u operación de archivo pendiente incompatible. Descarta ese cambio pendiente antes de añadir otro.</value></data>
+  <data name="Workbench.Dialog.ReplacePendingFileOperation.Title" xml:space="preserve"><value>¿Reemplazar la operación de archivo pendiente?</value></data>
+  <data name="Workbench.Dialog.ReplacePendingFileOperation.Message" xml:space="preserve"><value>El origen seleccionado ya tiene una operación de archivo pendiente. ¿Quieres reemplazarla por la operación recién previsualizada?</value></data>
+  <data name="Workbench.Dialog.ReplacePendingFileOperation.Confirm" xml:space="preserve"><value>Reemplazar</value></data>
+  <data name="Workbench.PendingChanges.FileOperation" xml:space="preserve"><value>Operación de archivo</value></data>
+  <data name="Workbench.PendingChanges.NoDestination" xml:space="preserve"><value>Sin destino</value></data>
+  <data name="Settings.Appearance.Density" xml:space="preserve"><value>Densidad del contenido</value></data>
+  <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>Compacta reduce el espaciado de filas, tarjetas y formularios sin reducir los destinos de navegación ni de los iconos.</value></data>
+  <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>Estándar</value></data>
+  <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>Compacta</value></data>
 </root>

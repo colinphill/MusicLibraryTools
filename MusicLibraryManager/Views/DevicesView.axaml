@@ -2,28 +2,65 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
-  <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+  <controls:AdaptivePage RowDefinitions="Auto,Auto,*" RowSpacing="16">
     <controls:PageHeader Title="{DynamicResource Loc.Devices.Title}"
         Subtitle="{DynamicResource Loc.Devices.Subtitle}">
-      <controls:PageHeader.Actions>
-        <WrapPanel>
-          <Button Classes="app" Content="{DynamicResource Loc.Devices.Action.Initialize}" Command="{Binding InitializeCommand}" />
-          <Button Classes="app" Margin="8,0,0,0" Content="{DynamicResource Loc.Common.Preview}" Command="{Binding PreviewCommand}" />
-          <Button Classes="app primary" Margin="8,0,0,0" Content="{DynamicResource Loc.Common.Apply}" Command="{Binding ApplyCommand}" />
-          <Button x:Name="RestoreButton" Classes="app" Margin="8,0,0,0" Content="{DynamicResource Loc.Devices.Action.Restore}" Command="{Binding RestoreCommand}" />
-          <Button Classes="app"
-                  Margin="8,0,0,0"
+      <controls:PageHeader.PrimaryAction>
+        <Grid>
+          <Button x:Name="InitializeButton"
+                  Classes="app primary"
+                  Content="{DynamicResource Loc.Devices.Action.Initialize}"
+                  Command="{Binding InitializeCommand}" />
+          <Button x:Name="PreviewButton"
+                  Classes="app primary"
+                  Content="{DynamicResource Loc.Common.Preview}"
+                  Command="{Binding PreviewCommand}" />
+          <Button x:Name="ApplyButton"
+                  Classes="app primary"
+                  Content="{DynamicResource Loc.Common.Apply}"
+                  Command="{Binding ApplyCommand}" />
+        </Grid>
+      </controls:PageHeader.PrimaryAction>
+      <controls:PageHeader.SecondaryActions>
+        <StackPanel Orientation="Horizontal"
+                    Spacing="8">
+          <Button x:Name="RestoreButton"
+                  Classes="app"
+                  Content="{DynamicResource Loc.Devices.Action.Restore}"
+                  Command="{Binding RestoreCommand}"
+                  IsVisible="False" />
+          <Button x:Name="DeviceCancelButton"
+                  Classes="app"
                   Content="{DynamicResource Loc.Common.Cancel}"
                   Command="{Binding CancelCommand}"
                   IsVisible="{Binding IsBusy}" />
-        </WrapPanel>
-      </controls:PageHeader.Actions>
+        </StackPanel>
+      </controls:PageHeader.SecondaryActions>
+      <controls:PageHeader.MoreAction>
+        <Button x:Name="DeviceMoreButton"
+                Classes="app quiet overflow"
+                Content="{DynamicResource Loc.Devices.Action.More}"
+                AutomationProperties.Name="{DynamicResource Loc.Devices.Action.MoreAutomation}">
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedRight">
+              <MenuItem Header="{DynamicResource Loc.Devices.Action.Initialize}"
+                        Command="{Binding InitializeCommand}" />
+              <MenuItem Header="{DynamicResource Loc.Devices.Action.Restore}"
+                        Command="{Binding RestoreCommand}" />
+              <Separator />
+              <MenuItem Header="{DynamicResource Loc.Common.Cancel}"
+                        Command="{Binding CancelCommand}"
+                        IsVisible="{Binding IsBusy}" />
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
+      </controls:PageHeader.MoreAction>
     </controls:PageHeader>
 
     <Border Grid.Row="1" Classes="status-banner info" AutomationProperties.LiveSetting="Polite">
-      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-        <TextBlock Classes="status-icon" Text="i" AutomationProperties.Name="{DynamicResource Loc.Devices.InformationAutomation}" />
-        <StackPanel Grid.Column="1" Spacing="2">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+        <controls:AppVectorIcon Kind="Information" AutomationProperties.Name="{DynamicResource Loc.Devices.InformationAutomation}" />
+        <StackPanel Grid.Column="1" Spacing="4">
           <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
           <TextBlock Classes="faint"
                      Text="{Binding DiagnosticDetail}"
@@ -39,14 +76,17 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="2" ColumnDefinitions="360,14,*">
-      <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="ConfigurationPanel" Spacing="10"
+    <Grid x:Name="DevicesContentLayout"
+          Grid.Row="2"
+          ColumnDefinitions="360,14,*">
+      <ScrollViewer x:Name="DeviceConfigurationScroll"
+                    VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="ConfigurationPanel" Spacing="12"
                     IsEnabled="{Binding IsConfigurationEnabled}">
           <Border Classes="card">
             <StackPanel Spacing="8">
               <TextBlock Classes="section-title" Text="{DynamicResource Loc.Devices.MirrorProfile}" />
-              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.AndroidDevice}" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.AndroidDevice}" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <ComboBox x:Name="DeviceSelector" Classes="app"
                           ItemsSource="{Binding AvailableDevices}"
@@ -54,9 +94,9 @@
                           AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDevice}">
                   <ComboBox.ItemTemplate>
                     <DataTemplate>
-                      <StackPanel Spacing="1">
+                      <StackPanel Spacing="4">
                         <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-                        <TextBlock Classes="muted" Text="{Binding Details}" FontSize="12" />
+                        <TextBlock Classes="supporting" Text="{Binding Details}" />
                       </StackPanel>
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
@@ -70,8 +110,8 @@
               <Border Classes="status-banner error" IsVisible="{Binding HasDeviceEnumerationError}"
                       AutomationProperties.LiveSetting="Polite">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                  <TextBlock Classes="status-icon" Text="!" />
-                  <StackPanel Grid.Column="1" Spacing="2">
+                  <controls:AppVectorIcon Kind="Error" />
+                  <StackPanel Grid.Column="1" Spacing="4">
                     <TextBlock Text="{DynamicResource Loc.Devices.DeviceDiscoveryFailed}" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding DeviceEnumerationError}" TextWrapping="Wrap" />
                     <TextBlock Classes="faint"
@@ -84,7 +124,7 @@
               <Border Classes="status-banner info" IsVisible="{Binding HasNoEnumeratedDevices}"
                       AutomationProperties.LiveSetting="Polite">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                  <TextBlock Classes="status-icon" Text="i" />
+                  <controls:AppVectorIcon Kind="Information" />
                   <TextBlock Grid.Column="1" Text="{DynamicResource Loc.Devices.NoDevices}"
                              TextWrapping="Wrap" />
                 </Grid>
@@ -92,7 +132,7 @@
               <Border Classes="status-banner warning" IsVisible="{Binding NeedsDeviceSelection}"
                       AutomationProperties.LiveSetting="Polite">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                  <TextBlock Classes="status-icon" Text="!" />
+                  <controls:AppVectorIcon Kind="Warning" />
                   <TextBlock Grid.Column="1"
                              Text="{DynamicResource Loc.Devices.MultipleReady}"
                              TextWrapping="Wrap" />
@@ -101,34 +141,34 @@
               <Border Classes="status-banner warning" IsVisible="{Binding IsSelectedDeviceUnavailable}"
                       AutomationProperties.LiveSetting="Polite">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                  <TextBlock Classes="status-icon" Text="!" />
+                  <controls:AppVectorIcon Kind="Warning" />
                   <TextBlock Grid.Column="1" Text="{DynamicResource Loc.Devices.Unavailable}"
                              TextWrapping="Wrap" />
                 </Grid>
               </Border>
               <StackPanel Spacing="4" IsVisible="{Binding IsManualDeviceSelected}">
-                <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.DeviceSerialOptional}" FontSize="12" FontWeight="SemiBold" />
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.DeviceSerialOptional}" />
                 <TextBox x:Name="ManualDeviceSerial" Classes="app" Text="{Binding DeviceSerial, Mode=TwoWay}"
                          PlaceholderText="{DynamicResource Loc.Devices.DeviceSerialPlaceholder}"
                          AutomationProperties.Name="{DynamicResource Loc.Devices.DeviceSerial}" />
               </StackPanel>
-              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.LocalSource}" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.LocalSource}" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <TextBox Classes="app" Text="{Binding SourcePath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Devices.LocalSourcePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Devices.LocalSourceAutomation}" />
                 <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseSourceCommand}" />
               </Grid>
-              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.AndroidDestination}" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.AndroidDestination}" />
               <TextBox Classes="app" Text="{Binding DestinationPath, Mode=TwoWay}"
-                       PlaceholderText="music or /storage/…/Music" AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDestination}" />
-              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                       AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDestination}" />
+              <TextBlock Classes="field-help"
                          Text="{DynamicResource Loc.Devices.DestinationAliasDescription}" />
-              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.AdbOverride}" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.AdbOverride}" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <TextBox Classes="app" Text="{Binding AdbPath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Devices.AdbOverridePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Devices.AdbOverrideAutomation}" />
                 <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseAdbCommand}" />
               </Grid>
               <Border Classes="status-banner warning">
-                <StackPanel Spacing="5">
+                <StackPanel Spacing="4">
                   <TextBlock FontWeight="SemiBold" Text="{DynamicResource Loc.Devices.ExistingDestination}" />
                   <CheckBox Content="{DynamicResource Loc.Devices.AdoptExisting}" IsChecked="{Binding Adopt, Mode=TwoWay}" />
                   <TextBlock Classes="muted" TextWrapping="Wrap"
@@ -141,43 +181,54 @@
           <Border Classes="card">
             <StackPanel Spacing="8">
               <TextBlock Classes="section-title" Text="{DynamicResource Loc.Devices.Policy}" />
-              <Border Classes="status-banner warning">
-                <StackPanel Spacing="6">
-                  <TextBlock FontWeight="SemiBold" Text="{DynamicResource Loc.Devices.DeletionRecovery}" />
-                  <CheckBox Content="{DynamicResource Loc.Devices.DeleteExtras}" IsChecked="{Binding DeleteExtras, Mode=TwoWay}" />
-                  <CheckBox Content="{DynamicResource Loc.Devices.DirectTransfer}" IsChecked="{Binding Direct, Mode=TwoWay}" />
-                  <TextBlock Classes="muted" TextWrapping="Wrap"
-                             Text="{DynamicResource Loc.Devices.DirectTransferDescription}" />
+              <CheckBox Content="{DynamicResource Loc.Devices.DeleteExtras}"
+                        IsChecked="{Binding DeleteExtras, Mode=TwoWay}" />
+              <Expander Header="{DynamicResource Loc.Devices.Advanced.Title}"
+                        AutomationProperties.Name="{DynamicResource Loc.Devices.Advanced.Title}">
+                <StackPanel Margin="0,8,0,0" Spacing="8">
+                  <Border Classes="status-banner warning">
+                    <StackPanel Spacing="8">
+                      <TextBlock FontWeight="SemiBold" Text="{DynamicResource Loc.Devices.DeletionRecovery}" />
+                      <CheckBox Content="{DynamicResource Loc.Devices.DirectTransfer}" IsChecked="{Binding Direct, Mode=TwoWay}" />
+                      <TextBlock Classes="muted" TextWrapping="Wrap"
+                                 Text="{DynamicResource Loc.Devices.DirectTransferDescription}" />
+                    </StackPanel>
+                  </Border>
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <StackPanel Spacing="4">
+                      <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.MaximumRemovals}" />
+                      <NumericUpDown Classes="app" Minimum="0" Value="{Binding MaxRemovals, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Devices.MaximumRemovals}" />
+                      <TextBlock Classes="field-help"
+                                 Text="{DynamicResource Loc.Devices.MaximumRemovalsDescription}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                      <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.MtimeTolerance}" />
+                      <NumericUpDown Classes="app" Minimum="0" Value="{Binding MtimeToleranceSeconds, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Devices.MtimeToleranceAutomation}" />
+                    </StackPanel>
+                  </Grid>
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.ExclusionGlobs}" />
+                  <TextBox Classes="app" Text="{Binding Exclusions, Mode=TwoWay}" AcceptsReturn="True"
+                           MinHeight="72" AutomationProperties.Name="{DynamicResource Loc.Devices.ExclusionGlobsAutomation}" />
                 </StackPanel>
-              </Border>
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                <StackPanel Spacing="4">
-                  <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.MaximumRemovals}" FontSize="12" FontWeight="SemiBold" />
-                  <NumericUpDown Classes="app" Minimum="0" Value="{Binding MaxRemovals, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Devices.MaximumRemovals}" />
-                  <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                             Text="{DynamicResource Loc.Devices.MaximumRemovalsDescription}" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="4">
-                  <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.MtimeTolerance}" FontSize="12" FontWeight="SemiBold" />
-                  <NumericUpDown Classes="app" Minimum="0" Value="{Binding MtimeToleranceSeconds, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Devices.MtimeToleranceAutomation}" />
-                </StackPanel>
-              </Grid>
-              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.ExclusionGlobs}" FontSize="12" FontWeight="SemiBold" />
-              <TextBox Classes="app" Text="{Binding Exclusions, Mode=TwoWay}" AcceptsReturn="True"
-                       MinHeight="88" PlaceholderText="**/*.tmp" AutomationProperties.Name="{DynamicResource Loc.Devices.ExclusionGlobsAutomation}" />
+              </Expander>
             </StackPanel>
           </Border>
         </StackPanel>
       </ScrollViewer>
 
-      <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="10">
+      <Grid x:Name="DeviceResultsPane"
+            Grid.Column="2"
+            RowDefinitions="Auto,*"
+            RowSpacing="12">
+        <ScrollViewer MaxHeight="144"
+                      VerticalScrollBarVisibility="Auto">
         <ItemsControl ItemsSource="{Binding Issues}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Classes="status-banner info" Margin="0,0,0,6" AutomationProperties.LiveSetting="Polite">
+              <Border Classes="status-banner info" Margin="0,0,0,8" AutomationProperties.LiveSetting="Polite">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                  <TextBlock Classes="status-icon" Text="i" />
-                  <StackPanel Grid.Column="1" Spacing="2">
+                  <controls:AppVectorIcon Kind="Information" />
+                  <StackPanel Grid.Column="1" Spacing="4">
                     <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
                     <TextBlock Classes="faint" Text="{Binding DiagnosticDetail}" TextWrapping="Wrap" />
                   </StackPanel>
@@ -186,10 +237,11 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+        </ScrollViewer>
         <Border Grid.Row="1" Classes="card" Padding="0" ClipToBounds="True">
           <Grid>
             <controls:AppDataGrid x:Name="ActionsGrid" ItemsSource="{Binding Actions}" />
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8"
                         IsVisible="{Binding IsActionListEmpty}" MaxWidth="420">
               <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Devices.NoActions.Title}" />
               <TextBlock Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
@@ -199,5 +251,5 @@
         </Border>
       </Grid>
     </Grid>
-  </Grid>
+  </controls:AdaptivePage>
 </UserControl>

@@ -130,7 +130,9 @@ public partial class DialogHost : UserControl
         button.Classes.Add("app");
         if (primary)
             button.Classes.Add("primary");
-        if (primary && request.Tone == DialogTone.Danger)
+        if (primary &&
+            request.PrimaryActionRole ==
+                DialogActionRole.Destructive)
             button.Classes.Add("danger");
         AutomationProperties.SetName(button, text);
         button.Click += (_, _) => _dialogs.Complete(result);
@@ -193,7 +195,8 @@ public partial class DialogHost : UserControl
         DialogRequest? request = _dialogs.Current;
         if (request?.DismissalPolicy.CanDismissFromScrim == true)
             _dialogs.Complete(false);
-        else if (request is not null)
+        else if (request is not null &&
+                 !RouteThroughEditorCancellation(request))
             FocusDefaultAction(request);
         e.Handled = true;
     }
@@ -203,7 +206,8 @@ public partial class DialogHost : UserControl
         DialogRequest? request = _dialogs.Current;
         if (request?.DismissalPolicy.CanDismissFromCloseButton == true)
             _dialogs.Complete(false);
-        else if (request is not null)
+        else if (request is not null &&
+                 !RouteThroughEditorCancellation(request))
             FocusDefaultAction(request);
     }
 
@@ -217,7 +221,8 @@ public partial class DialogHost : UserControl
         {
             if (request.DismissalPolicy.CanEscape)
                 _dialogs.Complete(false);
-            else
+            else if (!RouteThroughEditorCancellation(
+                         request))
                 FocusDefaultAction(request);
             e.Handled = true;
             return;
@@ -238,6 +243,20 @@ public partial class DialogHost : UserControl
                 e.Handled = true;
                 break;
         }
+    }
+
+    private static bool RouteThroughEditorCancellation(
+        DialogRequest request)
+    {
+        if (request is not FieldsRequest fields ||
+            !fields.ViewModel.CancelCommand.CanExecute(
+                null))
+        {
+            return false;
+        }
+
+        fields.ViewModel.CancelCommand.Execute(null);
+        return true;
     }
 
     private static string ToneClass(DialogTone tone) => tone switch

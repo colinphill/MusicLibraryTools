@@ -8,7 +8,7 @@ namespace MusicLibraryManager.Tests;
 public sealed class ReviewedFileOperationEditorViewModelTests
 {
     [Fact]
-    public async Task PreviewAndApplyUseTheSameCapturedPlan()
+    public async Task Preview_queues_the_same_captured_plan_without_direct_apply()
     {
         string source =
             Path.GetFullPath("source.flac");
@@ -16,17 +16,16 @@ public sealed class ReviewedFileOperationEditorViewModelTests
             Path.GetFullPath("destination");
         var service =
             new RecordingFileOperations();
-        ReviewedFileOperationPlan? applied = null;
+        ReviewedFileOperationPlan? reviewed = null;
         var viewModel =
             new ReviewedFileOperationEditorViewModel(
                 service,
                 new NoFiles(),
-                new FakeDialogs(),
                 () => [source],
-                applied: plan =>
+                plan =>
                 {
-                    applied = plan;
-                    return Task.CompletedTask;
+                    reviewed = plan;
+                    return Task.FromResult(true);
                 })
             {
                 SelectedKind =
@@ -38,36 +37,26 @@ public sealed class ReviewedFileOperationEditorViewModelTests
         await viewModel.PreviewCommand
             .ExecuteAsync(null);
 
-        Assert.True(
-            viewModel.HasApplicablePreview);
-        Assert.True(
-            viewModel.HasUnsavedChanges);
         Assert.Same(
             service.Previewed,
             service.LastPlan);
+        Assert.Same(
+            service.Previewed,
+            reviewed);
         Assert.Single(
             viewModel.PreviewItems);
-
-        await viewModel.ApplyCommand
-            .ExecuteAsync(null);
-
-        Assert.Same(
-            service.Previewed,
-            service.Applied);
-        Assert.Same(
-            service.Previewed,
-            applied);
         Assert.False(
             viewModel.HasApplicablePreview);
         Assert.False(
             viewModel.HasUnsavedChanges);
-        Assert.Contains(
-            "1 moved",
-            viewModel.Status);
+        Assert.Null(service.Applied);
+        Assert.Null(
+            typeof(ReviewedFileOperationEditorViewModel)
+                .GetProperty("ApplyCommand"));
     }
 
     [Fact]
-    public async Task EditingAfterPreviewInvalidatesApply()
+    public async Task Editing_after_rejected_preview_invalidates_the_captured_plan()
     {
         var service =
             new RecordingFileOperations();
@@ -75,9 +64,9 @@ public sealed class ReviewedFileOperationEditorViewModelTests
             new ReviewedFileOperationEditorViewModel(
                 service,
                 new NoFiles(),
-                new FakeDialogs(),
                 () =>
-                    [Path.GetFullPath("song.flac")])
+                    [Path.GetFullPath("song.flac")],
+                _ => Task.FromResult(false))
             {
                 SelectedKind =
                     ReviewedFileOperationKind.Copy,
@@ -99,6 +88,58 @@ public sealed class ReviewedFileOperationEditorViewModelTests
     }
 
     [Fact]
+    public async Task Preview_enters_review_queue_without_exposing_direct_apply()
+    {
+        string source =
+            Path.GetFullPath("review-source.flac");
+        string destination =
+            Path.GetFullPath("review-destination");
+        var service =
+            new RecordingFileOperations();
+        ReviewedFileOperationPlan? reviewed = null;
+        int reviewNotifications = 0;
+        var viewModel =
+            new ReviewedFileOperationEditorViewModel(
+                service,
+                new NoFiles(),
+                () => [source],
+                plan =>
+                {
+                    reviewed = plan;
+                    return Task.FromResult(true);
+                })
+            {
+                SelectedKind =
+                    ReviewedFileOperationKind.Move,
+                DestinationDirectory =
+                    destination,
+            };
+        viewModel.PreviewAddedToReview +=
+            (_, _) => reviewNotifications++;
+
+        await viewModel.PreviewCommand
+            .ExecuteAsync(null);
+
+        Assert.Same(
+            service.Previewed,
+            reviewed);
+        Assert.Equal(
+            1,
+            reviewNotifications);
+        Assert.Single(
+            viewModel.PreviewItems);
+        Assert.False(
+            viewModel.HasApplicablePreview);
+        Assert.False(
+            viewModel.HasUnsavedChanges);
+        Assert.Null(service.Applied);
+        Assert.Contains(
+            "review",
+            viewModel.Status,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task UnsavedMetadataPreflightPreventsPlanning()
     {
         var service =
@@ -107,9 +148,9 @@ public sealed class ReviewedFileOperationEditorViewModelTests
             new ReviewedFileOperationEditorViewModel(
                 service,
                 new NoFiles(),
-                new FakeDialogs(),
                 () =>
                     [Path.GetFullPath("song.flac")],
+                _ => Task.FromResult(true),
                 () =>
                     "Apply metadata first.")
             {

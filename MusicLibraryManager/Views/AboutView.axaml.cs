@@ -48,6 +48,8 @@ public partial class AboutView : UserControl
         DataContext = this;
         SizeChanged += (_, _) =>
             ApplyResponsiveLayout();
+        AboutPageScaffold.LayoutModeChanged +=
+            (_, _) => ApplyResponsiveLayout();
     }
 
     private static string ResolveProductVersion(
@@ -95,8 +97,35 @@ public partial class AboutView : UserControl
     private void ApplyResponsiveLayout()
     {
         bool narrow =
-            Bounds.Width > 0 &&
-            Bounds.Width < 960;
+            AboutPageScaffold.ContentWidth > 0 &&
+            AboutPageScaffold.ContentWidth < 960;
+        bool compactHero =
+            (AboutPageScaffold.Bounds.Height > 0 &&
+             AboutPageScaffold.Bounds.Height <= 700) ||
+            (AboutPageScaffold.ContentWidth > 0 &&
+             AboutPageScaffold.ContentWidth < 720);
+        double markSize =
+            compactHero ? 80 : 116;
+        double heroGap =
+            compactHero ? 16 : 24;
+        AboutHero.Padding =
+            new Thickness(
+                compactHero ? 16 : 24);
+        AboutBrandMark.Width = markSize;
+        AboutBrandMark.Height = markSize;
+        AboutProductName.FontSize =
+            compactHero ? 28 : 34;
+        HeroLayout.ColumnDefinitions.Clear();
+        HeroLayout.ColumnDefinitions.Add(
+            new ColumnDefinition(
+                new GridLength(markSize)));
+        HeroLayout.ColumnDefinitions.Add(
+            new ColumnDefinition(
+                new GridLength(heroGap)));
+        HeroLayout.ColumnDefinitions.Add(
+            new ColumnDefinition(
+                GridLength.Star));
+
         PackageGrid.ColumnDefinitions.Clear();
         PackageGrid.RowDefinitions.Clear();
         if (narrow)

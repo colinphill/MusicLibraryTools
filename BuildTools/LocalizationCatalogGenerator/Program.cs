@@ -85,6 +85,7 @@ internal static partial class CatalogGenerator
         "BOM",
         "CRLF",
         "LF",
+        "LE",
         "CR",
         "ETA",
         "KiB",
@@ -148,6 +149,7 @@ internal static partial class CatalogGenerator
         "Monkey's Audio",
         "True Audio",
         "Musepack",
+        "Latin-1",
         "Latin1",
         "Utf16",
         "Utf8",
@@ -176,12 +178,14 @@ internal static partial class CatalogGenerator
         "Ctrl",
         "Shift",
         "Alt",
+        "Meta",
         "OK",
     ];
 
     private static readonly string[]
         CaseSensitiveProtectedLiteralTokens =
         [
+            "Delete",
             "Enter",
             "Esc",
         ];
@@ -208,8 +212,34 @@ internal static partial class CatalogGenerator
             repositoryRoot,
             "MusicLibraryManager.Presentation",
             "Resources");
+        string destinationDirectory =
+            GetOptionValue(
+                args,
+                "--output-directory") is
+                { Length: > 0 } outputDirectory
+                ? Path.GetFullPath(outputDirectory)
+                : resourcesDirectory;
+        string editorialOverridesPath =
+            GetOptionValue(
+                args,
+                "--editorial-overrides") is
+                { Length: > 0 } overridesPath
+                ? Path.GetFullPath(overridesPath)
+                : Path.Combine(
+                    repositoryRoot,
+                    "BuildTools",
+                    "LocalizationCatalogGenerator",
+                    "EditorialOverrides.xml");
+        string? capturedOverridesPath =
+            GetOptionValue(
+                args,
+                "--capture-editorial-overrides");
         string neutralPath = Path.Combine(resourcesDirectory, "Strings.resx");
         bool checkOnly = args.Contains("--check", StringComparer.Ordinal);
+        if (checkOnly &&
+            capturedOverridesPath is not null)
+            throw new ArgumentException(
+                "--check and --capture-editorial-overrides cannot be combined.");
 
         XDocument neutral = XDocument.Load(
             neutralPath,
@@ -218,9 +248,33 @@ internal static partial class CatalogGenerator
             .Elements("data")
             .ToArray();
         IReadOnlyList<Term> terms = ParseTerms();
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyDictionary<string, string>>
+            editorialOverrides =
+                ParseEditorialOverrides(
+                    editorialOverridesPath);
+        var neutralKeys = neutralEntries
+            .Select(entry =>
+                (string?)entry.Attribute("name") ?? "")
+            .ToHashSet(StringComparer.Ordinal);
+        string[] unknownOverrideKeys =
+        [
+            .. editorialOverrides.Keys
+                .Where(key => !neutralKeys.Contains(key))
+                .OrderBy(key => key, StringComparer.Ordinal),
+        ];
+        if (unknownOverrideKeys.Length > 0)
+            throw new InvalidDataException(
+                "Editorial overrides reference unknown neutral resources: " +
+                string.Join(", ", unknownOverrideKeys));
         var failures = new List<string>();
         var residualCjkWords = new HashSet<string>(
             StringComparer.OrdinalIgnoreCase);
+        var generatedCatalogs = new Dictionary<
+            string,
+            XDocument>(
+            StringComparer.Ordinal);
         foreach (XElement entry in neutralEntries)
         {
             string key =
@@ -249,7 +303,8 @@ internal static partial class CatalogGenerator
                     key,
                     source,
                     locale,
-                    terms);
+                    terms,
+                    editorialOverrides);
                 if (string.IsNullOrWhiteSpace(translated))
                     failures.Add($"{locale.Name}:{key}: blank translation");
                 if (string.Equals(
@@ -261,7 +316,8 @@ internal static partial class CatalogGenerator
                 if (!HaveMatchingPlaceholders(source, translated))
                     failures.Add($"{locale.Name}:{key}: placeholder mismatch");
                 if (IsCjk(locale.Name) &&
-                    !NativeAutonyms.ContainsKey(key))
+                    !NativeAutonyms.ContainsKey(key) &&
+                    !CjkInvariantExampleKeys.Contains(key))
                 {
                     string[] residualLatinWords =
                         FindUnprotectedLatinWords(translated);
@@ -270,10 +326,12 @@ internal static partial class CatalogGenerator
                 }
                 valueElement.Value = translated;
             }
+            generatedCatalogs[locale.Name] =
+                new XDocument(satellite);
 
             ValidateKeyParity(neutralEntries, satellite, locale, failures);
             string destination = Path.Combine(
-                resourcesDirectory,
+                destinationDirectory,
                 $"Strings.{locale.Name}.resx");
             string generated = Serialize(satellite);
             if (checkOnly)
@@ -286,14 +344,26 @@ internal static partial class CatalogGenerator
                     failures.Add(
                         $"{locale.Name}: catalog is not generated from the current neutral catalog");
             }
-            else
+            else if (capturedOverridesPath is null)
             {
+                Directory.CreateDirectory(
+                    destinationDirectory);
                 File.WriteAllText(
                     destination,
                     generated,
                     new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             }
         }
+
+        XDocument? capturedOverrides =
+            capturedOverridesPath is null
+                ? null
+                : CaptureEditorialOverrides(
+                    resourcesDirectory,
+                    neutralEntries,
+                    generatedCatalogs,
+                    editorialOverrides.Keys,
+                    failures);
 
         if (residualCjkWords.Count > 0)
             failures.Add(
@@ -314,6 +384,24 @@ internal static partial class CatalogGenerator
             return 1;
         }
 
+        if (capturedOverrides is not null)
+        {
+            string capturedPath =
+                Path.GetFullPath(
+                    capturedOverridesPath!);
+            string? parent =
+                Path.GetDirectoryName(
+                    capturedPath);
+            if (!string.IsNullOrWhiteSpace(parent))
+                Directory.CreateDirectory(parent);
+            capturedOverrides.Save(
+                capturedPath,
+                SaveOptions.None);
+            Console.WriteLine(
+                $"Captured {capturedOverrides.Root!.Elements("entry").Count():N0} editorial override entries in {capturedPath}.");
+            return 0;
+        }
+
         Console.WriteLine(
             $"{(checkOnly ? "Validated" : "Generated")} " +
             $"{Locales.Length} satellite catalogs with " +
@@ -325,7 +413,11 @@ internal static partial class CatalogGenerator
         string key,
         string source,
         Locale locale,
-        IReadOnlyList<Term> terms)
+        IReadOnlyList<Term> terms,
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyDictionary<string, string>>
+            editorialOverrides)
     {
         if (NativeAutonyms.TryGetValue(key, out string? autonym))
             return autonym;
@@ -343,6 +435,11 @@ internal static partial class CatalogGenerator
                 "zh-TW" => "測試版",
                 _ => "Beta",
             };
+        if (editorialOverrides.TryGetValue(
+                key,
+                out IReadOnlyDictionary<string, string>?
+                    editorialTranslations))
+            return editorialTranslations[locale.Name];
         if (ExactResourceTranslations.TryGetValue(
                 key,
                 out IReadOnlyDictionary<string, string>?
@@ -409,9 +506,9 @@ internal static partial class CatalogGenerator
         {
             protectedValue = Regex.Replace(
                 protectedValue,
-                $@"(?<![\p{{L}}\p{{N}}])" +
+                $@"(?<![A-Za-z0-9])" +
                 Regex.Escape(literal) +
-                @"(?![\p{L}\p{N}])",
+                @"(?![A-Za-z0-9])",
                 match => AddProtectedToken(
                     match.Value,
                     tokens),
@@ -561,6 +658,280 @@ internal static partial class CatalogGenerator
             .ToArray();
     }
 
+    private static string? GetOptionValue(
+        IReadOnlyList<string> args,
+        string option)
+    {
+        int index = args
+            .Select((value, position) => (
+                Value: value,
+                Position: position))
+            .FirstOrDefault(item =>
+                string.Equals(
+                    item.Value,
+                    option,
+                    StringComparison.Ordinal))
+            .Position;
+        if (index == 0 &&
+            (args.Count == 0 ||
+             !string.Equals(
+                 args[0],
+                 option,
+                 StringComparison.Ordinal)))
+            return null;
+        if (index + 1 >= args.Count ||
+            args[index + 1].StartsWith(
+                "--",
+                StringComparison.Ordinal))
+            throw new ArgumentException(
+                $"{option} requires a path.");
+        return args[index + 1];
+    }
+
+    private static IReadOnlyDictionary<
+        string,
+        IReadOnlyDictionary<string, string>>
+        ParseEditorialOverrides(
+            string path)
+    {
+        if (!File.Exists(path))
+            return new Dictionary<
+                string,
+                IReadOnlyDictionary<string, string>>(
+                StringComparer.Ordinal);
+
+        XDocument document = XDocument.Load(
+            path,
+            LoadOptions.PreserveWhitespace);
+        if (document.Root?.Name.LocalName !=
+            "editorial-overrides")
+            throw new InvalidDataException(
+                $"Editorial override file '{path}' must use an editorial-overrides root.");
+
+        string[] localeNames = Locales
+            .Select(locale => locale.Name)
+            .ToArray();
+        var results = new Dictionary<
+            string,
+            IReadOnlyDictionary<string, string>>(
+            StringComparer.Ordinal);
+        foreach (XElement entry in
+                 document.Root.Elements("entry"))
+        {
+            string key =
+                (string?)entry.Attribute("key") ??
+                "";
+            if (string.IsNullOrWhiteSpace(key))
+                throw new InvalidDataException(
+                    "An editorial override entry is missing its key.");
+
+            var translations = new Dictionary<
+                string,
+                string>(
+                StringComparer.Ordinal);
+            foreach (XElement translation in
+                     entry.Elements("translation"))
+            {
+                string culture =
+                    (string?)translation.Attribute(
+                        "culture") ??
+                    "";
+                if (!localeNames.Contains(
+                        culture,
+                        StringComparer.Ordinal))
+                    throw new InvalidDataException(
+                        $"Editorial override '{key}' uses unsupported culture '{culture}'.");
+                if (!translations.TryAdd(
+                        culture,
+                        translation.Value))
+                    throw new InvalidDataException(
+                        $"Editorial override '{key}' repeats culture '{culture}'.");
+            }
+
+            string[] missingCultures =
+            [
+                .. localeNames.Where(locale =>
+                    !translations.ContainsKey(locale)),
+            ];
+            if (missingCultures.Length > 0)
+                throw new InvalidDataException(
+                    $"Editorial override '{key}' is missing: " +
+                    string.Join(", ", missingCultures));
+            if (translations.Any(item =>
+                    string.IsNullOrWhiteSpace(
+                        item.Value)))
+                throw new InvalidDataException(
+                    $"Editorial override '{key}' contains a blank translation.");
+            if (!results.TryAdd(
+                    key,
+                    translations))
+                throw new InvalidDataException(
+                    $"Editorial override key '{key}' is duplicated.");
+        }
+        return results;
+    }
+
+    private static XDocument CaptureEditorialOverrides(
+        string resourcesDirectory,
+        IReadOnlyList<XElement> neutralEntries,
+        IReadOnlyDictionary<string, XDocument>
+            generatedCatalogs,
+        IEnumerable<string> existingOverrideKeys,
+        ICollection<string> failures)
+    {
+        var actualCatalogs = new Dictionary<
+            string,
+            IReadOnlyDictionary<string, string>>(
+            StringComparer.Ordinal);
+        var differingKeys = new HashSet<string>(
+            existingOverrideKeys,
+            StringComparer.Ordinal);
+
+        foreach (Locale locale in Locales)
+        {
+            string path = Path.Combine(
+                resourcesDirectory,
+                $"Strings.{locale.Name}.resx");
+            if (!File.Exists(path))
+            {
+                failures.Add(
+                    $"{locale.Name}: shipping catalog is missing");
+                continue;
+            }
+
+            XDocument actual = XDocument.Load(
+                path,
+                LoadOptions.PreserveWhitespace);
+            ValidateKeyParity(
+                neutralEntries,
+                actual,
+                locale,
+                failures);
+            Dictionary<string, string> values =
+                actual.Root!
+                    .Elements("data")
+                    .ToDictionary(
+                        entry =>
+                            (string?)entry.Attribute(
+                                "name") ??
+                            "",
+                        entry =>
+                            entry.Element("value")
+                                ?.Value ??
+                            "",
+                        StringComparer.Ordinal);
+            actualCatalogs[locale.Name] =
+                values;
+
+            Dictionary<string, string> generated =
+                generatedCatalogs[locale.Name]
+                    .Root!
+                    .Elements("data")
+                    .ToDictionary(
+                        entry =>
+                            (string?)entry.Attribute(
+                                "name") ??
+                            "",
+                        entry =>
+                            entry.Element("value")
+                                ?.Value ??
+                            "",
+                        StringComparer.Ordinal);
+            foreach (XElement neutral in
+                     neutralEntries)
+            {
+                string key =
+                    (string?)neutral.Attribute(
+                        "name") ??
+                    "";
+                string source =
+                    neutral.Element("value")
+                        ?.Value ??
+                    "";
+                if (!values.TryGetValue(
+                        key,
+                        out string? actualValue))
+                    continue;
+                if (string.IsNullOrWhiteSpace(
+                        actualValue))
+                    failures.Add(
+                        $"{locale.Name}:{key}: blank shipping translation");
+                if (string.Equals(
+                        key,
+                        actualValue,
+                        StringComparison.Ordinal))
+                    failures.Add(
+                        $"{locale.Name}:{key}: shipping translation exposes its resource identifier as UI text");
+                if (!HaveMatchingPlaceholders(
+                        source,
+                        actualValue))
+                    failures.Add(
+                        $"{locale.Name}:{key}: shipping placeholder mismatch");
+                if (IsCjk(locale.Name) &&
+                    !NativeAutonyms.ContainsKey(key) &&
+                    !CjkInvariantExampleKeys.Contains(key))
+                {
+                    string[] residual =
+                        FindUnprotectedLatinWords(
+                            actualValue);
+                    if (residual.Length > 0)
+                        failures.Add(
+                            $"{locale.Name}:{key}: unprotected Latin text: " +
+                            string.Join(", ", residual));
+                }
+                if (!string.Equals(
+                        actualValue,
+                        generated[key],
+                        StringComparison.Ordinal))
+                    differingKeys.Add(key);
+            }
+        }
+
+        var root = new XElement(
+            "editorial-overrides");
+        foreach (XElement neutral in
+                 neutralEntries)
+        {
+            string key =
+                (string?)neutral.Attribute(
+                    "name") ??
+                "";
+            if (!differingKeys.Contains(key))
+                continue;
+            var entry = new XElement(
+                "entry",
+                new XAttribute(
+                    "key",
+                    key));
+            foreach (Locale locale in Locales)
+            {
+                if (!actualCatalogs.TryGetValue(
+                        locale.Name,
+                        out IReadOnlyDictionary<
+                            string,
+                            string>? values) ||
+                    !values.TryGetValue(
+                        key,
+                        out string? value))
+                    continue;
+                entry.Add(
+                    new XElement(
+                        "translation",
+                        new XAttribute(
+                            "culture",
+                            locale.Name),
+                        value));
+            }
+            root.Add(entry);
+        }
+        return new XDocument(
+            new XDeclaration(
+                "1.0",
+                "utf-8",
+                null),
+            root);
+    }
+
     private static IReadOnlyDictionary<
         string,
         IReadOnlyDictionary<string, string>>
@@ -707,7 +1078,7 @@ internal static partial class CatalogGenerator
     }
 
     [GeneratedRegex(
-        @"(?<!\{)\{\d+(?:,[^}:]+)?(?::[^}]*)?\}(?!\})|" +
+        @"(?<!\{)\{(?:\d+(?:,[^}:]+)?(?::[^}]*)?|[A-Za-z][A-Za-z0-9]*)\}(?!\})|" +
         @"(?<![\p{L}\p{N}])[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*){2,}(?![\p{L}\p{N}])|" +
         @"(?<![\p{L}\p{N}])--?[a-z][a-z0-9-]*(?:=[^\s,;)]+)?|" +
         @"(?:[A-Za-z]:\\|(?<!\S)/)[^\s\r\n,;)]*|" +
@@ -718,9 +1089,17 @@ internal static partial class CatalogGenerator
     private static partial Regex DynamicProtectedPattern();
 
     [GeneratedRegex(
-        @"(?<!\{)\{\d+(?:,[^}:]+)?(?::[^}]*)?\}(?!\})",
+        @"(?<!\{)\{(?:\d+(?:,[^}:]+)?(?::[^}]*)?|[A-Za-z][A-Za-z0-9]*)\}(?!\})",
         RegexOptions.CultureInvariant)]
     private static partial Regex PlaceholderPattern();
+
+    private static readonly HashSet<string>
+        CjkInvariantExampleKeys =
+    [
+        // Executable advanced-filter syntax must remain pasteable.
+        "Library.Filter.Placeholder",
+        "Library.FilterHelp.Description",
+    ];
 
     [GeneratedRegex(
         @"[A-Za-z][A-Za-z'-]*",
@@ -2188,6 +2567,14 @@ internal static partial class CatalogGenerator
         rock|Rockmusik|rock|rock|rock|rock|ロック|록|摇滚|搖滾
         kept|Beibehalten|conservado|conservé|mantenuto|mantido|保持|유지됨|已保留|已保留
         beta|Beta|Beta|Bêta|Beta|Beta|ベータ|베타|测试版|測試版
+        collapse|Einklappen|contraer|réduire|comprimi|recolher|折りたたむ|접기|折叠|收合
+        expand|Erweitern|expandir|développer|espandi|expandir|展開|펼치기|展开|展開
+        parallel|Parallel|paralelos|parallèles|paralleli|paralelos|並列|병렬|并行|平行
+        another|eine weitere|otra|une autre|un'altra|outra|別の|다른|另一个|另一個
+        density|Dichte|densidad|densité|densità|densidade|密度|밀도|密度|密度
+        reduce|reduzieren|reducir|réduire|ridurre|reduzir|減らす|줄이다|减少|減少
+        shrink|verkleinern|reducir|réduire|ridurre|reduzir|縮小する|축소하다|缩小|縮小
+        standard|Standard|Estándar|Standard|Standard|Padrão|標準|표준|标准|標準
         """
         .Replace("\r", "", StringComparison.Ordinal);
 }

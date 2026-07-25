@@ -3,6 +3,7 @@ using global::Avalonia.Controls;
 using global::Avalonia.Controls.Presenters;
 using global::Avalonia.Controls.Primitives;
 using global::Avalonia.Data;
+using global::Avalonia.Interactivity;
 using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Threading;
 using global::Avalonia.VisualTree;
@@ -14,13 +15,21 @@ namespace MusicLibraryManager.Views;
 
 public partial class SettingsView : UserControl
 {
-    private const double WideLayoutWidth = 1000;
-    private const double NarrowLayoutWidth = 700;
+    internal const double CategoryRailWidth = 230;
+    internal const double FourColumnPageWidth = 920;
+    internal const double TwoColumnPageWidth = 600;
+    internal const double SettingsContentHorizontalInset = 32;
+    internal const double MinimumPageWidthWithRail = 720;
+    internal const double CategoryRailActivationWidth =
+        CategoryRailWidth +
+        MinimumPageWidthWithRail;
+    internal const double FieldMappingSingleColumnWidth = 760;
     private readonly Dictionary<Grid, ResponsiveGridSnapshot> _responsiveGrids = [];
     private readonly HashSet<ComboBox> _localizedChoiceBoxes = [];
     private readonly ILocalizationService _localization;
     private readonly SettingsCategoryOption[] _categories;
     private int _responsiveColumnCount = -1;
+    private double _responsivePageWidth;
     private bool _localizationSubscribed;
 
     private static readonly SettingsCategoryDefinition[] CategoryDefinitions =
@@ -78,23 +87,45 @@ public partial class SettingsView : UserControl
 
     private void ApplyResponsiveLayout()
     {
-        double contentWidth = Bounds.Width;
-        if (contentWidth <= 0)
+        double navigationWidth =
+            SettingsNavigationLayout.Bounds.Width > 0
+                ? SettingsNavigationLayout.Bounds.Width
+                : Bounds.Width;
+        if (navigationWidth <= 0)
             return;
 
-        bool showCategoryRail = contentWidth >= WideLayoutWidth;
+        bool showCategoryRail =
+            navigationWidth >=
+            CategoryRailActivationWidth;
+        bool railVisibilityChanged =
+            SettingsCategoryRail.IsVisible !=
+            showCategoryRail;
         SettingsCategoryRail.IsVisible = showCategoryRail;
         SettingsCategoryPicker.IsVisible = !showCategoryRail;
         SettingsCategoryPicker.Margin = showCategoryRail
             ? new Thickness(12, 12, 12, 0)
-            : new Thickness(12, 6, 12, 0);
+            : new Thickness(12, 8, 12, 0);
         SettingsNavigationLayout.ColumnDefinitions[0].Width =
-            showCategoryRail ? new GridLength(230) : new GridLength(0);
+            showCategoryRail
+                 ? new GridLength(
+                     CategoryRailWidth)
+                 : new GridLength(0);
         HideLegacyTabHeaders();
 
-        int columns = contentWidth >= WideLayoutWidth
+        double estimatedPageWidth = Math.Max(
+            280,
+            navigationWidth -
+            (showCategoryRail
+                ? CategoryRailWidth
+                : 0) -
+            SettingsContentHorizontalInset);
+        double pageWidth =
+            ResolveActiveContentWidth() ??
+            estimatedPageWidth;
+        _responsivePageWidth = pageWidth;
+        int columns = pageWidth >= FourColumnPageWidth
             ? 4
-            : contentWidth >= NarrowLayoutWidth
+            : pageWidth >= TwoColumnPageWidth
                 ? 2
                 : 1;
         _responsiveColumnCount = columns;
@@ -102,14 +133,23 @@ public partial class SettingsView : UserControl
         DisplayLanguagePicker.MaxWidth = 320;
         DisplayLanguagePicker.Width = double.NaN;
         DisplayLanguagePicker.HorizontalAlignment =
-            contentWidth < NarrowLayoutWidth
+            pageWidth < TwoColumnPageWidth
                 ? global::Avalonia.Layout.HorizontalAlignment.Stretch
                 : global::Avalonia.Layout.HorizontalAlignment.Left;
-        HealthSettingsContent.Margin = contentWidth < WideLayoutWidth
-            ? new Thickness(10)
-            : new Thickness(18);
+        UiDensityPicker.MaxWidth = 320;
+        UiDensityPicker.Width = double.NaN;
+        UiDensityPicker.HorizontalAlignment =
+            pageWidth < TwoColumnPageWidth
+                ? global::Avalonia.Layout.HorizontalAlignment.Stretch
+                : global::Avalonia.Layout.HorizontalAlignment.Left;
+        HealthSettingsContent.Margin =
+            pageWidth < FourColumnPageWidth
+            ? new Thickness(12)
+            : new Thickness(16);
         HealthSettingsContent.Spacing =
-            contentWidth < WideLayoutWidth ? 6 : 10;
+            pageWidth < FourColumnPageWidth
+                ? 6
+                : 10;
 
         foreach (UniformGrid grid in this.GetVisualDescendants()
                      .OfType<UniformGrid>()
@@ -120,6 +160,9 @@ public partial class SettingsView : UserControl
 
         ApplyContentWidths();
         ApplyResponsiveGrids();
+
+        if (railVisibilityChanged)
+            Dispatcher.UIThread.Post(ApplyResponsiveLayout);
     }
 
     private void ApplyResponsiveGrids()
@@ -138,15 +181,21 @@ public partial class SettingsView : UserControl
                 _responsiveGrids.Add(grid, snapshot);
             }
 
-            if (snapshot.AppliedColumnCount == _responsiveColumnCount)
+            int desiredColumns =
+                grid.Classes.Contains("field-mapping-fields") &&
+                _responsivePageWidth <
+                FieldMappingSingleColumnWidth
+                    ? 1
+                    : _responsiveColumnCount;
+            if (snapshot.AppliedColumnCount == desiredColumns)
                 continue;
 
-            if (_responsiveColumnCount == 4 &&
+            if (desiredColumns == 4 &&
                 snapshot.OriginalColumnCount <= 4)
                 snapshot.Restore(grid);
             else
-                snapshot.ApplyFlow(grid, _responsiveColumnCount);
-            snapshot.AppliedColumnCount = _responsiveColumnCount;
+                snapshot.ApplyFlow(grid, desiredColumns);
+            snapshot.AppliedColumnCount = desiredColumns;
         }
 
         ApplyContentWidths();
@@ -193,6 +242,35 @@ public partial class SettingsView : UserControl
     private static bool IsResponsiveForm(Grid grid) =>
         grid.Classes.Contains("responsive-form");
 
+    private double? ResolveActiveContentWidth()
+    {
+        ScrollViewer? viewport = SettingsTabs
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .FirstOrDefault(scroll =>
+                scroll.IsEffectivelyVisible &&
+                scroll.Classes.Contains("settings-scroll"));
+        if (viewport is null ||
+            viewport.Bounds.Width <= 0)
+        {
+            return null;
+        }
+
+        StackPanel? content = viewport
+            .GetVisualDescendants()
+            .OfType<StackPanel>()
+            .FirstOrDefault(panel =>
+                panel.Classes.Contains("settings-content"));
+        Thickness margin =
+            content?.Margin ??
+            new Thickness(16);
+        return Math.Max(
+            280,
+            viewport.Bounds.Width -
+            margin.Left -
+            margin.Right);
+    }
+
     private void HideLegacyTabHeaders()
     {
         foreach (ItemsPresenter presenter in SettingsTabs
@@ -235,6 +313,52 @@ public partial class SettingsView : UserControl
     {
         foreach (SettingsCategoryOption category in _categories)
             category.Refresh(_localization);
+    }
+
+    private void OnEditLibraryProfileClicked(
+        object? sender,
+        RoutedEventArgs e) =>
+        RootPolicyEditorExpander.IsExpanded = true;
+
+    private void OnEditIngestProfileClicked(
+        object? sender,
+        RoutedEventArgs e) =>
+        IngestProfileEditorExpander.IsExpanded = true;
+
+    private void OnEditExportProfileClicked(
+        object? sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button)
+            return;
+
+        Border? card = button
+            .GetVisualAncestors()
+            .OfType<Border>()
+            .FirstOrDefault(border =>
+                border.Classes.Contains(
+                    "export-profile-card"));
+        Expander? selectedEditor = card?
+            .GetVisualDescendants()
+            .OfType<Expander>()
+            .FirstOrDefault(expander =>
+                expander.Name ==
+                "ExportProfileEditorExpander");
+        if (selectedEditor is null)
+            return;
+
+        foreach (Expander editor in this
+                     .GetVisualDescendants()
+                     .OfType<Expander>()
+                     .Where(expander =>
+                         expander.Name ==
+                         "ExportProfileEditorExpander"))
+        {
+            editor.IsExpanded =
+                ReferenceEquals(
+                    editor,
+                    selectedEditor);
+        }
     }
 
     private sealed record SettingsCategoryDefinition(

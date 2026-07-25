@@ -351,7 +351,9 @@ public sealed partial class LocalizationCatalogTests
             {
                 if (entry.Key.StartsWith(
                         "Culture.",
-                        StringComparison.Ordinal))
+                        StringComparison.Ordinal) ||
+                    CjkInvariantExampleKeys.Contains(
+                        entry.Key))
                     continue;
 
                 string value = DynamicProtectedPattern()
@@ -478,6 +480,7 @@ public sealed partial class LocalizationCatalogTests
 
     [GeneratedRegex(
         @"(?<!\{)\{\d+(?:,[^}:]+)?(?::[^}]*)?\}(?!\})|" +
+        @"(?<!\{)\{[A-Za-z][A-Za-z0-9]*\}(?!\})|" +
         @"(?<![\p{L}\p{N}])[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*){2,}(?![\p{L}\p{N}])|" +
         @"(?<![\p{L}\p{N}])--?[a-z][a-z0-9-]*(?:=[^\s,;)]+)?|" +
         @"(?:[A-Za-z]:\\|(?<!\S)/)[^\s\r\n,;)]*|" +
@@ -491,6 +494,16 @@ public sealed partial class LocalizationCatalogTests
         @"[A-Za-z][A-Za-z'-]*",
         RegexOptions.CultureInvariant)]
     private static partial Regex LatinWordPattern();
+
+    private static readonly HashSet<string>
+        CjkInvariantExampleKeys =
+    [
+        // This is executable advanced-filter syntax rather than prose.
+        // Translating its field/operator tokens would make the example
+        // impossible to paste back into the parser.
+        "Library.Filter.Placeholder",
+        "Library.FilterHelp.Description",
+    ];
 
     private static readonly string[] CjkAllowedLatinTokens =
     [
@@ -508,8 +521,10 @@ public sealed partial class LocalizationCatalogTests
         "ASIN",
         "BOM",
         "Bom",
+        "Latin-1",
         "CRLF",
         "LF",
+        "LE",
         "CR",
         "Lf",
         "Cr",
@@ -574,6 +589,8 @@ public sealed partial class LocalizationCatalogTests
         "Ctrl",
         "Shift",
         "Alt",
+        "Meta",
+        "Delete",
         "Enter",
         "Esc",
     ];

@@ -1,23 +1,27 @@
 <UserControl x:Class="MusicLibraryManager.Views.HomeView"
              xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Controls">
+  <controls:AdaptivePage x:Name="PageScaffold"
+                         RowDefinitions="Auto,Auto,*"
+                         RowSpacing="16">
     <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-      <StackPanel Spacing="5">
-        <TextBlock Classes="page-title" Text="{DynamicResource Loc.Home.Title}" />
+      <StackPanel Spacing="4">
+        <TextBlock Classes="page-title"
+                   Text="{DynamicResource Loc.Home.Title}"
+                   Focusable="False"
+                   AutomationProperties.HeadingLevel="1" />
         <TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Subtitle}" />
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasConfiguration}">
           <Button Classes="app" Content="{DynamicResource Loc.Home.Action.Refresh}" Command="{Binding RefreshCommand}" />
           <Button Classes="app primary" Content="{DynamicResource Loc.Home.Action.OpenLibrary}" Command="{Binding OpenLibraryCommand}" />
       </StackPanel>
-          <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Home.Action.SetUpLibrary}"
-              IsVisible="{Binding NeedsSetup}" Command="{Binding OpenSettingsCommand}" />
     </Grid>
 
     <Border Grid.Row="1" Classes="status-banner error" IsVisible="{Binding HasError}"
             AutomationProperties.LiveSetting="Assertive">
-      <StackPanel Spacing="3">
+      <StackPanel Spacing="4">
         <TextBlock Text="{Binding ErrorMessage}"
                    TextWrapping="Wrap" />
         <TextBlock Classes="muted"
@@ -28,30 +32,30 @@
     </Border>
 
     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-      <StackPanel Spacing="14">
-        <Border Classes="card" IsVisible="{Binding NeedsSetup}">
-          <Grid ColumnDefinitions="1.2*,0.8*" ColumnSpacing="28">
-            <StackPanel Spacing="10">
+      <StackPanel Classes="content-stack">
+        <Border Classes="section-frame" IsVisible="{Binding NeedsSetup}">
+          <Grid x:Name="SetupLayout" ColumnDefinitions="1.2*,0.8*" ColumnSpacing="24">
+            <StackPanel Spacing="12">
           <TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.Empty.Title}" />
-          <TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Empty.Description}" TextWrapping="Wrap" />
+          <TextBlock Classes="supporting" Text="{DynamicResource Loc.Home.Empty.Description}" TextWrapping="Wrap" />
           <Button Classes="app primary" HorizontalAlignment="Left" Content="{DynamicResource Loc.Home.Empty.Action}"
                       Command="{Binding OpenSettingsCommand}" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Spacing="10">
-              <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
-                <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppAccentBrush}"><TextBlock Text="1" Foreground="{DynamicResource AppAccentInkBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+            <StackPanel Grid.Column="1" Spacing="12">
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                <Border Width="26" Height="26" CornerRadius="99" Background="{DynamicResource AppAccentBrush}"><TextBlock Text="1" Foreground="{DynamicResource AppAccentInkBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
               <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc.Home.Step.ChooseConfiguration.Title}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Step.ChooseConfiguration.Description}" TextWrapping="Wrap" /></StackPanel>
               </Grid>
-              <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
-                <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="2" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                <Border Width="26" Height="26" CornerRadius="99" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="2" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
               <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc.Home.Step.AddRoots.Title}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Step.AddRoots.Description}" TextWrapping="Wrap" /></StackPanel>
               </Grid>
-              <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
-                <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="3" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                <Border Width="26" Height="26" CornerRadius="99" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="3" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
               <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc.Home.Step.Index.Title}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Step.Index.Description}" TextWrapping="Wrap" /></StackPanel>
               </Grid>
-              <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
-                <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="4" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
+                <Border Width="26" Height="26" CornerRadius="99" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="4" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
               <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc.Home.Step.Browse.Title}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Step.Browse.Description}" TextWrapping="Wrap" /></StackPanel>
               </Grid>
             </StackPanel>
@@ -61,7 +65,7 @@
         <Border Classes="card" IsVisible="{Binding Indexing.IsIndexing}">
           <Grid x:Name="IndexingBannerLayout" ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <ProgressBar Width="22" Height="22" IsIndeterminate="True" />
-            <StackPanel Grid.Column="1" Spacing="3">
+            <StackPanel Grid.Column="1" Spacing="4">
             <TextBlock Text="{DynamicResource Loc.Home.Indexing.Scanning}" FontWeight="SemiBold" />
               <TextBlock Classes="muted" Text="{Binding Indexing.StatusText}" />
               <TextBlock Classes="faint"
@@ -72,22 +76,22 @@
           </Grid>
         </Border>
 
-        <UniformGrid Columns="4" Rows="1" IsVisible="{Binding HasConfiguration}">
-          <Border Classes="card" Margin="0,0,9,0">
+        <UniformGrid x:Name="MetricGrid" Columns="4" IsVisible="{Binding HasConfiguration}">
+          <Border Classes="card" Margin="4">
             <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.Tracks}" FontWeight="SemiBold" /><TextBlock Text="{Binding TrackCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
-          <Border Classes="card" Margin="3,0,6,0">
+          <Border Classes="card" Margin="4">
             <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.Albums}" FontWeight="SemiBold" /><TextBlock Text="{Binding AlbumCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
-          <Border Classes="card" Margin="6,0,3,0">
+          <Border Classes="card" Margin="4">
             <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.AlbumArtists}" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtistCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
-          <Border Classes="card" Margin="9,0,0,0">
+          <Border Classes="card" Margin="4">
             <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.ArtworkCached}" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtworkCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
         </UniformGrid>
 
-        <Grid ColumnDefinitions="*,14,*" IsVisible="{Binding HasConfiguration}">
+        <Grid x:Name="HealthMetricLayout" ColumnDefinitions="*,14,*" IsVisible="{Binding HasConfiguration}">
           <Border Grid.Column="0" Classes="card">
             <StackPanel Spacing="8">
               <TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.LastSuccessfulIndex}" FontWeight="SemiBold" />
@@ -105,9 +109,9 @@
           </Border>
         </Grid>
 
-        <Grid ColumnDefinitions="1.45*,14,1*" IsVisible="{Binding HasConfiguration}">
+        <Grid x:Name="LibraryActionLayout" ColumnDefinitions="1.45*,14,1*" IsVisible="{Binding HasConfiguration}">
           <Border Grid.Column="0" Classes="card">
-            <StackPanel Spacing="10">
+            <StackPanel Spacing="12">
               <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="8" Height="8" Fill="{DynamicResource AppAccentBrush}" /><TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.Roots.Title}" /></StackPanel>
               <TextBlock Classes="muted" Text="{Binding RootHealth}" TextWrapping="Wrap" />
               <TextBlock Classes="faint" Text="{DynamicResource Loc.Home.Roots.Description}" TextWrapping="Wrap" />
@@ -115,7 +119,7 @@
             </StackPanel>
           </Border>
           <Border Grid.Column="2" Classes="card">
-            <StackPanel Spacing="10">
+            <StackPanel Spacing="12">
             <TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.Indexing.Title}" />
               <TextBlock Classes="muted" Text="{Binding Indexing.StatusText}" TextWrapping="Wrap" />
               <TextBlock Classes="faint"
@@ -132,12 +136,12 @@
         </Grid>
 
         <Border Classes="card" IsVisible="{Binding HasRecentActivity}">
-          <StackPanel Spacing="10">
+          <StackPanel Spacing="12">
             <TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.RecentActivity.Title}" />
             <ItemsControl ItemsSource="{Binding RecentActivityItems}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Grid Margin="0,0,0,8" ColumnDefinitions="Auto,180,*,Auto" ColumnSpacing="10">
+                  <Grid Margin="0,0,0,8" ColumnDefinitions="Auto,180,*,Auto" ColumnSpacing="12">
                     <Ellipse Width="7" Height="7" Fill="{DynamicResource AppAccentBrush}" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                     <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Message}" TextTrimming="CharacterEllipsis" />
@@ -150,5 +154,5 @@
         </Border>
       </StackPanel>
     </ScrollViewer>
-  </Grid>
+  </controls:AdaptivePage>
 </UserControl>

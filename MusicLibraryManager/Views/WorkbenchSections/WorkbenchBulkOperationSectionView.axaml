@@ -2,159 +2,171 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
-  <ScrollViewer x:Name="SectionScroll"
-                Margin="0,4,0,0"
-                VerticalScrollBarVisibility="Auto"
-                HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Spacing="10">
-      <StackPanel Spacing="7">
+  <Grid RowDefinitions="*,Auto"
+        RowSpacing="8">
+    <ScrollViewer x:Name="SectionScroll"
+                  Margin="0,4,0,0"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Classes="content-stack">
+      <StackPanel Spacing="8">
         <WrapPanel>
           <StackPanel Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5">
-            <TextBlock Classes="muted"
+                      Margin="0,0,12,8"
+                      Spacing="4">
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.Operation}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <ComboBox x:Name="WorkbenchOperationPicker"
                       Classes="app"
                       ItemsSource="{Binding OperationEditor.OperationChoices}"
                       DisplayMemberBinding="{Binding Label}"
                       SelectedValueBinding="{Binding Value}"
-                      SelectedValue="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
+                      SelectedValue="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Operation}" />
           </StackPanel>
           <StackPanel Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5">
-            <TextBlock Classes="muted"
+                      Margin="0,0,12,8"
+                      Spacing="4">
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.Field}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <ComboBox x:Name="WorkbenchOperationFieldPicker"
                       Classes="app"
                       ItemsSource="{Binding OperationEditor.Fields}"
                       DisplayMemberBinding="{Binding Label}"
-                      SelectedItem="{Binding OperationEditor.SelectedField, Mode=TwoWay}" />
+                      SelectedItem="{Binding OperationEditor.SelectedField, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Field}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationDestinationPanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowDestinationField}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.DestinationField}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding OperationEditor.Fields}"
                       DisplayMemberBinding="{Binding Label}"
-                      SelectedItem="{Binding OperationEditor.DestinationField, Mode=TwoWay}" />
+                      SelectedItem="{Binding OperationEditor.DestinationField, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.DestinationField}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationSecondaryPanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowSecondaryField}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.SecondSourceField}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding OperationEditor.Fields}"
                       DisplayMemberBinding="{Binding Label}"
-                      SelectedItem="{Binding OperationEditor.SecondaryField, Mode=TwoWay}" />
+                      SelectedItem="{Binding OperationEditor.SecondaryField, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.SecondSourceField}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationValuePanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowValue}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.Value}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <TextBox x:Name="WorkbenchOperationValueEditor"
                      Classes="app"
                      Text="{Binding OperationEditor.OperationValue, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Workbench.Bulk.AssignmentPlaceholder}" />
+                     PlaceholderText="{DynamicResource Loc.Workbench.Bulk.AssignmentPlaceholder}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Value}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationFindPanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowTextReplacement}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.Find}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <TextBox Classes="app"
                      Text="{Binding OperationEditor.SearchText, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Workbench.Bulk.FindPlaceholder}" />
+                     PlaceholderText="{DynamicResource Loc.Workbench.Bulk.FindPlaceholder}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Find}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationReplacementPanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowTextReplacement}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.ReplaceWith}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <TextBox Classes="app"
-                     Text="{Binding OperationEditor.ReplacementText, Mode=TwoWay}" />
+                     Text="{Binding OperationEditor.ReplacementText, Mode=TwoWay}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.ReplaceWith}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationCasePanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowCase}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.Case}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding OperationEditor.CaseModeChoices}"
                       DisplayMemberBinding="{Binding Label}"
                       SelectedValueBinding="{Binding Value}"
-                      SelectedValue="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
+                      SelectedValue="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Case}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationSeparatorPanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowSeparator}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.Separator}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <TextBox Classes="app"
-                     Text="{Binding OperationEditor.Separator, Mode=TwoWay}" />
+                     Text="{Binding OperationEditor.Separator, Mode=TwoWay}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Separator}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationValueOrderPanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowValueOrder}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.ValueOrder}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding OperationEditor.ValueOrderChoices}"
                       DisplayMemberBinding="{Binding Label}"
                       SelectedValueBinding="{Binding Value}"
-                      SelectedValue="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}" />
+                      SelectedValue="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.ValueOrder}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationSequencePanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowSequence}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.Sequence}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
               <NumericUpDown Classes="app"
                              Minimum="0"
                              Value="{Binding OperationEditor.SequenceStart, Mode=TwoWay}"
@@ -169,97 +181,105 @@
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationPathPanel"
                       Width="210"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowPathExtraction}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.PathComponent}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding OperationEditor.PathComponentChoices}"
                       DisplayMemberBinding="{Binding Label}"
                       SelectedValueBinding="{Binding Value}"
-                      SelectedValue="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}" />
+                      SelectedValue="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.PathComponent}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationParentLevelPanel"
                       Width="110"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowPathExtraction}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.ParentLevel}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <NumericUpDown Classes="app"
                            Minimum="1"
-                           Value="{Binding OperationEditor.ParentLevel, Mode=TwoWay}" />
+                           Value="{Binding OperationEditor.ParentLevel, Mode=TwoWay}"
+                           AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.ParentLevel}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationExtractionPatternPanel"
                       Width="260"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowPathExtraction}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.ExtractionPattern}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <TextBox Classes="app"
                      Text="{Binding OperationEditor.ExtractionPattern, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Workbench.Bulk.ExtractionPatternPlaceholder}" />
+                     PlaceholderText="{DynamicResource Loc.Workbench.Bulk.ExtractionPatternPlaceholder}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.ExtractionPattern}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationCaptureGroupPanel"
                       Width="150"
-                      Margin="0,0,10,8"
-                      Spacing="5"
+                      Margin="0,0,12,8"
+                      Spacing="4"
                       IsVisible="{Binding OperationEditor.ShowPathExtraction}">
-            <TextBlock Classes="muted"
+            <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Bulk.CaptureGroup}"
-                       FontSize="12"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <TextBox Classes="app"
-                     Text="{Binding OperationEditor.ExtractionGroup, Mode=TwoWay}" />
+                     Text="{Binding OperationEditor.ExtractionGroup, Mode=TwoWay}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.CaptureGroup}" />
           </StackPanel>
         </WrapPanel>
 
-        <CheckBox x:Name="WorkbenchOperationRegularExpressionOption"
-                  Content="{DynamicResource Loc.Workbench.Bulk.UseRegularExpression}"
-                  IsVisible="{Binding OperationEditor.ShowRegularExpression}"
-                  IsChecked="{Binding OperationEditor.UseRegularExpression, Mode=TwoWay}" />
-        <Expander Header="{DynamicResource Loc.Workbench.Bulk.Condition}">
-          <WrapPanel Margin="0,7,0,0">
-            <CheckBox Margin="0,0,10,7"
-                      VerticalAlignment="Center"
-                      Content="{DynamicResource Loc.Workbench.Bulk.EnableCondition}"
-                      IsChecked="{Binding OperationEditor.ConditionEnabled, Mode=TwoWay}" />
-            <ComboBox Classes="app"
-                      Width="170"
-                      Margin="0,0,8,7"
-                      ItemsSource="{Binding OperationEditor.Fields}"
-                      DisplayMemberBinding="{Binding Label}"
-                      SelectedItem="{Binding OperationEditor.SelectedConditionField, Mode=TwoWay}" />
-            <ComboBox Classes="app"
-                      Width="145"
-                      Margin="0,0,8,7"
-                      ItemsSource="{Binding OperationEditor.ConditionOperatorChoices}"
-                      DisplayMemberBinding="{Binding Label}"
-                      SelectedValueBinding="{Binding Value}"
-                      SelectedValue="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}" />
-            <TextBox Classes="app"
-                     Width="180"
-                     Margin="0,0,8,7"
-                     Text="{Binding OperationEditor.ConditionValue, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Workbench.Bulk.ConditionValuePlaceholder}" />
-          </WrapPanel>
+        <Expander Header="{DynamicResource Loc.Workbench.Common.Advanced}">
+          <StackPanel Margin="0,8,0,0"
+                      Spacing="8">
+            <CheckBox x:Name="WorkbenchOperationRegularExpressionOption"
+                      Content="{DynamicResource Loc.Workbench.Bulk.UseRegularExpression}"
+                      IsVisible="{Binding OperationEditor.ShowRegularExpression}"
+                      IsChecked="{Binding OperationEditor.UseRegularExpression, Mode=TwoWay}" />
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Bulk.Condition}" />
+            <WrapPanel>
+              <CheckBox Margin="0,0,12,8"
+                        VerticalAlignment="Center"
+                        Content="{DynamicResource Loc.Workbench.Bulk.EnableCondition}"
+                        IsChecked="{Binding OperationEditor.ConditionEnabled, Mode=TwoWay}" />
+              <ComboBox Classes="app"
+                        Width="170"
+                        Margin="0,0,8,8"
+                        ItemsSource="{Binding OperationEditor.Fields}"
+                        DisplayMemberBinding="{Binding Label}"
+                        SelectedItem="{Binding OperationEditor.SelectedConditionField, Mode=TwoWay}"
+                        AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Condition}" />
+              <ComboBox Classes="app"
+                        Width="145"
+                        Margin="0,0,8,8"
+                        ItemsSource="{Binding OperationEditor.ConditionOperatorChoices}"
+                        DisplayMemberBinding="{Binding Label}"
+                        SelectedValueBinding="{Binding Value}"
+                        SelectedValue="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}"
+                        AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Condition}" />
+              <TextBox Classes="app"
+                       Width="180"
+                       Margin="0,0,8,8"
+                       Text="{Binding OperationEditor.ConditionValue, Mode=TwoWay}"
+                       PlaceholderText="{DynamicResource Loc.Workbench.Bulk.ConditionValuePlaceholder}"
+                       AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.ConditionValuePlaceholder}" />
+            </WrapPanel>
+          </StackPanel>
         </Expander>
         <WrapPanel>
-          <Button Classes="app primary"
-                  Margin="0,0,8,6"
-                  Content="{DynamicResource Loc.Workbench.Bulk.Action.PreviewOperation}"
-                  Command="{Binding PreviewOperationCommand}" />
           <Button x:Name="AddWorkbenchRecipeStepButton"
                   Classes="app"
-                  Margin="0,0,8,6"
+                  Margin="0,0,8,8"
                   Content="{DynamicResource Loc.Workbench.Bulk.Action.AddToRecipe}"
                   Command="{Binding OperationEditor.AddCurrentOperationCommand}" />
         </WrapPanel>
@@ -268,11 +288,11 @@
       <Border Height="1"
               Background="{DynamicResource AppBorderBrush}" />
       <Grid x:Name="RecipeLayout"
-            Height="190"
+            MinHeight="190"
             ColumnDefinitions="1.2*,12,0.8*">
         <Grid x:Name="RecipeStepsPanel"
               RowDefinitions="Auto,*,Auto"
-              RowSpacing="6">
+              RowSpacing="8">
           <TextBlock Classes="section-title"
                      Text="{DynamicResource Loc.Workbench.Bulk.OrderedRecipe}" />
           <ListBox x:Name="WorkbenchRecipeSteps"
@@ -282,16 +302,26 @@
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                  <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" />
+                  <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}"
+                            AutomationProperties.Name="{Binding Name}" />
                   <TextBox Grid.Column="1"
                            Classes="app"
                            BorderThickness="0"
                            Background="Transparent"
-                           Text="{Binding Name, Mode=TwoWay}" />
+                           Text="{Binding Name, Mode=TwoWay}"
+                           AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.OrderedRecipe}" />
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+          <Border Grid.Row="1"
+                  Classes="empty-state"
+                  IsVisible="{Binding !OperationEditor.Steps.Count}">
+            <TextBlock Classes="supporting"
+                       Text="{DynamicResource Loc.Workbench.Bulk.Description}"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center" />
+          </Border>
           <Button x:Name="WorkbenchRecipeStepActionsButton"
                   Grid.Row="2"
                   Classes="app"
@@ -315,21 +345,27 @@
         </Grid>
         <StackPanel x:Name="SavedRecipesPanel"
                     Grid.Column="2"
-                    Spacing="7">
+                    Spacing="8">
           <TextBlock Classes="section-title"
+                     Text="{DynamicResource Loc.Workbench.Bulk.PersonalRecipes}" />
+          <TextBlock Classes="field-label"
                      Text="{DynamicResource Loc.Workbench.Bulk.PersonalRecipes}" />
           <ComboBox Classes="app"
                     ItemsSource="{Binding OperationEditor.SavedRecipes}"
                     SelectedItem="{Binding OperationEditor.SelectedSavedRecipe, Mode=TwoWay}"
                     DisplayMemberBinding="{Binding Name}"
-                    PlaceholderText="{DynamicResource Loc.Workbench.Bulk.SavedRecipePlaceholder}" />
+                    PlaceholderText="{DynamicResource Loc.Workbench.Bulk.SavedRecipePlaceholder}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.PersonalRecipes}" />
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Bulk.RecipeNamePlaceholder}" />
           <TextBox Classes="app"
                    Text="{Binding OperationEditor.RecipeName, Mode=TwoWay}"
-                   PlaceholderText="{DynamicResource Loc.Workbench.Bulk.RecipeNamePlaceholder}" />
+                   PlaceholderText="{DynamicResource Loc.Workbench.Bulk.RecipeNamePlaceholder}"
+                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.RecipeNamePlaceholder}" />
           <WrapPanel>
             <Button x:Name="SaveWorkbenchRecipeButton"
                     Classes="app primary"
-                    Margin="0,0,6,0"
+                    Margin="0,0,8,0"
                     Content="{DynamicResource Loc.Workbench.Bulk.Action.SaveRecipe}"
                     Command="{Binding OperationEditor.SaveRecipeCommand}" />
             <Button x:Name="WorkbenchRecipeMoreButton"
@@ -358,18 +394,18 @@
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.Bulk.PendingOperations}" />
         <controls:AppDataGrid x:Name="PendingOperationsGrid"
-                              Height="130"
+                              MinHeight="130"
                               ItemsSource="{Binding PendingOperations}"
                               AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.PendingOperationsAutomation}" />
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.Bulk.ReviewedChanges}" />
         <Border x:Name="WorkbenchRepresentativePreview"
-                Padding="10"
+                Padding="12"
                 Background="{DynamicResource AppInsetBrush}"
                 BorderBrush="{DynamicResource AppBorderBrush}"
                 BorderThickness="1"
-                CornerRadius="7">
-          <StackPanel Spacing="6">
+                CornerRadius="8">
+          <StackPanel Spacing="8">
             <TextBlock FontWeight="SemiBold"
                        Text="{DynamicResource Loc.Workbench.Bulk.RepresentativeDraft}" />
             <TextBlock x:Name="RepresentativeSupportingText"
@@ -378,7 +414,7 @@
                        Text="{Binding RepresentativePreview.Status}" />
             <controls:LocalizedFormatTextBlock
                 Classes="muted"
-                FontSize="11"
+                FontSize="{DynamicResource AppFontSizeCaption}"
                 TextWrapping="Wrap"
                 ResourceKey="Common.DiagnosticDetailFormat"
                 Value="{Binding RepresentativePreview.StatusDiagnosticDetail}"
@@ -389,12 +425,12 @@
             <Grid IsVisible="{Binding RepresentativePreview.HasPreview}"
                   ColumnDefinitions="*,*"
                   ColumnSpacing="12">
-              <StackPanel Spacing="3">
+              <StackPanel Spacing="4">
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Common.Before}" />
                 <TextBlock Text="{Binding RepresentativePreview.BeforeText}"
                            TextWrapping="Wrap" />
               </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="3">
+              <StackPanel Grid.Column="1" Spacing="4">
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Common.After}" />
                 <TextBlock Text="{Binding RepresentativePreview.AfterText}"
                            TextWrapping="Wrap" />
@@ -403,9 +439,24 @@
           </StackPanel>
         </Border>
         <controls:AppDataGrid x:Name="PreviewGrid"
-                              Height="260"
+                              MinHeight="180"
                               ItemsSource="{Binding PreviewChanges}" />
       </StackPanel>
-    </StackPanel>
-  </ScrollViewer>
+      </StackPanel>
+    </ScrollViewer>
+    <Border Grid.Row="1"
+            Classes="sticky-footer">
+      <Grid ColumnDefinitions="*,Auto"
+            ColumnSpacing="8">
+        <TextBlock Classes="muted"
+                   VerticalAlignment="Center"
+                   Text="{DynamicResource Loc.Workbench.Bulk.Safety}"
+                   TextTrimming="CharacterEllipsis" />
+        <Button Grid.Column="1"
+                Classes="app primary"
+                Content="{DynamicResource Loc.Workbench.Bulk.Action.PreviewOperation}"
+                Command="{Binding PreviewOperationCommand}" />
+      </Grid>
+    </Border>
+  </Grid>
 </UserControl>

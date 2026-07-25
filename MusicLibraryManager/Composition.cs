@@ -47,6 +47,10 @@ public static class Composition
         services.AddSingleton<WorkbenchSelectionInspectorViewModel>();
         services.AddSingleton<LibraryViewModel>();
         services.AddSingleton<WorkbenchViewModel>();
+        services.AddSingleton<
+            IWorkbenchPendingChangeCoordinator>(
+            sp => sp.GetRequiredService<
+                WorkbenchViewModel>());
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<AnalyzerViewModel>();
         services.AddSingleton<IngestViewModel>();

@@ -15,13 +15,10 @@ public partial class SelectionInspectorViewModel : ObservableObject
     private const int MaxCommonValueSample = 200;
     private readonly IMediaFileService _media;
     private readonly ILibraryService _library;
-    private readonly ITagWriteService _tags;
     private readonly IArtworkService _artwork;
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
-    private readonly IFieldsEditorService _fieldsEditor;
     private readonly IThumbnailService _thumbnails;
-    private readonly IActivityService _activities;
     private readonly IMetadataOperationService? _metadataOperations;
     private readonly IMetadataDocumentService? _metadataDocuments;
     private readonly ILocalizationService? _localization;
@@ -30,8 +27,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
         Func<string>> _artworkSummaryFactories = [];
     private int _generation;
     private CancellationTokenSource? _cancellation;
-    private CancellationTokenSource? _editCancellation;
     private bool _artworkSetModified;
+    private Dictionary<string, ArtworkSetPreviewRequest>?
+        _pendingArtworkRequests;
     private string? _statusMessageKey;
     private object?[] _statusMessageArguments = [];
     private long? _statusMessageCount;
@@ -80,13 +78,13 @@ public partial class SelectionInspectorViewModel : ObservableObject
     {
         _media = media;
         _library = library;
-        _tags = tags;
+        ArgumentNullException.ThrowIfNull(tags);
         _artwork = artwork;
         _files = files;
         _dialogs = dialogs;
-        _fieldsEditor = fieldsEditor;
+        ArgumentNullException.ThrowIfNull(fieldsEditor);
         _thumbnails = thumbnails;
-        _activities = activities;
+        ArgumentNullException.ThrowIfNull(activities);
         _metadataOperations = metadataOperations;
         _metadataDocuments = metadataDocuments;
         _localization = localization;
@@ -157,8 +155,6 @@ public partial class SelectionInspectorViewModel : ObservableObject
             };
         }
     }
-    public event Action? FilesChanged;
-
     public IReadOnlyList<MetadataPreviewRow>
         CreatePendingChangeRows()
     {
@@ -185,11 +181,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     L("Inspector.Pending.Artwork"),
                     L(
                         "Inspector.Pending.CurrentArtworkSet"),
-                    ArtworkItems.Count == 0
-                        ? L("Inspector.Common.None")
-                        : LC(
-                            "Inspector.Pending.Images",
-                            ArtworkItems.Count)));
+                    PendingArtworkSummary()));
             }
         }
         return rows;
@@ -253,15 +245,52 @@ public partial class SelectionInspectorViewModel : ObservableObject
         IReadOnlyDictionary<
             string,
             ArtworkSetPreviewRequest>?
-            artworkByPath = !CanEditArtworkSet() ||
-                            !HasArtworkSetEdits()
+            artworkByPath = !HasArtworkSetEdits()
                 ? null
-                : Selection.Paths.ToDictionary(
-                    path => path,
-                    _ => new ArtworkSetPreviewRequest(
-                        [.. CurrentArtworkInputs()]),
-                    PathComparer);
+                : _pendingArtworkRequests is { } pending
+                    ? pending.ToDictionary(
+                        pair => pair.Key,
+                        pair => pair.Value,
+                        PathComparer)
+                    : !CanEditArtworkSet()
+                        ? null
+                        : Selection.Paths.ToDictionary(
+                            path => path,
+                            _ => new ArtworkSetPreviewRequest(
+                                [.. CurrentArtworkInputs()]),
+                            PathComparer);
         return (editsByPath, artworkByPath);
+    }
+
+    private string PendingArtworkSummary()
+    {
+        if (_pendingArtworkRequests is { Count: > 0 } pending)
+        {
+            if (pending.Values.All(request =>
+                    request.Images.IsEmpty))
+                return L("Inspector.Common.None");
+            if (pending.Values.Any(request =>
+                    request.MaxDimension > 0))
+                return L("Inspector.View.Optimize");
+            int[] counts =
+            [
+                .. pending.Values
+                    .Select(request =>
+                        request.Images.Length)
+                    .Distinct(),
+            ];
+            if (counts.Length == 1)
+                return LC(
+                    "Inspector.Pending.Images",
+                    counts[0]);
+            return L("Inspector.Pending.Artwork");
+        }
+
+        return ArtworkItems.Count == 0
+            ? L("Inspector.Common.None")
+            : LC(
+                "Inspector.Pending.Images",
+                ArtworkItems.Count);
     }
 
     public void ReportArtworkPreviewUnavailable()
@@ -303,7 +332,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
     {
         if (!HasUnsavedChanges)
             return true;
-        if (!await _dialogs.ConfirmAsync(
+        if (!await _dialogs.ConfirmDestructiveAsync(
                 L("Inspector.Dialog.Discard.Title"),
                 LF(
                     "Inspector.Dialog.Discard.Message",
@@ -328,6 +357,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         ArtworkSource = null;
         ClearArtworkItems();
         _artworkSetModified = false;
+        _pendingArtworkRequests = null;
         HasPendingArtworkChanges = false;
         IsArtworkMixed = false;
         ArtworkSummary = L(
@@ -747,194 +777,11 @@ public partial class SelectionInspectorViewModel : ObservableObject
 
     private bool CanEdit() => HasSelection && !IsBusy;
     private bool CanRevert() => HasUnsavedChanges && !IsBusy;
-    private bool CanSaveTags() => CanEdit() &&
-        (Fields.Any(field => field.IsModified) ||
-         CanEditArtworkSet() && HasArtworkSetEdits());
     private bool CanEditArtworkSet() => CanEdit() && !IsArtworkMixed;
-    private bool CanSaveArtworkSet() => CanEditArtworkSet() &&
-        HasArtworkSetEdits();
     private bool HasArtworkSetEdits() =>
+        _pendingArtworkRequests is { Count: > 0 } ||
         _artworkSetModified ||
         ArtworkItems.Any(item => item.IsModified);
-
-    [RelayCommand(CanExecute = nameof(CanSaveTags))]
-    private async Task SaveTagsAsync()
-    {
-        TagEdit[] edits = Fields.Where(field => field.IsModified)
-            .Select(field => new TagEdit(field.Field, string.IsNullOrWhiteSpace(field.Value) ? null : field.Value))
-            .ToArray();
-        bool artworkChanged =
-            CanEditArtworkSet() &&
-            HasArtworkSetEdits();
-        ArtworkInput[] images = artworkChanged
-            ? CurrentArtworkInputs()
-            : [];
-        if (edits.Length == 0 && !artworkChanged)
-        {
-            SetStatus(
-                MessageTone.Info,
-                "Inspector.Status.NoChanges");
-            return;
-        }
-        if (_metadataOperations is not null)
-        {
-            MetadataValueEdit[] valueEdits =
-                edits.Select(edit =>
-                    new MetadataValueEdit(
-                        MetadataFieldKey.Known(
-                            edit.Field),
-                        edit.Value is null
-                            ? []
-                            : [edit.Value]))
-                    .ToArray();
-            var editsByPath = (IReadOnlyDictionary<
-                string,
-                IReadOnlyList<MetadataValueEdit>>?)
-                (edits.Length == 0
-                    ? null
-                    : Selection.Paths.ToDictionary(
-                        path => path,
-                        _ => (IReadOnlyList<
-                            MetadataValueEdit>)valueEdits,
-                        PathComparer));
-            var artworkByPath = (IReadOnlyDictionary<
-                string,
-                ArtworkSetPreviewRequest>?)
-                (!artworkChanged
-                    ? null
-                    : Selection.Paths.ToDictionary(
-                        path => path,
-                        _ => new ArtworkSetPreviewRequest(
-                            [.. images]),
-                        PathComparer));
-            await ApplyReviewedPlanAsync(
-                "Inspector.Activity.SaveTags",
-                (progress, ct) =>
-                    PreviewInspectorChangesAsync(
-                        editsByPath,
-                        artworkByPath,
-                        progress,
-                        ct),
-                DescribeSaveConfirmation(
-                    edits.Length,
-                    artworkChanged,
-                    images.Length));
-            return;
-        }
-        if ((Selection.Paths.Count > 1 ||
-             artworkChanged) &&
-            !await _dialogs.ConfirmAsync(
-                L("Inspector.Dialog.SaveTags.Title"),
-                DescribeSaveConfirmation(
-                    edits.Length,
-                    artworkChanged,
-                    images.Length) +
-                " " +
-                L("Inspector.Dialog.DirectWriteWarning"),
-                L("Inspector.Dialog.SaveTags.Confirm")))
-            return;
-        IsBusy = true;
-        NotifyCommands();
-        Guid activity = _activities.Start(
-            L("Inspector.Activity.SaveTags"),
-            LC(
-                "Inspector.Activity.UpdatingTracks",
-                Selection.Paths.Count),
-            ShellDestination.Library);
-        try
-        {
-            BatchWriteResult? tagResult =
-                edits.Length == 0
-                    ? null
-                    : await _tags.ApplyAsync(
-                        Selection.Paths,
-                        edits);
-            int artworkSaved = 0;
-            string? artworkError = null;
-            if (artworkChanged)
-            {
-                foreach (string path in Selection.Paths)
-                {
-                    ArtworkOpResult result =
-                        await _artwork.SaveImagesAsync(
-                            path,
-                            images);
-                    if (result.Success)
-                        artworkSaved++;
-                    else
-                        artworkError ??= result.Error;
-                }
-            }
-            bool hasFailures =
-                tagResult?.FailedCount > 0 ||
-                artworkChanged &&
-                artworkSaved != Selection.Paths.Count;
-            if (hasFailures)
-            {
-                SetStatus(
-                    MessageTone.Error,
-                    "Inspector.Status.SavePartialFailure");
-                StatusDiagnosticDetail = string.Join(
-                    Environment.NewLine,
-                    new[]
-                    {
-                        tagResult?.FailedCount > 0
-                            ? tagResult.Summary
-                            : null,
-                        artworkError,
-                    }.Where(value =>
-                        !string.IsNullOrWhiteSpace(value)));
-            }
-            else if (artworkChanged && edits.Length > 0)
-            {
-                SetCountStatus(
-                    MessageTone.Success,
-                    "Inspector.Status.UpdatedTagsAndArtwork",
-                    Selection.Paths.Count);
-            }
-            else if (artworkChanged)
-            {
-                SetCountStatus(
-                    MessageTone.Success,
-                    "Inspector.Status.UpdatedArtwork",
-                    Selection.Paths.Count);
-            }
-            else
-            {
-                SetStatus(
-                    MessageTone.Success,
-                    "Inspector.Status.UpdatedTagsSummary",
-                    tagResult!.SavedCount,
-                    tagResult.SkippedCount,
-                    tagResult.FailedCount,
-                    tagResult.CacheFailedCount);
-            }
-            _activities.Finish(activity, StatusMessage!,
-                hasFailures
-                    ? AppActivityState.Failed
-                    : AppActivityState.Completed);
-            if ((tagResult?.SavedCount ?? 0) > 0 ||
-                artworkSaved > 0)
-                FilesChanged?.Invoke();
-            if (!hasFailures)
-                await LoadAsync(Selection);
-        }
-        catch (Exception error)
-        {
-            SetStatusFailure(
-                "Inspector.Status.SaveFailed",
-                error.Message);
-            _activities.Finish(
-                activity,
-                StatusMessage!,
-                AppActivityState.Failed);
-        }
-        finally
-        {
-            IsBusy = false;
-            NotifyCommands();
-        }
-    }
 
     private async Task<MetadataOperationPlan>
         PreviewInspectorChangesAsync(
@@ -1029,30 +876,6 @@ public partial class SelectionInspectorViewModel : ObservableObject
             DateTimeOffset.UtcNow);
     }
 
-    private string DescribeSaveConfirmation(
-        int tagChanges,
-        bool artworkChanged,
-        int artworkCount) =>
-        (tagChanges > 0, artworkChanged) switch
-        {
-            (true, true) =>
-                LF(
-                    "Inspector.Dialog.SaveConfirmation.TagsAndArtwork",
-                    tagChanges,
-                    artworkCount,
-                    Selection.Paths.Count),
-            (true, false) =>
-                LF(
-                    "Inspector.Dialog.SaveConfirmation.TagsOnly",
-                    tagChanges,
-                    Selection.Paths.Count),
-            _ =>
-                LF(
-                    "Inspector.Dialog.SaveConfirmation.ArtworkOnly",
-                    Selection.Paths.Count,
-                    artworkCount),
-        };
-
     private ArtworkInput[] CurrentArtworkInputs() =>
         ArtworkItems.Select(item =>
             new ArtworkInput(
@@ -1064,78 +887,6 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     ? null
                     : item.Description.Trim()))
             .ToArray();
-
-    [RelayCommand(CanExecute = nameof(CanEdit))]
-    private async Task EditAllFieldsAsync()
-    {
-        if (!await _fieldsEditor.ShowAsync(Selection.Paths))
-            return;
-        SetStatus(
-            MessageTone.Success,
-            "Inspector.Status.MetadataFieldsUpdated");
-        FilesChanged?.Invoke();
-        await LoadAsync(Selection);
-    }
-
-    [RelayCommand(CanExecute = nameof(CanEdit))]
-    private async Task ReplaceArtworkAsync()
-    {
-        string? path = await _files.PickFileAsync(
-            L("Inspector.Picker.ChooseCoverArtwork"),
-            [new FilePickerType(
-                L("Inspector.Picker.Images"),
-                [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"])]);
-        if (path is null)
-            return;
-        if (_metadataOperations is not null)
-        {
-            PreparedImage? prepared =
-                await _artwork.PrepareFromFileAsync(
-                    path,
-                    ArtworkMaxDimension);
-            if (prepared is null)
-            {
-                SetStatus(
-                    MessageTone.Error,
-                    "Inspector.Status.ImagePreparationFailed");
-                return;
-            }
-            var edits = Selection.Paths.ToDictionary(
-                musicPath => musicPath,
-                _ => new ArtworkValueEdit(
-                    ArtworkValueEditMode.ReplaceFrontCover,
-                    new(
-                        ID3v2Util.APICType.FrontCover,
-                        prepared.MimeType,
-                        prepared.Data)),
-                PathComparer);
-            await ApplyReviewedPlanAsync(
-                "Inspector.Activity.ReplaceArtwork",
-                (progress, ct) =>
-                    _metadataOperations
-                        .PreviewArtworkEditsAsync(
-                            edits,
-                            L(
-                                "Inspector.Operation.ReplaceFrontCover"),
-                            progress,
-                            ct),
-                LC(
-                    "Inspector.Dialog.ReplaceFrontCover.Message",
-                    Selection.Paths.Count));
-            return;
-        }
-        if (!await _dialogs.ConfirmAsync(
-                L("Inspector.Dialog.ReplaceArtwork.Title"),
-                LC(
-                    "Inspector.Dialog.ReplaceFrontCover.DirectMessage",
-                    Selection.Paths.Count),
-                L("Inspector.Dialog.ReplaceArtwork.Confirm")))
-            return;
-        await ApplyArtworkAsync(
-            "Inspector.Activity.ReplaceArtwork",
-            async musicPath =>
-            await _artwork.SetCoverFromFileAsync(musicPath, path, ArtworkMaxDimension));
-    }
 
     [RelayCommand(CanExecute = nameof(CanEditArtworkSet))]
     private async Task AddArtworkAsync()
@@ -1176,12 +927,11 @@ public partial class SelectionInspectorViewModel : ObservableObject
         ArtworkItems.Add(item);
         ArtworkSource ??= item.Source;
         _artworkSetModified = true;
+        SynchronizePendingArtworkRequestsFromVisibleSet();
         HasPendingArtworkChanges = true;
         UpdateArtworkSummary();
         NotifyPendingChangeRowsChanged();
         NotifyUnsavedChangesChanged();
-        SaveTagsCommand.NotifyCanExecuteChanged();
-        SaveArtworkSetCommand.NotifyCanExecuteChanged();
     }
 
     public void RemoveArtworkItem(ArtworkPreviewItem item)
@@ -1193,12 +943,11 @@ public partial class SelectionInspectorViewModel : ObservableObject
         ArtworkItems.Remove(item);
         ArtworkSource = ArtworkItems.FirstOrDefault()?.Source;
         _artworkSetModified = true;
+        SynchronizePendingArtworkRequestsFromVisibleSet();
         HasPendingArtworkChanges = true;
         UpdateArtworkSummary();
         NotifyPendingChangeRowsChanged();
         NotifyUnsavedChangesChanged();
-        SaveTagsCommand.NotifyCanExecuteChanged();
-        SaveArtworkSetCommand.NotifyCanExecuteChanged();
     }
 
     public async Task ReplaceArtworkItemAsync(ArtworkPreviewItem item)
@@ -1233,6 +982,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         if (ReferenceEquals(ArtworkItems.FirstOrDefault(), item))
             ArtworkSource = item.Source;
         _artworkSetModified = true;
+        SynchronizePendingArtworkRequestsFromVisibleSet();
         HasPendingArtworkChanges = true;
         UpdateArtworkSummary();
         NotifyPendingChangeRowsChanged();
@@ -1240,8 +990,6 @@ public partial class SelectionInspectorViewModel : ObservableObject
             MessageTone.Info,
             "Inspector.Status.ArtworkReplacementReady");
         NotifyUnsavedChangesChanged();
-        SaveTagsCommand.NotifyCanExecuteChanged();
-        SaveArtworkSetCommand.NotifyCanExecuteChanged();
     }
 
     public async Task SaveArtworkItemToFileAsync(ArtworkPreviewItem item)
@@ -1292,53 +1040,12 @@ public partial class SelectionInspectorViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanSaveArtworkSet))]
-    private async Task SaveArtworkSetAsync()
-    {
-        ArtworkInput[] images =
-            CurrentArtworkInputs();
-        if (_metadataOperations is not null)
-        {
-            var requests = Selection.Paths.ToDictionary(
-                path => path,
-                _ => new ArtworkSetPreviewRequest(
-                    [.. images]),
-                PathComparer);
-            await ApplyReviewedPlanAsync(
-                "Inspector.Activity.SaveArtworkChanges",
-                (progress, ct) =>
-                    _metadataOperations
-                        .PreviewArtworkSetsAsync(
-                            requests,
-                            L(
-                                "Inspector.Operation.EditLibraryArtworkSet"),
-                            progress,
-                            ct),
-                LF(
-                    "Inspector.Dialog.SaveArtworkSet.Message",
-                    Selection.Paths.Count,
-                    images.Length));
-            return;
-        }
-        if (!await _dialogs.ConfirmAsync(
-                L("Inspector.Dialog.SaveArtworkSet.Title"),
-                LF(
-                    "Inspector.Dialog.SaveArtworkSet.DirectMessage",
-                    Selection.Paths.Count,
-                    ArtworkItems.Count),
-                L("Common.Save")))
-            return;
-
-        await ApplyArtworkAsync(
-            "Inspector.Activity.SaveArtworkChanges",
-            musicPath =>
-            _artwork.SaveImagesAsync(musicPath, images));
-    }
-
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private async Task ScrubArtworkAsync()
     {
-        if (_metadataOperations is not null)
+        IsBusy = true;
+        NotifyCommands();
+        try
         {
             var requests = new Dictionary<
                 string,
@@ -1386,78 +1093,50 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     ],
                     ArtworkMaxDimension);
             }
-            await ApplyReviewedPlanAsync(
-                "Inspector.Activity.OptimizeArtwork",
-                (progress, ct) =>
-                    _metadataOperations
-                        .PreviewArtworkSetsAsync(
-                            requests,
-                            L(
-                                "Inspector.Operation.OptimizeLibraryArtwork"),
-                            progress,
-                            ct),
-                LF(
-                    "Inspector.Dialog.OptimizeArtwork.Message",
-                    ArtworkMaxDimension,
-                    Selection.Paths.Count));
-            return;
+            _pendingArtworkRequests = requests;
+            HasPendingArtworkChanges = true;
+            NotifyPendingChangeRowsChanged();
+            NotifyUnsavedChangesChanged();
         }
-        if (!await _dialogs.ConfirmAsync(
-                L("Inspector.Dialog.OptimizeArtwork.Title"),
-                LF(
-                    "Inspector.Dialog.OptimizeArtwork.DirectMessage",
-                    ArtworkMaxDimension,
-                    Selection.Paths.Count),
-                L("Inspector.Dialog.OptimizeArtwork.Confirm")))
-            return;
-        await ApplyArtworkAsync(
-            "Inspector.Activity.OptimizeArtwork",
-            async musicPath =>
-            await _artwork.ScrubAsync(musicPath, ArtworkMaxDimension));
+        catch (Exception error) when (
+            error is not OperationCanceledException)
+        {
+            SetStatusFailure(
+                "Inspector.Status.ReadArtworkFailed",
+                error.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+            NotifyCommands();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
-    private async Task RemoveArtworkAsync()
+    private Task RemoveArtworkAsync()
     {
-        if (_metadataOperations is not null)
-        {
-            var edits = Selection.Paths.ToDictionary(
+        _pendingArtworkRequests =
+            Selection.Paths.ToDictionary(
                 path => path,
-                _ => new ArtworkValueEdit(
-                    ArtworkValueEditMode.RemoveAll),
+                _ => new ArtworkSetPreviewRequest([]),
                 PathComparer);
-            await ApplyReviewedPlanAsync(
-                "Inspector.Activity.RemoveArtwork",
-                (progress, ct) =>
-                    _metadataOperations
-                        .PreviewArtworkEditsAsync(
-                            edits,
-                            L(
-                                "Inspector.Operation.RemoveLibraryArtwork"),
-                            progress,
-                            ct),
-                LC(
-                    "Inspector.Dialog.RemoveArtwork.Message",
-                    Selection.Paths.Count));
-            return;
-        }
-        if (!await _dialogs.ConfirmAsync(
-                L("Inspector.Dialog.RemoveArtwork.Title"),
-                LC(
-                    "Inspector.Dialog.RemoveArtwork.DirectMessage",
-                    Selection.Paths.Count),
-                L("Common.Remove")))
-            return;
-        await ApplyArtworkAsync(
-            "Inspector.Activity.RemoveArtwork",
-            async musicPath =>
-            await _artwork.RemoveAsync(musicPath));
+        ClearArtworkItems();
+        ArtworkSource = null;
+        IsArtworkMixed = false;
+        ArtworkSummary = L(
+            "Inspector.Artwork.NoneEmbedded");
+        _artworkSetModified = true;
+        HasPendingArtworkChanges = true;
+        NotifyPendingChangeRowsChanged();
+        NotifyUnsavedChangesChanged();
+        NotifyCommands();
+        return Task.CompletedTask;
     }
 
     [RelayCommand(CanExecute = nameof(CanRevert))]
     private async Task RevertAsync()
     {
-        if (!await _dialogs.ConfirmAsync(
+        if (!await _dialogs.ConfirmDestructiveAsync(
                 L("Inspector.Dialog.Revert.Title"),
                 LF(
                     "Inspector.Dialog.Revert.Message",
@@ -1468,241 +1147,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
         await LoadAsync(Selection);
     }
 
-    private async Task ApplyReviewedPlanAsync(
-        string titleKey,
-        Func<
-            IProgress<OperationProgress>,
-            CancellationToken,
-            Task<MetadataOperationPlan>> preview,
-        string confirmation)
-    {
-        if (_metadataOperations is null)
-            throw new InvalidOperationException(
-                L("Inspector.Error.MetadataServiceUnavailable"));
-        string title = L(titleKey);
-        IsBusy = true;
-        NotifyCommands();
-        _editCancellation =
-            new CancellationTokenSource();
-        Guid activity = _activities.Start(
-            title,
-            LC(
-                "Inspector.Activity.PreviewingTracks",
-                Selection.Paths.Count),
-            ShellDestination.Library,
-            _editCancellation.Cancel);
-        var progress =
-            new Progress<OperationProgress>(update =>
-            {
-                double? fraction =
-                    update.Total is > 0
-                        ? Math.Clamp(
-                            (double)update.Completed /
-                            update.Total.Value,
-                            0,
-                            1)
-                        : null;
-                _activities.Report(
-                    activity,
-                    update.Message ??
-                    update.CurrentPath ??
-                    title,
-                    fraction);
-            });
-        try
-        {
-            MetadataOperationPlan plan =
-                await preview(
-                    progress,
-                    _editCancellation.Token);
-            OperationIssue[] blockers = plan.Files
-                .SelectMany(file => file.Issues)
-                .Where(issue =>
-                    issue.Severity ==
-                    OperationIssueSeverity.Blocker)
-                .ToArray();
-            if (!plan.CanApply)
-            {
-                if (blockers.Length > 0)
-                {
-                    SetCountStatus(
-                        MessageTone.Error,
-                        "Inspector.Status.PreviewBlockers",
-                        blockers.Length);
-                    StatusDiagnosticDetail =
-                        blockers[0].Message;
-                }
-                else
-                {
-                    SetStatus(
-                        MessageTone.Info,
-                        "Inspector.Status.PreviewNoChanges");
-                }
-                _activities.Finish(
-                    activity,
-                    StatusMessage!,
-                    blockers.Length > 0
-                        ? AppActivityState.Failed
-                        : AppActivityState.Completed);
-                return;
-            }
-            if (!await _dialogs.ConfirmAsync(
-                    LF(
-                        "Inspector.Dialog.ApplyReviewed.Title",
-                        title),
-                    LF(
-                        "Inspector.Dialog.ApplyReviewed.Message",
-                        confirmation,
-                        plan.ChangedFileCount),
-                    L("Common.Apply")))
-            {
-                SetStatus(
-                    MessageTone.Info,
-                    "Inspector.Status.ReviewedNotApplied");
-                _activities.Finish(
-                    activity,
-                    StatusMessage!,
-                    AppActivityState.Cancelled);
-                return;
-            }
-            MetadataApplyResult result =
-                await _metadataOperations.ApplyAsync(
-                    plan,
-                    progress,
-                    _editCancellation.Token);
-            string completionMessage =
-                LC(
-                    "Inspector.Status.ReviewedUpdated",
-                    result.ChangedFiles);
-            _activities.Finish(
-                activity,
-                completionMessage,
-                AppActivityState.Completed);
-            if (result.ChangedFiles > 0)
-                FilesChanged?.Invoke();
-            await LoadAsync(Selection);
-            SetCountStatus(
-                MessageTone.Success,
-                "Inspector.Status.ReviewedUpdated",
-                result.ChangedFiles);
-        }
-        catch (OperationCanceledException) when (
-            _editCancellation.IsCancellationRequested)
-        {
-            SetStatus(
-                MessageTone.Warning,
-                "Inspector.Status.OperationCancelled");
-            _activities.Finish(
-                activity,
-                StatusMessage!,
-                AppActivityState.Cancelled);
-        }
-        catch (Exception error)
-        {
-            SetStatusFailure(
-                "Inspector.Status.OperationFailed",
-                error.Message);
-            _activities.Finish(
-                activity,
-                StatusMessage!,
-                AppActivityState.Failed);
-        }
-        finally
-        {
-            _editCancellation.Dispose();
-            _editCancellation = null;
-            IsBusy = false;
-            NotifyCommands();
-        }
-    }
-
-    private async Task ApplyArtworkAsync(
-        string titleKey,
-        Func<string, Task<ArtworkOpResult>> apply)
-    {
-        bool hasRetryableChanges = HasPendingArtworkChanges ||
-            ArtworkItems.Any(item => item.IsModified);
-        IsBusy = true;
-        NotifyCommands();
-        Guid activity = _activities.Start(
-            L(titleKey),
-            LC(
-                "Inspector.Activity.UpdatingTracks",
-                Selection.Paths.Count),
-            ShellDestination.Library);
-        int saved = 0;
-        string? firstError = null;
-        try
-        {
-            foreach (string path in Selection.Paths)
-            {
-                ArtworkOpResult result = await apply(path);
-                if (result.Success)
-                    saved++;
-                else
-                    firstError ??= result.Error;
-                _activities.Report(
-                    activity,
-                    LF(
-                        "Inspector.Progress.UpdatedOfTotal",
-                        saved,
-                        Selection.Paths.Count),
-                    (double)saved / Selection.Paths.Count);
-            }
-            if (saved == Selection.Paths.Count)
-            {
-                SetCountStatus(
-                    MessageTone.Success,
-                    "Inspector.Status.UpdatedArtwork",
-                    saved);
-            }
-            else
-            {
-                SetStatus(
-                    MessageTone.Error,
-                    hasRetryableChanges
-                        ? "Inspector.Status.ArtworkPartialFailureRetry"
-                        : "Inspector.Status.ArtworkPartialFailure",
-                    saved,
-                    Selection.Paths.Count);
-                StatusDiagnosticDetail =
-                    firstError;
-            }
-            _activities.Finish(activity, StatusMessage!,
-                saved == Selection.Paths.Count ? AppActivityState.Completed : AppActivityState.Failed);
-            if (saved > 0)
-                FilesChanged?.Invoke();
-            if (saved == Selection.Paths.Count)
-                await LoadAsync(Selection);
-        }
-        catch (Exception error)
-        {
-            SetStatusFailure(
-                hasRetryableChanges
-                    ? "Inspector.Status.ArtworkSaveFailedRetry"
-                    : "Inspector.Status.ArtworkSaveFailed",
-                error.Message);
-            _activities.Finish(
-                activity,
-                StatusMessage!,
-                AppActivityState.Failed);
-            if (saved > 0)
-                FilesChanged?.Invoke();
-        }
-        finally
-        {
-            IsBusy = false;
-            NotifyCommands();
-        }
-    }
-
     private void NotifyCommands()
     {
-        SaveTagsCommand.NotifyCanExecuteChanged();
-        EditAllFieldsCommand.NotifyCanExecuteChanged();
-        ReplaceArtworkCommand.NotifyCanExecuteChanged();
         AddArtworkCommand.NotifyCanExecuteChanged();
-        SaveArtworkSetCommand.NotifyCanExecuteChanged();
         ScrubArtworkCommand.NotifyCanExecuteChanged();
         RemoveArtworkCommand.NotifyCanExecuteChanged();
         RevertCommand.NotifyCanExecuteChanged();
@@ -1719,15 +1166,31 @@ public partial class SelectionInspectorViewModel : ObservableObject
             nameof(EditableTagField.IsModified))
             return;
         NotifyUnsavedChangesChanged();
-        SaveTagsCommand.NotifyCanExecuteChanged();
     }
 
     private void OnArtworkItemChanged(object? sender, PropertyChangedEventArgs e)
     {
+        SynchronizePendingArtworkRequestsFromVisibleSet();
         NotifyPendingChangeRowsChanged();
         NotifyUnsavedChangesChanged();
-        SaveTagsCommand.NotifyCanExecuteChanged();
-        SaveArtworkSetCommand.NotifyCanExecuteChanged();
+    }
+
+    private void SynchronizePendingArtworkRequestsFromVisibleSet()
+    {
+        if (_pendingArtworkRequests is null ||
+            IsArtworkMixed)
+            return;
+
+        int maxDimension = _pendingArtworkRequests
+            .Values
+            .Select(request =>
+                request.MaxDimension)
+            .FirstOrDefault();
+        var request = new ArtworkSetPreviewRequest(
+            [.. CurrentArtworkInputs()],
+            maxDimension);
+        foreach (string path in Selection.Paths)
+            _pendingArtworkRequests[path] = request;
     }
 
     private void NotifyUnsavedChangesChanged()

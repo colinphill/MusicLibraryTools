@@ -12,18 +12,23 @@
     </Style>
   </UserControl.Styles>
   <Grid RowDefinitions="Auto,*">
-    <Grid Margin="12,10,10,0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+    <Grid Margin="12,12,12,0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
       <StackPanel>
-        <TextBlock Classes="faint" Text="{DynamicResource Loc.Inspector.View.Selection}" FontSize="12" FontWeight="SemiBold" />
+        <TextBlock Classes="faint" Text="{DynamicResource Loc.Inspector.View.Selection}" FontSize="{DynamicResource AppFontSizeCaption}" FontWeight="SemiBold" />
         <TextBlock Classes="muted" Text="{Binding UnsavedChangesSummary}"
                    IsVisible="{Binding HasUnsavedChanges}" />
       </StackPanel>
       <Button x:Name="InspectorCloseButton"
-              Grid.Column="1" Classes="app" Width="30" Height="30" Padding="0" Content="&#x2715;"
-              Click="OnClose" ToolTip.Tip="{DynamicResource Loc.Inspector.View.Close}" AutomationProperties.Name="{DynamicResource Loc.Inspector.View.Close}" />
+              Grid.Column="1" Classes="app icon" Width="36" Height="36" Padding="0"
+              Click="OnClose" ToolTip.Tip="{DynamicResource Loc.Inspector.View.Close}" AutomationProperties.Name="{DynamicResource Loc.Inspector.View.Close}">
+        <controls:AppVectorIcon Kind="Close" />
+      </Button>
     </Grid>
 
-    <Border x:Name="EmptyState" Grid.Row="1" IsVisible="{Binding !HasSelection}" Padding="24">
+    <Border x:Name="EmptyState"
+            Grid.Row="1"
+            Classes="empty-state"
+            IsVisible="{Binding !HasSelection}">
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" MaxWidth="240">
         <TextBlock Text="{DynamicResource Loc.Inspector.View.EmptyTitle}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
         <TextBlock Classes="muted" Text="{DynamicResource Loc.Inspector.View.EmptyDescription}"
@@ -33,7 +38,7 @@
 
     <ScrollViewer x:Name="InspectorContent" Grid.Row="1" IsVisible="{Binding HasSelection}"
                   VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Margin="12" Spacing="10">
+      <StackPanel Margin="12" Classes="content-stack">
         <TextBlock Classes="section-title" Text="{Binding SelectionSummary}" TextTrimming="CharacterEllipsis" />
         <TextBlock Classes="muted" Text="{Binding Overview}" TextWrapping="Wrap" />
         <ProgressBar Classes="app" IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3" />
@@ -42,13 +47,13 @@
         <ItemsControl ItemsSource="{Binding Fields}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <StackPanel Margin="0,0,0,10" Spacing="5">
-                <TextBlock Classes="muted" Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" />
+              <StackPanel Margin="0,0,0,12" Classes="field">
+                <TextBlock Classes="field-label" Text="{Binding Label}" FontSize="{DynamicResource AppFontSizeCaption}" FontWeight="SemiBold" />
                 <TextBox Classes="app" Text="{Binding Value, Mode=TwoWay}"
                          PlaceholderText="{Binding PlaceholderText}"
                          AutomationProperties.Name="{Binding Label}"
                          AutomationProperties.HelpText="{Binding VerificationMessage}" />
-                <TextBlock Classes="warning" FontSize="12" IsVisible="{Binding IsUnverified}"
+                <TextBlock Classes="error" FontSize="{DynamicResource AppFontSizeCaption}" IsVisible="{Binding IsUnverified}"
                            Text="{DynamicResource Loc.Inspector.View.UnverifiedValue}"
                            TextWrapping="Wrap" />
               </StackPanel>
@@ -64,7 +69,7 @@
           <Grid ColumnDefinitions="Auto,*"
                 RowDefinitions="Auto,Auto"
                 ColumnSpacing="8"
-                RowSpacing="3">
+                RowSpacing="4">
             <TextBlock Classes="status-icon" Text="{Binding StatusIcon}" />
             <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" TextWrapping="Wrap"
                        AutomationProperties.LiveSetting="Polite" />
@@ -72,7 +77,7 @@
                 Grid.Row="1"
                 Grid.Column="1"
                 Classes="muted"
-                FontSize="11"
+                FontSize="{DynamicResource AppFontSizeCaption}"
                 TextWrapping="Wrap"
                 ResourceKey="Common.DiagnosticDetailFormat"
                 Value="{Binding StatusDiagnosticDetail}"
@@ -80,28 +85,39 @@
           </Grid>
         </Border>
         <WrapPanel>
-          <Button Classes="app primary" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.SaveTags}" Command="{Binding SaveTagsCommand}" />
-          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.AllFields}" Command="{Binding EditAllFieldsCommand}" />
-          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.Revert}" Command="{Binding RevertCommand}" />
+          <Button x:Name="InspectorReviewChangesButton"
+                  Classes="app primary"
+                  Margin="0,0,8,8"
+                  Content="{DynamicResource Loc.Inspector.View.ReviewChanges}"
+                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ReviewChanges}"
+                  IsEnabled="{Binding HasUnsavedChanges}"
+                  Click="OnReviewChanges" />
+          <Button x:Name="InspectorDiscardEditsButton"
+                  Classes="app danger" Margin="0,0,8,8" Content="{DynamicResource Loc.Inspector.View.Revert}" Command="{Binding RevertCommand}" />
         </WrapPanel>
 
         <Border Height="1" Background="{DynamicResource AppBorderBrush}" />
         <TextBlock Classes="section-title" Text="{DynamicResource Loc.Inspector.View.Artwork}" />
         <TextBlock Classes="muted" Text="{Binding ArtworkSummary}" TextWrapping="Wrap" />
-        <Border Height="120" CornerRadius="10" Background="{DynamicResource AppInsetBrush}"
+        <Border Height="120" CornerRadius="8" Background="{DynamicResource AppInsetBrush}"
                 IsVisible="{Binding IsArtworkMixed}">
           <TextBlock Classes="muted" Text="{DynamicResource Loc.Inspector.View.MixedArtwork}" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>
-        <ItemsControl ItemsSource="{Binding ArtworkItems}">
-          <ItemsControl.ItemTemplate>
+        <ListBox x:Name="InspectorArtworkList"
+                 Classes="virtualized-results"
+                 MaxHeight="230"
+                 SelectedIndex="0"
+                 ItemsSource="{Binding ArtworkItems}">
+          <ListBox.ItemTemplate>
             <DataTemplate>
-              <Border Classes="card" Padding="8" Margin="0,0,0,10">
-                <Grid ColumnDefinitions="92,*"
-                      ColumnSpacing="9">
+              <Border Classes="card dense-card"
+                      Margin="0,0,8,8">
+                <Grid ColumnDefinitions="60,*,Auto"
+                      ColumnSpacing="8">
                   <Border Classes="artwork-preview-target"
-                          Width="84"
-                          Height="84"
-                          CornerRadius="8"
+                          Width="52"
+                          Height="52"
+                          CornerRadius="6"
                           Background="{DynamicResource AppInsetBrush}"
                           BorderBrush="Transparent"
                           BorderThickness="2"
@@ -118,69 +134,91 @@
                            Stretch="Uniform"
                            IsHitTestVisible="False" />
                   </Border>
-                  <StackPanel Grid.Column="1"
-                              Spacing="6">
-                    <Grid ColumnDefinitions="*,Auto"
-                          ColumnSpacing="6">
-                      <TextBlock Classes="muted"
-                                 VerticalAlignment="Center"
-                                 Text="{Binding Summary}"
-                                 TextWrapping="Wrap" />
-                      <Button Grid.Column="1"
-                              Classes="app"
-                              Width="34"
-                              Height="34"
-                              Padding="0"
-                              Content="&#x22EF;"
-                              ToolTip.Tip="{DynamicResource Loc.Inspector.View.ArtworkActions}"
-                              AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkActions}">
-                        <Button.Flyout>
-                          <MenuFlyout>
-                            <MenuItem Header="{DynamicResource Loc.Inspector.View.SaveArtworkToFile}"
-                                      AutomationProperties.Name="{DynamicResource Loc.Inspector.View.SaveArtworkToFileAutomation}"
-                                      Tag="{Binding}"
-                                      Click="OnSaveArtwork" />
-                            <MenuItem Header="{DynamicResource Loc.Inspector.View.ReplaceArtwork}"
-                                      AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ReplaceArtworkAutomation}"
-                                      Tag="{Binding}"
-                                      Click="OnReplaceArtwork" />
-                            <MenuItem Header="{DynamicResource Loc.Inspector.View.RemoveArtwork}"
-                                      AutomationProperties.Name="{DynamicResource Loc.Inspector.View.RemoveArtworkAutomation}"
-                                      Tag="{Binding}"
-                                      Click="OnRemoveArtwork" />
-                          </MenuFlyout>
-                        </Button.Flyout>
-                      </Button>
-                    </Grid>
-                    <ComboBox Classes="app"
-                              ItemsSource="{Binding DataContext.ArtworkTypeChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                              DisplayMemberBinding="{Binding Label}"
-                              SelectedValueBinding="{Binding Value}"
-                              SelectedValue="{Binding Type, Mode=TwoWay}"
-                              AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkType}" />
-                    <TextBox Classes="app"
-                             Text="{Binding Description, Mode=TwoWay}"
-                             PlaceholderText="{DynamicResource Loc.Inspector.View.DescriptionPlaceholder}"
-                             AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkDescription}" />
-                  </StackPanel>
+                  <TextBlock Grid.Column="1"
+                             Classes="muted"
+                             VerticalAlignment="Center"
+                             Text="{Binding Summary}"
+                             TextWrapping="Wrap" />
+                  <Button Grid.Column="2"
+                          Classes="app icon"
+                          VerticalAlignment="Center"
+                          ToolTip.Tip="{DynamicResource Loc.Inspector.View.ArtworkActions}"
+                          AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkActions}">
+                    <controls:AppVectorIcon Kind="More" />
+                    <Button.Flyout>
+                      <MenuFlyout>
+                        <MenuItem Header="{DynamicResource Loc.Inspector.View.SaveArtworkToFile}"
+                                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.SaveArtworkToFileAutomation}"
+                                  Tag="{Binding}"
+                                  Click="OnSaveArtwork" />
+                        <MenuItem Header="{DynamicResource Loc.Inspector.View.ReplaceArtwork}"
+                                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ReplaceArtworkAutomation}"
+                                  Tag="{Binding}"
+                                  Click="OnReplaceArtwork" />
+                        <MenuItem Header="{DynamicResource Loc.Inspector.View.RemoveArtwork}"
+                                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.RemoveArtworkAutomation}"
+                                  Tag="{Binding}"
+                                  Click="OnRemoveArtwork" />
+                      </MenuFlyout>
+                    </Button.Flyout>
+                  </Button>
                 </Grid>
               </Border>
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <TextBlock Classes="muted" Text="{DynamicResource Loc.Inspector.View.MaximumDimension}" FontSize="12" FontWeight="SemiBold" />
-        <NumericUpDown Classes="app" Minimum="64" Value="{Binding ArtworkMaxDimension, Mode=TwoWay}"
-                       AutomationProperties.Name="{DynamicResource Loc.Inspector.View.MaximumDimensionAutomation}" />
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <Border Classes="card dense-card"
+                IsVisible="{Binding SelectedItem, ElementName=InspectorArtworkList}"
+                DataContext="{Binding SelectedItem, ElementName=InspectorArtworkList}">
+          <StackPanel Classes="content-stack">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Inspector.View.ArtworkType}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding DataContext.ArtworkTypeChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding Type, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkType}" />
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Inspector.View.ArtworkDescription}" />
+            <TextBox Classes="app"
+                     Text="{Binding Description, Mode=TwoWay}"
+                     PlaceholderText="{DynamicResource Loc.Inspector.View.DescriptionPlaceholder}"
+                     AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkDescription}" />
+          </StackPanel>
+        </Border>
+        <Expander Header="{DynamicResource Loc.Inspector.View.OptimizeOptions}">
+          <StackPanel Margin="0,8,0,0"
+                      Spacing="4">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Inspector.View.MaximumDimension}"
+                       FontSize="{DynamicResource AppFontSizeCaption}"
+                       FontWeight="SemiBold" />
+            <NumericUpDown Classes="app"
+                           Minimum="64"
+                           Value="{Binding ArtworkMaxDimension, Mode=TwoWay}"
+                           AutomationProperties.Name="{DynamicResource Loc.Inspector.View.MaximumDimensionAutomation}" />
+          </StackPanel>
+        </Expander>
         <WrapPanel>
-          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.AddArtwork}"
+          <Button Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Inspector.View.AddArtwork}"
                   AutomationProperties.Name="{DynamicResource Loc.Inspector.View.AddArtworkAutomation}"
                   Command="{Binding AddArtworkCommand}" />
-          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.Optimize}"
+          <Button Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Inspector.View.Optimize}"
                   AutomationProperties.Name="{DynamicResource Loc.Inspector.View.OptimizeAutomation}"
                   Command="{Binding ScrubArtworkCommand}" />
-          <Button Classes="app danger" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.RemoveAll}"
-                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.RemoveAllAutomation}"
-                  Command="{Binding RemoveArtworkCommand}" />
+          <Button Classes="app"
+                  Margin="0,0,8,8"
+                  Content="{DynamicResource Loc.Workbench.Action.More}"
+                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkActions}">
+            <Button.Flyout>
+              <MenuFlyout>
+                <MenuItem Header="{DynamicResource Loc.Inspector.View.RemoveAll}"
+                          AutomationProperties.Name="{DynamicResource Loc.Inspector.View.RemoveAllAutomation}"
+                          Command="{Binding RemoveArtworkCommand}" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
         </WrapPanel>
       </StackPanel>
     </ScrollViewer>

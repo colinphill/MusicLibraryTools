@@ -5,15 +5,16 @@
   <Grid Margin="0,8,0,0"
         RowDefinitions="Auto,Auto,Auto,*"
         RowSpacing="8">
-    <Border x:Name="DiscoveryCard"
-            Classes="card"
-            Padding="10">
-      <StackPanel Spacing="7">
+    <Expander x:Name="DiscoveryStep"
+              IsExpanded="False"
+              Expanded="OnDiscoveryStepExpanded"
+              Collapsed="OnStepCollapsed">
+      <Expander.Header>
         <Grid ColumnDefinitions="Auto,*"
-              ColumnSpacing="10">
+              ColumnSpacing="12">
           <Border Width="28"
                   Height="28"
-                  CornerRadius="14"
+                  CornerRadius="99"
                   Background="{DynamicResource AppAccentBrush}">
             <TextBlock HorizontalAlignment="Center"
                        VerticalAlignment="Center"
@@ -21,43 +22,57 @@
                        Foreground="{DynamicResource AppAccentInkBrush}"
                        Text="1" />
           </Border>
-          <StackPanel Grid.Column="1" Spacing="2">
+          <StackPanel Grid.Column="1" Spacing="4">
             <TextBlock Classes="section-title"
                        Text="{DynamicResource Loc.Workbench.Online.DiscoverTitle}" />
-            <TextBlock x:Name="DiscoverySupportingText"
-                       Classes="muted"
-                       TextWrapping="Wrap"
-                       Text="{DynamicResource Loc.Workbench.Online.DiscoverDescription}" />
+            <TextBlock x:Name="DiscoveryStepSummary"
+                       Classes="compact-status muted"
+                       Text="{Binding SelectedOnlineMetadataScope.Label}"
+                       IsVisible="False" />
           </StackPanel>
         </Grid>
-        <WrapPanel Margin="38,0,0,0">
-          <ComboBox x:Name="OnlineMetadataDiscoveryScopePicker"
-                    Classes="app"
-                    Width="220"
-                    Margin="0,0,8,6"
-                    ItemsSource="{Binding OnlineMetadataScopeOptions}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding SelectedOnlineMetadataScope, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ScopeAutomation}" />
-          <Button x:Name="OnlineMetadataDiscoverButton"
-                  Classes="app primary"
-                  Margin="0,0,0,6"
-                  Content="{DynamicResource Loc.Workbench.Online.Discover}"
-                  Command="{Binding DiscoverOnlineAudioCommand}" />
-        </WrapPanel>
-      </StackPanel>
-    </Border>
+      </Expander.Header>
+      <Border x:Name="DiscoveryCard"
+              Classes="card dense-card"
+              Margin="24,8,0,0">
+        <StackPanel Classes="content-stack">
+          <TextBlock x:Name="DiscoverySupportingText"
+                     Classes="supporting"
+                     TextWrapping="Wrap"
+                     Text="{DynamicResource Loc.Workbench.Online.DiscoverDescription}" />
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Online.ScopeAutomation}" />
+          <WrapPanel>
+            <ComboBox x:Name="OnlineMetadataDiscoveryScopePicker"
+                      Classes="app"
+                      Width="220"
+                      Margin="0,0,8,8"
+                      ItemsSource="{Binding OnlineMetadataScopeOptions}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding SelectedOnlineMetadataScope, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ScopeAutomation}" />
+            <Button x:Name="OnlineMetadataDiscoverButton"
+                    Classes="app primary"
+                    Margin="0,0,0,8"
+                    Content="{DynamicResource Loc.Workbench.Online.Discover}"
+                    Click="OnDiscoveryStarted"
+                    Command="{Binding DiscoverOnlineAudioCommand}" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+    </Expander>
 
-    <Border x:Name="SearchCard"
-            Grid.Row="1"
-            Classes="card"
-            Padding="10">
-      <StackPanel Spacing="7">
+    <Expander x:Name="SearchStep"
+              Grid.Row="1"
+              IsExpanded="True"
+              Expanded="OnSearchStepExpanded"
+              Collapsed="OnStepCollapsed">
+      <Expander.Header>
         <Grid ColumnDefinitions="Auto,*"
-              ColumnSpacing="10">
+              ColumnSpacing="12">
           <Border Width="28"
                   Height="28"
-                  CornerRadius="14"
+                  CornerRadius="99"
                   Background="{DynamicResource AppAccentBrush}">
             <TextBlock HorizontalAlignment="Center"
                        VerticalAlignment="Center"
@@ -65,97 +80,167 @@
                        Foreground="{DynamicResource AppAccentInkBrush}"
                        Text="2" />
           </Border>
-          <StackPanel Grid.Column="1" Spacing="2">
+          <StackPanel Grid.Column="1" Spacing="4">
             <TextBlock Classes="section-title"
                        Text="{DynamicResource Loc.Workbench.Online.SearchTitle}" />
-            <TextBlock x:Name="SearchSupportingText"
-                       Classes="muted"
-                       TextWrapping="Wrap"
-                       Text="{DynamicResource Loc.Workbench.Online.SearchDescription}" />
+            <StackPanel x:Name="SearchStepSummary"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        IsVisible="False">
+              <TextBlock Classes="compact-status muted"
+                         FontWeight="SemiBold"
+                         Text="{Binding SelectedOnlineMetadataProvider.Label}" />
+              <StackPanel Orientation="Horizontal"
+                          Spacing="8"
+                          IsVisible="{Binding IsMusicBrainzOnlineMetadataProvider}">
+                <TextBlock Classes="compact-status muted"
+                           Text="{Binding ReleaseSearch.Artist}" />
+                <TextBlock Classes="compact-status muted"
+                           Text="{Binding ReleaseSearch.Album}" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal"
+                          Spacing="8"
+                          IsVisible="{Binding IsDiscogsOnlineMetadataProvider}">
+                <TextBlock Classes="compact-status muted"
+                           Text="{Binding DiscogsSearch.Artist}" />
+                <TextBlock Classes="compact-status muted"
+                           Text="{Binding DiscogsSearch.Album}" />
+              </StackPanel>
+            </StackPanel>
           </StackPanel>
         </Grid>
-        <WrapPanel Margin="38,0,0,0">
-          <ComboBox x:Name="OnlineMetadataProviderPicker"
-                    Classes="app"
-                    Width="170"
-                    Margin="0,0,8,6"
-                    ItemsSource="{Binding OnlineMetadataProviderOptions}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding SelectedOnlineMetadataProvider, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ProviderAutomation}" />
-          <Grid Width="190"
-                Margin="0,0,8,6"
+      </Expander.Header>
+      <Border x:Name="SearchCard"
+              Classes="card dense-card"
+              Margin="24,8,0,0">
+        <StackPanel Classes="content-stack">
+          <TextBlock x:Name="SearchSupportingText"
+                     Classes="supporting"
+                     TextWrapping="Wrap"
+                     Text="{DynamicResource Loc.Workbench.Online.SearchDescription}" />
+          <WrapPanel>
+          <StackPanel Classes="field"
+                      Width="170"
+                      Margin="0,0,8,8">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Online.ProviderAutomation}" />
+            <ComboBox x:Name="OnlineMetadataProviderPicker"
+                      Classes="app"
+                      ItemsSource="{Binding OnlineMetadataProviderOptions}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding SelectedOnlineMetadataProvider, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ProviderAutomation}" />
+          </StackPanel>
+          <StackPanel Classes="field"
+                Width="190"
+                Margin="0,0,8,8"
                 IsVisible="{Binding IsMusicBrainzOnlineMetadataProvider}">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Online.ArtistPlaceholder}" />
             <TextBox Classes="app"
                      Text="{Binding ReleaseSearch.Artist, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Workbench.Online.ArtistPlaceholder}" />
-          </Grid>
-          <Grid Width="190"
-                Margin="0,0,8,6"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ArtistPlaceholder}" />
+          </StackPanel>
+          <StackPanel Classes="field"
+                Width="190"
+                Margin="0,0,8,8"
                 IsVisible="{Binding IsDiscogsOnlineMetadataProvider}">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Online.ArtistPlaceholder}" />
             <TextBox Classes="app"
                      Text="{Binding DiscogsSearch.Artist, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Workbench.Online.ArtistPlaceholder}" />
-          </Grid>
-          <Grid Width="210"
-                Margin="0,0,8,6"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ArtistPlaceholder}" />
+          </StackPanel>
+          <StackPanel Classes="field"
+                Width="210"
+                Margin="0,0,8,8"
                 IsVisible="{Binding IsMusicBrainzOnlineMetadataProvider}">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Online.AlbumPlaceholder}" />
             <TextBox Classes="app"
                      Text="{Binding ReleaseSearch.Album, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Workbench.Online.AlbumPlaceholder}" />
-          </Grid>
-          <Grid Width="210"
-                Margin="0,0,8,6"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.AlbumPlaceholder}" />
+          </StackPanel>
+          <StackPanel Classes="field"
+                Width="210"
+                Margin="0,0,8,8"
                 IsVisible="{Binding IsDiscogsOnlineMetadataProvider}">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Online.AlbumPlaceholder}" />
             <TextBox Classes="app"
                      Text="{Binding DiscogsSearch.Album, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Workbench.Online.AlbumPlaceholder}" />
-          </Grid>
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.AlbumPlaceholder}" />
+          </StackPanel>
           <Button x:Name="OnlineMetadataSearchButton"
                   Classes="app primary"
-                  Margin="0,0,0,6"
+                  Margin="0,24,0,8"
                   Content="{DynamicResource Loc.Workbench.Online.Search}"
+                  Click="OnSearchStarted"
                   Command="{Binding SearchOnlineReleasesCommand}" />
-        </WrapPanel>
-        <Expander x:Name="OnlineMetadataAdvancedSearch"
-                  Margin="38,0,0,0"
-                  Header="{DynamicResource Loc.Workbench.Online.AdvancedIdentifiers}">
+          </WrapPanel>
+          <Expander x:Name="OnlineMetadataAdvancedSearch"
+                    Header="{DynamicResource Loc.Workbench.Online.AdvancedIdentifiers}">
           <Grid Margin="0,8,0,0">
-            <StackPanel Spacing="7"
+            <StackPanel Spacing="8"
                         IsVisible="{Binding IsMusicBrainzOnlineMetadataProvider}">
-              <TextBox Classes="app"
-                       Text="{Binding ReleaseSearch.Barcode, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Workbench.Online.BarcodePlaceholder}" />
-              <TextBox Classes="app"
-                       Text="{Binding ReleaseSearch.CatalogNumber, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Workbench.Online.CatalogNumberPlaceholder}" />
-              <TextBox Classes="app"
-                       Text="{Binding ReleaseSearch.ReleaseId, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Workbench.Online.MusicBrainzReleaseIdPlaceholder}" />
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Workbench.Online.BarcodePlaceholder}" />
+                <TextBox Classes="app"
+                         Text="{Binding ReleaseSearch.Barcode, Mode=TwoWay}"
+                         AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.BarcodePlaceholder}" />
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Workbench.Online.CatalogNumberPlaceholder}" />
+                <TextBox Classes="app"
+                         Text="{Binding ReleaseSearch.CatalogNumber, Mode=TwoWay}"
+                         AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.CatalogNumberPlaceholder}" />
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Workbench.Online.MusicBrainzReleaseIdPlaceholder}" />
+                <TextBox Classes="app"
+                         Text="{Binding ReleaseSearch.ReleaseId, Mode=TwoWay}"
+                         AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.MusicBrainzReleaseIdPlaceholder}" />
+              </StackPanel>
             </StackPanel>
-            <StackPanel Spacing="7"
+            <StackPanel Spacing="8"
                         IsVisible="{Binding IsDiscogsOnlineMetadataProvider}">
-              <TextBox Classes="app"
-                       Text="{Binding DiscogsSearch.Barcode, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Workbench.Online.BarcodePlaceholder}" />
-              <TextBox Classes="app"
-                       Text="{Binding DiscogsSearch.CatalogNumber, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Workbench.Online.CatalogNumberPlaceholder}" />
-              <TextBox Classes="app"
-                       Text="{Binding DiscogsSearch.ReleaseId, Mode=TwoWay}"
-                       PlaceholderText="{DynamicResource Loc.Workbench.Online.DiscogsReleaseIdPlaceholder}" />
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Workbench.Online.BarcodePlaceholder}" />
+                <TextBox Classes="app"
+                         Text="{Binding DiscogsSearch.Barcode, Mode=TwoWay}"
+                         AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.BarcodePlaceholder}" />
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Workbench.Online.CatalogNumberPlaceholder}" />
+                <TextBox Classes="app"
+                         Text="{Binding DiscogsSearch.CatalogNumber, Mode=TwoWay}"
+                         AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.CatalogNumberPlaceholder}" />
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Workbench.Online.DiscogsReleaseIdPlaceholder}" />
+                <TextBox Classes="app"
+                         Text="{Binding DiscogsSearch.ReleaseId, Mode=TwoWay}"
+                         AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.DiscogsReleaseIdPlaceholder}" />
+              </StackPanel>
             </StackPanel>
           </Grid>
-        </Expander>
-      </StackPanel>
-    </Border>
+          </Expander>
+        </StackPanel>
+      </Border>
+    </Expander>
 
     <Grid Grid.Row="2"
           ColumnDefinitions="Auto,*"
-          ColumnSpacing="10">
+          ColumnSpacing="12">
       <Border Width="28"
               Height="28"
-              CornerRadius="14"
+              CornerRadius="99"
               Background="{DynamicResource AppAccentBrush}">
         <TextBlock HorizontalAlignment="Center"
                    VerticalAlignment="Center"
@@ -163,11 +248,11 @@
                    Foreground="{DynamicResource AppAccentInkBrush}"
                    Text="3" />
       </Border>
-      <StackPanel Grid.Column="1" Spacing="2">
+      <StackPanel Grid.Column="1" Spacing="4">
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.Online.ResultsTitle}" />
         <TextBlock x:Name="ResultsSupportingText"
-                   Classes="muted"
+                   Classes="supporting"
                    Text="{DynamicResource Loc.Workbench.Online.ResultsDescription}"
                    TextWrapping="Wrap" />
       </StackPanel>
@@ -184,16 +269,16 @@
             <TextBlock x:Name="AudioResultSupportingText"
                        Classes="muted"
                        Width="360"
-                       Margin="0,0,8,6"
+                       Margin="0,0,8,8"
                        VerticalAlignment="Center"
                        Text="{DynamicResource Loc.Workbench.Online.AudioCandidatesDescription}"
                        TextWrapping="Wrap" />
             <Button Classes="app"
-                    Margin="0,0,8,6"
+                    Margin="0,0,8,8"
                     Content="{DynamicResource Loc.Workbench.Online.PreviewSelectedIds}"
                     Command="{Binding PreviewAudioIdentifiersCommand}" />
             <Button Classes="app"
-                    Margin="0,0,0,6"
+                    Margin="0,0,0,8"
                     Content="{DynamicResource Loc.Workbench.Online.FindReleaseEditions}"
                     Command="{Binding ResolveSelectedRecordingCommand}" />
           </WrapPanel>
@@ -210,16 +295,16 @@
       </TabItem>
       <TabItem Header="{DynamicResource Loc.Workbench.Online.DiscogsEditions}">
         <Grid RowDefinitions="Auto,*,Auto,*,Auto"
-              RowSpacing="6">
+              RowSpacing="8">
           <WrapPanel>
             <TextBlock Classes="muted"
                        Width="420"
-                       Margin="0,0,8,6"
+                       Margin="0,0,8,8"
                        VerticalAlignment="Center"
                        Text="{DynamicResource Loc.Workbench.Online.DiscogsEditionsDescription}"
                        TextWrapping="Wrap" />
             <Button Classes="app"
-                    Margin="0,0,0,6"
+                    Margin="0,0,0,8"
                     Content="{DynamicResource Loc.Workbench.Online.LoadDetails}"
                     Command="{Binding LoadDiscogsReleaseDetailsCommand}" />
           </WrapPanel>
@@ -230,20 +315,20 @@
           <WrapPanel Grid.Row="2">
             <TextBlock Classes="muted"
                        Width="360"
-                       Margin="0,0,8,6"
+                       Margin="0,0,8,8"
                        VerticalAlignment="Center"
                        Text="{DynamicResource Loc.Workbench.Online.MappingReviewDescription}"
                        TextWrapping="Wrap" />
             <Button Classes="app"
-                    Margin="0,0,8,6"
+                    Margin="0,0,8,8"
                     Content="{DynamicResource Loc.Workbench.Online.BuildMapping}"
                     Command="{Binding BuildDiscogsReleaseMappingCommand}" />
             <Button Classes="app primary"
-                    Margin="0,0,8,6"
+                    Margin="0,0,8,8"
                     Content="{DynamicResource Loc.Workbench.Online.PreviewMappedMetadata}"
                     Command="{Binding PreviewDiscogsReleaseMetadataCommand}" />
             <Button Classes="app"
-                    Margin="0,0,0,6"
+                    Margin="0,0,0,8"
                     Content="{DynamicResource Loc.Workbench.Online.PreviewCover}"
                     Command="{Binding PreviewDiscogsReleaseArtworkCommand}" />
           </WrapPanel>
@@ -280,16 +365,16 @@
           <WrapPanel>
             <TextBlock Classes="muted"
                        Width="430"
-                       Margin="0,0,8,6"
+                       Margin="0,0,8,8"
                        VerticalAlignment="Center"
                        Text="{DynamicResource Loc.Workbench.Online.TrackMappingDescription}"
                        TextWrapping="Wrap" />
             <Button Classes="app"
-                    Margin="0,0,8,6"
+                    Margin="0,0,8,8"
                     Content="{DynamicResource Loc.Workbench.Online.BuildMapping}"
                     Command="{Binding BuildReleaseMappingCommand}" />
             <Button Classes="app primary"
-                    Margin="0,0,0,6"
+                    Margin="0,0,0,8"
                     Content="{DynamicResource Loc.Workbench.Online.PreviewMappedMetadata}"
                     Command="{Binding PreviewReleaseMetadataCommand}" />
           </WrapPanel>
@@ -297,19 +382,19 @@
                                 Grid.Row="1"
                                 ItemsSource="{Binding ReleaseTrackMappings}" />
           <WrapPanel Grid.Row="2">
-            <CheckBox Margin="0,0,14,0"
+            <CheckBox Margin="0,0,16,0"
                       Content="{DynamicResource Loc.Workbench.Online.Field.Titles}"
                       IsChecked="{Binding ReleaseImport.TrackTitles, Mode=TwoWay}" />
-            <CheckBox Margin="0,0,14,0"
+            <CheckBox Margin="0,0,16,0"
                       Content="{DynamicResource Loc.Workbench.Online.Field.TrackArtists}"
                       IsChecked="{Binding ReleaseImport.TrackArtists, Mode=TwoWay}" />
-            <CheckBox Margin="0,0,14,0"
+            <CheckBox Margin="0,0,16,0"
                       Content="{DynamicResource Loc.Workbench.Online.Field.AlbumArtistDate}"
                       IsChecked="{Binding ReleaseImport.ReleaseIdentity, Mode=TwoWay}" />
-            <CheckBox Margin="0,0,14,0"
+            <CheckBox Margin="0,0,16,0"
                       Content="{DynamicResource Loc.Workbench.Online.Field.TrackDiscNumbers}"
                       IsChecked="{Binding ReleaseImport.Numbering, Mode=TwoWay}" />
-            <CheckBox Margin="0,0,14,0"
+            <CheckBox Margin="0,0,16,0"
                       Content="{DynamicResource Loc.Workbench.Online.Field.ReleaseDetails}"
                       IsChecked="{Binding ReleaseImport.ReleaseDetails, Mode=TwoWay}" />
             <CheckBox Content="{DynamicResource Loc.Workbench.Online.Field.MusicBrainzIds}"
@@ -320,32 +405,39 @@
       <TabItem Header="{DynamicResource Loc.Workbench.Online.Artwork}">
         <Grid RowDefinitions="Auto,*" RowSpacing="8">
           <WrapPanel>
-            <TextBlock Classes="muted"
+            <TextBlock x:Name="ArtworkResultSupportingText"
+                       Classes="muted"
                        Width="390"
-                       Margin="0,0,8,6"
+                       Margin="0,0,8,8"
                        VerticalAlignment="Center"
                        Text="{DynamicResource Loc.Workbench.Online.ArtworkDescription}"
                        TextWrapping="Wrap" />
             <Button x:Name="AddStagedArtworkButton"
                     Classes="app"
-                    Margin="0,0,8,6"
+                    Margin="0,0,8,8"
                     Content="{DynamicResource Loc.Workbench.Online.AddImage}"
                     Command="{Binding AddStagedArtworkCommand}" />
             <Button x:Name="PreviewStagedArtworkButton"
                     Classes="app primary"
-                    Margin="0,0,8,6"
+                    Margin="0,0,8,8"
                     Content="{DynamicResource Loc.Workbench.Online.PreviewArtworkSet}"
                     Command="{Binding PreviewStagedArtworkCommand}" />
-            <Button Classes="app"
-                    Margin="0,0,8,6"
-                    Content="{DynamicResource Loc.Workbench.Online.FindReleaseArtwork}"
-                    Command="{Binding FindReleaseArtworkCommand}" />
-            <Button Classes="app primary"
-                    Margin="0,0,0,6"
-                    Content="{DynamicResource Loc.Workbench.Online.PreviewReleaseCover}"
-                    Command="{Binding PreviewReleaseArtworkCommand}" />
+            <Button Classes="app overflow"
+                    Margin="0,0,0,8"
+                    Content="{DynamicResource Loc.Workbench.Action.More}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.MoreAutomation}">
+              <Button.Flyout>
+                <MenuFlyout>
+                  <MenuItem Header="{DynamicResource Loc.Workbench.Online.FindReleaseArtwork}"
+                            Command="{Binding FindReleaseArtworkCommand}" />
+                  <MenuItem Header="{DynamicResource Loc.Workbench.Online.PreviewReleaseCover}"
+                            Command="{Binding PreviewReleaseArtworkCommand}" />
+                </MenuFlyout>
+              </Button.Flyout>
+            </Button>
           </WrapPanel>
-          <TabControl Grid.Row="1">
+          <TabControl x:Name="OnlineMetadataArtworkTabs"
+                      Grid.Row="1">
             <TabItem Header="{DynamicResource Loc.Workbench.Online.EmbeddedArtworkSet}">
               <Grid x:Name="ArtworkEditorLayout"
                     Margin="0,8,0,0"
@@ -358,11 +450,11 @@
                     <DataTemplate>
                       <Grid Margin="4"
                             ColumnDefinitions="72,*"
-                            ColumnSpacing="10">
+                            ColumnSpacing="12">
                         <Border Width="64"
                                 Height="64"
                                 Background="{DynamicResource AppInsetBrush}"
-                                CornerRadius="5">
+                                CornerRadius="6">
                           <Image Source="{Binding Source}"
                                  Stretch="Uniform" />
                         </Border>
@@ -381,25 +473,28 @@
                 <ScrollViewer x:Name="ArtworkEditorScroll"
                               Grid.Column="2"
                               VerticalScrollBarVisibility="Auto">
-                  <StackPanel Spacing="8">
+                  <StackPanel Classes="content-stack">
                     <TextBlock Classes="section-title"
                                Text="{DynamicResource Loc.Workbench.Online.SelectedImage}" />
-                    <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Online.ArtworkRole}" />
+                    <TextBlock Classes="field-label" Text="{DynamicResource Loc.Workbench.Online.ArtworkRole}" />
                     <ComboBox x:Name="StagedArtworkTypePicker"
                               Classes="app"
                               ItemsSource="{Binding ArtworkTypeChoices}"
                               DisplayMemberBinding="{Binding Label}"
                               SelectedValueBinding="{Binding Value}"
-                              SelectedValue="{Binding SelectedStagedArtwork.Type, Mode=TwoWay}" />
-                    <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Online.Description}" />
+                              SelectedValue="{Binding SelectedStagedArtwork.Type, Mode=TwoWay}"
+                              AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ArtworkRole}" />
+                    <TextBlock Classes="field-label" Text="{DynamicResource Loc.Workbench.Online.Description}" />
                     <TextBox Classes="app"
-                             Text="{Binding SelectedStagedArtwork.Description, Mode=TwoWay}" />
-                    <TextBlock Classes="muted"
+                             Text="{Binding SelectedStagedArtwork.Description, Mode=TwoWay}"
+                             AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.Description}" />
+                    <TextBlock Classes="field-label"
                                Text="{DynamicResource Loc.Workbench.Online.MaximumDimension}" />
                     <NumericUpDown Classes="app"
                                    Minimum="0"
                                    Maximum="100000"
-                                   Value="{Binding ArtworkMaxDimension, Mode=TwoWay}" />
+                                   Value="{Binding ArtworkMaxDimension, Mode=TwoWay}"
+                                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.MaximumDimension}" />
                     <Button x:Name="StagedArtworkActionsButton"
                             Classes="app"
                             HorizontalAlignment="Left"

@@ -22,7 +22,7 @@ namespace MusicLibraryManager.UI.Tests;
 public sealed class WorkbenchInteractionTests
 {
     [AvaloniaFact]
-    public void Session_context_menu_opens_for_shift_f10_and_apps_key()
+    public void Session_context_menu_keys_are_scoped_to_the_focused_grid()
     {
         using ServiceProvider services = BuildServices();
         App.UseServicesForTests(services);
@@ -32,9 +32,13 @@ public sealed class WorkbenchInteractionTests
         {
             WorkbenchView view =
                 ShowWorkbench(window, services, 1200, 700);
-            ContextMenu menu = Assert.IsType<ContextMenu>(
+            AppDataGrid grid =
                 view.FindControl<AppDataGrid>(
-                    "WorkbenchGrid")!.ContextMenu);
+                    "WorkbenchGrid")!;
+            ContextMenu menu = Assert.IsType<ContextMenu>(
+                grid.ContextMenu);
+            grid.Focus();
+            Render();
 
             view.RaiseEvent(new KeyEventArgs
             {
@@ -54,6 +58,19 @@ public sealed class WorkbenchInteractionTests
             Render();
             Assert.True(menu.IsOpen);
             menu.Close();
+
+            Button outsideGrid =
+                view.FindControl<Button>(
+                    "WorkbenchPendingChangesButton")!;
+            outsideGrid.Focus();
+            Render();
+            view.RaiseEvent(new KeyEventArgs
+            {
+                RoutedEvent = InputElement.KeyDownEvent,
+                Key = Key.Apps,
+            });
+            Render();
+            Assert.False(menu.IsOpen);
         }
         finally
         {
@@ -281,6 +298,89 @@ public sealed class WorkbenchInteractionTests
                 pendingButton,
                 window.FocusManager!
                     .GetFocusedElement());
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Drawer_tab_cycle_excludes_hidden_drawer_surfaces()
+    {
+        using ServiceProvider services = BuildServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(window, services, 900, 640);
+            view.FindControl<Button>(
+                    "WorkbenchPendingChangesButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            Render();
+
+            Control pendingDrawer =
+                view.FindControl<Control>(
+                    "WorkbenchPendingChangesDrawer")!;
+            Control hiddenInspector =
+                view.FindControl<Control>(
+                    "WorkbenchInspectorDrawer")!;
+            Control[] visibleFocusCycle =
+            [
+                .. pendingDrawer
+                    .GetVisualDescendants()
+                    .OfType<Control>()
+                    .Where(control =>
+                        control.IsEffectivelyVisible &&
+                        control.IsEffectivelyEnabled &&
+                        control.Focusable),
+            ];
+            Assert.NotEmpty(visibleFocusCycle);
+
+            AssertCyclesWithinVisibleDrawer(
+                visibleFocusCycle[^1],
+                KeyModifiers.None);
+            AssertCyclesWithinVisibleDrawer(
+                visibleFocusCycle[0],
+                KeyModifiers.Shift);
+
+            void AssertCyclesWithinVisibleDrawer(
+                Control boundary,
+                KeyModifiers modifiers)
+            {
+                boundary.Focus();
+                Render();
+                view.RaiseEvent(
+                    new KeyEventArgs
+                    {
+                        RoutedEvent =
+                            InputElement.KeyDownEvent,
+                        Key = Key.Tab,
+                        KeyModifiers = modifiers,
+                    });
+                Render();
+
+                Control focused =
+                    Assert.IsAssignableFrom<Control>(
+                        window.FocusManager!
+                            .GetFocusedElement());
+                Assert.True(
+                    ReferenceEquals(
+                        focused,
+                        pendingDrawer) ||
+                    focused.GetVisualAncestors()
+                        .Contains(pendingDrawer));
+                Assert.False(
+                    ReferenceEquals(
+                        focused,
+                        hiddenInspector) ||
+                    focused.GetVisualAncestors()
+                        .Contains(hiddenInspector));
+            }
         }
         finally
         {
