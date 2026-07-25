@@ -138,6 +138,79 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task StageBuildsReviewedReplacementWithoutMutatingLiveFile()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-stage-" +
+            Guid.NewGuid().ToString("N") +
+            ".json");
+        var settings = new AppSettings(statePath);
+        var service = new MetadataOperationService(
+            _documents,
+            MediaFormatRegistry.Default,
+            new FileMutationPlanExecutor(settings: settings),
+            settings);
+        OperationRecipe recipe = OperationRecipe.Create(
+            "Stage",
+            new AssignFieldOperation(
+                MetadataFieldKey.Known(TagFields.Title),
+                "Staged title"));
+        MetadataOperationPlan plan =
+            await service.PreviewAsync(
+                [media.Path],
+                recipe,
+                TestContext.Current.CancellationToken);
+
+        MetadataOperationStageResult stage =
+            await service.StageAsync(
+                plan,
+                ct: TestContext.Current.CancellationToken);
+        try
+        {
+            MetadataStagedFile staged =
+                Assert.Single(stage.Files);
+            Assert.Equal(
+                ".flac",
+                Path.GetExtension(staged.StagedPath));
+            Assert.Equal(
+                "TestTitle",
+                (await _documents.LoadAsync(
+                    media.Path,
+                    ct: TestContext.Current
+                        .CancellationToken))
+                    .FirstValue(TagFields.Title));
+            Assert.Equal(
+                "Staged title",
+                (await _documents.LoadAsync(
+                    staged.StagedPath,
+                    ct: TestContext.Current
+                        .CancellationToken))
+                    .FirstValue(TagFields.Title));
+            Assert.Single(stage.Participants);
+        }
+        finally
+        {
+            await service.DiscardStageAsync(
+                stage,
+                TestContext.Current.CancellationToken);
+            try
+            {
+                File.Delete(statePath);
+            }
+            catch
+            {
+            }
+        }
+
+        Assert.All(
+            stage.Files,
+            file => Assert.False(
+                File.Exists(file.StagedPath)));
+    }
+
+    [Fact]
     public async Task LibraryPolicy_BlocksMetadataPreviewWithoutWritePermission()
     {
         string root = Path.Combine(

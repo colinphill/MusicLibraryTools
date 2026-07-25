@@ -9,8 +9,26 @@ namespace MusicLibrary.Core.Services;
 /// </summary>
 public interface IReindexService
 {
+    /// <summary>
+    /// Returns whether the exact path currently has a row in the loaded
+    /// metadata cache.
+    /// </summary>
+    Task<bool> IsIndexedFileAsync(
+        string path,
+        CancellationToken ct = default) =>
+        Task.FromResult(false);
+
     /// <summary>Re-parse the file and refresh its rows in the cache. No-op if no library is loaded.</summary>
     Task ReindexFileAsync(string path, CancellationToken ct = default);
+
+    /// <summary>
+    /// Removes the exact path from the loaded cache without scanning any
+    /// directory.
+    /// </summary>
+    Task RemoveIndexedFileAsync(
+        string path,
+        CancellationToken ct = default) =>
+        Task.CompletedTask;
 
     /// <summary>
     /// Refresh the cache from the media object that was just saved, avoiding a second read of a

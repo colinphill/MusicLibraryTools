@@ -1,5 +1,36 @@
 using System.Text.Json;
 
+if (args.Length >= 2 &&
+    args[0] == "--managed-process")
+{
+    switch (args[1])
+    {
+        case "large":
+            for (int index = 0; index < 1_000; index++)
+            {
+                Console.WriteLine(
+                    $"stdout-{index:D4}-" +
+                    new string('o', 32));
+                Console.Error.WriteLine(
+                    $"stderr-{index:D4}-" +
+                    new string('e', 32));
+            }
+            return 0;
+        case "arguments":
+            Console.Write(
+                JsonSerializer.Serialize(
+                    args.Skip(2).ToArray()));
+            return 0;
+        case "wait":
+            await Task.Delay(TimeSpan.FromSeconds(30));
+            return 0;
+        default:
+            Console.Error.WriteLine(
+                "Unknown managed-process fixture mode.");
+            return 4;
+    }
+}
+
 if (args.Length != 4 ||
     args[0] != "-json" ||
     args[1] != "-length" ||

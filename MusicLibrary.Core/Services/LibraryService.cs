@@ -381,6 +381,47 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         ArtworkMaterializationChanged?.Invoke();
     }
 
+    public async Task<bool> IsIndexedFileAsync(
+        string path,
+        CancellationToken ct = default)
+    {
+        if (!IsReady)
+            return false;
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase(GetContext());
+            return await Task.Run(
+                () => db.ContainsFile(path),
+                ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task RemoveIndexedFileAsync(
+        string path,
+        CancellationToken ct = default)
+    {
+        if (!IsReady)
+            return;
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase(GetContext());
+            await Task.Run(
+                () => db.RemoveFile(path),
+                ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+        ArtworkMaterializationChanged?.Invoke();
+    }
+
     public async Task<IReadOnlyList<PlannedMove>> PreviewMovesAsync(CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);

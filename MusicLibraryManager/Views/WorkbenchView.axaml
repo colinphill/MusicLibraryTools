@@ -306,6 +306,9 @@
             <sections:WorkbenchColumnsDrawerView
                 x:Name="WorkbenchColumnsDrawer"
                 IsVisible="False" />
+            <sections:WorkbenchTranscodeDrawerView
+                x:Name="WorkbenchTranscodeDrawer"
+                IsVisible="False" />
           </Grid>
         </Border>
       </controls:PersistedSplitView.Right>

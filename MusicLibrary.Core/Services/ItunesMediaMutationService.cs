@@ -17,16 +17,29 @@ public enum ItunesMediaMutationKind
 public sealed record ItunesMediaMutation(
     ItunesMediaMutationKind Kind,
     string? OriginalPath,
-    string? CurrentPath)
+    string? CurrentPath,
+    string? ReferencePath = null)
 {
-    public static ItunesMediaMutation Refresh(string path) =>
-        new(ItunesMediaMutationKind.Refresh, path, path);
+    public static ItunesMediaMutation Refresh(
+        string path,
+        string? referencePath = null) =>
+        new(
+            ItunesMediaMutationKind.Refresh,
+            path,
+            path,
+            referencePath);
 
     public static ItunesMediaMutation Relocate(string originalPath, string currentPath) =>
         new(ItunesMediaMutationKind.Relocate, originalPath, currentPath);
 
-    public static ItunesMediaMutation Add(string path) =>
-        new(ItunesMediaMutationKind.Add, null, path);
+    public static ItunesMediaMutation Add(
+        string path,
+        string? referencePath = null) =>
+        new(
+            ItunesMediaMutationKind.Add,
+            null,
+            path,
+            referencePath);
 
     public static ItunesMediaMutation Remove(string path) =>
         new(ItunesMediaMutationKind.Remove, path, null);
@@ -235,7 +248,11 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
             await using IItunesMediaMutationSession session =
                 await BeginAsync(refreshPaths, backupFiles: false, ct).ConfigureAwait(false);
             ItunesMediaMutationResult result = await session.CommitAsync(
-                refreshPaths.Select(ItunesMediaMutation.Refresh).ToArray(), ct)
+                refreshPaths
+                    .Select(path =>
+                        ItunesMediaMutation.Refresh(path))
+                    .ToArray(),
+                ct)
                 .ConfigureAwait(false);
             await session.CompleteAsync(ct).ConfigureAwait(false);
             return new(true, result.Active, refreshPaths.Length, result.RefreshedTracks,
@@ -397,6 +414,9 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
                 foreach (ItunesMediaMutation mutation in mutations)
                 {
                     ct.ThrowIfCancellationRequested();
+                    if (mutation.ReferencePath is { } reference &&
+                        _document.FindTracksByPath(reference).Count == 0)
+                        continue;
                     switch (mutation.Kind)
                     {
                         case ItunesMediaMutationKind.Refresh:
@@ -408,13 +428,7 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
                             IReadOnlyList<ItlRecord> matches = _document.FindTracksByPath(path);
                             ItlLocalTrackMetadata metadata = ReadMetadata(path);
                             FileInfo file = new(path);
-                            if (matches.Count == 0)
-                            {
-                                _document.ImportLocalTrack(path, metadata, file.Length,
-                                    file.LastWriteTimeUtc);
-                                imported++;
-                            }
-                            else
+                            if (matches.Count > 0)
                             {
                                 foreach (ItlRecord track in matches)
                                     _document.RefreshLocalTrack(track, path, metadata, file.Length,

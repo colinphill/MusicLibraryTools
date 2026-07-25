@@ -1050,6 +1050,7 @@ public sealed class EditableLibraryConfig
             bool unknownTool = source.Name.LocalName == "ToolBinding" &&
                 (string?)source.Attribute("Name") is { } name &&
                 !name.Equals("Ffmpeg", StringComparison.OrdinalIgnoreCase) &&
+                !name.Equals("Wavpack", StringComparison.OrdinalIgnoreCase) &&
                 !name.Equals("ItunesLibrary", StringComparison.OrdinalIgnoreCase);
             if (unknownElement || unknownTool)
                 root.Add(new XElement(source));

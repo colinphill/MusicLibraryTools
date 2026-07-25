@@ -49,6 +49,131 @@ public sealed class MediaCatalogIntegrationTests
     }
 
     [Fact]
+    public async Task MirrorSourceCatalogPolicyCarriesTrackedMembershipReference()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"catalog-mirror-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            string source = Path.Combine(root, "source.flac");
+            string stage = Path.Combine(root, "stage.flac");
+            string destination = Path.Combine(root, "output.flac");
+            await File.WriteAllTextAsync(
+                source,
+                "source",
+                TestContext.Current.CancellationToken);
+            await File.WriteAllTextAsync(
+                stage,
+                "encoded",
+                TestContext.Current.CancellationToken);
+            var stageInfo = new FileInfo(stage);
+            var integration = new RecordingIntegration();
+            var executor = new FileMutationPlanExecutor(
+                new FileMutationCoordinator(),
+                catalogIntegrations: [integration]);
+            var plan = new FileMutationPlan(
+                "test",
+                root,
+                "",
+                [
+                    new(
+                        FileMutationKind.Copy,
+                        stage,
+                        destination,
+                        new(
+                            true,
+                            false,
+                            stageInfo.Length,
+                            stageInfo.LastWriteTimeUtc)
+                        {
+                            Path = stage,
+                        },
+                        OperationPathSnapshot.Missing(destination),
+                        CatalogPolicy:
+                            FileMutationCatalogPolicy.MirrorSource,
+                        CatalogReferencePath: source),
+                ],
+                [],
+                DateTimeOffset.UtcNow,
+                RetainRecovery: false);
+
+            await executor.ApplyAsync(
+                plan,
+                ct: TestContext.Current.CancellationToken);
+
+            MediaCatalogMutation mutation =
+                Assert.Single(integration.Session.Mutations);
+            Assert.Equal(
+                MediaCatalogMutationKind.Add,
+                mutation.Kind);
+            Assert.Equal(source, mutation.ReferencePath);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task CatalogExcludedSidecarProducesNoCatalogMutation()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"catalog-sidecar-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            string stage = Path.Combine(root, "stage.wvc");
+            string destination = Path.Combine(root, "output.wvc");
+            await File.WriteAllTextAsync(
+                stage,
+                "correction",
+                TestContext.Current.CancellationToken);
+            var stageInfo = new FileInfo(stage);
+            var integration = new RecordingIntegration();
+            var executor = new FileMutationPlanExecutor(
+                new FileMutationCoordinator(),
+                catalogIntegrations: [integration]);
+            var plan = new FileMutationPlan(
+                "test",
+                root,
+                "",
+                [
+                    new(
+                        FileMutationKind.Copy,
+                        stage,
+                        destination,
+                        new(
+                            true,
+                            false,
+                            stageInfo.Length,
+                            stageInfo.LastWriteTimeUtc)
+                        {
+                            Path = stage,
+                        },
+                        OperationPathSnapshot.Missing(destination),
+                        CatalogPolicy:
+                            FileMutationCatalogPolicy.None),
+                ],
+                [],
+                DateTimeOffset.UtcNow,
+                RetainRecovery: false);
+
+            await executor.ApplyAsync(
+                plan,
+                ct: TestContext.Current.CancellationToken);
+
+            Assert.Empty(integration.Session.Mutations);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MoveMutationRelocatesConfiguredCatalogEntry()
     {
         string root = Path.Combine(

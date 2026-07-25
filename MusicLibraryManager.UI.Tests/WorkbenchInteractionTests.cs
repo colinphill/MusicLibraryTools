@@ -4,8 +4,10 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Controls;
@@ -214,6 +216,167 @@ public sealed class WorkbenchInteractionTests
         }
     }
 
+    [AvaloniaFact]
+    public async Task Transcode_drawer_stays_in_bounds_and_restores_focus_after_escape()
+    {
+        using ServiceProvider services = BuildServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(
+                    window,
+                    services,
+                    900,
+                    600);
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            var track = new WorkbenchTrackViewModel(
+                new MediaDocument(
+                    "transcode-source.flac",
+                    [],
+                    [],
+                    null,
+                    new(
+                        "transcode-source.flac",
+                        10,
+                        DateTime.UtcNow,
+                        "hash"),
+                    true));
+            model.Files.Add(track);
+            model.SetSelectedFiles([track]);
+            Button focusOwner =
+                view.FindControl<Button>(
+                    "WorkbenchSessionActionsButton")!;
+            Control drawer =
+                view.FindControl<Control>(
+                    "WorkbenchTranscodeDrawer")!;
+            Button closeButton =
+                view.FindControl<Button>(
+                    "WorkbenchTranscodeCloseButton")!;
+            ComboBox format =
+                view.FindControl<ComboBox>(
+                    "WorkbenchTranscodeFormat")!;
+            ComboBox encoder =
+                view.FindControl<ComboBox>(
+                    "WorkbenchTranscodeEncoder")!;
+            ComboBox rateMode =
+                view.FindControl<ComboBox>(
+                    "WorkbenchTranscodeRateMode")!;
+
+            foreach ((double width, double height) in
+                     new[]
+                     {
+                         (900d, 600d),
+                         (1200d, 700d),
+                         (1440d, 900d),
+                     })
+            {
+                window.Width = width;
+                window.Height = height;
+                Render();
+
+                Assert.True(
+                    await view
+                        .OpenTranscodeDrawerAsync());
+                Render();
+
+                Assert.True(drawer.IsVisible);
+                Assert.InRange(
+                    drawer.Bounds.Width,
+                    300,
+                    430);
+                Assert.True(
+                    drawer.Bounds.Height <=
+                    view.Bounds.Height + 1);
+                Assert.Equal(
+                    AudioTranscodeFormatIds.Flac,
+                    model.TranscodeEditor!
+                        .SelectedFormatId);
+                Assert.Equal(
+                    AudioTranscodeEncoderIds.Automatic,
+                    model.TranscodeEditor
+                        .SelectedEncoderId);
+                Assert.Equal(
+                    AudioTranscodeRateMode.Lossless,
+                    model.TranscodeEditor
+                        .SelectedRateMode);
+                Assert.Equal(
+                    AudioTranscodeFormatIds.Flac,
+                    Assert.IsType<
+                        LocalizedChoice<string>>(
+                        format.SelectedItem)
+                        .Value);
+                Assert.Equal(
+                    AudioTranscodeEncoderIds.Automatic,
+                    Assert.IsType<
+                        LocalizedChoice<string>>(
+                        encoder.SelectedItem)
+                        .Value);
+                Assert.Equal(
+                    AudioTranscodeRateMode.Lossless,
+                    Assert.IsType<
+                        LocalizedChoice<
+                            AudioTranscodeRateMode>>(
+                        rateMode.SelectedItem)
+                        .Value);
+                Assert.Same(
+                    closeButton,
+                    window.FocusManager!
+                        .GetFocusedElement());
+                CaptureTranscodeDrawer(
+                    window,
+                    (int)width,
+                    (int)height);
+
+                view.RaiseEvent(new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = Key.Escape,
+                });
+                Render();
+
+                Assert.False(drawer.IsVisible);
+                Assert.Same(
+                    focusOwner,
+                    window.FocusManager!
+                        .GetFocusedElement());
+            }
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    private static void CaptureTranscodeDrawer(
+        MainWindow window,
+        int width,
+        int height)
+    {
+        string? captureDirectory =
+            Environment.GetEnvironmentVariable(
+                "MUSIC_LIBRARY_MANAGER_CAPTURE_DIR");
+        if (string.IsNullOrWhiteSpace(
+                captureDirectory))
+            return;
+        using var frame =
+            window.GetLastRenderedFrame();
+        Assert.NotNull(frame);
+        Directory.CreateDirectory(
+            captureDirectory);
+        frame.Save(
+            Path.Combine(
+                captureDirectory,
+                $"workbench-transcode-drawer-" +
+                $"{width}x{height}.png"),
+            PngBitmapEncoderOptions.Default);
+    }
+
     private static HashSet<string> ExpectedPanels(
         MetadataOperationKind kind) => kind switch
         {
@@ -273,6 +436,9 @@ public sealed class WorkbenchInteractionTests
             collection.AddSingleton<ILocalizationService>(
                 new ResourceLocalizationService(
                     settings));
+            collection.AddSingleton<
+                IAudioTranscodeCapabilityService>(
+                new FixedTranscodeCapabilities());
         });
     }
 
@@ -322,6 +488,52 @@ public sealed class WorkbenchInteractionTests
                 _preferences.Remove(key);
             else
                 _preferences[key] = value;
+        }
+    }
+
+    private sealed class FixedTranscodeCapabilities :
+        IAudioTranscodeCapabilityService
+    {
+        public Task<AudioTranscodeCapabilitySnapshot>
+            GetAsync(
+                bool forceRefresh = false,
+                CancellationToken ct = default) =>
+            Task.FromResult(
+                new AudioTranscodeCapabilitySnapshot(
+                    [],
+                    [
+                        new(
+                            AudioTranscodeFormatIds.Flac,
+                            "flac",
+                            "flac",
+                            ".flac",
+                            true,
+                            [
+                                AudioTranscodeEncoderIds
+                                    .Ffmpeg("flac"),
+                            ]),
+                    ],
+                    [
+                        new(
+                            AudioTranscodeEncoderIds
+                                .Ffmpeg("flac"),
+                            AudioTranscodeToolKind.Ffmpeg,
+                            "flac",
+                            AudioEncoderThreadingMode
+                                .ThreadCountControllable,
+                            [
+                                new(
+                                    AudioTranscodeRateMode
+                                        .Lossless),
+                            ],
+                            [],
+                            [16, 24]),
+                    ],
+                    DateTimeOffset.UtcNow,
+                    1));
+
+        public void Invalidate()
+        {
         }
     }
 }

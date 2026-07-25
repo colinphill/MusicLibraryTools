@@ -11,7 +11,8 @@ public enum MediaCatalogMutationKind
 public sealed record MediaCatalogMutation(
     MediaCatalogMutationKind Kind,
     string? OriginalPath,
-    string? CurrentPath)
+    string? CurrentPath,
+    string? ReferencePath = null)
 {
     public static MediaCatalogMutation Refresh(string path) =>
         new(MediaCatalogMutationKind.Refresh, path, path);
@@ -80,11 +81,15 @@ public sealed class ItunesMediaCatalogIntegration(
             ItunesMediaMutation[] translated = mutations.Select(mutation => mutation.Kind switch
             {
                 MediaCatalogMutationKind.Refresh =>
-                    ItunesMediaMutation.Refresh(mutation.CurrentPath!),
+                    ItunesMediaMutation.Refresh(
+                        mutation.CurrentPath!,
+                        mutation.ReferencePath),
                 MediaCatalogMutationKind.Relocate =>
                     ItunesMediaMutation.Relocate(mutation.OriginalPath!, mutation.CurrentPath!),
                 MediaCatalogMutationKind.Add =>
-                    ItunesMediaMutation.Add(mutation.CurrentPath!),
+                    ItunesMediaMutation.Add(
+                        mutation.CurrentPath!,
+                        mutation.ReferencePath),
                 MediaCatalogMutationKind.Remove =>
                     ItunesMediaMutation.Remove(mutation.OriginalPath!),
                 _ => throw new ArgumentOutOfRangeException(nameof(mutation.Kind)),

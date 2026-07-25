@@ -20,6 +20,7 @@ public partial class WorkbenchView : UserControl
         Inspector,
         PendingChanges,
         Columns,
+        Transcode,
     }
 
     private readonly WorkbenchViewModel _viewModel;
@@ -48,6 +49,8 @@ public partial class WorkbenchView : UserControl
 
         WorkbenchSessionSection.ColumnsRequested +=
             OnColumnsRequested;
+        WorkbenchSessionSection.TranscodeRequested +=
+            OnTranscodeRequested;
         WorkbenchColumnsDrawer.Attach(
             WorkbenchSessionSection);
         WorkbenchColumnsDrawer.CloseRequested +=
@@ -56,6 +59,11 @@ public partial class WorkbenchView : UserControl
             OnDrawerCloseRequested;
         WorkbenchInspectorDrawer.CloseRequested +=
             OnInspectorCloseRequested;
+        WorkbenchTranscodeDrawer.CloseRequested +=
+            OnDrawerCloseRequested;
+        if (_viewModel.TranscodeEditor is not null)
+            _viewModel.TranscodeEditor.PreviewCompleted +=
+                OnTranscodePreviewCompleted;
 
         AttachedToVisualTree += (_, _) =>
         {
@@ -254,6 +262,29 @@ public partial class WorkbenchView : UserControl
             WorkbenchDrawerSurface.Columns,
             WorkbenchSessionSection.ColumnsButton);
 
+    private async void OnTranscodeRequested(
+        object? sender,
+        EventArgs e) =>
+        await OpenTranscodeDrawerAsync();
+
+    internal async Task<bool>
+        OpenTranscodeDrawerAsync()
+    {
+        if (!await _viewModel.OpenTranscodeAsync())
+            return false;
+        ToggleTransientDrawer(
+            WorkbenchDrawerSurface.Transcode,
+            WorkbenchSessionSection.SelectionActionsButton);
+        return true;
+    }
+
+    private void OnTranscodePreviewCompleted(
+        object? sender,
+        EventArgs e) =>
+        ShowDrawer(
+            WorkbenchDrawerSurface.PendingChanges,
+            WorkbenchPendingChangesButton);
+
     private void ToggleTransientDrawer(
         WorkbenchDrawerSurface surface,
         Control focusOwner)
@@ -295,6 +326,8 @@ public partial class WorkbenchView : UserControl
                     WorkbenchPendingChangesDrawer.InitialFocus,
                 WorkbenchDrawerSurface.Columns =>
                     WorkbenchColumnsDrawer.InitialFocus,
+                WorkbenchDrawerSurface.Transcode =>
+                    WorkbenchTranscodeDrawer.InitialFocus,
                 _ => focusOwner,
             };
         Dispatcher.UIThread.Post(
@@ -354,7 +387,8 @@ public partial class WorkbenchView : UserControl
         WorkbenchDrawerSurface surface) =>
         surface is
             WorkbenchDrawerSurface.PendingChanges or
-            WorkbenchDrawerSurface.Columns;
+            WorkbenchDrawerSurface.Columns or
+            WorkbenchDrawerSurface.Transcode;
 
     private void ApplyDrawerState()
     {
@@ -378,6 +412,9 @@ public partial class WorkbenchView : UserControl
         WorkbenchColumnsDrawer.IsVisible =
             _activeDrawer ==
                 WorkbenchDrawerSurface.Columns;
+        WorkbenchTranscodeDrawer.IsVisible =
+            _activeDrawer ==
+                WorkbenchDrawerSurface.Transcode;
 
         WorkbenchSplit.SetCompact(
             _responsiveCompact ||

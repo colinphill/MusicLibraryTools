@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security.Cryptography;
 using MusicLibrary.Core.Models;
 
 namespace MusicLibrary.Core.Services;
@@ -134,7 +135,11 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
 
             if (catalogSession is not null)
                 await catalogSession.CommitAsync(
-                    plan.Actions.Select(ToCatalogMutation).ToArray(),
+                    plan.Actions
+                        .Select(ToCatalogMutation)
+                        .Where(item => item is not null)
+                        .Cast<MediaCatalogMutation>()
+                        .ToArray(),
                     CancellationToken.None).ConfigureAwait(false);
 
             await WriteJournalAsync(journal, journalStream, $"COMMIT\t{operationId}", ct);
@@ -297,7 +302,12 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
 
         if (catalogSession is not null)
         {
-            await catalogSession.CommitAsync(plan.Actions.Select(ToCatalogMutation).ToArray(),
+            await catalogSession.CommitAsync(
+                plan.Actions
+                    .Select(ToCatalogMutation)
+                    .Where(item => item is not null)
+                    .Cast<MediaCatalogMutation>()
+                    .ToArray(),
                 CancellationToken.None).ConfigureAwait(false);
             await catalogSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
         }
@@ -323,8 +333,13 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                 CopyAtomically(action.SourcePath, action.DestinationPath, replace: false);
                 try
                 {
+                    var created = new FileInfo(action.DestinationPath);
+                    string createdHash = await HashFileAsync(
+                        action.DestinationPath, ct).ConfigureAwait(false);
                     await WriteJournalAsync(journal, journalStream,
-                        $"INSTALL\tCOPY\t{action.DestinationPath}", ct);
+                        $"CREATE_REVERSIBLE\t1\t{action.DestinationPath}\t" +
+                        $"{created.Length}\t{createdHash}\t" +
+                        $"{created.LastWriteTimeUtc.Ticks}\t{(int)created.Attributes}", ct);
                 }
                 catch
                 {
@@ -877,6 +892,27 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         stream.Flush(true);
     }
 
+    private static async Task<string> HashFileAsync(string path, CancellationToken ct)
+    {
+        await using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            1024 * 1024,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        byte[] buffer = new byte[1024 * 1024];
+        while (true)
+        {
+            int read = await stream.ReadAsync(buffer, ct).ConfigureAwait(false);
+            if (read == 0)
+                break;
+            hasher.AppendData(buffer, 0, read);
+        }
+        return Convert.ToHexString(hasher.GetHashAndReset());
+    }
+
     private static string PlanLine(
         FileMutationAction action,
         RecoveryPayloadPolicy recoveryPayloadPolicy) => action.Kind switch
@@ -896,19 +932,39 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         _ => throw new ArgumentOutOfRangeException(nameof(action.Kind)),
     };
 
-    private static MediaCatalogMutation ToCatalogMutation(FileMutationAction action) =>
-        action.Kind switch
+    private static MediaCatalogMutation? ToCatalogMutation(
+        FileMutationAction action)
+    {
+        if (action.CatalogPolicy ==
+            FileMutationCatalogPolicy.None)
+            return null;
+        string? reference =
+            action.CatalogPolicy ==
+                FileMutationCatalogPolicy.MirrorSource
+                ? action.CatalogReferencePath ??
+                  action.SourcePath
+                : null;
+        return action.Kind switch
         {
             FileMutationKind.Copy or FileMutationKind.Write =>
-                MediaCatalogMutation.Add(action.DestinationPath),
+                new(
+                    MediaCatalogMutationKind.Add,
+                    null,
+                    action.DestinationPath,
+                    reference),
             FileMutationKind.Move =>
                 MediaCatalogMutation.Relocate(action.SourcePath, action.DestinationPath),
             FileMutationKind.Replace or FileMutationKind.ReplaceGenerated =>
-                MediaCatalogMutation.Refresh(action.DestinationPath),
+                new(
+                    MediaCatalogMutationKind.Refresh,
+                    action.DestinationPath,
+                    action.DestinationPath,
+                    reference),
             FileMutationKind.Quarantine or FileMutationKind.Delete =>
                 MediaCatalogMutation.Remove(action.SourcePath),
             _ => throw new ArgumentOutOfRangeException(nameof(action.Kind)),
         };
+    }
 
     private static string BackupPath(string recoveryRoot, string destination)
     {

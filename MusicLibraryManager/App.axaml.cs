@@ -2,6 +2,7 @@ using global::Avalonia;
 using global::Avalonia.Controls.ApplicationLifetimes;
 using global::Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using MusicLibrary.Core.Services;
 using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Services;
 
@@ -41,7 +42,28 @@ public partial class App : Application
                     provider.GetRequiredService<SettingsViewModel>().SelectedTheme);
                 desktop.MainWindow = window;
                 desktop.Exit += (_, _) => provider.Dispose();
-                window.Opened += (_, _) => provider.GetRequiredService<ShellViewModel>().RestoreConfiguration();
+                window.Opened += async (_, _) =>
+                {
+                    try
+                    {
+                        await provider.GetRequiredService<
+                                IReviewedChangeBatchService>()
+                            .ReconcilePendingAsync();
+                        await provider.GetRequiredService<
+                                IReviewedChangeHistoryService>()
+                            .ReconcilePendingAsync();
+                    }
+                    catch (Exception error)
+                    {
+                        File.WriteAllText(
+                            Path.Combine(
+                                AppContext.BaseDirectory,
+                                "startup-recovery-error.txt"),
+                            error.ToString());
+                    }
+                    provider.GetRequiredService<ShellViewModel>()
+                        .RestoreConfiguration();
+                };
             }
             catch (Exception error)
             {

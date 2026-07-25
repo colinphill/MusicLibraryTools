@@ -271,6 +271,89 @@ public sealed class OperationJournalServiceTests
     }
 
     [Fact]
+    public async Task RestoreRemovesAnUnchangedReversibleCreatedOutput()
+    {
+        using var temp = new TempDirectory();
+        string run = temp.Directory("transcode-recovery");
+        string output = Path.Combine(temp.Path, "song.flac");
+        File.WriteAllText(output, "generated audio");
+        var info = new FileInfo(output);
+        string hash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(output)));
+        string journal = Path.Combine(run, "journal.tsv");
+        File.WriteAllLines(journal,
+        [
+            "BEGIN\ttranscode",
+            $"CREATE_REVERSIBLE\t1\t{output}\t{info.Length}\t{hash}\t" +
+            $"{info.LastWriteTimeUtc.Ticks}\t{(int)info.Attributes}",
+            "COMMIT\ttranscode",
+        ]);
+        var summary = new OperationJournalSummary(
+            "MusicLibraryManager",
+            OperationJournalKind.Other,
+            OperationJournalState.Completed,
+            run,
+            journal,
+            DateTimeOffset.UtcNow,
+            1);
+        var service = new OperationJournalService();
+
+        OperationFileEntry entry = Assert.Single(
+            (await service.BrowseAsync(summary)).Entries);
+        OperationRestorePlan plan = await service.PreviewRestoreAsync(summary, [entry]);
+        OperationRestoreResult result = await service.ApplyRestoreAsync(plan);
+
+        Assert.Equal(OperationEntryKind.Created, entry.Kind);
+        Assert.Equal(
+            OperationRestoreDisposition.RemoveCreatedOutput,
+            Assert.Single(plan.Actions).Disposition);
+        Assert.Equal(1, result.RestoredCount);
+        Assert.False(File.Exists(output));
+        Assert.Equal("CONSUMED\tRESTORE", File.ReadLines(plan.RestoreJournalPath).Last());
+    }
+
+    [Fact]
+    public async Task RestoreRefusesToRemoveAReversibleOutputWhoseHashChanged()
+    {
+        using var temp = new TempDirectory();
+        string run = temp.Directory("transcode-recovery");
+        string output = Path.Combine(temp.Path, "song.flac");
+        File.WriteAllText(output, "AAAA");
+        var info = new FileInfo(output);
+        string hash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(output)));
+        string journal = Path.Combine(run, "journal.tsv");
+        File.WriteAllLines(journal,
+        [
+            "BEGIN\ttranscode",
+            $"CREATE_REVERSIBLE\t1\t{output}\t{info.Length}\t{hash}\t" +
+            $"{info.LastWriteTimeUtc.Ticks}\t{(int)info.Attributes}",
+            "COMMIT\ttranscode",
+        ]);
+        var summary = new OperationJournalSummary(
+            "MusicLibraryManager",
+            OperationJournalKind.Other,
+            OperationJournalState.Completed,
+            run,
+            journal,
+            DateTimeOffset.UtcNow,
+            1);
+        var service = new OperationJournalService();
+        OperationFileEntry entry = Assert.Single(
+            (await service.BrowseAsync(summary)).Entries);
+        OperationRestorePlan plan = await service.PreviewRestoreAsync(summary, [entry]);
+        File.WriteAllText(output, "BBBB");
+        File.SetLastWriteTimeUtc(output, plan.Actions[0].SourceSnapshot.LastWriteTimeUtc);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ApplyRestoreAsync(plan));
+
+        Assert.Contains("generated output changed", error.Message);
+        Assert.Equal("BBBB", File.ReadAllText(output));
+        Assert.False(File.Exists(plan.RestoreJournalPath));
+    }
+
+    [Fact]
     public async Task PurgePreviewFiltersByAgeProtectsInterruptedRunsAndCountsRestoreBackups()
     {
         using var temp = new TempDirectory();

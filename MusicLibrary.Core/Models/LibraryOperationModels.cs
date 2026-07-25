@@ -28,7 +28,9 @@ public sealed record OperationProgress(
     int? Total = null,
     string? CurrentPath = null,
     string? Message = null,
-    OperationItemStatus? ItemStatus = null);
+    OperationItemStatus? ItemStatus = null,
+    string? MessageKey = null,
+    ImmutableArray<object?> MessageArguments = default);
 
 public enum OperationIssueSeverity { Information, Warning, Blocker }
 
@@ -49,6 +51,13 @@ public enum FileMutationKind
     Delete,
 }
 
+public enum FileMutationCatalogPolicy
+{
+    Legacy = 0,
+    MirrorSource = 1,
+    None = 2,
+}
+
 /// <summary>
 /// One immutable filesystem decision. Source and destination snapshots describe the exact state
 /// reviewed during preview; execution rejects the complete plan before its first mutation if any
@@ -60,7 +69,10 @@ public sealed record FileMutationAction(
     string DestinationPath,
     OperationPathSnapshot? ExpectedSource,
     OperationPathSnapshot? ExpectedDestination,
-    ImmutableArray<byte> Content = default);
+    ImmutableArray<byte> Content = default,
+    FileMutationCatalogPolicy CatalogPolicy =
+        FileMutationCatalogPolicy.Legacy,
+    string? CatalogReferencePath = null);
 
 public sealed record FileMutationPlan(
     string ToolName,

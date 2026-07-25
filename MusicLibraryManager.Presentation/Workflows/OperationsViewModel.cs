@@ -2051,6 +2051,8 @@ public sealed class OperationRunViewModel : ViewModelBase
                 "Operations.Choice.OperationJournalKind.Sync",
             OperationJournalKind.Device =>
                 "Operations.Choice.OperationJournalKind.Device",
+            OperationJournalKind.ReviewedChange =>
+                "Operations.Choice.OperationJournalKind.ReviewedChange",
             _ =>
                 "Operations.Choice.OperationJournalKind.OtherKind",
         });
@@ -2142,7 +2144,10 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
     public List<OperationEntryNodeViewModel> Children { get; } = [];
     public bool HasEntry => Kind is not null;
     public bool CanRestore => HasEntry && Exists && CurrentPath is not null &&
-        Kind is OperationEntryKind.Quarantined or OperationEntryKind.Moved or OperationEntryKind.Planned;
+        Kind is OperationEntryKind.Quarantined or
+            OperationEntryKind.Moved or
+            OperationEntryKind.Created or
+            OperationEntryKind.Planned;
 
     [ObservableProperty]
     private bool _isSelected;

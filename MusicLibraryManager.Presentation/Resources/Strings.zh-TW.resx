@@ -194,10 +194,10 @@
     <value>聲道</value>
   </data>
   <data name="Column.Codec" xml:space="preserve">
-    <value>編解碼器</value>
+    <value>Codec</value>
   </data>
   <data name="Column.CodecType" xml:space="preserve">
-    <value>編解碼器類型</value>
+    <value>Codec 類型</value>
   </data>
   <data name="Column.Comment" xml:space="preserve">
     <value>註解</value>
@@ -554,7 +554,7 @@
     <value>混合 值; 一個 值 每 行</value>
   </data>
   <data name="FieldsEditor.UserStringName" xml:space="preserve">
-    <value>使用者-字串 名稱</value>
+    <value>使用者-字串 name</value>
   </data>
   <data name="Home.Action.OpenHealth" xml:space="preserve">
     <value>開啟 健康狀況</value>
@@ -683,7 +683,7 @@
     <value>日期</value>
   </data>
   <data name="Health.AlbumMatrix.Description" xml:space="preserve">
-    <value>僅 專輯 資料夾 含 一個 問題 是 已顯示. 琥珀色 儲存格 識別 遺失 或 衝突 演出者, 專輯, 日期, 曲目/光碟 編號, 或 總計 值; 暫留 一個 儲存格 用於 其 原因. 專輯 含 該 相同 名稱 是 分開 當 其 資料夾 路徑 不同.</value>
+    <value>僅 專輯 資料夾 含 一個 問題 是 已顯示. 琥珀色 儲存格 識別 遺失 或 衝突 演出者, 專輯, 日期, 曲目/光碟 編號, 或 總計 值; 暫留 一個 儲存格 用於 其 原因. 專輯 含 該 相同 name 是 分開 當 其 資料夾 路徑 不同.</value>
   </data>
   <data name="Health.AlbumMatrix.Disc" xml:space="preserve">
     <value>光碟</value>
@@ -710,16 +710,16 @@
     <value>曲目總數</value>
   </data>
   <data name="Health.Artist.CanonicalName" xml:space="preserve">
-    <value>標準 名稱</value>
+    <value>標準 name</value>
   </data>
   <data name="Health.Artist.CanonicalNameAutomation" xml:space="preserve">
-    <value>標準 演出者 名稱</value>
+    <value>標準 演出者 name</value>
   </data>
   <data name="Health.Artist.CanonicalTarget" xml:space="preserve">
     <value>標準 目標</value>
   </data>
   <data name="Health.Artist.Description" xml:space="preserve">
-    <value>選擇 該 標準 名稱 用於 每個 叢集, 然後 標記 僅 該 變體 您 希望 已重新命名 作用中. 篩選器 傳送 一個 變體's 曲目 至 資料庫.</value>
+    <value>選擇 該 標準 name 用於 每個 叢集, 然後 標記 僅 該 變體 您 希望 已重新命名 作用中. 篩選器 傳送 一個 變體's 曲目 至 資料庫.</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
     <value>{0} 曲目 已選取 跨 作用中 變體</value>
@@ -1157,7 +1157,7 @@
     <value>取消 正在載入</value>
   </data>
   <data name="Library.Filter.Placeholder" xml:space="preserve">
-    <value>篩選器, 或 使用 演出者:名稱 與 不 編解碼器:MP3</value>
+    <value>篩選器, 或 使用 演出者:Name 與 不 Codec:MP3</value>
   </data>
   <data name="Library.Filter.Automation" xml:space="preserve">
     <value>篩選器 資料庫</value>
@@ -1220,7 +1220,7 @@
     <value>已知 中繼資料 欄位</value>
   </data>
   <data name="Library.Columns.CustomFieldPlaceholder" xml:space="preserve">
-    <value>原生 自訂 欄位 名稱</value>
+    <value>原生 自訂 欄位 name</value>
   </data>
   <data name="Library.Columns.Action.New" xml:space="preserve">
     <value>新增</value>
@@ -1244,10 +1244,10 @@
     <value>儲存 該 目前 篩選器, 欄, 與 排序</value>
   </data>
   <data name="Library.SavedViews.NamePlaceholder" xml:space="preserve">
-    <value>檢視 名稱</value>
+    <value>檢視 name</value>
   </data>
   <data name="Library.SavedViews.NameAutomation" xml:space="preserve">
-    <value>新增 已儲存 檢視 名稱</value>
+    <value>新增 已儲存 檢視 name</value>
   </data>
   <data name="Library.SavedViews.Action.Save" xml:space="preserve">
     <value>儲存 檢視</value>
@@ -1523,7 +1523,7 @@
     <value>預覽 發行版 封面</value>
   </data>
   <data name="Library.Reports.NamePlaceholder" xml:space="preserve">
-    <value>報告 名稱</value>
+    <value>報告 name</value>
   </data>
   <data name="Library.Reports.OutputPlaceholder" xml:space="preserve">
     <value>輸出 檔案 或 資料夾</value>
@@ -1559,7 +1559,7 @@
     <value>寫入 已檢閱 報告</value>
   </data>
   <data name="Library.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>播放清單 名稱</value>
+    <value>播放清單 name</value>
   </data>
   <data name="Library.Playlists.OutputPlaceholder" xml:space="preserve">
     <value>輸出 檔案 或 資料夾</value>
@@ -1595,10 +1595,10 @@
     <value>刪除</value>
   </data>
   <data name="Library.Tools.NamePlaceholder" xml:space="preserve">
-    <value>工具 名稱</value>
+    <value>工具 name</value>
   </data>
   <data name="Library.Tools.ExecutablePlaceholder" xml:space="preserve">
-    <value>可執行檔 路徑 或 命令 名稱</value>
+    <value>可執行檔 路徑 或 命令 name</value>
   </data>
   <data name="Library.Tools.Action.BrowseExecutable" xml:space="preserve">
     <value>瀏覽 可執行檔</value>
@@ -1610,7 +1610,7 @@
     <value>瀏覽 資料夾</value>
   </data>
   <data name="Library.Tools.ArgumentsDescription" xml:space="preserve">
-    <value>一個 引數 每 行. 支援 預留位置: {檔案}, {檔案}, {目錄}, {檔案名稱}, {FileNameWithoutExtension}, {副檔名}, {索引}, 與 {計數}.</value>
+    <value>一個 引數 每 行. 支援 預留位置: {檔案}, {檔案}, {目錄}, {檔案名稱}, {FileNameWithoutExtension}, {Extension}, {索引}, 與 {計數}.</value>
   </data>
   <data name="Library.Tools.Warning" xml:space="preserve">
     <value>外部工具 執行 不含 一個 殼層 但是 保留 外部 應用程式 復原. 正在執行 永遠 需要 確認.</value>
@@ -1769,7 +1769,7 @@
     <value>最大值 移除</value>
   </data>
   <data name="Operations.PlaylistName" xml:space="preserve">
-    <value>播放清單 名稱</value>
+    <value>播放清單 name</value>
   </data>
   <data name="Operations.PurgeReviewed" xml:space="preserve">
     <value>清除 已檢閱 復原 歷程記錄</value>
@@ -1856,7 +1856,7 @@
     <value>檔案 操作 狀態</value>
   </data>
   <data name="ReviewedFileOperation.TemplateAutomation" xml:space="preserve">
-    <value>檔案 名稱 範本</value>
+    <value>檔案 name 範本</value>
   </data>
   <data name="Shell.OpenLibraryConfiguration" xml:space="preserve">
     <value>開啟 資料庫 設定</value>
@@ -2153,13 +2153,13 @@
     <value>封面</value>
   </data>
   <data name="Settings.Common.Codec" xml:space="preserve">
-    <value>編解碼器</value>
+    <value>Codec</value>
   </data>
   <data name="Settings.Common.CollisionBehavior" xml:space="preserve">
     <value>衝突 行為</value>
   </data>
   <data name="Settings.Common.FileNameTemplate" xml:space="preserve">
-    <value>檔案-名稱 範本</value>
+    <value>檔案-name 範本</value>
   </data>
   <data name="Settings.Common.FolderTemplate" xml:space="preserve">
     <value>資料夾 範本</value>
@@ -2171,7 +2171,7 @@
     <value>最大尺寸</value>
   </data>
   <data name="Settings.Common.Name" xml:space="preserve">
-    <value>名稱</value>
+    <value>Name</value>
   </data>
   <data name="Settings.Common.StableId" xml:space="preserve">
     <value>穩定 ID</value>
@@ -2378,7 +2378,7 @@
     <value>最大 曲目</value>
   </data>
   <data name="Settings.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>播放清單 名稱</value>
+    <value>播放清單 name</value>
   </data>
   <data name="Settings.Playlists.NamingArtwork" xml:space="preserve">
     <value>命名 與 封面</value>
@@ -2444,7 +2444,7 @@
     <value>檔案 播放清單 來源</value>
   </data>
   <data name="Settings.Playlists.SyncNameAutomation" xml:space="preserve">
-    <value>同步 播放清單 名稱</value>
+    <value>同步 播放清單 name</value>
   </data>
   <data name="Settings.Playlists.SyncTargetAutomation" xml:space="preserve">
     <value>交叉-資料庫 同步 目標 根目錄</value>
@@ -2552,7 +2552,7 @@
     <value>OptimFROG 工具 目錄</value>
   </data>
   <data name="Settings.Tools.OptimFrogPlaceholder" xml:space="preserve">
-    <value>目錄 包含 ofr, ofs, 與 關閉</value>
+    <value>目錄 包含 ofr, ofs, 與 off</value>
   </data>
   <data name="Settings.Tools.StoreToken" xml:space="preserve">
     <value>儲存 權杖</value>
@@ -2648,7 +2648,7 @@
     <value>該 光碟 策略 是 該 目的地 表示: 保留 標籤 保留 光碟 中繼資料; 每個 其他 策略 移除 那些 標籤 與 表示 該 光碟 在 該 專輯, 資料夾, 檔案名稱, 或 連續 曲目 編號.</value>
   </data>
   <data name="Settings.RootPolicy.FileNameTemplateAutomation" xml:space="preserve">
-    <value>設定檔 檔案 名稱 範本</value>
+    <value>設定檔 檔案 name 範本</value>
   </data>
   <data name="Settings.RootPolicy.FolderTemplateAutomation" xml:space="preserve">
     <value>設定檔 資料夾 範本</value>
@@ -2723,7 +2723,7 @@
     <value>保留 Unicode</value>
   </data>
   <data name="Settings.RootPolicy.ProfileName" xml:space="preserve">
-    <value>設定檔 名稱</value>
+    <value>設定檔 name</value>
   </data>
   <data name="Settings.RootPolicy.ProfileTitle" xml:space="preserve">
     <value>根目錄 原則 設定檔</value>
@@ -2807,7 +2807,7 @@
     <value>擷取 配方 目的地 根目錄</value>
   </data>
   <data name="Settings.Ingest.DisplayNamePlaceholder" xml:space="preserve">
-    <value>顯示 名稱</value>
+    <value>顯示 name</value>
   </data>
   <data name="Settings.Ingest.EnableRecipes" xml:space="preserve">
     <value>啟用 擷取 配方</value>
@@ -2816,7 +2816,7 @@
     <value>啟用 配方</value>
   </data>
   <data name="Settings.Ingest.Encoder" xml:space="preserve">
-    <value>編碼器 (空白 = 自動)</value>
+    <value>Encoder (空白 = 自動)</value>
   </data>
   <data name="Settings.Ingest.ExtensionsPlaceholder" xml:space="preserve">
     <value>.flac, .m4a</value>
@@ -2855,7 +2855,7 @@
     <value>輸出 聲道</value>
   </data>
   <data name="Settings.Ingest.OutputExtension" xml:space="preserve">
-    <value>輸出 副檔名</value>
+    <value>輸出 extension</value>
   </data>
   <data name="Settings.Ingest.OutputExtensionPlaceholder" xml:space="preserve">
     <value>用於 範例 .flac</value>
@@ -2873,7 +2873,7 @@
     <value>保留 附屬檔案 依 預設</value>
   </data>
   <data name="Settings.Ingest.ProfileName" xml:space="preserve">
-    <value>擷取 設定檔 名稱</value>
+    <value>擷取 設定檔 name</value>
   </data>
   <data name="Settings.Ingest.RecipeIdPlaceholder" xml:space="preserve">
     <value>穩定 配方 ID</value>
@@ -2927,7 +2927,7 @@
     <value>格式 系列</value>
   </data>
   <data name="Settings.FieldMappings.NativeField" xml:space="preserve">
-    <value>原生 欄位 名稱</value>
+    <value>原生 欄位 name</value>
   </data>
   <data name="Settings.FieldMappings.NativeFieldPlaceholder" xml:space="preserve">
     <value>格式-原生 索引鍵</value>
@@ -3416,7 +3416,7 @@
     <value>該 應用程式 保留 檔案 與 資料夾 名稱 位置 它們 是.</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.Organized" xml:space="preserve">
-    <value>當 檔案 是 整理, 它們 是 名稱 如同 “{0}”. 如果 該 名稱 已經 存在, 該 應用程式 使用 該 {1} 規則.</value>
+    <value>當 檔案 是 整理, 它們 是 名稱 如同 “{0}”. 如果 該 name 已經 存在, 該 應用程式 使用 該 {1} 規則.</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Eager" xml:space="preserve">
     <value>封面 是 讀取 與 已快取 期間 正在建立索引, 因此 瀏覽 與 封面 稽核 是 立即 完成. 正在建立索引 將 採用 更長 與 該 快取 將 使用 更多 空間.</value>
@@ -3548,7 +3548,7 @@
     <value>光碟 資料夾</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FileNamePrefix" xml:space="preserve">
-    <value>檔案-名稱 前置詞</value>
+    <value>檔案-name 前置詞</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FlattenContinuous" xml:space="preserve">
     <value>連續 曲目 編號</value>
@@ -3869,7 +3869,7 @@
     <value>已編碼 依</value>
   </data>
   <data name="Settings.Choice.TagFields.EncoderSettings" xml:space="preserve">
-    <value>編碼器 設定</value>
+    <value>Encoder 設定</value>
   </data>
   <data name="Settings.Choice.TagFields.Engineer" xml:space="preserve">
     <value>工程師</value>
@@ -3959,7 +3959,7 @@
     <value>原始 演出者</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalFileName" xml:space="preserve">
-    <value>原始 檔案 名稱</value>
+    <value>原始 檔案 name</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalDate" xml:space="preserve">
     <value>原始日期</value>
@@ -4591,7 +4591,7 @@
   <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>正在預覽 表示 中繼資料 複製</value></data>
   <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>正在讀取 演出者 名稱</value></data>
   <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>選取 組織 修復</value></data>
-  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>演出者-名稱 比較</value></data>
+  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>演出者-name 比較</value></data>
   <data name="Health.Progress.Unit.Files" xml:space="preserve"><value>檔案</value></data>
   <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>發現項目</value></data>
   <data name="Health.Progress.Unit.Moves" xml:space="preserve"><value>移動</value></data>
@@ -5081,7 +5081,7 @@
   <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>待處理 操作</value></data>
   <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>待處理 操作</value></data>
   <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>個人 配方</value></data>
-  <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>配方 名稱</value></data>
+  <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>配方 Name</value></data>
   <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>取代 含</value></data>
   <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>一個 輕量 草稿 預覽 更新 作為 您 編輯 該 目前 操作.</value></data>
   <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>代表 草稿</value></data>
@@ -5151,7 +5151,7 @@
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>已知 欄位</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>標籤</value></data>
   <data name="Workbench.Columns.Metadata" xml:space="preserve"><value>中繼資料</value></data>
-  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>選擇 一個 已知 欄位 或 輸入 一個 自訂 欄位 名稱.</value></data>
+  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>選擇 一個 已知 欄位 或 輸入 一個 自訂 欄位 name.</value></data>
   <data name="Workbench.Columns.Status.EnterLabel" xml:space="preserve"><value>Enter 一個 欄 標籤.</value></data>
   <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>新增 未儲存 中繼資料 欄.</value></data>
   <data name="Workbench.Columns.Status.Removed" xml:space="preserve"><value>已移除 中繼資料 欄 '{0}'.</value></data>
@@ -5400,7 +5400,7 @@
   <data name="Workbench.Playlists.Description" xml:space="preserve"><value>預覽 播放清單 目的地 與 內容 之前 寫入 輸出.</value></data>
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>編碼</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>延伸 資訊</value></data>
-  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>名稱</value></data>
+  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
   <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>一個 每 群組</value></data>
   <data name="Workbench.Playlists.PathStyle" xml:space="preserve"><value>路徑 樣式</value></data>
   <data name="Workbench.Playlists.Reviewed" xml:space="preserve"><value>已檢閱</value></data>
@@ -5418,16 +5418,16 @@
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>遞減</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>選擇 欄位, 分組, 與 排序, 然後 檢閱 每個 輸出 目的地.</value></data>
   <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>位元 每 範例</value></data>
-  <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>編解碼器類型</value></data>
+  <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>Codec 類型</value></data>
   <data name="Workbench.Reports.Field.File" xml:space="preserve"><value>檔案 - {0}</value></data>
-  <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>檔案 名稱</value></data>
+  <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>檔案 Name</value></data>
   <data name="Workbench.Reports.Field.FileSize" xml:space="preserve"><value>檔案 大小</value></data>
   <data name="Workbench.Reports.Field.MaximumBitrate" xml:space="preserve"><value>最大位元率</value></data>
   <data name="Workbench.Reports.Field.Metadata" xml:space="preserve"><value>中繼資料 - {0}</value></data>
   <data name="Workbench.Reports.Field.SampleRate" xml:space="preserve"><value>取樣率</value></data>
   <data name="Workbench.Reports.Field.Technical" xml:space="preserve"><value>技術 - {0}</value></data>
   <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>群組 依</value></data>
-  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>名稱</value></data>
+  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
   <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>否 分組</value></data>
   <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>一個 每 群組</value></data>
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>已檢閱</value></data>
@@ -5496,7 +5496,7 @@
   <data name="Workbench.Shortcuts.Command.Redo" xml:space="preserve"><value>取消復原</value></data>
   <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>重複 最後 配方</value></data>
   <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>復原 最後 套用</value></data>
-  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>使用 一個 修飾鍵 與 一個 Avalonia 索引鍵 名稱, 用於 範例 Ctrl+Alt+R, 中繼+F8, 或 Ctrl+Shift+Enter.</value></data>
+  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>使用 一個 修飾鍵 與 一個 Avalonia 索引鍵 name, 用於 範例 Ctrl+Alt+R, 中繼+F8, 或 Ctrl+Shift+Enter.</value></data>
   <data name="Workbench.Shortcuts.GesturePlaceholder" xml:space="preserve"><value>手勢</value></data>
   <data name="Workbench.Shortcuts.InputWarning" xml:space="preserve"><value>快速鍵 是 已忽略 期間 一個 文字 或 選項 編輯器 有 焦點. Ctrl+K 與 Ctrl+I 保留 保留 用於 全域 搜尋 與 正在建立索引.</value></data>
   <data name="Workbench.Shortcuts.New" xml:space="preserve"><value>新增</value></data>
@@ -5512,7 +5512,7 @@
   <data name="Workbench.Shortcuts.Validation.ChooseTarget" xml:space="preserve"><value>選擇 一個 快速鍵 目標.</value></data>
   <data name="Workbench.Shortcuts.Validation.Conflict" xml:space="preserve"><value>{0} 是 已經 已指派 至 {1}.</value></data>
   <data name="Workbench.Shortcuts.Validation.Invalid" xml:space="preserve"><value>該 快速鍵 是 無效.</value></data>
-  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>使用 一個 Avalonia 索引鍵 名稱 此類 作為 P, Enter, 刪除, 或 F8.</value></data>
+  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>使用 一個 Avalonia 索引鍵 name 此類 作為 P, Enter, 刪除, 或 F8.</value></data>
   <data name="Workbench.Shortcuts.Validation.ModifierAndKeyExample" xml:space="preserve"><value>使用 於 至少 一個 修飾鍵 加 一個 索引鍵, 此類 作為 Ctrl+Shift+P.</value></data>
   <data name="Workbench.Shortcuts.Validation.ModifierAndKeyRequired" xml:space="preserve"><value>一個 修飾鍵 與 一個 索引鍵 是 必要.</value></data>
   <data name="Workbench.Shortcuts.Validation.OneKey" xml:space="preserve"><value>一個 快速鍵 可以 包含 僅 一個 非-修飾鍵 索引鍵.</value></data>
@@ -5634,7 +5634,7 @@
   <data name="Workbench.Status.Restored.One" xml:space="preserve"><value>已還原 {0:N0} 檔案 從 該 最新 工作台 操作.</value></data>
   <data name="Workbench.Status.Restored.Other" xml:space="preserve"><value>已還原 {0:N0} 檔案 從 該 最新 工作台 操作.</value></data>
   <data name="Workbench.Status.RestoreFailed" xml:space="preserve"><value>還原 失敗.</value></data>
-  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>選取 或 名稱 一個 目的地 欄位 之前 正在貼上 純文字 文字.</value></data>
+  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>選取 或 name 一個 目的地 欄位 之前 正在貼上 純文字 文字.</value></data>
   <data name="Workbench.Status.SendToIngestFailed" xml:space="preserve"><value>該 選取的檔案 可以 不 為 已傳送 至 擷取.</value></data>
   <data name="Workbench.Status.SentToIngest.One" xml:space="preserve"><value>已傳送 {0:N0} 已選取 檔案 至 擷取.</value></data>
   <data name="Workbench.Status.SentToIngest.Other" xml:space="preserve"><value>已傳送 {0:N0} 選取的檔案 至 擷取.</value></data>
@@ -5657,9 +5657,9 @@
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>可執行檔</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>載入</value></data>
   <data name="Workbench.Tools.MoreAutomation" xml:space="preserve"><value>更多</value></data>
-  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>名稱</value></data>
+  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
   <data name="Workbench.Tools.New" xml:space="preserve"><value>新增 工具</value></data>
-  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>已記錄 預留位置: {檔案} 用於 一個 選取 程序; 或 {檔案}, {目錄}, {檔案名稱}, {FileNameWithoutExtension}, {副檔名}, {索引}, 與 {計數} 用於 一個 程序 每 檔案. {檔案} 必須 為 其 自己的 引數.</value></data>
+  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>已記錄 預留位置: {檔案} 用於 一個 選取 程序; 或 {檔案}, {目錄}, {檔案名稱}, {FileNameWithoutExtension}, {Extension}, {索引}, 與 {計數} 用於 一個 程序 每 檔案. {檔案} 必須 為 其 自己的 引數.</value></data>
   <data name="Workbench.Tools.Preview" xml:space="preserve"><value>預覽 工具</value></data>
   <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>已檢閱 標題</value></data>
   <data name="Workbench.Tools.Run" xml:space="preserve"><value>執行</value></data>
@@ -5712,6 +5712,7 @@
   <data name="Operations.Choice.OperationJournalKind.Ingest" xml:space="preserve"><value>擷取</value></data>
   <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>組織</value></data>
   <data name="Operations.Choice.OperationJournalKind.OtherKind" xml:space="preserve"><value>其他</value></data>
+  <data name="Operations.Choice.OperationJournalKind.ReviewedChange" xml:space="preserve"><value>已檢閱的變更</value></data>
   <data name="Operations.Choice.OperationJournalKind.Sync" xml:space="preserve"><value>同步</value></data>
   <data name="Operations.Choice.OperationJournalState.Completed" xml:space="preserve"><value>已完成</value></data>
   <data name="Operations.Choice.OperationJournalState.Interrupted" xml:space="preserve"><value>已中斷 — 復原 可能 為 必要</value></data>
@@ -5790,7 +5791,7 @@
   <data name="Operations.Run.NoJournal" xml:space="preserve"><value>否 日誌 (資料夾-僅 隔離)</value></data>
   <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>設定 該 iTunes 資料庫 路徑 在 該 作用中 資料庫 設定.</value></data>
   <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>一個 iTunes 資料庫.itl 路徑 是 必要.</value></data>
-  <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>一個 iTunes 播放清單 名稱 是 必要.</value></data>
+  <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>一個 iTunes 播放清單 name 是 必要.</value></data>
   <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>一個 智慧-儲存空間 目的地 是 必要.</value></data>
   <data name="Operations.Count.Errors.One" xml:space="preserve"><value>{0:N0} 錯誤</value></data>
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} 錯誤</value></data>
@@ -5919,7 +5920,7 @@
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>已更新 {0:N0} 檔案. 原始 是 已保留 用於 復原.</value></data>
   <data name="Fields.Status.SaveFailed" xml:space="preserve"><value>該 欄位 變更 可以 不 為 已儲存. 建議 變更 保留 就緒 至 重試.</value></data>
   <data name="Fields.Status.UserStringExists" xml:space="preserve"><value>使用者 字串 “{0}” 是 已經 在 該 清單.</value></data>
-  <data name="Fields.Status.UserStringNameRequired" xml:space="preserve"><value>Enter 一個 使用者-字串 名稱.</value></data>
+  <data name="Fields.Status.UserStringNameRequired" xml:space="preserve"><value>Enter 一個 使用者-字串 name.</value></data>
   <data name="Fields.Title.Files.One" xml:space="preserve"><value>編輯 欄位 — {0:N0} 檔案</value></data>
   <data name="Fields.Title.Files.Other" xml:space="preserve"><value>編輯 欄位 — {0:N0} 檔案</value></data>
   <data name="Fields.Title.Single" xml:space="preserve"><value>編輯 欄位 — {0}</value></data>
@@ -6008,8 +6009,8 @@
   <data name="MetadataEditor.Choice.Operation.Sequence" xml:space="preserve"><value>序列</value></data>
   <data name="MetadataEditor.Choice.Operation.Split" xml:space="preserve"><value>分割 值</value></data>
   <data name="MetadataEditor.Choice.Operation.TrimWhitespace" xml:space="preserve"><value>正規化 空白</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FileName" xml:space="preserve"><value>檔案 名稱</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>檔案 名稱 不含 副檔名</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FileName" xml:space="preserve"><value>檔案 name</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>檔案 name 不含 extension</value></data>
   <data name="MetadataEditor.Choice.PathComponent.FullPath" xml:space="preserve"><value>完整 路徑</value></data>
   <data name="MetadataEditor.Choice.PathComponent.ParentFolder" xml:space="preserve"><value>上層 資料夾</value></data>
   <data name="MetadataEditor.Choice.ValueOrder.Ascending" xml:space="preserve"><value>遞增</value></data>
@@ -6120,4 +6121,119 @@
   <data name="About.License.Agreement" xml:space="preserve"><value>授權協議</value></data>
   <data name="About.License.Copy" xml:space="preserve"><value>複製授權</value></data>
   <data name="About.Trademarks" xml:space="preserve"><value>第三方產品名稱與商標均屬其各自所有者。</value></data>
+  <data name="Transcode.Title" xml:space="preserve"><value>轉碼音訊</value></data>
+  <data name="Transcode.Action.Open" xml:space="preserve"><value>轉碼…</value></data>
+  <data name="Transcode.Action.Close" xml:space="preserve"><value>關閉轉碼編輯器</value></data>
+  <data name="Transcode.Action.ApplyReady" xml:space="preserve"><value>套用已就緒檔案</value></data>
+  <data name="Transcode.Action.ReplacePending" xml:space="preserve"><value>取代待處理轉碼</value></data>
+  <data name="Transcode.Selection.None" xml:space="preserve"><value>未選取檔案</value></data>
+  <data name="Transcode.Selection.Files.One" xml:space="preserve"><value>已擷取 {0:N0} 個檔案</value></data>
+  <data name="Transcode.Selection.Files.Other" xml:space="preserve"><value>已擷取 {0:N0} 個檔案</value></data>
+  <data name="Transcode.Preset.Title" xml:space="preserve"><value>預設</value></data>
+  <data name="Transcode.Preset.Custom" xml:space="preserve"><value>自訂設定</value></data>
+  <data name="Transcode.Preset.Name" xml:space="preserve"><value>預設名稱</value></data>
+  <data name="Transcode.Preset.SaveAs" xml:space="preserve"><value>另存新檔</value></data>
+  <data name="Transcode.Preset.Update" xml:space="preserve"><value>更新</value></data>
+  <data name="Transcode.Preset.DeleteTitle" xml:space="preserve"><value>刪除轉碼預設？</value></data>
+  <data name="Transcode.Preset.DeleteMessage" xml:space="preserve"><value>這會移除選取的具名預設，不會變更任何音訊檔案。</value></data>
+  <data name="Transcode.Encoding.Title" xml:space="preserve"><value>編碼</value></data>
+  <data name="Transcode.Format.Label" xml:space="preserve"><value>格式</value></data>
+  <data name="Transcode.Encoder.Label" xml:space="preserve"><value>編碼器</value></data>
+  <data name="Transcode.Encoder.Auto" xml:space="preserve"><value>自動</value></data>
+  <data name="Transcode.Encoder.WavPack" xml:space="preserve"><value>WavPack</value></data>
+  <data name="Transcode.Encoder.OptimFrogOfr" xml:space="preserve"><value>OptimFROG ofr</value></data>
+  <data name="Transcode.Encoder.OptimFrogOfs" xml:space="preserve"><value>OptimFROG ofs</value></data>
+  <data name="Transcode.Encoder.OptimFrogOff" xml:space="preserve"><value>OptimFROG off</value></data>
+  <data name="Transcode.RateMode.Label" xml:space="preserve"><value>位元率模式</value></data>
+  <data name="Transcode.Bitrate.Label" xml:space="preserve"><value>位元率 (kbps)</value></data>
+  <data name="Transcode.Quality.Label" xml:space="preserve"><value>品質</value></data>
+  <data name="Transcode.SampleRate.Label" xml:space="preserve"><value>取樣率</value></data>
+  <data name="Transcode.BitDepth.Label" xml:space="preserve"><value>位元深度</value></data>
+  <data name="Transcode.Metadata.Preserve" xml:space="preserve"><value>保留中繼資料</value></data>
+  <data name="Transcode.Artwork.Preserve" xml:space="preserve"><value>保留封面圖片</value></data>
+  <data name="Transcode.Correction.Create" xml:space="preserve"><value>支援時建立修正檔</value></data>
+  <data name="Transcode.Destination.Title" xml:space="preserve"><value>目的地與命名</value></data>
+  <data name="Transcode.Destination.Alongside" xml:space="preserve"><value>來源檔案旁</value></data>
+  <data name="Transcode.Destination.ReplaceOriginal" xml:space="preserve"><value>取代原始檔</value></data>
+  <data name="Transcode.Destination.ChosenFolder" xml:space="preserve"><value>選取的資料夾</value></data>
+  <data name="Transcode.Destination.Folder" xml:space="preserve"><value>輸出資料夾</value></data>
+  <data name="Transcode.Destination.PickerTitle" xml:space="preserve"><value>選擇轉碼輸出資料夾</value></data>
+  <data name="Transcode.Destination.PreserveLayout" xml:space="preserve"><value>保留相對來源配置</value></data>
+  <data name="Transcode.Destination.Flatten" xml:space="preserve"><value>攤平到單一資料夾</value></data>
+  <data name="Transcode.Naming.Label" xml:space="preserve"><value>檔案命名</value></data>
+  <data name="Transcode.Naming.Tokens" xml:space="preserve"><value>權杖：{Name}、{Extension}、{Codec}、{Encoder}、{SampleRate}、{BitsPerSample}</value></data>
+  <data name="Transcode.Collision.Label" xml:space="preserve"><value>輸出已存在時</value></data>
+  <data name="Transcode.Collision.Stop" xml:space="preserve"><value>停止</value></data>
+  <data name="Transcode.Collision.Suffix" xml:space="preserve"><value>加入數字尾碼</value></data>
+  <data name="Transcode.Concurrency.Title" xml:space="preserve"><value>CPU 使用率</value></data>
+  <data name="Transcode.Concurrency.Automatic" xml:space="preserve"><value>自動調適並行處理</value></data>
+  <data name="Transcode.Tools.Refresh" xml:space="preserve"><value>重新整理工具功能</value></data>
+  <data name="Transcode.Tools.Ready.One" xml:space="preserve"><value>{1:N0} 個工具中有 {0:N0} 個已就緒</value></data>
+  <data name="Transcode.Tools.Ready.Other" xml:space="preserve"><value>{1:N0} 個工具中有 {0:N0} 個已就緒</value></data>
+  <data name="Transcode.Value.Preserve" xml:space="preserve"><value>保留來源</value></data>
+  <data name="Transcode.Value.Unavailable" xml:space="preserve"><value>無法使用</value></data>
+  <data name="Transcode.Value.Bits.One" xml:space="preserve"><value>{0:N0} 位元</value></data>
+  <data name="Transcode.Value.Bits.Other" xml:space="preserve"><value>{0:N0} 位元</value></data>
+  <data name="Transcode.RateMode.Lossless" xml:space="preserve"><value>無損</value></data>
+  <data name="Transcode.RateMode.ConstantBitrate" xml:space="preserve"><value>固定位元率 (CBR)</value></data>
+  <data name="Transcode.RateMode.AverageBitrate" xml:space="preserve"><value>平均位元率 (ABR)</value></data>
+  <data name="Transcode.RateMode.VariableQuality" xml:space="preserve"><value>可變品質 (VBR)</value></data>
+  <data name="Transcode.RateMode.ConstrainedVariableBitrate" xml:space="preserve"><value>受限 VBR</value></data>
+  <data name="Transcode.RateMode.HybridBitrate" xml:space="preserve"><value>混合位元率</value></data>
+  <data name="Transcode.RateMode.HybridQuality" xml:space="preserve"><value>混合品質</value></data>
+  <data name="Transcode.Format.Flac" xml:space="preserve"><value>FLAC</value></data>
+  <data name="Transcode.Format.AlacM4a" xml:space="preserve"><value>M4A 中的 ALAC</value></data>
+  <data name="Transcode.Format.AacM4a" xml:space="preserve"><value>M4A 中的 AAC</value></data>
+  <data name="Transcode.Format.AacAdts" xml:space="preserve"><value>ADTS 中的 AAC</value></data>
+  <data name="Transcode.Format.Mp3" xml:space="preserve"><value>MP3</value></data>
+  <data name="Transcode.Format.OpusOgg" xml:space="preserve"><value>Ogg 中的 Opus</value></data>
+  <data name="Transcode.Format.VorbisOgg" xml:space="preserve"><value>Ogg 中的 Vorbis</value></data>
+  <data name="Transcode.Format.WavPack" xml:space="preserve"><value>WavPack</value></data>
+  <data name="Transcode.Format.PcmWave" xml:space="preserve"><value>WAV 中的 PCM</value></data>
+  <data name="Transcode.Format.PcmRf64" xml:space="preserve"><value>RF64 中的 PCM</value></data>
+  <data name="Transcode.Format.PcmAiff" xml:space="preserve"><value>AIFF 中的 PCM</value></data>
+  <data name="Transcode.Format.TrueAudio" xml:space="preserve"><value>True Audio (TTA)</value></data>
+  <data name="Transcode.Format.OptimFrog" xml:space="preserve"><value>OptimFROG OFR</value></data>
+  <data name="Transcode.Format.OptimFrogDualStream" xml:space="preserve"><value>OptimFROG DualStream (OFS)</value></data>
+  <data name="Transcode.Format.OptimFrogFloat" xml:space="preserve"><value>OptimFROG Float (OFF)</value></data>
+  <data name="Transcode.Pending.Field" xml:space="preserve"><value>轉碼</value></data>
+  <data name="Transcode.Dialog.ReplacePending.Title" xml:space="preserve"><value>取代待處理轉碼？</value></data>
+  <data name="Transcode.Dialog.ReplacePending.Message" xml:space="preserve"><value>至少一個選取的來源已有待處理轉碼。是否取代先前的轉碼設定？</value></data>
+  <data name="Transcode.Dialog.Partial.Title" xml:space="preserve"><value>部分檔案無法準備</value></data>
+  <data name="Transcode.Dialog.Partial.Message.One" xml:space="preserve"><value>{0:N0} 個檔案暫存失敗，仍可一起套用 {1:N0} 個已就緒檔案。</value></data>
+  <data name="Transcode.Dialog.Partial.Message.Other" xml:space="preserve"><value>{0:N0} 個檔案暫存失敗，仍可一起套用 {1:N0} 個已就緒檔案。</value></data>
+  <data name="Transcode.Error.NoReadyFiles" xml:space="preserve"><value>沒有可套用的已就緒轉碼輸出。</value></data>
+  <data name="Transcode.Status.Ready" xml:space="preserve"><value>選擇編碼設定，然後預覽待檢閱的變更。</value></data>
+  <data name="Transcode.Status.ToolsFailed" xml:space="preserve"><value>無法載入工具功能。</value></data>
+  <data name="Transcode.Status.Previewing" xml:space="preserve"><value>正在驗證轉碼設定…</value></data>
+  <data name="Transcode.Status.PreviewBlocked" xml:space="preserve"><value>請先解決列出的問題再預覽。</value></data>
+  <data name="Transcode.Status.PreviewFailed" xml:space="preserve"><value>轉碼預覽失敗。</value></data>
+  <data name="Transcode.Status.PreviewUnchanged" xml:space="preserve"><value>待處理轉碼未變更。</value></data>
+  <data name="Transcode.Status.PreviewReady.One" xml:space="preserve"><value>已將 {0:N0} 個轉碼加入「檢閱變更」。</value></data>
+  <data name="Transcode.Status.PreviewReady.Other" xml:space="preserve"><value>已將 {0:N0} 個轉碼加入「檢閱變更」。</value></data>
+  <data name="Transcode.Status.PendingAdded.One" xml:space="preserve"><value>已加入 {0:N0} 個待處理轉碼</value></data>
+  <data name="Transcode.Status.PendingAdded.Other" xml:space="preserve"><value>已加入 {0:N0} 個待處理轉碼</value></data>
+  <data name="Transcode.Status.PresetSaved" xml:space="preserve"><value>預設已儲存。</value></data>
+  <data name="Transcode.Status.PresetUpdated" xml:space="preserve"><value>預設已更新。</value></data>
+  <data name="Transcode.Status.PresetDeleted" xml:space="preserve"><value>預設已刪除。</value></data>
+  <data name="Transcode.Issue.FormatUnavailable" xml:space="preserve"><value>選取的輸出格式無法使用。</value></data>
+  <data name="Transcode.Issue.EncoderUnavailable" xml:space="preserve"><value>選取的編碼器無法使用。</value></data>
+  <data name="Transcode.Issue.SourceUnavailable" xml:space="preserve"><value>已設定的工具無法解碼某個來源檔案。</value></data>
+  <data name="Transcode.Issue.SettingsInvalid" xml:space="preserve"><value>選取的編碼器不支援這些編碼設定。</value></data>
+  <data name="Transcode.Issue.DestinationInvalid" xml:space="preserve"><value>輸出路徑無法使用或與其他檔案衝突。</value></data>
+  <data name="Transcode.Issue.CorrectionUnavailable" xml:space="preserve"><value>選取的編碼器無法建立要求的修正檔案。</value></data>
+  <data name="Transcode.Issue.DsdSettingsRequired" xml:space="preserve"><value>DSD 轉 PCM 需要取樣率和位元深度。</value></data>
+  <data name="Transcode.Issue.ReplaceUnsafe" xml:space="preserve"><value>此來源檔案並非恰好包含一個音訊節目，無法安全取代。</value></data>
+  <data name="Transcode.Issue.SeparatePrimaryAudio" xml:space="preserve"><value>個別輸出將僅包含主要音訊串流；其他串流將被省略。</value></data>
+  <data name="Transcode.Issue.OutputSessionOnly" xml:space="preserve"><value>輸出位於已設定的索引根目錄之外，因此僅能在此工作階段使用。</value></data>
+  <data name="Transcode.Issue.CatalogRefreshFailed" xml:space="preserve"><value>檔案已變更，但無法重新整理受影響的媒體庫項目。</value></data>
+  <data name="Transcode.Progress.Planning" xml:space="preserve"><value>正在規劃轉碼</value></data>
+  <data name="Transcode.Progress.Preparing" xml:space="preserve"><value>正在準備轉碼</value></data>
+  <data name="Transcode.Progress.EncodingUnknown" xml:space="preserve"><value>{0:N0} 個正在進行 · {1:hh\:mm\:ss}</value></data>
+  <data name="Transcode.Progress.Encoding" xml:space="preserve"><value>{0:N0} 個正在進行 · {1:hh\:mm\:ss} · 已編碼 {2:0}%</value></data>
+  <data name="Transcode.Progress.Reviewed" xml:space="preserve"><value>已檢閱 {0:N0} 個轉碼檔案</value></data>
+  <data name="Transcode.Issue.StageFailed" xml:space="preserve"><value>無法準備轉碼輸出。</value></data>
+  <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>部分中繼資料無法由輸出格式表示。</value></data>
+  <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>部分封面圖片無法由輸出格式表示。</value></data>
+  <data name="Common.Delete" xml:space="preserve"><value>刪除</value></data>
 </root>

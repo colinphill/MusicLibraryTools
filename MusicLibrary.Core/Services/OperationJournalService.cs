@@ -195,8 +195,11 @@ public sealed class OperationJournalService : IOperationJournalService
         {
             ct.ThrowIfCancellationRequested();
             ValidateSnapshot(action.SourcePath, action.SourceSnapshot, "restore source");
-            ValidateSnapshot(action.DestinationPath, action.DestinationSnapshot,
-                "restore destination");
+            if (action.Disposition == OperationRestoreDisposition.RestoreOriginal)
+                ValidateSnapshot(action.DestinationPath, action.DestinationSnapshot,
+                    "restore destination");
+            else
+                await ValidateCreatedOutputAsync(action, ct).ConfigureAwait(false);
             if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
                 await ValidateCompactBaseAsync(action, ct).ConfigureAwait(false);
             if (Exists(action.CollisionBackupPath))
@@ -220,7 +223,12 @@ public sealed class OperationJournalService : IOperationJournalService
                             ? "BEGIN\tRESTORE_BATCH"
                             : "BEGIN\tRESTORE",
                         .. restorePlan.Actions.Select(action =>
-                            action.PayloadKind == RecoveryPayloadKind.ReverseDelta
+                            action.Disposition ==
+                                OperationRestoreDisposition.RemoveCreatedOutput
+                                ? $"PLAN_REMOVE_CREATED\t{action.SourcePath}\t" +
+                                  $"{action.CollisionBackupPath}\t" +
+                                  $"{action.PostEditLength}\t{action.PostEditSha256}"
+                                : action.PayloadKind == RecoveryPayloadKind.ReverseDelta
                                 ? $"PLAN_RESTORE_COMPACT\t{action.SourcePath}\t" +
                                   $"{action.DestinationPath}\t" +
                                   $"{action.CollisionBackupPath}\t" +
@@ -299,15 +307,23 @@ public sealed class OperationJournalService : IOperationJournalService
                     bool collisionMoved = false;
                     try
                     {
-                        if (action.DestinationSnapshot.Exists)
+                        if (action.Disposition ==
+                            OperationRestoreDisposition.RemoveCreatedOutput)
                         {
-                            MovePath(action.DestinationPath, action.CollisionBackupPath);
-                            collisionMoved = true;
+                            MovePath(action.SourcePath, action.CollisionBackupPath);
                         }
-                        if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
-                            File.Move(preparedCompact[action], action.DestinationPath, false);
                         else
-                            MovePath(action.SourcePath, action.DestinationPath);
+                        {
+                            if (action.DestinationSnapshot.Exists)
+                            {
+                                MovePath(action.DestinationPath, action.CollisionBackupPath);
+                                collisionMoved = true;
+                            }
+                            if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
+                                File.Move(preparedCompact[action], action.DestinationPath, false);
+                            else
+                                MovePath(action.SourcePath, action.DestinationPath);
+                        }
                     }
                     catch
                     {
@@ -318,7 +334,10 @@ public sealed class OperationJournalService : IOperationJournalService
                     }
                     completed.Add((restorePlan, action));
                     WriteRestoreJournal(restorePlan.RestoreJournalPath,
-                        [action.PayloadKind == RecoveryPayloadKind.ReverseDelta
+                        [action.Disposition ==
+                            OperationRestoreDisposition.RemoveCreatedOutput
+                            ? $"REMOVE_CREATED\t{action.SourcePath}\t{action.CollisionBackupPath}"
+                            : action.PayloadKind == RecoveryPayloadKind.ReverseDelta
                             ? $"RESTORE_COMPACT\t{action.SourcePath}\t{action.DestinationPath}\t{action.CollisionBackupPath}"
                             : $"RESTORE\t{action.SourcePath}\t{action.DestinationPath}\t{action.CollisionBackupPath}"]);
                     progress?.Report(completed.Count);
@@ -349,6 +368,10 @@ public sealed class OperationJournalService : IOperationJournalService
                 DeleteFileStrict(action.CollisionBackupPath);
                 DeleteFileStrict(action.SourcePath);
             }
+            foreach (OperationRestoreAction action in actions.Where(item =>
+                         item.Disposition ==
+                         OperationRestoreDisposition.RemoveCreatedOutput))
+                DeleteFileStrict(action.CollisionBackupPath);
             foreach (OperationRestorePlan restorePlan in plan.Plans)
                 WriteRestoreJournal(
                     restorePlan.RestoreJournalPath,
@@ -357,7 +380,10 @@ public sealed class OperationJournalService : IOperationJournalService
                         : "CONSUMED\tRESTORE"]);
             return new(
                 completed.Count,
-                completed.Count(item => item.Action.DestinationSnapshot.Exists),
+                completed.Count(item =>
+                    item.Action.Disposition ==
+                        OperationRestoreDisposition.RestoreOriginal &&
+                    item.Action.DestinationSnapshot.Exists),
                 plan.Plans.Select(item => item.RestoreJournalPath).ToArray());
         }
         catch
@@ -369,7 +395,16 @@ public sealed class OperationJournalService : IOperationJournalService
             {
                 try
                 {
-                    if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
+                    if (action.Disposition ==
+                        OperationRestoreDisposition.RemoveCreatedOutput)
+                    {
+                        if (Exists(action.SourcePath))
+                            throw new IOException(
+                                $"A generated output reappeared during rollback: {action.SourcePath}");
+                        if (Exists(action.CollisionBackupPath))
+                            MovePath(action.CollisionBackupPath, action.SourcePath);
+                    }
+                    else if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
                     {
                         if (File.Exists(action.DestinationPath))
                             DeleteFileStrict(action.DestinationPath);
@@ -452,7 +487,11 @@ public sealed class OperationJournalService : IOperationJournalService
                 foreach (RestoreJournalAction action in actions.Reverse())
                 {
                     ct.ThrowIfCancellationRequested();
-                    if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
+                    if (action.Disposition ==
+                        OperationRestoreDisposition.RemoveCreatedOutput)
+                        await RollBackInterruptedCreatedRemovalAsync(action, ct)
+                            .ConfigureAwait(false);
+                    else if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
                         await RollBackInterruptedCompactRestoreAsync(action, ct)
                             .ConfigureAwait(false);
                     else
@@ -501,6 +540,15 @@ public sealed class OperationJournalService : IOperationJournalService
             DeleteFileStrict(action.CollisionBackupPath);
             DeleteFileStrict(action.SourcePath);
         }
+        foreach (RestoreJournalAction action in actions.Where(action =>
+                     action.Disposition ==
+                     OperationRestoreDisposition.RemoveCreatedOutput))
+        {
+            ct.ThrowIfCancellationRequested();
+            await ValidateCommittedCreatedRemovalAsync(action, ct)
+                .ConfigureAwait(false);
+            DeleteFileStrict(action.CollisionBackupPath);
+        }
         foreach (RestoreJournalTransaction transaction in transactions)
         {
             if (transaction.Terminal != RestoreJournalTerminal.Consumed)
@@ -511,6 +559,70 @@ public sealed class OperationJournalService : IOperationJournalService
                         : "CONSUMED\tRESTORE"]);
         }
         return OperationRestoreTransitionState.Consumed;
+    }
+
+    private static async Task RollBackInterruptedCreatedRemovalAsync(
+        RestoreJournalAction action,
+        CancellationToken ct)
+    {
+        bool outputExists = File.Exists(action.SourcePath);
+        bool backupExists = File.Exists(action.CollisionBackupPath);
+        if (backupExists)
+        {
+            if (outputExists)
+                throw new InvalidOperationException(
+                    $"The interrupted generated-output restore has two live copies: " +
+                    $"{action.SourcePath}");
+            await ValidateCreatedFileAsync(
+                action.CollisionBackupPath,
+                action.ExpectedLength,
+                action.ExpectedSha256,
+                ct).ConfigureAwait(false);
+            MovePath(action.CollisionBackupPath, action.SourcePath);
+            return;
+        }
+        if (!outputExists)
+            throw new InvalidOperationException(
+                $"The interrupted generated-output restore lost '{action.SourcePath}'.");
+        await ValidateCreatedFileAsync(
+            action.SourcePath,
+            action.ExpectedLength,
+            action.ExpectedSha256,
+            ct).ConfigureAwait(false);
+    }
+
+    private static async Task ValidateCommittedCreatedRemovalAsync(
+        RestoreJournalAction action,
+        CancellationToken ct)
+    {
+        if (File.Exists(action.SourcePath))
+            throw new InvalidOperationException(
+                $"A committed generated output removal reappeared: {action.SourcePath}");
+        if (File.Exists(action.CollisionBackupPath))
+            await ValidateCreatedFileAsync(
+                action.CollisionBackupPath,
+                action.ExpectedLength,
+                action.ExpectedSha256,
+                ct).ConfigureAwait(false);
+    }
+
+    private static async Task ValidateCreatedFileAsync(
+        string path,
+        long expectedLength,
+        string? expectedSha256,
+        CancellationToken ct)
+    {
+        if (!File.Exists(path) ||
+            expectedLength < 0 ||
+            new FileInfo(path).Length != expectedLength ||
+            string.IsNullOrWhiteSpace(expectedSha256) ||
+            !StringComparer.OrdinalIgnoreCase.Equals(
+                await HashFileAsync(path, ct).ConfigureAwait(false),
+                expectedSha256))
+        {
+            throw new InvalidOperationException(
+                $"A generated output recovery file changed: {path}");
+        }
     }
 
     private async Task RollBackInterruptedCompactRestoreAsync(
@@ -658,7 +770,10 @@ public sealed class OperationJournalService : IOperationJournalService
                         fields[2],
                         fields[3],
                         fields[4],
-                        fullPath));
+                        fullPath,
+                        OperationRestoreDisposition.RestoreOriginal,
+                        0,
+                        null));
                     break;
                 case "PLAN_RESTORE" when fields.Length > 3:
                     actions.Add(new(
@@ -667,7 +782,26 @@ public sealed class OperationJournalService : IOperationJournalService
                         fields[2],
                         fields[3],
                         null,
-                        fullPath));
+                        fullPath,
+                        OperationRestoreDisposition.RestoreOriginal,
+                        0,
+                        null));
+                    break;
+                case "PLAN_REMOVE_CREATED" when fields.Length > 4 &&
+                    long.TryParse(
+                        fields[3],
+                        CultureInfo.InvariantCulture,
+                        out long expectedLength):
+                    actions.Add(new(
+                        RecoveryPayloadKind.FullOriginal,
+                        fields[1],
+                        fields[1],
+                        fields[2],
+                        null,
+                        fullPath,
+                        OperationRestoreDisposition.RemoveCreatedOutput,
+                        expectedLength,
+                        fields[4]));
                     break;
                 case "APPLIED":
                     terminal = RestoreJournalTerminal.Applied;
@@ -768,6 +902,12 @@ public sealed class OperationJournalService : IOperationJournalService
     {
         foreach (OperationRestoreAction action in actions)
         {
+            if (action.Disposition ==
+                OperationRestoreDisposition.RemoveCreatedOutput)
+            {
+                yield return ItunesMediaMutation.Remove(action.SourcePath);
+                continue;
+            }
             if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
             {
                 yield return ItunesMediaMutation.Refresh(action.DestinationPath);
@@ -1023,9 +1163,12 @@ public sealed class OperationJournalService : IOperationJournalService
         string restoreRoot = Path.Combine(run.RunPath, ".MusicLibrary.App-restore",
             DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff") + "-" + Guid.NewGuid().ToString("N"));
         var eligible = entries
-            .Where(entry => entry.Kind is OperationEntryKind.Quarantined or OperationEntryKind.Moved or
+            .Where(entry => entry.Kind is OperationEntryKind.Quarantined or
+                    OperationEntryKind.Moved or OperationEntryKind.Created or
                     OperationEntryKind.Planned && entry.CurrentPath is not null)
             .Where(entry => entry.CurrentPath is not null && Exists(entry.CurrentPath))
+            .Where(entry => entry.Kind != OperationEntryKind.Created ||
+                !string.IsNullOrWhiteSpace(entry.PostEditSha256))
             .ToList();
         // A selected directory and one of its selected descendants cannot both be moved. Prefer
         // leaf entries; keep only empty/directly selected directories with no selected descendant.
@@ -1046,9 +1189,13 @@ public sealed class OperationJournalService : IOperationJournalService
             ct.ThrowIfCancellationRequested();
             string backup = Path.Combine(restoreRoot, "collisions",
                 Guid.NewGuid().ToString("N") + "-" + Path.GetFileName(entry.OriginalPath));
+            bool created = entry.Kind == OperationEntryKind.Created;
             actions.Add(new(
                 entry.CurrentPath!, entry.OriginalPath, backup,
-                Snapshot(entry.CurrentPath!), Snapshot(entry.OriginalPath), entry.Kind,
+                Snapshot(entry.CurrentPath!),
+                created ? OperationPathSnapshot.Missing(entry.OriginalPath) :
+                    Snapshot(entry.OriginalPath),
+                entry.Kind,
                 entry.PayloadKind,
                 entry.OriginalSha256,
                 entry.PostEditSha256,
@@ -1056,7 +1203,10 @@ public sealed class OperationJournalService : IOperationJournalService
                 entry.PostEditBytes,
                 entry.OriginalLastWriteTimeUtc,
                 entry.OriginalAttributes,
-                entry.PayloadSha256));
+                entry.PayloadSha256,
+                created
+                    ? OperationRestoreDisposition.RemoveCreatedOutput
+                    : OperationRestoreDisposition.RestoreOriginal));
         }
         return new(run, Path.Combine(restoreRoot, "restore.tsv"), actions,
             entries.Count - actions.Count);
@@ -1134,6 +1284,29 @@ public sealed class OperationJournalService : IOperationJournalService
                 $"Compact recovery base or payload changed after the edit: " +
                 $"{action.DestinationPath}. Undo was refused and its history was retained.",
                 error);
+        }
+    }
+
+    private static async Task ValidateCreatedOutputAsync(
+        OperationRestoreAction action,
+        CancellationToken ct)
+    {
+        if (!File.Exists(action.SourcePath) ||
+            action.PostEditLength < 0 ||
+            new FileInfo(action.SourcePath).Length != action.PostEditLength ||
+            string.IsNullOrWhiteSpace(action.PostEditSha256))
+        {
+            throw new InvalidOperationException(
+                $"A generated output changed after the operation: {action.SourcePath}. " +
+                "Undo was refused and its history was retained.");
+        }
+        string currentHash = await HashFileAsync(action.SourcePath, ct).ConfigureAwait(false);
+        if (!StringComparer.OrdinalIgnoreCase.Equals(
+                currentHash, action.PostEditSha256))
+        {
+            throw new InvalidOperationException(
+                $"A generated output changed after the operation: {action.SourcePath}. " +
+                "Undo was refused and its history was retained.");
         }
     }
 
@@ -1264,6 +1437,9 @@ public sealed class OperationJournalService : IOperationJournalService
                         break; // A replacement's recoverable backup is more useful than its install.
                     Put(entries, originalRoot, fields[2], fields[2], OperationEntryKind.Created);
                     break;
+                case "CREATE_REVERSIBLE" when fields.Length > 6:
+                    PutCreated(entries, originalRoot, fields);
+                    break;
                 case "DELTA_READY" when fields.Length > 10:
                     if (!completedCompactDestinations.Contains(fields[2]))
                         PutCompact(entries, originalRoot, fields, installed: false);
@@ -1373,6 +1549,43 @@ public sealed class OperationJournalService : IOperationJournalService
             RecoveryPayloadKind.FullOriginal,
             retainedBytes,
             retainedBytes);
+    }
+
+    private static void PutCreated(
+        Dictionary<string, OperationFileEntry> entries,
+        string originalRoot,
+        string[] fields)
+    {
+        long length = -1;
+        long lastWriteTicks = 0;
+        int attributes = 0;
+        bool valid = int.TryParse(fields[1], CultureInfo.InvariantCulture, out int version) &&
+            version == 1 &&
+            long.TryParse(fields[3], CultureInfo.InvariantCulture, out length) &&
+            length >= 0 &&
+            long.TryParse(fields[5], CultureInfo.InvariantCulture, out lastWriteTicks) &&
+            int.TryParse(fields[6], CultureInfo.InvariantCulture, out attributes) &&
+            fields[4].Length == 64;
+        if (!valid)
+            return;
+        string path = fields[2];
+        bool exists = File.Exists(path);
+        entries[path] = new OperationFileEntry(
+            path,
+            path,
+            Relative(originalRoot, path),
+            OperationEntryKind.Created,
+            exists,
+            false,
+            RecoveryPayloadKind.FullOriginal,
+            0,
+            0,
+            length,
+            null,
+            fields[4],
+            null,
+            new DateTime(lastWriteTicks, DateTimeKind.Utc),
+            (FileAttributes)attributes);
     }
 
     private static void PutCompact(
@@ -1714,6 +1927,8 @@ public sealed class OperationJournalService : IOperationJournalService
         "SortDownloads" or "OrganizeFiles" => OperationJournalKind.Organize,
         "CrossSyncMusic" or "AndroidSync" => OperationJournalKind.Sync,
         "UpdateCarCard" or "UpdateSmartStorage" => OperationJournalKind.Device,
+        "MusicLibraryManager" =>
+            OperationJournalKind.ReviewedChange,
         _ => OperationJournalKind.Other,
     };
 
@@ -1738,7 +1953,10 @@ public sealed class OperationJournalService : IOperationJournalService
         string DestinationPath,
         string CollisionBackupPath,
         string? PreparedPath,
-        string JournalPath);
+        string JournalPath,
+        OperationRestoreDisposition Disposition,
+        long ExpectedLength,
+        string? ExpectedSha256);
 
     private sealed record RestoreJournalTransaction(
         string Path,

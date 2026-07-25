@@ -21,7 +21,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMediaCatalogIntegration, ItunesMediaCatalogIntegration>();
         services.AddSingleton<IFileInventoryService, FileInventoryService>();
         services.AddSingleton<IReverseDeltaService, ReverseDeltaService>();
+        services.AddSingleton<IRecoverySpaceProbe>(
+            SystemRecoverySpaceProbe.Instance);
         services.AddSingleton<IFileMutationPlanExecutor, FileMutationPlanExecutor>();
+        services.AddSingleton<IReviewedChangeBatchService,
+            ReviewedChangeBatchService>();
+        services.AddSingleton<IReviewedChangeHistoryService,
+            ReviewedChangeHistoryService>();
         services.AddSingleton<IReviewedFileOperationService,
             ReviewedFileOperationService>();
         services.AddSingleton<IMetadataDocumentService, MetadataDocumentService>();
@@ -82,6 +88,26 @@ public static class ServiceCollectionExtensions
             services.AddSingleton(provider);
         services.AddSingleton<IUnifiedJobService, UnifiedJobService>();
         services.AddSingleton<IIndexBenchmarkService, IndexBenchmarkService>();
+        services.AddSingleton<IManagedProcessRunner,
+            ManagedProcessRunner>();
+        services.AddSingleton<IAudioTranscodeCapabilityService,
+            AudioTranscodeCapabilityService>();
+        services.AddSingleton<IAudioSourceLayoutInspector,
+            AudioSourceLayoutInspector>();
+        services.AddSingleton<IAudioTranscodeAdapter,
+            AudioTranscodeAdapter>();
+        services.AddSingleton<ITranscodeMetadataProjectionService,
+            TranscodeMetadataProjectionService>();
+        services.AddSingleton<ITranscodePcmReferenceService,
+            TranscodePcmReferenceService>();
+        services.AddSingleton<ITranscodeCorrectionVerificationService,
+            TranscodeCorrectionVerificationService>();
+        services.AddSingleton<IAudioTranscodeService,
+            AudioTranscodeService>();
+        services.AddSingleton<ITranscodeWorkScheduler,
+            TranscodeWorkScheduler>();
+        services.AddSingleton<ITranscodePresetStore,
+            TranscodePresetStore>();
         services.AddSingleton<IFfmpegRunner, FfmpegRunner>();
         services.AddSingleton<IFpcalcRunner, FpcalcRunner>();
         services.AddSingleton<IOptimFrogRunner,

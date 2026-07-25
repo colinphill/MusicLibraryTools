@@ -160,6 +160,26 @@ public interface IMetadataOperationService
         MetadataOperationPlan plan,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default);
+
+    Task<MetadataOperationStageResult> StageAsync(
+        MetadataOperationPlan plan,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default) =>
+        Task.FromException<MetadataOperationStageResult>(
+            new NotSupportedException(
+                "Reviewed metadata staging is not implemented."));
+
+    Task CompleteStagedApplyAsync(
+        MetadataOperationStageResult stage,
+        IReadOnlyList<string> journalPaths,
+        bool recordHistory,
+        CancellationToken ct = default) =>
+        Task.CompletedTask;
+
+    Task DiscardStageAsync(
+        MetadataOperationStageResult stage,
+        CancellationToken ct = default) =>
+        Task.CompletedTask;
 }
 
 public interface IEditHistoryService
@@ -1648,11 +1668,71 @@ public sealed class MetadataOperationService(
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
     {
+        MetadataOperationStageResult stage =
+            await StageAsync(plan, progress, ct)
+                .ConfigureAwait(false);
+        var journals = new List<string>();
+        RecoveryStorageSummary recoveryStorage = RecoveryStorageSummary.Empty;
+        try
+        {
+            foreach (FileMutationPlan participant in
+                     stage.Participants)
+            {
+                FileMutationSummary result =
+                    await mutations.ApplyAsync(
+                        participant,
+                        progress,
+                        ct).ConfigureAwait(false);
+                if (result.JournalPath is not null)
+                    journals.Add(result.JournalPath);
+                if (result.RecoveryStorage is not null)
+                    recoveryStorage = recoveryStorage.Add(result.RecoveryStorage);
+            }
+            await CompleteStagedApplyAsync(
+                    stage,
+                    journals,
+                    recordHistory: true,
+                    ct)
+                .ConfigureAwait(false);
+            progress?.Report(new(
+                OperationPhase.Completed,
+                stage.ChangedFiles,
+                stage.ChangedFiles,
+                Message:
+                    $"Saved metadata to " +
+                    $"{stage.ChangedFiles:N0} file(s)"));
+            return new(
+                stage.ChangedFiles,
+                [.. journals],
+                [.. stage.Plan.Files
+                    .Where(file => file.CanApply)
+                    .SelectMany(file => file.Issues)],
+                recoveryStorage.FullOriginalCount +
+                    recoveryStorage.ReverseDeltaCount > 0
+                    ? recoveryStorage
+                    : null);
+        }
+        finally
+        {
+            await DiscardStageAsync(
+                    stage,
+                    CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+    }
+
+    public async Task<MetadataOperationStageResult> StageAsync(
+        MetadataOperationPlan plan,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
         ArgumentNullException.ThrowIfNull(plan);
         if (!plan.CanApply)
-            throw new InvalidOperationException("The metadata plan has no applicable changes or contains blockers.");
+            throw new InvalidOperationException(
+                "The metadata plan has no applicable changes or contains blockers.");
 
-        MetadataFilePlan[] changed = plan.Files.Where(file => file.CanApply).ToArray();
+        MetadataFilePlan[] changed =
+            [.. plan.Files.Where(file => file.CanApply)];
         foreach (MetadataFilePlan filePlan in changed)
         {
             ct.ThrowIfCancellationRequested();
@@ -1662,55 +1742,84 @@ public sealed class MetadataOperationService(
                 !filePlan.TagLayerEdits.IsDefaultOrEmpty ||
                 !filePlan.TagLayerConversions.IsDefaultOrEmpty ||
                 filePlan.Id3VersionEdit is not null,
-                ct);
+                ct).ConfigureAwait(false);
             if (current.Snapshot.Length != filePlan.Snapshot.Length ||
-                current.Snapshot.LastWriteTimeUtc != filePlan.Snapshot.LastWriteTimeUtc ||
+                current.Snapshot.LastWriteTimeUtc !=
+                filePlan.Snapshot.LastWriteTimeUtc ||
                 !StringComparer.Ordinal.Equals(
-                    current.Snapshot.MetadataHash, filePlan.Snapshot.MetadataHash))
+                    current.Snapshot.MetadataHash,
+                    filePlan.Snapshot.MetadataHash))
                 throw new InvalidOperationException(
                     $"Stale plan: metadata changed since preview: '{filePlan.Path}'.");
         }
 
-        var journals = new List<string>();
-        RecoveryStorageSummary recoveryStorage = RecoveryStorageSummary.Empty;
+        var stagedFiles = new List<MetadataStagedFile>();
+        var participants = new List<FileMutationPlan>();
         int completed = 0;
-        foreach (IGrouping<string, MetadataFilePlan> volume in changed.GroupBy(
-                     file => Path.GetPathRoot(file.Path) ?? "", PathComparer))
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            MetadataFilePlan[] group = volume.ToArray();
-            string commonRoot = CommonDirectory(group.Select(file => file.Path));
-            string container = commonRoot + ".MusicLibraryManager-recovery";
-            string recoveryRoot = Path.Combine(container,
-                DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff", CultureInfo.InvariantCulture) +
-                "-" + Guid.NewGuid().ToString("N"));
-            var staged = new List<string>();
-            try
+            foreach (IGrouping<string, MetadataFilePlan> volume in
+                     changed.GroupBy(
+                         file =>
+                             Path.GetPathRoot(file.Path) ?? "",
+                         PathComparer))
             {
-                var actions = new List<FileMutationAction>(group.Length);
+                ct.ThrowIfCancellationRequested();
+                MetadataFilePlan[] group = [.. volume];
+                string commonRoot =
+                    CommonDirectory(group.Select(file =>
+                        file.Path));
+                string container =
+                    commonRoot +
+                    ".MusicLibraryManager-recovery";
+                string recoveryRoot = Path.Combine(
+                    container,
+                    DateTime.UtcNow.ToString(
+                        "yyyyMMdd-HHmmssfff",
+                        CultureInfo.InvariantCulture) +
+                    "-" +
+                    Guid.NewGuid().ToString("N"));
+                var actions =
+                    new List<FileMutationAction>(
+                        group.Length);
                 foreach (MetadataFilePlan filePlan in group)
                 {
                     ct.ThrowIfCancellationRequested();
-                    progress?.Report(new(OperationPhase.Applying, completed, changed.Length,
-                        filePlan.Path, "Staging metadata changes"));
-                    string stage = Stage(filePlan, formats, fieldMappings);
-                    staged.Add(stage);
-                    var stageInfo = new FileInfo(stage);
+                    progress?.Report(new(
+                        OperationPhase.Applying,
+                        completed,
+                        changed.Length,
+                        filePlan.Path,
+                        "Staging metadata changes"));
+                    string stagedPath = Stage(
+                        filePlan,
+                        formats,
+                        fieldMappings);
+                    stagedFiles.Add(new(
+                        filePlan.Path,
+                        stagedPath));
+                    var stageInfo =
+                        new FileInfo(stagedPath);
                     actions.Add(new(
                         FileMutationKind.Replace,
-                        stage,
+                        stagedPath,
                         filePlan.Path,
                         Snapshot(stageInfo),
-                        new(true, false, filePlan.Snapshot.Length,
-                            filePlan.Snapshot.LastWriteTimeUtc)
+                        new(
+                            true,
+                            false,
+                            filePlan.Snapshot.Length,
+                            filePlan.Snapshot
+                                .LastWriteTimeUtc)
                         {
                             Path = filePlan.Path,
                         }));
                     completed++;
                 }
 
-                LibraryConfiguration? configuration = settings.GetSnapshot().Configuration;
-                var mutationPlan = new FileMutationPlan(
+                LibraryConfiguration? configuration =
+                    settings.GetSnapshot().Configuration;
+                participants.Add(new(
                     "MusicLibraryManager",
                     commonRoot,
                     recoveryRoot,
@@ -1718,43 +1827,69 @@ public sealed class MetadataOperationService(
                     [],
                     DateTimeOffset.UtcNow,
                     RetainRecovery: true,
-                    PolicyFingerprint: configuration?.PolicySnapshot.Fingerprint,
-                    LibraryId: configuration?.LibraryId,
-                    RecoveryPayloadPolicy: RecoveryPayloadPolicy.AdaptiveReverseDelta);
-                FileMutationSummary result = await mutations.ApplyAsync(mutationPlan, progress, ct);
-                if (result.JournalPath is not null)
-                    journals.Add(result.JournalPath);
-                if (result.RecoveryStorage is not null)
-                    recoveryStorage = recoveryStorage.Add(result.RecoveryStorage);
+                    PolicyFingerprint:
+                        configuration?
+                            .PolicySnapshot.Fingerprint,
+                    LibraryId:
+                        configuration?.LibraryId,
+                    RecoveryPayloadPolicy:
+                        RecoveryPayloadPolicy
+                            .AdaptiveReverseDelta));
             }
-            finally
-            {
-                foreach (string stage in staged)
-                    try { if (File.Exists(stage)) File.Delete(stage); } catch { }
-            }
+            return new(
+                plan,
+                [.. participants],
+                [.. stagedFiles]);
         }
+        catch
+        {
+            foreach (MetadataStagedFile staged in
+                     stagedFiles)
+                TryDelete(staged.StagedPath);
+            throw;
+        }
+    }
 
+    public Task CompleteStagedApplyAsync(
+        MetadataOperationStageResult stage,
+        IReadOnlyList<string> journalPaths,
+        bool recordHistory,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(stage);
+        ct.ThrowIfCancellationRequested();
+        MetadataFilePlan[] changed =
+            [.. stage.Plan.Files.Where(file =>
+                file.CanApply)];
         if (reindex is not null)
-            QueueCacheRefresh(changed, reindex, formats, fieldMappings);
-
-        if (history is not null)
+            QueueCacheRefresh(
+                changed,
+                reindex,
+                formats,
+                fieldMappings);
+        if (recordHistory && history is not null)
             history.Record(new(
-                plan.Id,
-                plan.Name,
+                stage.Plan.Id,
+                stage.Plan.Name,
                 DateTimeOffset.UtcNow,
-                [.. journals],
-                [.. changed.Select(file => file.Path)],
-                plan.Recipe));
-        progress?.Report(new(
-            OperationPhase.Completed,
-            changed.Length,
-            changed.Length,
-            Message: $"Saved metadata to {changed.Length:N0} file(s)"));
-        return new(changed.Length, [.. journals],
-            [.. changed.SelectMany(file => file.Issues)],
-            recoveryStorage.FullOriginalCount + recoveryStorage.ReverseDeltaCount > 0
-                ? recoveryStorage
-                : null);
+                [.. journalPaths],
+                [.. changed.Select(file =>
+                    file.Path)],
+                stage.Plan.Recipe));
+        return Task.CompletedTask;
+    }
+
+    public Task DiscardStageAsync(
+        MetadataOperationStageResult stage,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(stage);
+        foreach (MetadataStagedFile file in stage.Files)
+        {
+            ct.ThrowIfCancellationRequested();
+            TryDelete(file.StagedPath);
+        }
+        return Task.CompletedTask;
     }
 
     private static void QueueCacheRefresh(
@@ -2303,7 +2438,9 @@ public sealed class MetadataOperationService(
     {
         string stage = Path.Combine(
             Path.GetDirectoryName(plan.Path)!,
-            $".{Path.GetFileName(plan.Path)}.{Guid.NewGuid():N}.workbench-stage");
+            $".{Path.GetFileNameWithoutExtension(plan.Path)}." +
+            $"{Guid.NewGuid():N}.workbench-stage" +
+            Path.GetExtension(plan.Path));
         try
         {
             IMediaFile file = MediaFile.GetFile(plan.Path, readOnly: false,
@@ -2385,6 +2522,19 @@ public sealed class MetadataOperationService(
         {
             Path = info.FullName,
         };
+
+    private static void TryDelete(string? path)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(path) &&
+                File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+        }
+    }
 
     private static IMetadataProvider? FindTagLayer(
         IMediaFile media,
@@ -2531,7 +2681,10 @@ public sealed class EditHistoryService : IEditHistoryService
                 entry.Paths.Length);
             OperationBrowseResult browse = await _journals.BrowseAsync(summary, ct);
             OperationFileEntry[] candidates = browse.Entries
-                .Where(item => item.Kind == OperationEntryKind.Quarantined &&
+                .Where(item => item.Kind is
+                        OperationEntryKind.Quarantined or
+                        OperationEntryKind.Moved or
+                        OperationEntryKind.Created &&
                     item.Exists && item.CurrentPath is not null)
                 .ToArray();
             OperationRestorePlan plan = await _journals.PreviewRestoreAsync(

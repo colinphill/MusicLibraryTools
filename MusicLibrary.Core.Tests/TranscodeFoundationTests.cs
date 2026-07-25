@@ -1,0 +1,1298 @@
+using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text.Json;
+using MusicFileUtilities;
+using MusicLibrary.Core.Models;
+using MusicLibrary.Core.Services;
+using MusicLibraryTools;
+using Xunit;
+
+namespace MusicLibrary.Core.Tests;
+
+public sealed class TranscodeFoundationTests
+{
+    [Fact]
+    public void FfmpegTableParserUsesExactIdentifiers()
+    {
+        const string output = """
+             A..... flac                 FLAC encoder
+             A..... flac_fixed           Test-only similarly named encoder
+             V..... h264                 Video encoder
+             A..... libmp3lame           MP3 encoder
+            """;
+
+        var values = AudioTranscodeCapabilityService.ParseToolTable(
+            output,
+            requiredFlag: 'A');
+
+        Assert.Contains("flac", values);
+        Assert.Contains("flac_fixed", values);
+        Assert.Contains("libmp3lame", values);
+        Assert.DoesNotContain("h264", values);
+        Assert.DoesNotContain("fla", values);
+    }
+
+    [Theory]
+    [InlineData(
+        " A..... libopus Opus\r\n A..... libvorbis Vorbis\r\n",
+        'A',
+        "libopus",
+        "libvorbis")]
+    [InlineData(
+        " DE matroska,webm Matroska / WebM\n D  mov,mp4,m4a QuickTime\n",
+        'D',
+        "webm",
+        "m4a")]
+    [InlineData(
+        " E  ipod iPod output\n E  wav WAV / WAVE\n",
+        'E',
+        "ipod",
+        "wav")]
+    public void FfmpegTableParserHandlesRepresentativePlatformOutput(
+        string output,
+        char flag,
+        string first,
+        string second)
+    {
+        ImmutableHashSet<string> values =
+            AudioTranscodeCapabilityService.ParseToolTable(
+                output,
+                flag);
+
+        Assert.Contains(first, values);
+        Assert.Contains(second, values);
+    }
+
+    [Fact]
+    public async Task SourceLayoutInspectorCountsAudioProgramsAndOtherStreams()
+    {
+        const string output = """
+            {
+              "programs": [
+                {
+                  "program_id": 1,
+                  "streams": [
+                    { "codec_type": "audio" },
+                    { "codec_type": "video" }
+                  ]
+                },
+                {
+                  "program_id": 2,
+                  "streams": [
+                    { "codec_type": "audio" }
+                  ]
+                }
+              ],
+              "streams": [
+                { "codec_type": "audio" },
+                { "codec_type": "video" },
+                { "codec_type": "audio" }
+              ]
+            }
+            """;
+        var service = new AudioSourceLayoutInspector(
+            new MemorySettings(),
+            new FixedProcessRunner(output));
+
+        AudioSourceLayout layout =
+            await service.InspectAsync(
+                "source.mkv",
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, layout.AudioStreamCount);
+        Assert.Equal(1, layout.NonAudioStreamCount);
+        Assert.Equal(2, layout.AudioProgramCount);
+    }
+
+    [Theory]
+    [InlineData(
+        true,
+        "transcode.replace-multiple-audio-programs",
+        OperationIssueSeverity.Blocker)]
+    [InlineData(
+        false,
+        "transcode.separate-primary-audio",
+        OperationIssueSeverity.Warning)]
+    public void AdditionalStreamsBlockReplacementButWarnForSeparateOutput(
+        bool replace,
+        string expectedCode,
+        OperationIssueSeverity expectedSeverity)
+    {
+        var issues = new List<OperationIssue>();
+
+        AudioTranscodeService.AddSourceLayoutIssues(
+            new(1, 1, 1),
+            replace,
+            "source.mkv",
+            issues);
+
+        OperationIssue issue = Assert.Single(issues);
+        Assert.Equal(expectedCode, issue.Code);
+        Assert.Equal(expectedSeverity, issue.Severity);
+    }
+
+    [Fact]
+    public async Task CapabilityProbeCachesUntilForcedAndAdvertisesOnlyExactEncoderMatches()
+    {
+        var settings = new MemorySettings();
+        var runner = new ProbeRunner();
+        using var service = new AudioTranscodeCapabilityService(
+            settings,
+            runner);
+
+        AudioTranscodeCapabilitySnapshot first =
+            await service.GetAsync(
+                ct: TestContext.Current.CancellationToken);
+        int calls = runner.Calls;
+        AudioTranscodeCapabilitySnapshot cached =
+            await service.GetAsync(
+                ct: TestContext.Current.CancellationToken);
+        AudioTranscodeCapabilitySnapshot forced =
+            await service.GetAsync(
+                forceRefresh: true,
+                TestContext.Current.CancellationToken);
+
+        Assert.Same(first, cached);
+        Assert.True(runner.Calls > calls);
+        AudioTranscodeFormatDescriptor flac = Assert.Single(
+            first.Formats,
+            item => item.Id == AudioTranscodeFormatIds.Flac);
+        Assert.Contains(
+            AudioTranscodeEncoderIds.Ffmpeg("flac"),
+            flac.EncoderIds);
+        Assert.DoesNotContain(
+            AudioTranscodeEncoderIds.Ffmpeg("flac_fixed"),
+            flac.EncoderIds);
+        Assert.Equal(first.ConfigurationVersion, forced.ConfigurationVersion);
+    }
+
+    [Fact]
+    public void SourceValidationRequiresAnExactFfmpegDemuxer()
+    {
+        AudioTranscodeCapabilitySnapshot snapshot =
+            SnapshotWithTools(
+                FfmpegProbe(demuxers: ["flac_fixed"]));
+        var issues = new List<OperationIssue>();
+
+        AudioTranscodeService.ValidateSourceCapability(
+            snapshot,
+            FfmpegEncoder(),
+            "source.flac",
+            issues);
+
+        OperationIssue issue = Assert.Single(issues);
+        Assert.Equal(
+            "transcode.source-container-unavailable",
+            issue.Code);
+    }
+
+    [Fact]
+    public void SourceValidationAcceptsAConfiguredFfmpegDemuxer()
+    {
+        AudioTranscodeCapabilitySnapshot snapshot =
+            SnapshotWithTools(
+                FfmpegProbe(demuxers: ["flac"]));
+        var issues = new List<OperationIssue>();
+
+        AudioTranscodeService.ValidateSourceCapability(
+            snapshot,
+            FfmpegEncoder(),
+            "source.flac",
+            issues);
+
+        Assert.Empty(issues);
+    }
+
+    [Theory]
+    [InlineData(".aac", "aac")]
+    [InlineData(".aiff", "aiff")]
+    [InlineData(".ape", "ape")]
+    [InlineData(".wma", "asf")]
+    [InlineData(".dsf", "dsf")]
+    [InlineData(".flac", "flac")]
+    [InlineData(".m4a", "mov")]
+    [InlineData(".mkv", "matroska")]
+    [InlineData(".webm", "webm")]
+    [InlineData(".mp3", "mp3")]
+    [InlineData(".mpc", "musepack")]
+    [InlineData(".opus", "ogg")]
+    [InlineData(".rf64", "wav")]
+    [InlineData(".tak", "tak")]
+    [InlineData(".tta", "tta")]
+    [InlineData(".wv", "wv")]
+    public void SourceValidationCoversAdvertisedInputFamilies(
+        string extension,
+        string demuxer)
+    {
+        AudioTranscodeCapabilitySnapshot snapshot =
+            SnapshotWithTools(
+                FfmpegProbe(demuxers: [demuxer]));
+        var issues = new List<OperationIssue>();
+
+        AudioTranscodeService.ValidateSourceCapability(
+            snapshot,
+            FfmpegEncoder(),
+            "source" + extension,
+            issues);
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void OptimFrogSourceRequiresItsMatchingDecoder()
+    {
+        AudioTranscodeCapabilitySnapshot snapshot =
+            SnapshotWithTools(
+                FfmpegProbe(demuxers: ["wav"]),
+                new AudioToolProbeResult(
+                    AudioTranscodeToolKind.OptimFrog,
+                    AudioToolProbeState.Ready,
+                    "tools",
+                    "tools",
+                    "test",
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "ofr"),
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "ofr"),
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "ofr"),
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "wav")));
+        var issues = new List<OperationIssue>();
+
+        AudioTranscodeService.ValidateSourceCapability(
+            snapshot,
+            FfmpegEncoder(),
+            "source.ofs",
+            issues);
+
+        OperationIssue issue = Assert.Single(issues);
+        Assert.Equal(
+            "transcode.source-decoder-unavailable",
+            issue.Code);
+    }
+
+    [Fact]
+    public void OptimFrogFloatContainerAcceptsOffDecoderForOfrExtension()
+    {
+        AudioTranscodeCapabilitySnapshot snapshot =
+            SnapshotWithTools(
+                FfmpegProbe(demuxers: ["wav"]),
+                new AudioToolProbeResult(
+                    AudioTranscodeToolKind.OptimFrog,
+                    AudioToolProbeState.Ready,
+                    "tools",
+                    "tools",
+                    "test",
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "off"),
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "off"),
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "off"),
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "wav")));
+        var issues = new List<OperationIssue>();
+
+        AudioTranscodeService.ValidateSourceCapability(
+            snapshot,
+            FfmpegEncoder(),
+            "float.ofr",
+            issues);
+
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void NumericCollisionSuffixProtectsCorrectionSidecarAsAUnit()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "MusicLibraryTools.Tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string destination =
+                Path.Combine(directory, "track.wv");
+            File.WriteAllText(
+                Path.ChangeExtension(destination, ".wvc"),
+                "unrelated");
+            var issues = new List<OperationIssue>();
+
+            string resolved =
+                AudioTranscodeService.ResolveCollision(
+                    Path.Combine(directory, "source.flac"),
+                    destination,
+                    AudioTranscodeCollisionPolicy.Suffix,
+                    new HashSet<string>(
+                        StringComparer.OrdinalIgnoreCase),
+                    issues,
+                    ".wvc");
+
+            Assert.Equal(
+                Path.Combine(directory, "track (2).wv"),
+                resolved);
+            Assert.Empty(issues);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(AudioTranscodeFormatIds.WavPack, ".wvc")]
+    [InlineData(
+        AudioTranscodeFormatIds.OptimFrogDualStream,
+        ".ofc")]
+    public void CorrectionFormatsUseStableSidecarExtensions(
+        string formatId,
+        string expected)
+    {
+        var format = new AudioTranscodeFormatDescriptor(
+            formatId,
+            "codec",
+            "container",
+            ".audio",
+            true,
+            []);
+        var settings = new AudioTranscodeSettings(
+            formatId,
+            AudioTranscodeEncoderIds.Automatic,
+            AudioTranscodeRateMode.HybridBitrate,
+            CreateCorrectionFile: true);
+
+        Assert.Equal(
+            expected,
+            AudioTranscodeService.CorrectionSidecarExtension(
+                format,
+                settings));
+    }
+
+    [Fact]
+    public void PreviewCapacityEstimateBlocksBeforeEncoding()
+    {
+        string source = Path.GetFullPath("large.flac");
+        string destination = Path.GetFullPath("output.flac");
+        var items = new List<AudioTranscodePlanItem>
+        {
+            new(
+                Guid.NewGuid(),
+                source,
+                destination,
+                new(
+                    true,
+                    false,
+                    100 * 1024 * 1024,
+                    DateTime.UtcNow)
+                {
+                    Path = source,
+                },
+                OperationPathSnapshot.Missing(destination),
+                "",
+                new(
+                    AudioTranscodeFormatIds.Flac,
+                    AudioTranscodeEncoderIds.Automatic,
+                    AudioTranscodeRateMode.Lossless),
+                []),
+        };
+        var format = new AudioTranscodeFormatDescriptor(
+            AudioTranscodeFormatIds.Flac,
+            "flac",
+            "flac",
+            ".flac",
+            true,
+            []);
+
+        AudioTranscodeService.AddPreviewCapacityIssues(
+            items,
+            format,
+            new FixedRecoverySpaceProbe(1024));
+
+        OperationIssue issue =
+            Assert.Single(items[0].Issues);
+        Assert.Equal(
+            "transcode.recovery-space",
+            issue.Code);
+        Assert.Equal(
+            OperationIssueSeverity.Blocker,
+            issue.Severity);
+    }
+
+    [Fact]
+    public void OutputOutsideConfiguredIndexRootsWarnsThatItIsSessionOnly()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "MusicLibraryTools.Tests",
+            Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(directory, "library");
+        string outside = Path.Combine(
+            directory,
+            "exports",
+            "track.flac");
+        string configPath = Path.Combine(
+            directory,
+            "library.xml");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var editable = new EditableLibraryConfig
+            {
+                IndexTargets =
+                [
+                    new IndexTargetEntry
+                    {
+                        Target = root,
+                    },
+                ],
+            };
+            editable.Save(configPath);
+            var issues = new List<OperationIssue>();
+
+            AudioTranscodeService.AddInternalCatalogIssues(
+                new LibraryConfiguration(configPath),
+                outside,
+                issues);
+
+            OperationIssue issue = Assert.Single(issues);
+            Assert.Equal(
+                "transcode.output-session-only",
+                issue.Code);
+            Assert.Equal(
+                OperationIssueSeverity.Warning,
+                issue.Severity);
+        }
+        finally
+        {
+            Directory.Delete(
+                directory,
+                recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DitherIsAppliedOnlyWhenIntegerPrecisionCanBeLost()
+    {
+        string source =
+            MediaFixtures.Path_("sample.flac");
+
+        Assert.False(
+            AudioTranscodeAdapter.RequiresDither(
+                source,
+                24));
+        Assert.True(
+            AudioTranscodeAdapter.RequiresDither(
+                source,
+                8));
+    }
+
+    [Fact]
+    public void OptimFrogFloatUsesFloatingPointPcmBridge()
+    {
+        var settings = new AudioTranscodeSettings(
+            AudioTranscodeFormatIds.OptimFrogFloat,
+            AudioTranscodeEncoderIds.OptimFrogOff,
+            AudioTranscodeRateMode.Lossless);
+
+        Assert.Equal(
+            "pcm_f32le",
+            AudioTranscodeAdapter.PcmBridgeCodec(
+                settings,
+                floatOutput: true));
+        Assert.Equal(
+            "high",
+            AudioTranscodeAdapter.OptimFrogFloatMode(
+                5));
+        Assert.Equal(
+            "extranew-light",
+            AudioTranscodeAdapter.OptimFrogFloatMode(
+                10));
+    }
+
+    [Fact]
+    public async Task TransformedPcmReferenceUsesReviewedConversionSettings()
+    {
+        using var source = MediaFixtures.Copy("sample.flac");
+        var runner = new ReferenceProcessRunner();
+        var service = new TranscodePcmReferenceService(
+            new MemorySettings(),
+            runner);
+        var settings = new AudioTranscodeSettings(
+            AudioTranscodeFormatIds.Flac,
+            AudioTranscodeEncoderIds.Ffmpeg("flac"),
+            AudioTranscodeRateMode.Lossless,
+            SampleRateHz: 48_000,
+            BitsPerSample: 8);
+        string stagedOutput = Path.Combine(
+            Path.GetDirectoryName(source.Path)!,
+            Guid.NewGuid().ToString("N") +
+            ".flac");
+
+        string reference = await service.CreateAsync(
+            source.Path,
+            settings,
+            stagedOutput,
+            TestContext.Current.CancellationToken);
+        try
+        {
+            Assert.True(File.Exists(reference));
+            int filterIndex = runner.Arguments.IndexOf("-af");
+            Assert.True(filterIndex >= 0);
+            string filter =
+                runner.Arguments[filterIndex + 1];
+            Assert.Contains(
+                "48000",
+                filter,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "dither_method=triangular_hp",
+                filter,
+                StringComparison.Ordinal);
+            Assert.Contains("-map_metadata", runner.Arguments);
+            Assert.Contains("flac", runner.Arguments);
+        }
+        finally
+        {
+            File.Delete(reference);
+        }
+    }
+
+    [Theory]
+    [InlineData(
+        AudioTranscodeToolKind.WavPack,
+        "wvunpack",
+        "-o")]
+    [InlineData(
+        AudioTranscodeToolKind.OptimFrog,
+        "ofs",
+        "--decode")]
+    public async Task CorrectionVerificationReconstructsWithNativeDecoder(
+        AudioTranscodeToolKind tool,
+        string expectedExecutable,
+        string expectedArgument)
+    {
+        using var source = MediaFixtures.Copy("sample.flac");
+        var runner = new ReferenceProcessRunner();
+        var service =
+            new TranscodeCorrectionVerificationService(
+                new MemorySettings(),
+                runner);
+
+        string reconstructed =
+            await service.ReconstructAsync(
+                source.Path,
+                tool,
+                TestContext.Current.CancellationToken);
+        try
+        {
+            Assert.True(File.Exists(reconstructed));
+            Assert.Contains(
+                expectedExecutable,
+                Path.GetFileNameWithoutExtension(
+                    runner.Executable),
+                StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(
+                expectedArgument,
+                runner.Arguments);
+        }
+        finally
+        {
+            File.Delete(reconstructed);
+        }
+    }
+
+    [Fact]
+    public async Task AutomaticSchedulerRunsIndependentSingleThreadedFilesConcurrently()
+    {
+        var scheduler = new TranscodeWorkScheduler(
+            new MemorySettings(),
+            processorCount: 4,
+            perVolumeLimit: 4);
+        int active = 0;
+        int maximumActive = 0;
+        TranscodeWorkItem<int>[] items =
+        [
+            .. Enumerable.Range(0, 8).Select(index =>
+                new TranscodeWorkItem<int>(
+                    index,
+                    index,
+                    $"volume-{index}",
+                    AudioEncoderThreadingMode.SingleThreaded)),
+        ];
+
+        IReadOnlyList<TranscodeWorkResult<int>> results =
+            await scheduler.RunAsync(
+                items,
+                async (_, _, ct) =>
+                {
+                    int now = Interlocked.Increment(ref active);
+                    UpdateMaximum(ref maximumActive, now);
+                    await Task.Delay(40, ct);
+                    Interlocked.Decrement(ref active);
+                },
+                ct: TestContext.Current.CancellationToken);
+
+        Assert.InRange(maximumActive, 2, 4);
+        Assert.All(results, result => Assert.True(result.Succeeded));
+        Assert.Equal(
+            Enumerable.Range(0, 8),
+            results.Select(result => result.Index));
+    }
+
+    [Fact]
+    public async Task SchedulerHonorsManualBudgetAndPerVolumeIoGate()
+    {
+        var scheduler = new TranscodeWorkScheduler(
+            new MemorySettings(),
+            processorCount: 8,
+            perVolumeLimit: 2);
+        scheduler.SaveSettings(new(
+            Automatic: false,
+            MaximumProcesses: 5));
+        int active = 0;
+        int maximumActive = 0;
+        TranscodeWorkItem<int>[] items =
+        [
+            .. Enumerable.Range(0, 10).Select(index =>
+                new TranscodeWorkItem<int>(
+                    index,
+                    index,
+                    "same-volume",
+                    AudioEncoderThreadingMode.SingleThreaded)),
+        ];
+
+        await scheduler.RunAsync(
+            items,
+            async (_, _, ct) =>
+            {
+                int now = Interlocked.Increment(ref active);
+                UpdateMaximum(ref maximumActive, now);
+                await Task.Delay(30, ct);
+                Interlocked.Decrement(ref active);
+            },
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, maximumActive);
+    }
+
+    [Fact]
+    public async Task ControllableEncoderThreadAllocationsStayWithinCpuBudget()
+    {
+        var scheduler = new TranscodeWorkScheduler(
+            new MemorySettings(),
+            processorCount: 6,
+            perVolumeLimit: 6);
+        int activeThreads = 0;
+        int maximumThreads = 0;
+        TranscodeWorkItem<int>[] items =
+        [
+            .. Enumerable.Range(0, 8).Select(index =>
+                new TranscodeWorkItem<int>(
+                    index,
+                    index,
+                    $"volume-{index}",
+                    AudioEncoderThreadingMode.ThreadCountControllable)),
+        ];
+
+        await scheduler.RunAsync(
+            items,
+            async (_, threads, ct) =>
+            {
+                int now = Interlocked.Add(
+                    ref activeThreads,
+                    threads);
+                UpdateMaximum(ref maximumThreads, now);
+                await Task.Delay(30, ct);
+                Interlocked.Add(
+                    ref activeThreads,
+                    -threads);
+            },
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.InRange(maximumThreads, 1, 6);
+    }
+
+    [Fact]
+    public async Task CancellationStopsQueuedAndActiveSchedulerWork()
+    {
+        var scheduler = new TranscodeWorkScheduler(
+            new MemorySettings(),
+            processorCount: 4,
+            perVolumeLimit: 4);
+        using var cancellation = new CancellationTokenSource();
+        int started = 0;
+        TranscodeWorkItem<int>[] items =
+        [
+            .. Enumerable.Range(0, 20).Select(index =>
+                new TranscodeWorkItem<int>(
+                    index,
+                    index,
+                    $"volume-{index}",
+                    AudioEncoderThreadingMode.SingleThreaded)),
+        ];
+
+        Task run = scheduler.RunAsync(
+            items,
+            async (_, _, ct) =>
+            {
+                if (Interlocked.Increment(ref started) == 2)
+                    cancellation.Cancel();
+                await Task.Delay(
+                    TimeSpan.FromSeconds(10),
+                    ct);
+            },
+            ct: cancellation.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => run);
+        Assert.True(started < items.Length);
+    }
+
+    [Fact]
+    public async Task ManagedProcessRunnerCapsDiagnosticsAndReportsLines()
+    {
+        var runner = new ManagedProcessRunner(
+            maximumCapturedCharacters: 4_096);
+        var lines = new RecordingProgress<string>();
+
+        ManagedProcessResult result = await runner.RunAsync(
+            ManagedProcessFixtureExecutable,
+            ["--managed-process", "large"],
+            standardOutputLines: lines,
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.InRange(result.StandardOutput.Length, 1, 4_096);
+        Assert.InRange(result.StandardError.Length, 1, 4_096);
+        Assert.Contains("stdout-0999", result.StandardOutput);
+        Assert.Contains("stderr-0999", result.StandardError);
+        Assert.Equal(1_000, lines.Values.Count);
+    }
+
+    [Fact]
+    public async Task ManagedProcessRunnerPassesArgumentsWithoutShellParsing()
+    {
+        var runner = new ManagedProcessRunner();
+        string[] arguments =
+        [
+            "--managed-process",
+            "arguments",
+            "value with spaces",
+            "$(not-a-command)",
+            "semi;colon",
+        ];
+
+        ManagedProcessResult result = await runner.RunAsync(
+            ManagedProcessFixtureExecutable,
+            arguments,
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            arguments.Skip(2),
+            JsonSerializer.Deserialize<string[]>(
+                result.StandardOutput));
+    }
+
+    [Fact]
+    public async Task ManagedProcessRunnerCancellationTerminatesPromptly()
+    {
+        var runner = new ManagedProcessRunner();
+        using var cancellation =
+            new CancellationTokenSource(
+                TimeSpan.FromMilliseconds(250));
+        var elapsed = Stopwatch.StartNew();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => runner.RunAsync(
+                ManagedProcessFixtureExecutable,
+                ["--managed-process", "wait"],
+                ct: cancellation.Token));
+
+        Assert.True(
+            elapsed.Elapsed < TimeSpan.FromSeconds(5),
+            $"Cancellation took {elapsed.Elapsed}.");
+    }
+
+    [Fact]
+    public async Task StagingUsesReviewedMetadataSourceOverrideForEncodingAndProjection()
+    {
+        using var source = MediaFixtures.Copy("sample.flac");
+        using var projected =
+            MediaFixtures.Copy("sample.flac");
+        string destination = Path.Combine(
+            Path.GetDirectoryName(source.Path)!,
+            Guid.NewGuid().ToString("N") +
+            ".flac");
+        var settings = new MemorySettings();
+        var adapter = new RecordingAdapter();
+        var projection =
+            new RecordingProjection();
+        var coordinator =
+            new FileMutationCoordinator();
+        var journals =
+            new OperationJournalService(coordinator);
+        var reviewed =
+            new ReviewedChangeBatchService(
+                new FileMutationPlanExecutor(
+                    coordinator),
+                journals);
+        var history =
+            new ReviewedChangeHistoryService(
+                settings,
+                journals);
+        var decodedVerifier =
+            new SuccessfulDecodedVerifier();
+        var pcmReference =
+            new RecordingPcmReference();
+        var service = new AudioTranscodeService(
+            settings,
+            new FixedCapabilityService(),
+            adapter,
+            projection,
+            new TranscodeWorkScheduler(
+                settings,
+                processorCount: 2),
+            reviewed,
+            history,
+            decodedVerifier,
+            pcmReference: pcmReference);
+        int sourceBits = checked((int)MediaFile.GetFile(
+                source.Path,
+                readOnly: true)
+            .Codecs.First().BitsPerSample);
+        AudioTranscodeSettings transcodeSettings =
+            new(
+                AudioTranscodeFormatIds.Flac,
+                AudioTranscodeEncoderIds.Ffmpeg(
+                    "flac"),
+                AudioTranscodeRateMode.Lossless,
+                BitsPerSample: sourceBits);
+        AudioTranscodeRequest request = new(
+            [source.Path],
+            transcodeSettings,
+            new(
+                AudioTranscodeDestinationMode.Alongside,
+                null,
+                true,
+                "{Name}{Extension}",
+                AudioTranscodeCollisionPolicy.Stop));
+        var item = new AudioTranscodePlanItem(
+            Guid.NewGuid(),
+            source.Path,
+            destination,
+            FileSnapshot(source.Path),
+            OperationPathSnapshot.Missing(destination),
+            FileHash(source.Path),
+            transcodeSettings,
+            []);
+        var plan = new AudioTranscodePlan(
+            Guid.NewGuid(),
+            request,
+            [item],
+            [],
+            DateTimeOffset.UtcNow,
+            1);
+        var operationProgress =
+            new RecordingProgress<OperationProgress>();
+
+        AudioTranscodeStageResult stage =
+            await service.StageWithSourceOverridesAsync(
+                plan,
+                new Dictionary<string, string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    [source.Path] = projected.Path,
+                },
+                operationProgress,
+                ct: TestContext.Current
+                    .CancellationToken);
+        try
+        {
+            Assert.Equal(
+                projected.Path,
+                adapter.SourcePath);
+            Assert.Equal(
+                projected.Path,
+                projection.SourcePath);
+            Assert.Single(stage.ReadyItems);
+            Assert.Contains(
+                operationProgress.Values,
+                value => value.Message?.Contains(
+                    "% encoded",
+                    StringComparison.Ordinal) == true);
+            Assert.Contains(
+                operationProgress.Values,
+                value => value.MessageKey ==
+                    "Transcode.Progress.Encoding" &&
+                    value.MessageArguments.Length == 3);
+            Assert.Equal(1, pcmReference.Calls);
+            DecodedAudioPair pair = Assert.Single(
+                Assert.Single(
+                    decodedVerifier.Pairs));
+            Assert.Equal(
+                pcmReference.LastPath,
+                pair.FirstPath);
+            Assert.False(
+                File.Exists(pcmReference.LastPath));
+        }
+        finally
+        {
+            await service.DiscardStageAsync(
+                stage,
+                TestContext.Current
+                    .CancellationToken);
+        }
+    }
+
+    private static void UpdateMaximum(
+        ref int target,
+        int value)
+    {
+        while (true)
+        {
+            int current = Volatile.Read(ref target);
+            if (value <= current ||
+                Interlocked.CompareExchange(
+                    ref target,
+                    value,
+                    current) == current)
+                return;
+        }
+    }
+
+    private static AudioTranscodeCapabilitySnapshot SnapshotWithTools(
+        params AudioToolProbeResult[] tools) =>
+        new(
+            [.. tools],
+            [],
+            [],
+            DateTimeOffset.UtcNow,
+            1);
+
+    private static AudioToolProbeResult FfmpegProbe(
+        IEnumerable<string> demuxers) =>
+        new(
+            AudioTranscodeToolKind.Ffmpeg,
+            AudioToolProbeState.Ready,
+            "ffmpeg",
+            "ffmpeg",
+            "test",
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "flac"),
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "flac"),
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "flac"),
+            demuxers.ToImmutableHashSet(
+                StringComparer.Ordinal));
+
+    private static AudioEncoderDescriptor FfmpegEncoder() =>
+        new(
+            AudioTranscodeEncoderIds.Ffmpeg("flac"),
+            AudioTranscodeToolKind.Ffmpeg,
+            "flac",
+            AudioEncoderThreadingMode.ThreadCountControllable,
+            [new(AudioTranscodeRateMode.Lossless)],
+            [],
+            [16, 24]);
+
+    private static OperationPathSnapshot FileSnapshot(
+        string path)
+    {
+        var info = new FileInfo(path);
+        return new(
+            true,
+            false,
+            info.Length,
+            info.LastWriteTimeUtc)
+        {
+            Path = Path.GetFullPath(path),
+        };
+    }
+
+    private static string FileHash(string path)
+    {
+        using FileStream stream = File.OpenRead(path);
+        return Convert.ToHexString(
+            SHA256.HashData(stream));
+    }
+
+    private static string ManagedProcessFixtureExecutable =>
+        Path.Combine(
+            AppContext.BaseDirectory,
+            "FpcalcFixture",
+            OperatingSystem.IsWindows()
+                ? "FpcalcFixture.exe"
+                : "FpcalcFixture");
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value) => Values.Add(value);
+    }
+
+    private sealed class FixedCapabilityService :
+        IAudioTranscodeCapabilityService
+    {
+        public Task<AudioTranscodeCapabilitySnapshot> GetAsync(
+            bool forceRefresh = false,
+            CancellationToken ct = default) =>
+            Task.FromResult(new AudioTranscodeCapabilitySnapshot(
+                [],
+                [
+                    new(
+                        AudioTranscodeFormatIds.Flac,
+                        "flac",
+                        "flac",
+                        ".flac",
+                        true,
+                        [
+                            AudioTranscodeEncoderIds
+                                .Ffmpeg("flac"),
+                        ]),
+                ],
+                [FfmpegEncoder()],
+                DateTimeOffset.UtcNow,
+                1));
+
+        public void Invalidate()
+        {
+        }
+    }
+
+    private sealed class RecordingAdapter :
+        IAudioTranscodeAdapter
+    {
+        public string? SourcePath { get; private set; }
+
+        public Task EncodeAsync(
+            string sourcePath,
+            string destinationPath,
+            AudioTranscodeSettings settings,
+            AudioEncoderDescriptor encoder,
+            int threadCount,
+            IProgress<AudioTranscodeAdapterProgress>?
+                progress = null,
+            CancellationToken ct = default)
+        {
+            SourcePath = sourcePath;
+            File.Copy(
+                sourcePath,
+                destinationPath);
+            progress?.Report(new(
+                "encoding",
+                TimeSpan.FromHours(1)));
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingProjection :
+        ITranscodeMetadataProjectionService
+    {
+        public string? SourcePath { get; private set; }
+
+        public IReadOnlyList<OperationIssue> Project(
+            string sourcePath,
+            string destinationPath,
+            bool preserveMetadata,
+            bool preserveArtwork)
+        {
+            SourcePath = sourcePath;
+            return [];
+        }
+    }
+
+    private sealed class SuccessfulDecodedVerifier :
+        IDecodedAudioVerificationService
+    {
+        public List<IReadOnlyList<DecodedAudioPair>>
+            Pairs { get; } = [];
+
+        public Task<AnalysisReport> VerifyAsync(
+            string ffmpegExecutable,
+            IReadOnlyList<DecodedAudioPair> pairs,
+            IProgress<DecodedAudioProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            Pairs.Add(pairs);
+            return Task.FromResult(
+                new AnalysisReport(
+                    "decoded",
+                    []));
+        }
+    }
+
+    private sealed class RecordingPcmReference :
+        ITranscodePcmReferenceService
+    {
+        public int Calls { get; private set; }
+        public string? LastPath { get; private set; }
+
+        public Task<string> CreateAsync(
+            string sourcePath,
+            AudioTranscodeSettings settings,
+            string stagedOutputPath,
+            CancellationToken ct = default)
+        {
+            Calls++;
+            LastPath = Path.Combine(
+                Path.GetDirectoryName(
+                    stagedOutputPath)!,
+                Guid.NewGuid().ToString("N") +
+                ".reference.flac");
+            File.Copy(
+                sourcePath,
+                LastPath);
+            return Task.FromResult(LastPath);
+        }
+    }
+
+    private sealed class FixedRecoverySpaceProbe(
+        long? available) : IRecoverySpaceProbe
+    {
+        public long? GetAvailableFreeSpace(
+            string root) =>
+            available;
+    }
+
+    private sealed class ProbeRunner : IManagedProcessRunner
+    {
+        public int Calls { get; private set; }
+
+        public Task<ManagedProcessResult> RunAsync(
+            string executable,
+            IReadOnlyList<string> arguments,
+            string? workingDirectory = null,
+            IProgress<string>? standardOutputLines = null,
+            CancellationToken ct = default)
+        {
+            Calls++;
+            if (!executable.Equals(
+                    "ffmpeg",
+                    StringComparison.OrdinalIgnoreCase))
+                throw new FileNotFoundException(executable);
+            string output = arguments.Last() switch
+            {
+                "-version" => "ffmpeg version test",
+                "-encoders" => """
+                    A..... flac
+                    A..... flac_fixed
+                    A..... libmp3lame
+                    A..... aac
+                    """,
+                "-decoders" => """
+                    A..... flac
+                    A..... mp3
+                    A..... aac
+                    """,
+                "-muxers" => """
+                    E flac
+                    E mp3
+                    E ipod
+                    E adts
+                    """,
+                "-demuxers" => """
+                    D flac
+                    D mp3
+                    D mov
+                    D aac
+                    """,
+                _ => "",
+            };
+            return Task.FromResult(
+                new ManagedProcessResult(0, output, ""));
+        }
+    }
+
+    private sealed class FixedProcessRunner(
+        string standardOutput) : IManagedProcessRunner
+    {
+        public Task<ManagedProcessResult> RunAsync(
+            string executable,
+            IReadOnlyList<string> arguments,
+            string? workingDirectory = null,
+            IProgress<string>? standardOutputLines = null,
+            CancellationToken ct = default) =>
+            Task.FromResult(
+                new ManagedProcessResult(
+                    0,
+                    standardOutput,
+                    ""));
+    }
+
+    private sealed class ReferenceProcessRunner :
+        IManagedProcessRunner
+    {
+        public string Executable { get; private set; } =
+            string.Empty;
+        public List<string> Arguments { get; } = [];
+
+        public Task<ManagedProcessResult> RunAsync(
+            string executable,
+            IReadOnlyList<string> arguments,
+            string? workingDirectory = null,
+            IProgress<string>? standardOutputLines = null,
+            CancellationToken ct = default)
+        {
+            Executable = executable;
+            Arguments.AddRange(arguments);
+            File.WriteAllText(
+                arguments[^1],
+                "reference");
+            return Task.FromResult(
+                new ManagedProcessResult(0, "", ""));
+        }
+    }
+
+    private sealed class MemorySettings : IAppSettings
+    {
+        private readonly ConcurrentDictionary<string, string>
+            _preferences = new(StringComparer.Ordinal);
+
+        public string? ConfigPath => null;
+        public LibraryConfiguration? Configuration => null;
+        public AppConfigurationSnapshot GetSnapshot() =>
+            new(null, null, 1);
+        public event EventHandler? ConfigurationChanged
+        {
+            add
+            {
+            }
+            remove
+            {
+            }
+        }
+        public void LoadConfig(string path) =>
+            throw new NotSupportedException();
+        public string? GetRememberedConfigPath() => null;
+        public IReadOnlyList<string> RecentConfigPaths => [];
+        public void ClearRecentConfigs()
+        {
+        }
+        public string? GetPreference(string key) =>
+            _preferences.GetValueOrDefault(key);
+        public void SetPreference(string key, string? value)
+        {
+            if (value is null)
+                _preferences.TryRemove(key, out _);
+            else
+                _preferences[key] = value;
+        }
+    }
+}

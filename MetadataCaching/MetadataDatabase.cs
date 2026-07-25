@@ -2363,6 +2363,9 @@ namespace MetadataCaching
         /// Remove a single file's rows from the cache (used after an Organize move relocates it, so the
         /// stale entry at the old path is dropped). Returns false if the file isn't in the cache.
         /// </summary>
+        public bool ContainsFile(string fullPath)
+            => ResolveFileId(fullPath) is not null;
+
         public bool RemoveFile(string fullPath)
         {
             var id = ResolveFileId(fullPath);

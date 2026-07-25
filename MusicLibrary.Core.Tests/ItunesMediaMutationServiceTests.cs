@@ -78,6 +78,70 @@ public sealed class ItunesMediaMutationServiceTests
             PathComparer.Equals(issue.Path, untracked));
     }
 
+    [Fact]
+    public async Task MirroredAddImportsOnlyWhenReferenceSourceIsTracked()
+    {
+        using var fixture = CreateFixture();
+        string trackedOutput =
+            Path.Combine(fixture.MediaFolder, "tracked-output.mp3");
+        string untrackedSource =
+            Path.Combine(fixture.MediaFolder, "untracked-source.mp3");
+        string untrackedOutput =
+            Path.Combine(fixture.MediaFolder, "untracked-output.mp3");
+        File.Copy(
+            MediaFixtures.Path_("sample.mp3"),
+            trackedOutput);
+        File.Copy(
+            MediaFixtures.Path_("sample.mp3"),
+            untrackedSource);
+        File.Copy(
+            MediaFixtures.Path_("sample.mp3"),
+            untrackedOutput);
+        var service = new ItunesMediaMutationService(
+            new CommandLineAppSettings(
+                fixture.ConfigurationPath));
+
+        await using (IItunesMediaMutationSession session =
+                     await service.BeginAsync(
+                         [
+                             trackedOutput,
+                             untrackedOutput,
+                         ],
+                         backupFiles: false,
+                         TestContext.Current.CancellationToken))
+        {
+            ItunesMediaMutationResult result =
+                await session.CommitAsync(
+                    [
+                        ItunesMediaMutation.Add(
+                            trackedOutput,
+                            fixture.MediaPath),
+                        ItunesMediaMutation.Add(
+                            untrackedOutput,
+                            untrackedSource),
+                    ],
+                    TestContext.Current.CancellationToken);
+            await session.CompleteAsync(
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(1, result.ImportedTracks);
+        }
+
+        ItlTrack[] tracks =
+            [.. ItlLibrary.Load(fixture.LibraryPath).Tracks];
+        Assert.Equal(2, tracks.Length);
+        Assert.Contains(
+            tracks,
+            track => PathComparer.Equals(
+                track.Location,
+                trackedOutput));
+        Assert.DoesNotContain(
+            tracks,
+            track => PathComparer.Equals(
+                track.Location,
+                untrackedOutput));
+    }
+
     private static ItunesMediaIndexedFile Snapshot(string path)
     {
         var file = new FileInfo(path);

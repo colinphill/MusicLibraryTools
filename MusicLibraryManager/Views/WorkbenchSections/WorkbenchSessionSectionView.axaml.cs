@@ -1,5 +1,7 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using System.ComponentModel;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
@@ -68,6 +70,7 @@ public partial class WorkbenchSessionSectionView : UserControl
     }
 
     public event EventHandler? ColumnsRequested;
+    public event EventHandler? TranscodeRequested;
     public event Action? ColumnDefinitionsChanged;
 
     private void OnViewModelPropertyChanged(
@@ -89,6 +92,9 @@ public partial class WorkbenchSessionSectionView : UserControl
 
     public Button ColumnsButton =>
         WorkbenchColumnsButton;
+
+    public Button SelectionActionsButton =>
+        WorkbenchSessionActionsButton;
 
     public IReadOnlyList<AppGridColumnDefinition>
         ColumnDefinitions =>
@@ -120,6 +126,34 @@ public partial class WorkbenchSessionSectionView : UserControl
         object? sender,
         global::Avalonia.Interactivity.RoutedEventArgs e) =>
         ColumnsRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnTranscodeClick(
+        object? sender,
+        global::Avalonia.Interactivity.RoutedEventArgs e) =>
+        TranscodeRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnWorkbenchPointerPressed(
+        object? sender,
+        PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(WorkbenchGrid)
+                .Properties.PointerUpdateKind !=
+            PointerUpdateKind.RightButtonPressed)
+            return;
+        DataGridRow? row =
+            (e.Source as Control)?
+                .GetVisualAncestors()
+                .OfType<DataGridRow>()
+                .FirstOrDefault();
+        if (row?.DataContext is not
+            WorkbenchTrackViewModel item ||
+            WorkbenchGrid.SelectedItems.Contains(item))
+            return;
+        WorkbenchGrid.SelectedItems.Clear();
+        WorkbenchGrid.SelectedItems.Add(item);
+        WorkbenchGrid.SelectedItem = item;
+        _viewModel.SetSelectedFiles([item]);
+    }
 
     private void BuildColumns()
     {

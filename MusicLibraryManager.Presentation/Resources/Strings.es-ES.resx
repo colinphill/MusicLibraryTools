@@ -194,10 +194,10 @@
     <value>canales</value>
   </data>
   <data name="Column.Codec" xml:space="preserve">
-    <value>códec</value>
+    <value>Codec</value>
   </data>
   <data name="Column.CodecType" xml:space="preserve">
-    <value>tipo de códec</value>
+    <value>Codec tipo</value>
   </data>
   <data name="Column.Comment" xml:space="preserve">
     <value>comentario</value>
@@ -554,7 +554,7 @@
     <value>mixto valores; uno valor por línea</value>
   </data>
   <data name="FieldsEditor.UserStringName" xml:space="preserve">
-    <value>usuario-cadena nombre</value>
+    <value>usuario-cadena name</value>
   </data>
   <data name="Home.Action.OpenHealth" xml:space="preserve">
     <value>abrir estado</value>
@@ -683,7 +683,7 @@
     <value>fecha</value>
   </data>
   <data name="Health.AlbumMatrix.Description" xml:space="preserve">
-    <value>solo álbum carpetas con un problema son mostrado. ámbar celdas identificar ausente o conflicto artista, álbum, fecha, pista/disco número, o total valores; pasar el cursor un celda para su motivo. álbumes con el igual nombre son separado cuando sus carpeta rutas diferir.</value>
+    <value>solo álbum carpetas con un problema son mostrado. ámbar celdas identificar ausente o conflicto artista, álbum, fecha, pista/disco número, o total valores; pasar el cursor un celda para su motivo. álbumes con el igual name son separado cuando sus carpeta rutas diferir.</value>
   </data>
   <data name="Health.AlbumMatrix.Disc" xml:space="preserve">
     <value>disco</value>
@@ -710,16 +710,16 @@
     <value>total de pistas</value>
   </data>
   <data name="Health.Artist.CanonicalName" xml:space="preserve">
-    <value>canónico nombre</value>
+    <value>canónico name</value>
   </data>
   <data name="Health.Artist.CanonicalNameAutomation" xml:space="preserve">
-    <value>canónico artista nombre</value>
+    <value>canónico artista name</value>
   </data>
   <data name="Health.Artist.CanonicalTarget" xml:space="preserve">
     <value>canónico destino</value>
   </data>
   <data name="Health.Artist.Description" xml:space="preserve">
-    <value>elegir el canónico nombre para cada grupo, entonces marcar solo el variantes usted querer renombrado activo. filtro enviar un variante's pistas a biblioteca.</value>
+    <value>elegir el canónico name para cada grupo, entonces marcar solo el variantes usted querer renombrado activo. filtro enviar un variante's pistas a biblioteca.</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
     <value>{0} pista seleccionado entre activo variantes</value>
@@ -1157,7 +1157,7 @@
     <value>cancelar cargando</value>
   </data>
   <data name="Library.Filter.Placeholder" xml:space="preserve">
-    <value>filtro, o usar artista:nombre y no códec:MP3</value>
+    <value>filtro, o usar artista:Name y no Codec:MP3</value>
   </data>
   <data name="Library.Filter.Automation" xml:space="preserve">
     <value>filtro biblioteca</value>
@@ -1220,7 +1220,7 @@
     <value>conocido metadatos campo</value>
   </data>
   <data name="Library.Columns.CustomFieldPlaceholder" xml:space="preserve">
-    <value>nativo personalizado campo nombre</value>
+    <value>nativo personalizado campo name</value>
   </data>
   <data name="Library.Columns.Action.New" xml:space="preserve">
     <value>nuevo</value>
@@ -1244,10 +1244,10 @@
     <value>guardar el actual filtro, columnas, y ordenar</value>
   </data>
   <data name="Library.SavedViews.NamePlaceholder" xml:space="preserve">
-    <value>vista nombre</value>
+    <value>vista name</value>
   </data>
   <data name="Library.SavedViews.NameAutomation" xml:space="preserve">
-    <value>nuevo guardado vista nombre</value>
+    <value>nuevo guardado vista name</value>
   </data>
   <data name="Library.SavedViews.Action.Save" xml:space="preserve">
     <value>guardar vista</value>
@@ -1523,7 +1523,7 @@
     <value>vista previa lanzamiento carátula</value>
   </data>
   <data name="Library.Reports.NamePlaceholder" xml:space="preserve">
-    <value>informe nombre</value>
+    <value>informe name</value>
   </data>
   <data name="Library.Reports.OutputPlaceholder" xml:space="preserve">
     <value>salida archivo o carpeta</value>
@@ -1559,7 +1559,7 @@
     <value>escribir revisado informe</value>
   </data>
   <data name="Library.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>lista de reproducción nombre</value>
+    <value>lista de reproducción name</value>
   </data>
   <data name="Library.Playlists.OutputPlaceholder" xml:space="preserve">
     <value>salida archivo o carpeta</value>
@@ -1595,10 +1595,10 @@
     <value>eliminar</value>
   </data>
   <data name="Library.Tools.NamePlaceholder" xml:space="preserve">
-    <value>herramienta nombre</value>
+    <value>herramienta name</value>
   </data>
   <data name="Library.Tools.ExecutablePlaceholder" xml:space="preserve">
-    <value>ejecutable ruta o comando nombre</value>
+    <value>ejecutable ruta o comando name</value>
   </data>
   <data name="Library.Tools.Action.BrowseExecutable" xml:space="preserve">
     <value>examinar ejecutable</value>
@@ -1610,7 +1610,7 @@
     <value>examinar carpeta</value>
   </data>
   <data name="Library.Tools.ArgumentsDescription" xml:space="preserve">
-    <value>uno argumento por línea. compatible marcadores: {archivos}, {archivo}, {directorio}, {nombre de archivo}, {FileNameWithoutExtension}, {extensión}, {indexar}, y {cantidad}.</value>
+    <value>uno argumento por línea. compatible marcadores: {archivos}, {archivo}, {directorio}, {nombre de archivo}, {FileNameWithoutExtension}, {Extension}, {indexar}, y {cantidad}.</value>
   </data>
   <data name="Library.Tools.Warning" xml:space="preserve">
     <value>herramientas externas ejecutar sin un intérprete pero permanecer fuera aplicación recuperación. ejecutando siempre requerir confirmación.</value>
@@ -1769,7 +1769,7 @@
     <value>máximo eliminaciones</value>
   </data>
   <data name="Operations.PlaylistName" xml:space="preserve">
-    <value>lista de reproducción nombre</value>
+    <value>lista de reproducción name</value>
   </data>
   <data name="Operations.PurgeReviewed" xml:space="preserve">
     <value>purgar revisado recuperación historial</value>
@@ -1856,7 +1856,7 @@
     <value>archivo operación estado</value>
   </data>
   <data name="ReviewedFileOperation.TemplateAutomation" xml:space="preserve">
-    <value>archivo nombre plantilla</value>
+    <value>archivo name plantilla</value>
   </data>
   <data name="Shell.OpenLibraryConfiguration" xml:space="preserve">
     <value>abrir biblioteca configuración</value>
@@ -2153,13 +2153,13 @@
     <value>carátula</value>
   </data>
   <data name="Settings.Common.Codec" xml:space="preserve">
-    <value>códec</value>
+    <value>Codec</value>
   </data>
   <data name="Settings.Common.CollisionBehavior" xml:space="preserve">
     <value>conflicto comportamiento</value>
   </data>
   <data name="Settings.Common.FileNameTemplate" xml:space="preserve">
-    <value>archivo-nombre plantilla</value>
+    <value>archivo-name plantilla</value>
   </data>
   <data name="Settings.Common.FolderTemplate" xml:space="preserve">
     <value>carpeta plantilla</value>
@@ -2171,7 +2171,7 @@
     <value>dimensión máxima</value>
   </data>
   <data name="Settings.Common.Name" xml:space="preserve">
-    <value>nombre</value>
+    <value>Name</value>
   </data>
   <data name="Settings.Common.StableId" xml:space="preserve">
     <value>estable ID</value>
@@ -2378,7 +2378,7 @@
     <value>máximo pistas</value>
   </data>
   <data name="Settings.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>lista de reproducción nombre</value>
+    <value>lista de reproducción name</value>
   </data>
   <data name="Settings.Playlists.NamingArtwork" xml:space="preserve">
     <value>nomenclatura y carátula</value>
@@ -2444,7 +2444,7 @@
     <value>archivo lista de reproducción orígenes</value>
   </data>
   <data name="Settings.Playlists.SyncNameAutomation" xml:space="preserve">
-    <value>sincronizar lista de reproducción nombre</value>
+    <value>sincronizar lista de reproducción name</value>
   </data>
   <data name="Settings.Playlists.SyncTargetAutomation" xml:space="preserve">
     <value>cruzado-biblioteca sincronizar destino raíz</value>
@@ -2552,7 +2552,7 @@
     <value>OptimFROG herramientas directorio</value>
   </data>
   <data name="Settings.Tools.OptimFrogPlaceholder" xml:space="preserve">
-    <value>directorio que contiene ofr, ofs, y desactivado</value>
+    <value>directorio que contiene ofr, ofs, y off</value>
   </data>
   <data name="Settings.Tools.StoreToken" xml:space="preserve">
     <value>almacenar token</value>
@@ -2648,7 +2648,7 @@
     <value>el disco estrategia es el destino representación: conservar etiquetas conservar disco metadatos; cada otro estrategia quitar esos etiquetas y representa el disco en el álbum, carpeta, nombre de archivo, o continuo pista número.</value>
   </data>
   <data name="Settings.RootPolicy.FileNameTemplateAutomation" xml:space="preserve">
-    <value>perfil archivo nombre plantilla</value>
+    <value>perfil archivo name plantilla</value>
   </data>
   <data name="Settings.RootPolicy.FolderTemplateAutomation" xml:space="preserve">
     <value>perfil carpeta plantilla</value>
@@ -2723,7 +2723,7 @@
     <value>conservar Unicode</value>
   </data>
   <data name="Settings.RootPolicy.ProfileName" xml:space="preserve">
-    <value>perfil nombre</value>
+    <value>perfil name</value>
   </data>
   <data name="Settings.RootPolicy.ProfileTitle" xml:space="preserve">
     <value>raíz directiva perfil</value>
@@ -2807,7 +2807,7 @@
     <value>ingesta receta destino raíz</value>
   </data>
   <data name="Settings.Ingest.DisplayNamePlaceholder" xml:space="preserve">
-    <value>visualización nombre</value>
+    <value>visualización name</value>
   </data>
   <data name="Settings.Ingest.EnableRecipes" xml:space="preserve">
     <value>habilitar ingesta recetas</value>
@@ -2816,7 +2816,7 @@
     <value>habilitar receta</value>
   </data>
   <data name="Settings.Ingest.Encoder" xml:space="preserve">
-    <value>codificador (en blanco = automático)</value>
+    <value>Encoder (en blanco = automático)</value>
   </data>
   <data name="Settings.Ingest.ExtensionsPlaceholder" xml:space="preserve">
     <value>.flac, .m4a</value>
@@ -2855,7 +2855,7 @@
     <value>salida canales</value>
   </data>
   <data name="Settings.Ingest.OutputExtension" xml:space="preserve">
-    <value>salida extensión</value>
+    <value>salida extension</value>
   </data>
   <data name="Settings.Ingest.OutputExtensionPlaceholder" xml:space="preserve">
     <value>para ejemplo .flac</value>
@@ -2873,7 +2873,7 @@
     <value>conservar archivo asociado por predeterminado</value>
   </data>
   <data name="Settings.Ingest.ProfileName" xml:space="preserve">
-    <value>ingesta perfil nombre</value>
+    <value>ingesta perfil name</value>
   </data>
   <data name="Settings.Ingest.RecipeIdPlaceholder" xml:space="preserve">
     <value>estable receta ID</value>
@@ -2927,7 +2927,7 @@
     <value>formato familia</value>
   </data>
   <data name="Settings.FieldMappings.NativeField" xml:space="preserve">
-    <value>nativo campo nombre</value>
+    <value>nativo campo name</value>
   </data>
   <data name="Settings.FieldMappings.NativeFieldPlaceholder" xml:space="preserve">
     <value>formato-nativo clave</value>
@@ -3416,7 +3416,7 @@
     <value>el aplicación dejar archivo y carpeta nombre dónde ellos son.</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.Organized" xml:space="preserve">
-    <value>cuando archivos son organizar, ellos son nombre como “{0}”. si ese nombre ya existe, el aplicación usa el {1} regla.</value>
+    <value>cuando archivos son organizar, ellos son nombre como “{0}”. si ese name ya existe, el aplicación usa el {1} regla.</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Eager" xml:space="preserve">
     <value>carátula es leer y en caché durante indexando, por tanto examinar y carátula auditoría son inmediatamente completo. indexando se tomar más largo y el caché se usar más espacio.</value>
@@ -3548,7 +3548,7 @@
     <value>disco carpeta</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FileNamePrefix" xml:space="preserve">
-    <value>archivo-nombre prefijo</value>
+    <value>archivo-name prefijo</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FlattenContinuous" xml:space="preserve">
     <value>continuo pista número</value>
@@ -3869,7 +3869,7 @@
     <value>codificado por</value>
   </data>
   <data name="Settings.Choice.TagFields.EncoderSettings" xml:space="preserve">
-    <value>codificador configuración</value>
+    <value>Encoder configuración</value>
   </data>
   <data name="Settings.Choice.TagFields.Engineer" xml:space="preserve">
     <value>ingeniero</value>
@@ -3959,7 +3959,7 @@
     <value>original artista</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalFileName" xml:space="preserve">
-    <value>original archivo nombre</value>
+    <value>original archivo name</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalDate" xml:space="preserve">
     <value>fecha original</value>
@@ -4591,7 +4591,7 @@
   <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>previsualizando representación metadatos copiar</value></data>
   <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>leyendo artista nombre</value></data>
   <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>seleccionar organización reparaciones</value></data>
-  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>artista-nombre comparaciones</value></data>
+  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>artista-name comparaciones</value></data>
   <data name="Health.Progress.Unit.Files" xml:space="preserve"><value>archivos</value></data>
   <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>hallazgos</value></data>
   <data name="Health.Progress.Unit.Moves" xml:space="preserve"><value>movimientos</value></data>
@@ -5081,7 +5081,7 @@
   <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>pendiente operaciones</value></data>
   <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>pendiente operaciones</value></data>
   <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>personal recetas</value></data>
-  <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>receta nombre</value></data>
+  <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>receta Name</value></data>
   <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>reemplazar con</value></data>
   <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>un ligero borrador vista previa actualizar como usted editar el actual operación.</value></data>
   <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>representativo borrador</value></data>
@@ -5151,7 +5151,7 @@
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>conocido campo</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>etiqueta</value></data>
   <data name="Workbench.Columns.Metadata" xml:space="preserve"><value>metadatos</value></data>
-  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>elegir un conocido campo o introducir un personalizado campo nombre.</value></data>
+  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>elegir un conocido campo o introducir un personalizado campo name.</value></data>
   <data name="Workbench.Columns.Status.EnterLabel" xml:space="preserve"><value>Enter un columna etiqueta.</value></data>
   <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>nuevo sin guardar metadatos columna.</value></data>
   <data name="Workbench.Columns.Status.Removed" xml:space="preserve"><value>quitado metadatos columna '{0}'.</value></data>
@@ -5400,7 +5400,7 @@
   <data name="Workbench.Playlists.Description" xml:space="preserve"><value>vista previa lista de reproducción destinos y contenidos antes escribir salida.</value></data>
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>codificación</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>extendido información</value></data>
-  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>nombre</value></data>
+  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
   <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>uno por grupo</value></data>
   <data name="Workbench.Playlists.PathStyle" xml:space="preserve"><value>ruta estilo</value></data>
   <data name="Workbench.Playlists.Reviewed" xml:space="preserve"><value>revisado</value></data>
@@ -5418,16 +5418,16 @@
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>descendente</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>elegir campos, agrupación, y ordenar, entonces revisar cada salida destino.</value></data>
   <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>bits por muestra</value></data>
-  <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>tipo de códec</value></data>
+  <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>Codec tipo</value></data>
   <data name="Workbench.Reports.Field.File" xml:space="preserve"><value>archivo - {0}</value></data>
-  <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>archivo nombre</value></data>
+  <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>archivo Name</value></data>
   <data name="Workbench.Reports.Field.FileSize" xml:space="preserve"><value>archivo tamaño</value></data>
   <data name="Workbench.Reports.Field.MaximumBitrate" xml:space="preserve"><value>tasa de bits máxima</value></data>
   <data name="Workbench.Reports.Field.Metadata" xml:space="preserve"><value>metadatos - {0}</value></data>
   <data name="Workbench.Reports.Field.SampleRate" xml:space="preserve"><value>frecuencia de muestreo</value></data>
   <data name="Workbench.Reports.Field.Technical" xml:space="preserve"><value>técnico - {0}</value></data>
   <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>grupo por</value></data>
-  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>nombre</value></data>
+  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
   <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>no agrupación</value></data>
   <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>uno por grupo</value></data>
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>revisado</value></data>
@@ -5496,7 +5496,7 @@
   <data name="Workbench.Shortcuts.Command.Redo" xml:space="preserve"><value>rehacer</value></data>
   <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>repetir último receta</value></data>
   <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>deshacer último aplicar</value></data>
-  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>usar un modificador y un Avalonia clave nombre, para ejemplo Ctrl+Alt+R, meta+F8, o Ctrl+Shift+Enter.</value></data>
+  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>usar un modificador y un Avalonia clave name, para ejemplo Ctrl+Alt+R, meta+F8, o Ctrl+Shift+Enter.</value></data>
   <data name="Workbench.Shortcuts.GesturePlaceholder" xml:space="preserve"><value>gesto</value></data>
   <data name="Workbench.Shortcuts.InputWarning" xml:space="preserve"><value>atajos son ignorado mientras un texto o opción editor tiene foco. Ctrl+K y Ctrl+I permanecer reservado para global buscar y indexando.</value></data>
   <data name="Workbench.Shortcuts.New" xml:space="preserve"><value>nuevo</value></data>
@@ -5512,7 +5512,7 @@
   <data name="Workbench.Shortcuts.Validation.ChooseTarget" xml:space="preserve"><value>elegir un atajo destino.</value></data>
   <data name="Workbench.Shortcuts.Validation.Conflict" xml:space="preserve"><value>{0} es ya asignado a {1}.</value></data>
   <data name="Workbench.Shortcuts.Validation.Invalid" xml:space="preserve"><value>el atajo es no válido.</value></data>
-  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>usar un Avalonia clave nombre tal como P, Enter, eliminar, o F8.</value></data>
+  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>usar un Avalonia clave name tal como P, Enter, eliminar, o F8.</value></data>
   <data name="Workbench.Shortcuts.Validation.ModifierAndKeyExample" xml:space="preserve"><value>usar en mínimo uno modificador más un clave, tal como Ctrl+Shift+P.</value></data>
   <data name="Workbench.Shortcuts.Validation.ModifierAndKeyRequired" xml:space="preserve"><value>un modificador y un clave son obligatorio.</value></data>
   <data name="Workbench.Shortcuts.Validation.OneKey" xml:space="preserve"><value>un atajo puede contener solo uno no-modificador clave.</value></data>
@@ -5634,7 +5634,7 @@
   <data name="Workbench.Status.Restored.One" xml:space="preserve"><value>restaurado {0:N0} archivo de el más reciente área de trabajo operación.</value></data>
   <data name="Workbench.Status.Restored.Other" xml:space="preserve"><value>restaurado {0:N0} archivos de el más reciente área de trabajo operación.</value></data>
   <data name="Workbench.Status.RestoreFailed" xml:space="preserve"><value>restaurar fallido.</value></data>
-  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>seleccionar o nombre un destino campo antes pegando simple texto.</value></data>
+  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>seleccionar o name un destino campo antes pegando simple texto.</value></data>
   <data name="Workbench.Status.SendToIngestFailed" xml:space="preserve"><value>el archivos seleccionados podría no ser enviado a ingesta.</value></data>
   <data name="Workbench.Status.SentToIngest.One" xml:space="preserve"><value>enviado {0:N0} seleccionado archivo a ingesta.</value></data>
   <data name="Workbench.Status.SentToIngest.Other" xml:space="preserve"><value>enviado {0:N0} archivos seleccionados a ingesta.</value></data>
@@ -5657,9 +5657,9 @@
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>ejecutable</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>cargar</value></data>
   <data name="Workbench.Tools.MoreAutomation" xml:space="preserve"><value>más</value></data>
-  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>nombre</value></data>
+  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>Name</value></data>
   <data name="Workbench.Tools.New" xml:space="preserve"><value>nuevo herramienta</value></data>
-  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>documentado marcadores: {archivos} para uno selección proceso; o {archivo}, {directorio}, {nombre de archivo}, {FileNameWithoutExtension}, {extensión}, {indexar}, y {cantidad} para uno proceso por archivo. {archivos} debe ser su propio argumento.</value></data>
+  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>documentado marcadores: {archivos} para uno selección proceso; o {archivo}, {directorio}, {nombre de archivo}, {FileNameWithoutExtension}, {Extension}, {indexar}, y {cantidad} para uno proceso por archivo. {archivos} debe ser su propio argumento.</value></data>
   <data name="Workbench.Tools.Preview" xml:space="preserve"><value>vista previa herramienta</value></data>
   <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>revisado título</value></data>
   <data name="Workbench.Tools.Run" xml:space="preserve"><value>ejecutar</value></data>
@@ -5712,6 +5712,7 @@
   <data name="Operations.Choice.OperationJournalKind.Ingest" xml:space="preserve"><value>ingesta</value></data>
   <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>organización</value></data>
   <data name="Operations.Choice.OperationJournalKind.OtherKind" xml:space="preserve"><value>otro</value></data>
+  <data name="Operations.Choice.OperationJournalKind.ReviewedChange" xml:space="preserve"><value>Cambio revisado</value></data>
   <data name="Operations.Choice.OperationJournalKind.Sync" xml:space="preserve"><value>sincronización</value></data>
   <data name="Operations.Choice.OperationJournalState.Completed" xml:space="preserve"><value>completado</value></data>
   <data name="Operations.Choice.OperationJournalState.Interrupted" xml:space="preserve"><value>interrumpido — recuperación puede ser obligatorio</value></data>
@@ -5790,7 +5791,7 @@
   <data name="Operations.Run.NoJournal" xml:space="preserve"><value>no diario (carpeta-solo cuarentena)</value></data>
   <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>establecer el iTunes biblioteca ruta en el activo biblioteca configuración.</value></data>
   <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>un iTunes biblioteca.itl ruta es obligatorio.</value></data>
-  <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>un iTunes lista de reproducción nombre es obligatorio.</value></data>
+  <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>un iTunes lista de reproducción name es obligatorio.</value></data>
   <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>un inteligente-almacenamiento destino es obligatorio.</value></data>
   <data name="Operations.Count.Errors.One" xml:space="preserve"><value>{0:N0} error</value></data>
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} errores</value></data>
@@ -5919,7 +5920,7 @@
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>actualizado {0:N0} archivos. original son retenido para deshacer.</value></data>
   <data name="Fields.Status.SaveFailed" xml:space="preserve"><value>el campo cambios podría no ser guardado. propuesto cambios permanecer listo a reintentar.</value></data>
   <data name="Fields.Status.UserStringExists" xml:space="preserve"><value>usuario cadena “{0}” es ya en el lista.</value></data>
-  <data name="Fields.Status.UserStringNameRequired" xml:space="preserve"><value>Enter un usuario-cadena nombre.</value></data>
+  <data name="Fields.Status.UserStringNameRequired" xml:space="preserve"><value>Enter un usuario-cadena name.</value></data>
   <data name="Fields.Title.Files.One" xml:space="preserve"><value>editar campos — {0:N0} archivo</value></data>
   <data name="Fields.Title.Files.Other" xml:space="preserve"><value>editar campos — {0:N0} archivos</value></data>
   <data name="Fields.Title.Single" xml:space="preserve"><value>editar campos — {0}</value></data>
@@ -6008,8 +6009,8 @@
   <data name="MetadataEditor.Choice.Operation.Sequence" xml:space="preserve"><value>secuencia</value></data>
   <data name="MetadataEditor.Choice.Operation.Split" xml:space="preserve"><value>dividir valores</value></data>
   <data name="MetadataEditor.Choice.Operation.TrimWhitespace" xml:space="preserve"><value>normalizar espacios</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FileName" xml:space="preserve"><value>archivo nombre</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>archivo nombre sin extensión</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FileName" xml:space="preserve"><value>archivo name</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>archivo name sin extension</value></data>
   <data name="MetadataEditor.Choice.PathComponent.FullPath" xml:space="preserve"><value>completo ruta</value></data>
   <data name="MetadataEditor.Choice.PathComponent.ParentFolder" xml:space="preserve"><value>principal carpeta</value></data>
   <data name="MetadataEditor.Choice.ValueOrder.Ascending" xml:space="preserve"><value>ascendente</value></data>
@@ -6120,4 +6121,119 @@
   <data name="About.License.Agreement" xml:space="preserve"><value>Acuerdo de licencia</value></data>
   <data name="About.License.Copy" xml:space="preserve"><value>Copiar licencia</value></data>
   <data name="About.Trademarks" xml:space="preserve"><value>Los nombres de productos y las marcas de terceros pertenecen a sus respectivos propietarios.</value></data>
+  <data name="Transcode.Title" xml:space="preserve"><value>Transcodificar audio</value></data>
+  <data name="Transcode.Action.Open" xml:space="preserve"><value>Transcodificar…</value></data>
+  <data name="Transcode.Action.Close" xml:space="preserve"><value>Cerrar editor de transcodificación</value></data>
+  <data name="Transcode.Action.ApplyReady" xml:space="preserve"><value>Aplicar archivos listos</value></data>
+  <data name="Transcode.Action.ReplacePending" xml:space="preserve"><value>Reemplazar transcodificaciones pendientes</value></data>
+  <data name="Transcode.Selection.None" xml:space="preserve"><value>No hay archivos seleccionados</value></data>
+  <data name="Transcode.Selection.Files.One" xml:space="preserve"><value>{0:N0} archivo capturado</value></data>
+  <data name="Transcode.Selection.Files.Other" xml:space="preserve"><value>{0:N0} archivos capturados</value></data>
+  <data name="Transcode.Preset.Title" xml:space="preserve"><value>Preajuste</value></data>
+  <data name="Transcode.Preset.Custom" xml:space="preserve"><value>Configuración personalizada</value></data>
+  <data name="Transcode.Preset.Name" xml:space="preserve"><value>Nombre del preajuste</value></data>
+  <data name="Transcode.Preset.SaveAs" xml:space="preserve"><value>Guardar como</value></data>
+  <data name="Transcode.Preset.Update" xml:space="preserve"><value>Actualizar</value></data>
+  <data name="Transcode.Preset.DeleteTitle" xml:space="preserve"><value>¿Eliminar el preajuste de transcodificación?</value></data>
+  <data name="Transcode.Preset.DeleteMessage" xml:space="preserve"><value>Esto elimina el preajuste seleccionado. No se cambia ningún archivo de audio.</value></data>
+  <data name="Transcode.Encoding.Title" xml:space="preserve"><value>Codificación</value></data>
+  <data name="Transcode.Format.Label" xml:space="preserve"><value>Formato</value></data>
+  <data name="Transcode.Encoder.Label" xml:space="preserve"><value>Codificador</value></data>
+  <data name="Transcode.Encoder.Auto" xml:space="preserve"><value>Automático</value></data>
+  <data name="Transcode.Encoder.WavPack" xml:space="preserve"><value>WavPack</value></data>
+  <data name="Transcode.Encoder.OptimFrogOfr" xml:space="preserve"><value>OptimFROG ofr</value></data>
+  <data name="Transcode.Encoder.OptimFrogOfs" xml:space="preserve"><value>OptimFROG ofs</value></data>
+  <data name="Transcode.Encoder.OptimFrogOff" xml:space="preserve"><value>OptimFROG off</value></data>
+  <data name="Transcode.RateMode.Label" xml:space="preserve"><value>Modo de tasa</value></data>
+  <data name="Transcode.Bitrate.Label" xml:space="preserve"><value>Tasa de bits (kbps)</value></data>
+  <data name="Transcode.Quality.Label" xml:space="preserve"><value>Calidad</value></data>
+  <data name="Transcode.SampleRate.Label" xml:space="preserve"><value>Frecuencia de muestreo</value></data>
+  <data name="Transcode.BitDepth.Label" xml:space="preserve"><value>Profundidad de bits</value></data>
+  <data name="Transcode.Metadata.Preserve" xml:space="preserve"><value>Conservar metadatos</value></data>
+  <data name="Transcode.Artwork.Preserve" xml:space="preserve"><value>Conservar ilustraciones</value></data>
+  <data name="Transcode.Correction.Create" xml:space="preserve"><value>Crear archivo de corrección si es compatible</value></data>
+  <data name="Transcode.Destination.Title" xml:space="preserve"><value>Destino y nombres</value></data>
+  <data name="Transcode.Destination.Alongside" xml:space="preserve"><value>Junto a los archivos de origen</value></data>
+  <data name="Transcode.Destination.ReplaceOriginal" xml:space="preserve"><value>Reemplazar originales</value></data>
+  <data name="Transcode.Destination.ChosenFolder" xml:space="preserve"><value>Carpeta elegida</value></data>
+  <data name="Transcode.Destination.Folder" xml:space="preserve"><value>Carpeta de salida</value></data>
+  <data name="Transcode.Destination.PickerTitle" xml:space="preserve"><value>Elegir carpeta de salida de transcodificación</value></data>
+  <data name="Transcode.Destination.PreserveLayout" xml:space="preserve"><value>Conservar estructura relativa de origen</value></data>
+  <data name="Transcode.Destination.Flatten" xml:space="preserve"><value>Aplanar en una carpeta</value></data>
+  <data name="Transcode.Naming.Label" xml:space="preserve"><value>Nombres de archivo</value></data>
+  <data name="Transcode.Naming.Tokens" xml:space="preserve"><value>Tokens: {Name}, {Extension}, {Codec}, {Encoder}, {SampleRate}, {BitsPerSample}</value></data>
+  <data name="Transcode.Collision.Label" xml:space="preserve"><value>Cuando existe una salida</value></data>
+  <data name="Transcode.Collision.Stop" xml:space="preserve"><value>Detener</value></data>
+  <data name="Transcode.Collision.Suffix" xml:space="preserve"><value>Agregar sufijo numérico</value></data>
+  <data name="Transcode.Concurrency.Title" xml:space="preserve"><value>Uso de CPU</value></data>
+  <data name="Transcode.Concurrency.Automatic" xml:space="preserve"><value>Concurrencia adaptativa automática</value></data>
+  <data name="Transcode.Tools.Refresh" xml:space="preserve"><value>Actualizar capacidades de herramientas</value></data>
+  <data name="Transcode.Tools.Ready.One" xml:space="preserve"><value>{0:N0} de {1:N0} herramienta está lista</value></data>
+  <data name="Transcode.Tools.Ready.Other" xml:space="preserve"><value>{0:N0} de {1:N0} herramientas están listas</value></data>
+  <data name="Transcode.Value.Preserve" xml:space="preserve"><value>Conservar origen</value></data>
+  <data name="Transcode.Value.Unavailable" xml:space="preserve"><value>No disponible</value></data>
+  <data name="Transcode.Value.Bits.One" xml:space="preserve"><value>{0:N0} bit</value></data>
+  <data name="Transcode.Value.Bits.Other" xml:space="preserve"><value>{0:N0} bits</value></data>
+  <data name="Transcode.RateMode.Lossless" xml:space="preserve"><value>Sin pérdida</value></data>
+  <data name="Transcode.RateMode.ConstantBitrate" xml:space="preserve"><value>Tasa de bits constante (CBR)</value></data>
+  <data name="Transcode.RateMode.AverageBitrate" xml:space="preserve"><value>Tasa de bits media (ABR)</value></data>
+  <data name="Transcode.RateMode.VariableQuality" xml:space="preserve"><value>Calidad variable (VBR)</value></data>
+  <data name="Transcode.RateMode.ConstrainedVariableBitrate" xml:space="preserve"><value>VBR restringido</value></data>
+  <data name="Transcode.RateMode.HybridBitrate" xml:space="preserve"><value>Tasa de bits híbrida</value></data>
+  <data name="Transcode.RateMode.HybridQuality" xml:space="preserve"><value>Calidad híbrida</value></data>
+  <data name="Transcode.Format.Flac" xml:space="preserve"><value>FLAC</value></data>
+  <data name="Transcode.Format.AlacM4a" xml:space="preserve"><value>ALAC en M4A</value></data>
+  <data name="Transcode.Format.AacM4a" xml:space="preserve"><value>AAC en M4A</value></data>
+  <data name="Transcode.Format.AacAdts" xml:space="preserve"><value>AAC en ADTS</value></data>
+  <data name="Transcode.Format.Mp3" xml:space="preserve"><value>MP3</value></data>
+  <data name="Transcode.Format.OpusOgg" xml:space="preserve"><value>Opus en Ogg</value></data>
+  <data name="Transcode.Format.VorbisOgg" xml:space="preserve"><value>Vorbis en Ogg</value></data>
+  <data name="Transcode.Format.WavPack" xml:space="preserve"><value>WavPack</value></data>
+  <data name="Transcode.Format.PcmWave" xml:space="preserve"><value>PCM en WAV</value></data>
+  <data name="Transcode.Format.PcmRf64" xml:space="preserve"><value>PCM en RF64</value></data>
+  <data name="Transcode.Format.PcmAiff" xml:space="preserve"><value>PCM en AIFF</value></data>
+  <data name="Transcode.Format.TrueAudio" xml:space="preserve"><value>True Audio (TTA)</value></data>
+  <data name="Transcode.Format.OptimFrog" xml:space="preserve"><value>OptimFROG OFR</value></data>
+  <data name="Transcode.Format.OptimFrogDualStream" xml:space="preserve"><value>OptimFROG DualStream (OFS)</value></data>
+  <data name="Transcode.Format.OptimFrogFloat" xml:space="preserve"><value>OptimFROG Float (OFF)</value></data>
+  <data name="Transcode.Pending.Field" xml:space="preserve"><value>Transcodificación</value></data>
+  <data name="Transcode.Dialog.ReplacePending.Title" xml:space="preserve"><value>¿Reemplazar la transcodificación pendiente?</value></data>
+  <data name="Transcode.Dialog.ReplacePending.Message" xml:space="preserve"><value>Al menos un origen seleccionado ya tiene una transcodificación pendiente. ¿Reemplazar su intención anterior?</value></data>
+  <data name="Transcode.Dialog.Partial.Title" xml:space="preserve"><value>No se pudieron preparar algunos archivos</value></data>
+  <data name="Transcode.Dialog.Partial.Message.One" xml:space="preserve"><value>No se pudo preparar {0:N0} archivo. Aún se pueden aplicar juntos {1:N0} archivos listos.</value></data>
+  <data name="Transcode.Dialog.Partial.Message.Other" xml:space="preserve"><value>No se pudieron preparar {0:N0} archivos. Aún se pueden aplicar juntos {1:N0} archivos listos.</value></data>
+  <data name="Transcode.Error.NoReadyFiles" xml:space="preserve"><value>No hay ninguna salida transcodificada lista para aplicar.</value></data>
+  <data name="Transcode.Status.Ready" xml:space="preserve"><value>Elige la configuración de codificación y luego previsualiza el cambio revisado.</value></data>
+  <data name="Transcode.Status.ToolsFailed" xml:space="preserve"><value>No se pudieron cargar las capacidades de las herramientas.</value></data>
+  <data name="Transcode.Status.Previewing" xml:space="preserve"><value>Validando la configuración de transcodificación…</value></data>
+  <data name="Transcode.Status.PreviewBlocked" xml:space="preserve"><value>Resuelve los problemas indicados antes de la vista previa.</value></data>
+  <data name="Transcode.Status.PreviewFailed" xml:space="preserve"><value>Error en la vista previa de transcodificación.</value></data>
+  <data name="Transcode.Status.PreviewUnchanged" xml:space="preserve"><value>La transcodificación pendiente no cambió.</value></data>
+  <data name="Transcode.Status.PreviewReady.One" xml:space="preserve"><value>Se añadió {0:N0} transcodificación a Revisar cambios.</value></data>
+  <data name="Transcode.Status.PreviewReady.Other" xml:space="preserve"><value>Se añadieron {0:N0} transcodificaciones a Revisar cambios.</value></data>
+  <data name="Transcode.Status.PendingAdded.One" xml:space="preserve"><value>Se añadió {0:N0} transcodificación pendiente</value></data>
+  <data name="Transcode.Status.PendingAdded.Other" xml:space="preserve"><value>Se añadieron {0:N0} transcodificaciones pendientes</value></data>
+  <data name="Transcode.Status.PresetSaved" xml:space="preserve"><value>Preajuste guardado.</value></data>
+  <data name="Transcode.Status.PresetUpdated" xml:space="preserve"><value>Preajuste actualizado.</value></data>
+  <data name="Transcode.Status.PresetDeleted" xml:space="preserve"><value>Preajuste eliminado.</value></data>
+  <data name="Transcode.Issue.FormatUnavailable" xml:space="preserve"><value>El formato de salida seleccionado no está disponible.</value></data>
+  <data name="Transcode.Issue.EncoderUnavailable" xml:space="preserve"><value>El codificador seleccionado no está disponible.</value></data>
+  <data name="Transcode.Issue.SourceUnavailable" xml:space="preserve"><value>Un origen no se puede decodificar con las herramientas configuradas.</value></data>
+  <data name="Transcode.Issue.SettingsInvalid" xml:space="preserve"><value>La configuración de codificación no es compatible con el codificador seleccionado.</value></data>
+  <data name="Transcode.Issue.DestinationInvalid" xml:space="preserve"><value>Una ruta de salida no está disponible o entra en conflicto con otro archivo.</value></data>
+  <data name="Transcode.Issue.CorrectionUnavailable" xml:space="preserve"><value>El codificador seleccionado no puede crear el archivo de corrección solicitado.</value></data>
+  <data name="Transcode.Issue.DsdSettingsRequired" xml:space="preserve"><value>La conversión de DSD a PCM requiere frecuencia de muestreo y profundidad de bits.</value></data>
+  <data name="Transcode.Issue.ReplaceUnsafe" xml:space="preserve"><value>Este origen no se puede reemplazar de forma segura porque no contiene exactamente un programa de audio.</value></data>
+  <data name="Transcode.Issue.SeparatePrimaryAudio" xml:space="preserve"><value>La salida separada contendrá solo la secuencia de audio principal; se omitirán las secuencias adicionales.</value></data>
+  <data name="Transcode.Issue.OutputSessionOnly" xml:space="preserve"><value>La salida está fuera de las raíces de índice configuradas y solo permanecerá disponible en esta sesión.</value></data>
+  <data name="Transcode.Issue.CatalogRefreshFailed" xml:space="preserve"><value>Los archivos se modificaron, pero no se pudieron actualizar las entradas de biblioteca afectadas.</value></data>
+  <data name="Transcode.Progress.Planning" xml:space="preserve"><value>Planificando transcodificación</value></data>
+  <data name="Transcode.Progress.Preparing" xml:space="preserve"><value>Preparando transcodificación</value></data>
+  <data name="Transcode.Progress.EncodingUnknown" xml:space="preserve"><value>{0:N0} activos · {1:hh\:mm\:ss}</value></data>
+  <data name="Transcode.Progress.Encoding" xml:space="preserve"><value>{0:N0} activos · {1:hh\:mm\:ss} · {2:0}% codificado</value></data>
+  <data name="Transcode.Progress.Reviewed" xml:space="preserve"><value>Se revisaron {0:N0} archivos de transcodificación</value></data>
+  <data name="Transcode.Issue.StageFailed" xml:space="preserve"><value>No se pudo preparar una salida transcodificada.</value></data>
+  <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>Algunos metadatos no se pueden representar en el formato de salida.</value></data>
+  <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>Algunas ilustraciones no se pueden representar en el formato de salida.</value></data>
+  <data name="Common.Delete" xml:space="preserve"><value>Eliminar</value></data>
 </root>

@@ -442,6 +442,18 @@ public sealed record MetadataApplyResult(
     ImmutableArray<OperationIssue> Issues,
     RecoveryStorageSummary? RecoveryStorage = null);
 
+public sealed record MetadataStagedFile(
+    string LivePath,
+    string StagedPath);
+
+public sealed record MetadataOperationStageResult(
+    MetadataOperationPlan Plan,
+    ImmutableArray<FileMutationPlan> Participants,
+    ImmutableArray<MetadataStagedFile> Files)
+{
+    public int ChangedFiles => Files.Length;
+}
+
 public sealed record WorkbenchLoadRequest(
     IReadOnlyList<string> Sources,
     bool Recursive = true);

@@ -2,11 +2,12 @@ namespace MusicLibrary.Core.Models;
 
 public enum OperationJournalKind
 {
-    Ingest,
-    Organize,
-    Sync,
-    Device,
-    Other,
+    Ingest = 0,
+    Organize = 1,
+    Sync = 2,
+    Device = 3,
+    Other = 4,
+    ReviewedChange = 5,
 }
 
 public enum OperationJournalState
@@ -81,6 +82,12 @@ public sealed record OperationPathSnapshot(
         new(false, false, 0, DateTime.MinValue) { Path = System.IO.Path.GetFullPath(path) };
 }
 
+public enum OperationRestoreDisposition
+{
+    RestoreOriginal = 0,
+    RemoveCreatedOutput = 1,
+}
+
 public sealed record OperationRestoreAction(
     string SourcePath,
     string DestinationPath,
@@ -95,7 +102,8 @@ public sealed record OperationRestoreAction(
     long PostEditLength = 0,
     DateTime? OriginalLastWriteTimeUtc = null,
     FileAttributes? OriginalAttributes = null,
-    string? PayloadSha256 = null);
+    string? PayloadSha256 = null,
+    OperationRestoreDisposition Disposition = OperationRestoreDisposition.RestoreOriginal);
 
 public sealed record OperationRestorePlan(
     OperationJournalSummary Run,
@@ -103,7 +111,9 @@ public sealed record OperationRestorePlan(
     IReadOnlyList<OperationRestoreAction> Actions,
     int SkippedCount)
 {
-    public int CollisionCount => Actions.Count(action => action.DestinationSnapshot.Exists);
+    public int CollisionCount => Actions.Count(action =>
+        action.Disposition == OperationRestoreDisposition.RestoreOriginal &&
+        action.DestinationSnapshot.Exists);
     public bool CanApply => Actions.Count > 0;
 }
 

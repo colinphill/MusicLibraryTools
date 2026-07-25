@@ -300,13 +300,22 @@ public sealed class OperationsViewModelTests
 
         await viewModel.PreviewRestoreCommand.ExecuteAsync(null);
         Assert.True(viewModel.ShowRestorePreview);
-        Assert.Single(journals.PreviewEntries!);
-        Assert.Equal(recoverable.OriginalPath, journals.PreviewEntries![0].OriginalPath);
+        Assert.Equal(2, journals.PreviewEntries!.Count);
+        Assert.Contains(
+            journals.PreviewEntries,
+            entry =>
+                entry.Kind == OperationEntryKind.Quarantined &&
+                entry.OriginalPath == recoverable.OriginalPath);
+        Assert.Contains(
+            journals.PreviewEntries,
+            entry =>
+                entry.Kind == OperationEntryKind.Created &&
+                entry.OriginalPath == created.OriginalPath);
 
         await viewModel.ApplyRestoreCommand.ExecuteAsync(null);
         Assert.Equal(1, journals.ApplyCalls);
         Assert.False(viewModel.ShowRestorePreview);
-        Assert.Contains("Restored 1 item", viewModel.StatusText);
+        Assert.Contains("Restored 2 items", viewModel.StatusText);
     }
 
     [Fact]

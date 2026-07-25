@@ -71,9 +71,23 @@ public sealed partial class LocalizationCatalogTests
         "MP4",
         "AAC",
         "ALAC",
+        "CPU",
+        "CBR",
+        "ABR",
+        "VBR",
+        "ADTS",
+        "M4A",
+        "PCM",
+        "RF64",
+        "OFR",
+        "OFS",
+        "OFF",
+        "DualStream",
+        "Float",
         "WAV",
         "AIFF",
         "DSF",
+        "DSD",
         "ASF",
         "WMA",
         "APE",
@@ -275,11 +289,13 @@ public sealed partial class LocalizationCatalogTests
                     token);
                 if (expected == 0)
                     continue;
-                Assert.Equal(
-                    expected,
-                    CountProtectedToken(
-                        translated,
-                        token));
+                int actual = CountProtectedToken(
+                    translated,
+                    token);
+                Assert.True(
+                    expected == actual,
+                    $"{cultureName}:{key} changed protected token " +
+                    $"'{token}' ({expected} expected, {actual} actual).");
             }
 
             Assert.Equal(
@@ -505,6 +521,12 @@ public sealed partial class LocalizationCatalogTests
         "TB",
         "kbps",
         "Hz",
+        "Name",
+        "Extension",
+        "Codec",
+        "Encoder",
+        "SampleRate",
+        "BitsPerSample",
         "ADB",
         "adb",
         "fpcalc",

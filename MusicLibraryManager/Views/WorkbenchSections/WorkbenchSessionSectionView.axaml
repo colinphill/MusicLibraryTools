@@ -39,6 +39,9 @@
                       Command="{Binding MoveUpCommand}" />
             <MenuItem Header="{DynamicResource Loc.Workbench.Action.MoveDown}"
                       Command="{Binding MoveDownCommand}" />
+            <Separator />
+            <MenuItem Header="{DynamicResource Loc.Transcode.Action.Open}"
+                      Click="OnTranscodeClick" />
             <MenuItem Header="{DynamicResource Loc.Workbench.Session.Action.SendToIngest}"
                       Command="{Binding SendSelectedToIngestCommand}" />
             <Separator />
@@ -55,6 +58,7 @@
                             ItemsSource="{Binding Files}"
                             SelectedItem="{Binding SelectedFile, Mode=TwoWay}"
                             SelectionChanged="OnWorkbenchSelectionChanged"
+                            PointerPressed="OnWorkbenchPointerPressed"
                             AutomationProperties.Name="{DynamicResource Loc.Workbench.Session.GridAutomation}">
         <controls:AppDataGrid.ContextMenu>
           <ContextMenu>
@@ -64,6 +68,9 @@
                       Command="{Binding MoveUpCommand}" />
             <MenuItem Header="{DynamicResource Loc.Workbench.Action.MoveDown}"
                       Command="{Binding MoveDownCommand}" />
+            <Separator />
+            <MenuItem Header="{DynamicResource Loc.Transcode.Action.Open}"
+                      Click="OnTranscodeClick" />
             <MenuItem Header="{DynamicResource Loc.Workbench.Session.Action.SendToIngest}"
                       Command="{Binding SendSelectedToIngestCommand}" />
             <Separator />

@@ -90,7 +90,10 @@ public sealed record WorkbenchMetadataFieldRow(
             SelectedFileCount);
 }
 
-public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
+public partial class WorkbenchViewModel :
+    ObservableObject,
+    INavigationGuard,
+    IWorkbenchPendingChangeCoordinator
 {
     private const string RecentLocationsPreference = "manager.workbench.recentLocations.v1";
     private const string UiPreference = "manager.workbench.ui.v1";
@@ -117,6 +120,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private readonly IIngestSourceHandoff? _ingestHandoff;
     private readonly INavigationService? _navigation;
     private readonly ILocalizationService? _localization;
+    private readonly IAudioTranscodeService? _transcodes;
+    private readonly IReviewedChangeHistoryService? _reviewedHistory;
     private string? _statusTextKey;
     private object?[] _statusTextArguments = [];
     private long? _statusTextCount;
@@ -135,6 +140,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         string,
         ArtworkSetPreviewRequest> _artworkDrafts =
             new(PathComparer);
+    private readonly List<AudioTranscodePlan>
+        _transcodePlans = [];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BrowseFilesCommand))]
@@ -371,7 +378,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         WorkbenchSelectionInspectorViewModel? inspector = null,
         IIngestSourceHandoff? ingestHandoff = null,
         INavigationService? navigation = null,
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        IAudioTranscodeService? transcodes = null,
+        IAudioTranscodeCapabilityService? transcodeCapabilities = null,
+        ITranscodePresetStore? transcodePresets = null,
+        ITranscodeWorkScheduler? transcodeScheduler = null,
+        IReviewedChangeHistoryService? reviewedHistory = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -395,6 +407,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _ingestHandoff = ingestHandoff;
         _navigation = navigation;
         _localization = localization;
+        _transcodes = transcodes;
+        _reviewedHistory = reviewedHistory;
         ReleaseSearch = new(localization);
         DiscogsSearch = new(localization);
         if (_inspector is not null)
@@ -447,6 +461,21 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                         OnPropertyChanged(
                             nameof(HasUnsavedChanges));
                 };
+        TranscodeEditor =
+            transcodes is not null &&
+            transcodeCapabilities is not null &&
+            transcodePresets is not null &&
+            transcodeScheduler is not null
+                ? new(
+                    transcodes,
+                    transcodeCapabilities,
+                    transcodePresets,
+                    transcodeScheduler,
+                    files,
+                    dialogs,
+                    this,
+                    localization)
+                : null;
         OperationEditor.Changed +=
             ScheduleRepresentativePreview;
         ShortcutEditor = new(
@@ -560,6 +589,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         RepresentativePreview { get; }
     public ReviewedFileOperationEditorViewModel?
         FileOperations { get; }
+    public TranscodeEditorViewModel?
+        TranscodeEditor { get; }
     public SelectionInspectorViewModel? Inspector => _inspector;
     public ObservableCollection<MetadataFieldChoice>
         KnownFieldChoices { get; } = [];
@@ -609,9 +640,14 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _artworkDrafts.Count > 0 ||
         _inspector?.HasUnsavedChanges == true ||
         FileOperations?.HasUnsavedChanges == true ||
+        _transcodePlans.Count > 0 ||
         Files.Any(file => file.HasChanges);
-    public bool CanUndoLatest => _history.CanUndo && !IsBusy;
-    public bool CanRedoLatest => _history.CanRedo && !IsBusy;
+    public bool CanUndoLatest =>
+        (_history.CanUndo || _reviewedHistory?.CanUndo == true) &&
+        !IsBusy;
+    public bool CanRedoLatest =>
+        (_history.CanRedo || _reviewedHistory?.CanRedo == true) &&
+        !IsBusy;
     public bool CanRepeatLatest =>
         _history.Entries.FirstOrDefault()?.Recipe is not null &&
         Files.Count > 0 && !IsBusy;
@@ -750,6 +786,75 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             !await _inspector.TryLoadAsync(CreateInspectorSelection(selected)))
             return false;
         ApplySelectedFiles(selected);
+        return true;
+    }
+
+    public async Task<bool> OpenTranscodeAsync(
+        CancellationToken ct = default)
+    {
+        if (TranscodeEditor is null ||
+            IsBusy ||
+            EditTargets.Count == 0)
+            return false;
+        await TranscodeEditor.OpenAsync(
+            EditTargets.Select(file => file.Path),
+            ct);
+        return true;
+    }
+
+    public async Task<bool> AddPendingTranscodeAsync(
+        AudioTranscodePlan plan,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        HashSet<string> incoming =
+            plan.Items.Select(item => item.SourcePath)
+                .ToHashSet(PathComparer);
+        bool overlaps = _transcodePlans.Any(existing =>
+            existing.Items.Any(item =>
+                incoming.Contains(item.SourcePath)));
+        if (overlaps &&
+            !await _dialogs.ConfirmAsync(
+                L("Transcode.Dialog.ReplacePending.Title"),
+                L("Transcode.Dialog.ReplacePending.Message"),
+                L("Transcode.Action.ReplacePending")))
+            return false;
+
+        for (int index = _transcodePlans.Count - 1;
+             index >= 0;
+             index--)
+        {
+            AudioTranscodePlan existing =
+                _transcodePlans[index];
+            ImmutableArray<AudioTranscodePlanItem> retained =
+            [
+                .. existing.Items.Where(item =>
+                    !incoming.Contains(item.SourcePath)),
+            ];
+            if (retained.Length == 0)
+                _transcodePlans.RemoveAt(index);
+            else
+                _transcodePlans[index] =
+                    existing with
+                    {
+                        Items = retained,
+                        Request = existing.Request with
+                        {
+                            SourcePaths =
+                            [
+                                .. retained.Select(item =>
+                                    item.SourcePath),
+                            ],
+                        },
+                    };
+        }
+        _transcodePlans.Add(plan);
+        RebuildPendingChanges();
+        HasApplicablePreview = true;
+        SetCountStatus(
+            "Transcode.Status.PendingAdded",
+            plan.Items.Length);
+        NotifySessionChanged();
         return true;
     }
 
@@ -993,6 +1098,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         PendingChanges.Clear();
         PendingOperations.Clear();
         _plan = null;
+        _transcodePlans.Clear();
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
@@ -1469,66 +1575,159 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private async Task ApplyAsync()
     {
         if (_plan is null &&
-            !HasDirectPendingChanges)
+            !HasDirectPendingChanges &&
+            _transcodePlans.Count == 0)
             return;
         BeginOperation(
             L("Workbench.Activity.ApplyingReviewedChanges"));
+        MetadataOperationStageResult? metadataStage = null;
         try
         {
             IProgress<OperationProgress> progress = CreateProgress();
-            _plan ??= await PreviewDirectPendingChangesAsync(
-                progress,
-                _cancellation!.Token);
-            if (_plan is null)
+            int changed = 0;
+            if (_plan is not null ||
+                HasDirectPendingChanges)
             {
-                SetStatus(
-                    "Workbench.Status.NoPendingChanges");
-                return;
+                _plan ??=
+                    await PreviewDirectPendingChangesAsync(
+                        progress,
+                        _cancellation!.Token);
+                if (_plan is not null)
+                {
+                    MetadataPreviewRowBuilder.Populate(
+                        PreviewChanges,
+                        _plan,
+                        _localization);
+                    PendingMetadataOperationRowBuilder.Populate(
+                        PendingOperations,
+                        _plan,
+                        _localization);
+                    HasApplicablePreview = _plan.CanApply;
+                    if (!_plan.CanApply)
+                    {
+                        OperationIssue? blocker = _plan.Files
+                            .SelectMany(file => file.Issues)
+                            .FirstOrDefault(issue =>
+                                issue.Severity ==
+                                OperationIssueSeverity.Blocker);
+                        if (blocker is null)
+                            SetStatus(
+                                "Workbench.Status.NoApplicableChanges");
+                        else
+                            SetFailure(
+                                "Workbench.Status.PendingChangesBlocked",
+                                blocker.Message);
+                        return;
+                    }
+                    if (_transcodePlans.Count > 0)
+                    {
+                        metadataStage =
+                            await _operations.StageAsync(
+                                _plan,
+                                progress,
+                                _cancellation!.Token);
+                    }
+                    else
+                    {
+                        MetadataApplyResult result =
+                            await _operations.ApplyAsync(
+                                _plan,
+                                progress,
+                                _cancellation!.Token);
+                        string[] paths = _plan.Files
+                            .Where(file => file.HasChanges)
+                            .Select(file => file.Path)
+                            .ToArray();
+                        foreach (MetadataFilePlan file in
+                                 _plan.Files.Where(file =>
+                                     file.ArtworkEdit is not null))
+                            _artworkDrafts.Remove(file.Path);
+                        await ReloadAsync(
+                            paths,
+                            progress,
+                            _cancellation.Token);
+                        if (_inspector?.HasUnsavedChanges == true)
+                            await _inspector.LoadAsync(
+                                _inspector.Selection);
+                        changed += result.ChangedFiles;
+                        _plan = null;
+                        PreviewChanges.Clear();
+                        PendingOperations.Clear();
+                    }
+                }
             }
-            MetadataPreviewRowBuilder.Populate(
-                PreviewChanges,
-                _plan,
-                _localization);
-            PendingMetadataOperationRowBuilder.Populate(
-                PendingOperations,
-                _plan,
-                _localization);
-            HasApplicablePreview = _plan.CanApply;
-            if (!_plan.CanApply)
+
+            if (_transcodePlans.Count > 0)
             {
-                OperationIssue? blocker = _plan.Files
-                    .SelectMany(file => file.Issues)
-                    .FirstOrDefault(issue =>
-                        issue.Severity ==
-                        OperationIssueSeverity.Blocker);
-                if (blocker is null)
-                    SetStatus(
-                        "Workbench.Status.NoApplicableChanges");
-                else
-                    SetFailure(
-                        "Workbench.Status.PendingChangesBlocked",
-                        blocker.Message);
-                return;
+                IReadOnlyDictionary<string, string>
+                    sourceOverrides = metadataStage?.Files
+                        .ToDictionary(
+                            file => file.LivePath,
+                            file => file.StagedPath,
+                            PathComparer) ??
+                        new Dictionary<string, string>(
+                            PathComparer);
+                PendingTranscodeApplyOutcome outcome =
+                    await ApplyPendingTranscodesAsync(
+                    progress,
+                    _cancellation!.Token,
+                    metadataStage,
+                    sourceOverrides);
+                if (!outcome.Committed)
+                    return;
+                changed += outcome.ChangedFiles;
+                if (outcome.AppliedMetadata is not null)
+                    await _operations
+                        .CompleteStagedApplyAsync(
+                            outcome.AppliedMetadata,
+                            [],
+                            recordHistory: false,
+                            _cancellation.Token);
+                if (outcome.ConsumedMetadataPaths.Length > 0)
+                {
+                    string[] appliedPaths =
+                    [
+                        .. outcome
+                            .ConsumedMetadataPaths,
+                    ];
+                    foreach (string path in
+                             appliedPaths)
+                        _artworkDrafts.Remove(path);
+                    await ReloadAsync(
+                        [
+                            .. appliedPaths.Where(
+                                File.Exists),
+                        ],
+                        progress,
+                        _cancellation.Token);
+                    if (_inspector?.HasUnsavedChanges == true)
+                        await _inspector.LoadAsync(
+                            _inspector.Selection);
+                    HashSet<string> applied =
+                        appliedPaths.ToHashSet(
+                            PathComparer);
+                    ImmutableArray<MetadataFilePlan>
+                        retained =
+                    [
+                        .. _plan!.Files.Where(file =>
+                            !applied.Contains(
+                                file.Path)),
+                    ];
+                    _plan = retained.Length == 0
+                        ? null
+                        : _plan with
+                        {
+                            Files = retained,
+                        };
+                }
             }
-            MetadataApplyResult result = await _operations.ApplyAsync(
-                _plan, progress, _cancellation!.Token);
-            string[] paths = _plan.Files.Where(file => file.HasChanges)
-                .Select(file => file.Path).ToArray();
-            foreach (MetadataFilePlan file in _plan.Files.Where(
-                         file => file.ArtworkEdit is not null))
-                _artworkDrafts.Remove(file.Path);
-            await ReloadAsync(paths, progress, _cancellation.Token);
-            if (_inspector?.HasUnsavedChanges == true)
-                await _inspector.LoadAsync(
-                    _inspector.Selection);
-            _plan = null;
-            PreviewChanges.Clear();
-            PendingOperations.Clear();
+
             RebuildPendingChanges();
-            HasApplicablePreview = false;
+            HasApplicablePreview =
+                _transcodePlans.Count > 0;
             SetCountStatus(
                 "Workbench.Status.Applied",
-                result.ChangedFiles);
+                changed);
         }
         catch (OperationCanceledException)
         {
@@ -1542,16 +1741,324 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
         finally
         {
+            if (metadataStage is not null)
+                await _operations.DiscardStageAsync(
+                    metadataStage,
+                    CancellationToken.None);
             EndOperation();
             NotifySessionChanged();
         }
+    }
+
+    private async Task<PendingTranscodeApplyOutcome>
+        ApplyPendingTranscodesAsync(
+        IProgress<OperationProgress> progress,
+        CancellationToken ct,
+        MetadataOperationStageResult? metadataStage = null,
+        IReadOnlyDictionary<string, string>?
+            sourceOverrides = null)
+    {
+        if (_transcodes is null ||
+            _transcodePlans.Count == 0)
+            return new(0, false, null, []);
+        var stages = new List<AudioTranscodeStageResult>();
+        try
+        {
+            foreach (AudioTranscodePlan plan in
+                     _transcodePlans)
+                stages.Add(
+                    sourceOverrides is { Count: > 0 }
+                        ? await _transcodes
+                            .StageWithSourceOverridesAsync(
+                                plan,
+                                sourceOverrides,
+                                progress,
+                                ct)
+                        : await _transcodes.StageAsync(
+                            plan,
+                            progress,
+                            ct));
+
+            int failed = stages.Sum(stage =>
+                stage.FailedItems.Length);
+            int ready = stages.Sum(stage =>
+                stage.ReadyItems.Length);
+            HashSet<string> failedSources = stages
+                .SelectMany(stage => stage.FailedItems)
+                .Select(item => item.PlanItem.SourcePath)
+                .ToHashSet(PathComparer);
+            HashSet<string> replacementSources =
+                new(PathComparer);
+            foreach (AudioTranscodeStageResult stage in
+                     stages.Where(stage =>
+                         stage.Plan.Request.Destination.Mode ==
+                         AudioTranscodeDestinationMode
+                             .ReplaceOriginal))
+            {
+                foreach (AudioTranscodeStagedItem readyItem in
+                         stage.ReadyItems)
+                    replacementSources.Add(
+                        readyItem.PlanItem.SourcePath);
+            }
+            HashSet<string> excludedMetadataSources =
+                failedSources.ToHashSet(PathComparer);
+            excludedMetadataSources.UnionWith(
+                replacementSources);
+            MetadataOperationStageResult? appliedMetadata =
+                FilterMetadataStage(
+                    metadataStage,
+                    excludedMetadataSources);
+            ImmutableArray<string> consumedMetadataPaths =
+                metadataStage is null
+                    ? []
+                    :
+                    [
+                        .. (appliedMetadata?.Files
+                                .Select(file =>
+                                    file.LivePath) ??
+                            [])
+                            .Concat(
+                                metadataStage.Files
+                                    .Select(file =>
+                                        file.LivePath)
+                                    .Where(path =>
+                                        replacementSources
+                                            .Contains(path)))
+                            .Distinct(PathComparer),
+                    ];
+            if (failed > 0)
+            {
+                if (ready == 0)
+                {
+                    if (appliedMetadata is null)
+                        throw new InvalidOperationException(
+                            L("Transcode.Error.NoReadyFiles"));
+                    MetadataApplyResult metadataResult =
+                        await _operations.ApplyAsync(
+                            appliedMetadata.Plan,
+                            progress,
+                            ct);
+                    foreach (AudioTranscodeStageResult stage in
+                             stages)
+                        await _transcodes.DiscardStageAsync(
+                            stage,
+                            CancellationToken.None);
+                    return new(
+                        metadataResult.ChangedFiles,
+                        true,
+                        null,
+                        consumedMetadataPaths);
+                }
+                bool applyReady =
+                    await _dialogs.ConfirmAsync(
+                        L("Transcode.Dialog.Partial.Title"),
+                        LC(
+                            "Transcode.Dialog.Partial.Message",
+                            failed,
+                            ready),
+                        L("Transcode.Action.ApplyReady"));
+                if (!applyReady)
+                {
+                    foreach (AudioTranscodeStageResult stage in
+                             stages)
+                        await _transcodes.DiscardStageAsync(
+                            stage,
+                            CancellationToken.None);
+                    return new(0, false, null, []);
+                }
+            }
+
+            int changed = 0;
+            var appliedPairs = new List<(
+                string Source,
+                string Destination,
+                AudioTranscodeDestinationMode Mode)>();
+            var retainedPlans = new List<AudioTranscodePlan>();
+            HashSet<Guid> readyIds = stages
+                .SelectMany(stage => stage.ReadyItems)
+                .Select(item => item.PlanItem.Id)
+                .ToHashSet();
+            if (readyIds.Count > 0)
+            {
+                AudioTranscodeApplyResult result =
+                    await _transcodes.ApplyReviewedBatchAsync(
+                        stages,
+                        appliedMetadata?.Participants ?? [],
+                        readyIds,
+                        progress,
+                        ct);
+                changed = result.ChangedFiles;
+                appliedPairs.AddRange(
+                    stages.SelectMany(stage =>
+                        stage.ReadyItems.Select(item =>
+                            (
+                                item.PlanItem.SourcePath,
+                                item.PlanItem.DestinationPath,
+                                stage.Plan.Request.Destination.Mode
+                            ))));
+            }
+            foreach (AudioTranscodeStageResult stage in
+                     stages)
+            {
+                if (stage.FailedItems.Length > 0)
+                {
+                    ImmutableArray<AudioTranscodePlanItem>
+                        failedItems =
+                    [
+                        .. stage.FailedItems.Select(item =>
+                            item.PlanItem),
+                    ];
+                    retainedPlans.Add(
+                        stage.Plan with
+                        {
+                            Items = failedItems,
+                            Request =
+                                stage.Plan.Request with
+                                {
+                                    SourcePaths =
+                                    [
+                                        .. failedItems.Select(item =>
+                                            item.SourcePath),
+                                    ],
+                                },
+                        });
+                }
+            }
+            _transcodePlans.Clear();
+            _transcodePlans.AddRange(retainedPlans);
+            await RefreshSessionAfterTranscodeAsync(
+                appliedPairs,
+                progress,
+                ct);
+            return new(
+                changed,
+                true,
+                appliedMetadata,
+                consumedMetadataPaths);
+        }
+        catch
+        {
+            foreach (AudioTranscodeStageResult stage in
+                     stages)
+                await _transcodes.DiscardStageAsync(
+                    stage,
+                    CancellationToken.None);
+            throw;
+        }
+    }
+
+    private static MetadataOperationStageResult?
+        FilterMetadataStage(
+            MetadataOperationStageResult? stage,
+            IReadOnlySet<string> excludedPaths)
+    {
+        if (stage is null)
+            return null;
+        ImmutableArray<MetadataStagedFile> files =
+        [
+            .. stage.Files.Where(file =>
+                !excludedPaths.Contains(
+                    file.LivePath)),
+        ];
+        if (files.Length == 0)
+            return null;
+        HashSet<string> included = files
+            .Select(file => file.LivePath)
+            .ToHashSet(PathComparer);
+        ImmutableArray<FileMutationPlan> participants =
+        [
+            .. stage.Participants
+                .Select(participant => participant with
+                {
+                    Actions =
+                    [
+                        .. participant.Actions.Where(action =>
+                            included.Contains(
+                                action.DestinationPath)),
+                    ],
+                })
+                .Where(participant =>
+                    participant.Actions.Count > 0),
+        ];
+        return stage with
+        {
+            Plan = stage.Plan with
+            {
+                Files =
+                [
+                    .. stage.Plan.Files.Where(file =>
+                        included.Contains(file.Path)),
+                ],
+            },
+            Participants = participants,
+            Files = files,
+        };
+    }
+
+    private async Task RefreshSessionAfterTranscodeAsync(
+        IReadOnlyList<(
+            string Source,
+            string Destination,
+            AudioTranscodeDestinationMode Mode)> applied,
+        IProgress<OperationProgress> progress,
+        CancellationToken ct)
+    {
+        if (applied.Count == 0)
+            return;
+        string[] destinations =
+        [
+            .. applied.Select(item => item.Destination)
+                .Distinct(PathComparer),
+        ];
+        WorkbenchLoadResult loaded =
+            await _workbench.LoadAsync(
+                new(destinations, Recursive: false),
+                progress,
+                ct);
+        Dictionary<string, MediaDocument> documents =
+            loaded.Documents.ToDictionary(
+                document => document.Path,
+                PathComparer);
+        foreach ((string source,
+                     string destination,
+                     AudioTranscodeDestinationMode mode)
+                 in applied)
+        {
+            WorkbenchTrackViewModel? sourceRow =
+                Files.FirstOrDefault(file =>
+                    PathComparer.Equals(
+                        file.Path,
+                        source));
+            if (mode ==
+                    AudioTranscodeDestinationMode.ReplaceOriginal &&
+                sourceRow is not null)
+            {
+                sourceRow.PropertyChanged -= OnTrackChanged;
+                Files.Remove(sourceRow);
+            }
+            if (!documents.TryGetValue(
+                    destination,
+                    out MediaDocument? document) ||
+                Files.Any(file =>
+                    PathComparer.Equals(
+                        file.Path,
+                        destination)))
+                continue;
+            AddTrack(new(document));
+        }
+        SetSelectedFiles(
+            Files.Where(file =>
+                destinations.Contains(
+                    file.Path,
+                    PathComparer)));
     }
 
     [RelayCommand(CanExecute = nameof(CanRevertPendingChanges))]
     private async Task RevertPendingChangesAsync()
     {
         if (_plan is null &&
-            PendingChanges.Count == 0)
+            PendingChanges.Count == 0 &&
+            _transcodePlans.Count == 0)
             return;
 
         foreach (WorkbenchTrackViewModel file in
@@ -1559,6 +2066,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             file.RevertPendingChanges();
         if (_inspector?.HasUnsavedChanges == true)
             await _inspector.DiscardPendingChangesAsync();
+        _transcodePlans.Clear();
         CancelPlan();
         SetStatus("Workbench.Status.PendingReverted");
         NotifySessionChanged();
@@ -1586,12 +2094,38 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     Message: LC(
                         "Workbench.Progress.Restored",
                         completed))));
-            int restored = await _history.UndoLatestAsync(
-                restoreProgress, _cancellation!.Token);
-            await ReloadAsync(
-                Files.Select(file => file.Path).ToArray(),
-                CreateProgress(),
-                _cancellation.Token);
+            EditHistoryEntry? metadataEntry =
+                _history.Entries.FirstOrDefault();
+            ReviewedChangeHistoryEntry? reviewedEntry =
+                _reviewedHistory?.Entries.FirstOrDefault();
+            bool undoReviewed =
+                reviewedEntry is not null &&
+                (metadataEntry is null ||
+                 reviewedEntry.AppliedAtUtc >=
+                 metadataEntry.AppliedAtUtc);
+            int restored;
+            if (undoReviewed)
+            {
+                ReviewedChangeUndoResult result =
+                    await _reviewedHistory!.UndoLatestAsync(
+                        restoreProgress,
+                        _cancellation!.Token);
+                restored = result.RestoredFiles;
+                await RefreshSessionAfterReviewedUndoAsync(
+                    reviewedEntry!,
+                    CreateProgress(),
+                    _cancellation.Token);
+            }
+            else
+            {
+                restored = await _history.UndoLatestAsync(
+                    restoreProgress,
+                    _cancellation!.Token);
+                await ReloadAsync(
+                    Files.Select(file => file.Path).ToArray(),
+                    CreateProgress(),
+                    _cancellation.Token);
+            }
             SetCountStatus(
                 "Workbench.Status.Restored",
                 restored);
@@ -1616,13 +2150,121 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [RelayCommand(CanExecute = nameof(CanRedo))]
     private async Task RedoAsync()
     {
+        ReviewedChangeHistoryEntry? reviewed =
+            _reviewedHistory?.RedoEntries.FirstOrDefault();
         EditHistoryEntry? candidate = _history.RedoEntries
             .FirstOrDefault(entry => entry.Recipe is not null);
+        if (reviewed is not null &&
+            (candidate is null ||
+             reviewed.AppliedAtUtc >=
+             candidate.AppliedAtUtc))
+        {
+            if (_transcodes is null)
+                return;
+            BeginOperation(
+                L("Transcode.Status.Previewing"));
+            try
+            {
+                foreach (AudioTranscodeRequest request in
+                         reviewed.EffectiveRedoRequests)
+                {
+                    AudioTranscodePlan plan =
+                        await _transcodes.PreviewAsync(
+                            request,
+                            CreateProgress(),
+                            _cancellation!.Token);
+                    if (!plan.CanApply)
+                        throw new InvalidOperationException(
+                            plan.Issues.Concat(
+                                    plan.Items.SelectMany(item =>
+                                        item.Issues))
+                                .FirstOrDefault(issue =>
+                                    issue.Severity ==
+                                    OperationIssueSeverity.Blocker)
+                                ?.Message ??
+                            L("Transcode.Status.PreviewBlocked"));
+                    await AddPendingTranscodeAsync(
+                        plan,
+                        _cancellation.Token);
+                }
+                SetStatus(
+                    "Workbench.Status.RedoRegenerated");
+            }
+            catch (Exception error)
+            {
+                SetFailure(
+                    "Workbench.Status.PreviewFailed",
+                    error.Message);
+            }
+            finally
+            {
+                EndOperation();
+                NotifySessionChanged();
+            }
+            return;
+        }
         if (candidate?.Recipe is null)
             return;
         await PreviewAsync((progress, ct) => _operations.PreviewAsync(
             candidate.Paths, candidate.Recipe, progress, ct));
         SetStatus("Workbench.Status.RedoRegenerated");
+    }
+
+    private async Task RefreshSessionAfterReviewedUndoAsync(
+        ReviewedChangeHistoryEntry entry,
+        IProgress<OperationProgress> progress,
+        CancellationToken ct)
+    {
+        foreach (WorkbenchTrackViewModel file in
+                 Files.Where(file =>
+                     !File.Exists(file.Path))
+                     .ToArray())
+        {
+            file.PropertyChanged -= OnTrackChanged;
+            Files.Remove(file);
+        }
+        string[] existingSources =
+        [
+            .. entry.SourcePaths
+                .Where(File.Exists)
+                .Distinct(PathComparer),
+        ];
+        if (existingSources.Length > 0)
+        {
+            WorkbenchLoadResult loaded =
+                await _workbench.LoadAsync(
+                    new(existingSources, Recursive: false),
+                    progress,
+                    ct);
+            foreach (MediaDocument document in
+                     loaded.Documents)
+            {
+                WorkbenchTrackViewModel? current =
+                    Files.FirstOrDefault(file =>
+                        PathComparer.Equals(
+                            file.Path,
+                            document.Path));
+                if (current is not null)
+                {
+                    int index = Files.IndexOf(current);
+                    current.PropertyChanged -= OnTrackChanged;
+                    var replacement =
+                        new WorkbenchTrackViewModel(document);
+                    replacement.PropertyChanged +=
+                        OnTrackChanged;
+                    Files[index] = replacement;
+                }
+                else
+                {
+                    AddTrack(new(document));
+                }
+            }
+        }
+        SetSelectedFiles(
+            Files.Where(file =>
+                existingSources.Contains(
+                    file.Path,
+                    PathComparer)));
     }
 
     [RelayCommand(CanExecute = nameof(CanRepeat))]
@@ -3343,7 +3985,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _plan = null;
         PreviewChanges.Clear();
         PendingOperations.Clear();
-        HasApplicablePreview = false;
+        HasApplicablePreview =
+            _transcodePlans.Count > 0;
         RebuildPendingChanges();
     }
 
@@ -3358,20 +4001,29 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         {
             foreach (MetadataPreviewRow row in PreviewChanges)
                 PendingChanges.Add(row);
-            return;
         }
-
-        foreach (MetadataPreviewRow row in Files
-                     .Where(file => file.HasChanges)
-                     .SelectMany(file =>
-                         file.CreatePendingChangeRows()))
-            PendingChanges.Add(row);
-        if (_inspector is not null)
+        else
         {
-            foreach (MetadataPreviewRow row in
-                     _inspector.CreatePendingChangeRows())
+            foreach (MetadataPreviewRow row in Files
+                         .Where(file => file.HasChanges)
+                         .SelectMany(file =>
+                             file.CreatePendingChangeRows()))
                 PendingChanges.Add(row);
+            if (_inspector is not null)
+            {
+                foreach (MetadataPreviewRow row in
+                         _inspector.CreatePendingChangeRows())
+                    PendingChanges.Add(row);
+            }
         }
+        foreach (AudioTranscodePlanItem item in
+                 _transcodePlans.SelectMany(plan =>
+                     plan.Items))
+            PendingChanges.Add(new(
+                Path.GetFileName(item.SourcePath),
+                L("Transcode.Pending.Field"),
+                item.SourcePath,
+                item.DestinationPath));
     }
 
     private async Task<MetadataOperationPlan?>
@@ -3734,7 +4386,22 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         {
             IsProgressIndeterminate = true;
         }
-        if (!string.IsNullOrWhiteSpace(progress.Message))
+        if (!string.IsNullOrWhiteSpace(
+                progress.MessageKey))
+            ProgressText =
+                _localization?.Format(
+                    progress.MessageKey,
+                    progress.MessageArguments.IsDefault
+                        ? []
+                        : progress.MessageArguments
+                            .ToArray()) ??
+                LocalizedText.Format(
+                    progress.MessageKey,
+                    progress.MessageArguments.IsDefault
+                        ? []
+                        : progress.MessageArguments
+                            .ToArray());
+        else if (!string.IsNullOrWhiteSpace(progress.Message))
             ProgressText = progress.Message;
     }
 
@@ -3766,9 +4433,16 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool CanApply() =>
         !IsBusy &&
         (HasApplicablePreview && _plan is not null ||
-         HasDirectPendingChanges);
-    private bool CanUndo() => !IsBusy && _history.CanUndo;
-    private bool CanRedo() => !IsBusy && _history.CanRedo;
+         HasDirectPendingChanges ||
+         _transcodePlans.Count > 0);
+    private bool CanUndo() =>
+        !IsBusy &&
+        (_history.CanUndo ||
+         _reviewedHistory?.CanUndo == true);
+    private bool CanRedo() =>
+        !IsBusy &&
+        (_history.CanRedo ||
+         _reviewedHistory?.CanRedo == true);
     private bool CanRepeat() =>
         !IsBusy && Files.Count > 0 &&
         _history.Entries.FirstOrDefault()?.Recipe is not null;
@@ -4289,6 +4963,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private sealed record WorkbenchUiPreferences(
         WorkbenchSection Section,
         bool InspectorOpen);
+
+    private sealed record PendingTranscodeApplyOutcome(
+        int ChangedFiles,
+        bool Committed,
+        MetadataOperationStageResult? AppliedMetadata,
+        ImmutableArray<string> ConsumedMetadataPaths);
 }
 
 public partial class WorkbenchTrackViewModel : ObservableObject
