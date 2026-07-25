@@ -108,7 +108,7 @@ Last updated: 2026-07-25
   pending. Workbench tests verify both partial-ready branches: Apply commits
   only ready item IDs and retains failed intent, while Back discards all stages
   and preserves the complete pending set.
-- [In Progress] PIPE-04: Preview uses shell-free `ffprobe` JSON inspection to
+- [Complete] PIPE-04: Preview uses shell-free `ffprobe` JSON inspection to
   count audio programs, audio streams, and non-audio streams. Replacement is
   blocked unless the source contains exactly one audio stream/program and no
   other stream; separate output remains available with a localized
@@ -117,14 +117,19 @@ Last updated: 2026-07-25
   resampler/dither settings and compare decoded audio against that reference.
   WavPack `.wvc` and OptimFROG `.ofc` stages are reconstructed with their
   native decoders and the reconstructed audio is decoded-compared against the
-  source or transformed reference. The full format verification matrix
-  remains. Real FFmpeg coverage additionally decodes 14 representative AAC,
-  AIFF, FLAC, Matroska, MP3, Musepack, Ogg, TTA, WAV, WebM, ASF/WMA, WavPack,
-  AAC/M4A, and ALAC/M4A sources into verified lossless output.
+  source or transformed reference. Real FFmpeg coverage additionally decodes
+  15 representative AAC, AIFF, Monkey's Audio, FLAC, Matroska, MP3, Musepack,
+  Ogg, TTA, WAV, WebM, ASF/WMA, WavPack, AAC/M4A, and ALAC/M4A sources into
+  verified lossless output.
   Integer-lossless inputs compare directly; lossy/floating decoder output is
   compared with an independently generated deterministic integer reference.
   A 96 kHz/24-bit to 48 kHz/16-bit case verifies matching resampling and
-  bit-depth reduction end to end.
+  bit-depth reduction end to end. A corrected full-block DSD64 fixture verifies
+  the explicit-rate/depth preview guard and DSD-to-88.2 kHz/24-bit PCM against
+  the transformed reference. The real OptimFROG DualStream test creates its
+  `.ofc`, reconstructs with the native decoder, and decoded-compares it with
+  the source. WavPack correction reconstruction remains covered by the
+  opt-in real-tool test and deterministic service tests.
 
 ## Transaction, recovery, catalog, and history
 
@@ -202,7 +207,7 @@ Last updated: 2026-07-25
 - Source layout, aggregate progress, transformed reference, native correction
   reconstruction, platform parser variants, specialist fallback, and
   advertised source-family validation pass the targeted transcode foundation
-  suite: 53 tests. Scheduler validation includes a conservative multi-file
+  suite: 54 tests. Scheduler validation includes a conservative multi-file
   performance comparison and high-contention per-volume I/O gating across two
   independently progressing volumes.
 - Targeted Workbench interaction validation passes: 6 tests, including both
@@ -225,10 +230,16 @@ Last updated: 2026-07-25
   WavPack test now covers lossless output, hybrid correction output, and native
   correction reconstruction; no WavPack executable was available on this
   validation machine, so that external-tool path remains target-machine
-  validation. Six FFmpeg-enabled real-tool cases now include the 14-family
-  source matrix, deterministic transformed-reference equality, and a complete
-  reviewed MP3-to-FLAC staging pass through scheduling, output validation, and
-  decoded verification.
+  validation. Seven real-tool cases now include the 15-family FFmpeg source
+  matrix, deterministic transformed-reference equality, DSD-to-PCM, native
+  OptimFROG DualStream correction reconstruction, and a complete reviewed
+  MP3-to-FLAC staging pass through scheduling, output validation, and decoded
+  verification.
+- The shared fixture generator now emits an 8,284-byte, FFmpeg-decodable DSD64
+  stream instead of the legacy undersized structural file. Monkey's Audio now
+  uses a deterministic 0.3-second tone generated with the official 13.20
+  3-clause-BSD SDK; only the verified encoded fixture and provenance/hash
+  record are committed, not the SDK or encoder.
 - Headless Workbench matrix validation passes for the required viewports,
   light/dark themes, normal/18 px type, 40%-expanded pseudo-locale, German,
   Japanese, Korean, and Simplified/Traditional Chinese. Three dedicated
@@ -240,20 +251,19 @@ Last updated: 2026-07-25
   SkiaSharp licenses/notices, and the embedded four-ABI Syncer server payload;
   no ImageSharp artifact is present. Native installer/package creation still
   requires validation on each target operating system.
-- Full portable Release tests pass: Core 1,071; MusicLibraryManager 226;
+- Full portable Release tests pass: Core 1,073; MusicLibraryManager 226;
   MusicLibraryManager UI 84; MusicFileUtilities 506; DumpITL 78.
 - The MusicLibraryManager Release project builds with 0 warnings and 0 errors.
 - `git diff --check` passes; Git reports only existing line-ending
   normalization notices.
 - No database/index schema, scan configuration, or rescan behavior has changed.
 - The primary engine checkpoint is commit `c069eec`; Operations, scheduler,
-  and cross-runtime validation are committed in `7a760e8`. The destination,
-  Workbench interaction, and expanded media-verification batch is ready for
-  its next reviewable commit.
+  and cross-runtime validation are committed in `7a760e8`; destination,
+  Workbench interaction, and expanded verification are committed in
+  `4497846`. The valid APE/DSF fixture and specialist correction batch is ready
+  for its next reviewable commit.
 
 ## Resume next
 
-1. Add valid decodable APE and DSF media fixtures, then finish their
-   transformed-PCM and specialist correction-mode verification.
-2. Run target-native installer/package verification and the opt-in WavPack
+1. Run target-native installer/package verification and the opt-in WavPack
    real-tool integration on a machine with WavPack installed.

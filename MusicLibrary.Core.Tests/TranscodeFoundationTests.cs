@@ -567,6 +567,52 @@ public sealed class TranscodeFoundationTests
         }
     }
 
+    [Fact]
+    public async Task DsdToPcmRequiresExplicitRateAndDepth()
+    {
+        using var source =
+            MediaFixtures.Copy("sample.dsf");
+        string outputRoot =
+            Path.GetDirectoryName(source.Path)!;
+        AudioTranscodeService service =
+            CreatePreviewService(
+                new MemorySettings());
+        AudioTranscodeRequest missing =
+            PreviewRequest(
+                [source.Path],
+                outputRoot,
+                preserveLayout: false);
+
+        AudioTranscodePlan blocked =
+            await service.PreviewAsync(
+                missing,
+                ct: TestContext.Current
+                    .CancellationToken);
+        Assert.Contains(
+            Assert.Single(blocked.Items).Issues,
+            issue => issue.Code ==
+                "transcode.dsd-pcm-settings-required" &&
+                issue.Severity ==
+                OperationIssueSeverity.Blocker);
+
+        AudioTranscodePlan explicitPlan =
+            await service.PreviewAsync(
+                missing with
+                {
+                    Settings = missing.Settings with
+                    {
+                        SampleRateHz = 88_200,
+                        BitsPerSample = 24,
+                    },
+                },
+                ct: TestContext.Current
+                    .CancellationToken);
+        Assert.DoesNotContain(
+            Assert.Single(explicitPlan.Items).Issues,
+            issue => issue.Code ==
+                "transcode.dsd-pcm-settings-required");
+    }
+
     [Theory]
     [InlineData(AudioTranscodeFormatIds.WavPack, ".wvc")]
     [InlineData(
@@ -1483,7 +1529,7 @@ public sealed class TranscodeFoundationTests
             bool forceRefresh = false,
             CancellationToken ct = default) =>
             Task.FromResult(new AudioTranscodeCapabilitySnapshot(
-                [FfmpegProbe(["flac"])],
+                [FfmpegProbe(["flac", "dsf"])],
                 [
                     new(
                         AudioTranscodeFormatIds.Flac,

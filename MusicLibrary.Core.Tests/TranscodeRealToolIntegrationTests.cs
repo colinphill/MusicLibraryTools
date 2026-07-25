@@ -111,6 +111,7 @@ public sealed class TranscodeRealToolIntegrationTests
         [
             "sample.aac",
             "sample.aiff",
+            "sample.ape",
             "sample.flac",
             "sample.mka",
             "sample.mp3",
@@ -294,6 +295,101 @@ public sealed class TranscodeRealToolIntegrationTests
     }
 
     [Fact]
+    public async Task ConfiguredFfmpegDsdToPcmMatchesTransformedReference()
+    {
+        string? ffmpeg = Environment.GetEnvironmentVariable(
+            "MUSICLIBRARY_FFMPEG");
+        if (string.IsNullOrWhiteSpace(ffmpeg) ||
+            !File.Exists(ffmpeg))
+            return;
+        using var temp = new TempDirectory();
+        AppSettings settings = CreateSettings(
+            temp,
+            ffmpeg);
+        var processes = new ManagedProcessRunner();
+        using var capabilities =
+            new AudioTranscodeCapabilityService(
+                settings,
+                processes);
+        AudioTranscodeCapabilitySnapshot snapshot =
+            await capabilities.GetAsync(
+                forceRefresh: true,
+                TestContext.Current.CancellationToken);
+        AudioEncoderDescriptor encoder =
+            snapshot.FindEncoder(
+                AudioTranscodeEncoderIds
+                    .Ffmpeg("flac"))!;
+        var adapter = new AudioTranscodeAdapter(
+            settings,
+            processes);
+        var referenceService =
+            new TranscodePcmReferenceService(
+                settings,
+                processes);
+        var reviewed = new AudioTranscodeSettings(
+            AudioTranscodeFormatIds.Flac,
+            encoder.Id,
+            AudioTranscodeRateMode.Lossless,
+            SampleRateHz: 88_200,
+            BitsPerSample: 24);
+        string source =
+            MediaFixtures.Path_("sample.dsf");
+        string destination =
+            Path.Combine(
+                temp.Path,
+                "dsd-to-pcm.flac");
+
+        await adapter.EncodeAsync(
+            source,
+            destination,
+            reviewed,
+            encoder,
+            threadCount: 1,
+            ct: TestContext.Current
+                .CancellationToken);
+        string reference =
+            await referenceService.CreateAsync(
+                source,
+                reviewed,
+                destination,
+                TestContext.Current
+                    .CancellationToken);
+        try
+        {
+            AnalysisReport report =
+                await new DecodedAudioVerificationService(
+                        new FfmpegRunner())
+                    .VerifyAsync(
+                        ffmpeg,
+                        [
+                            new(
+                                reference,
+                                destination,
+                                "DSD64 to " +
+                                "88.2 kHz/24-bit PCM"),
+                        ],
+                        ct: TestContext.Current
+                            .CancellationToken);
+            Assert.Empty(report.Findings);
+            ICodecProvider outputCodec =
+                MediaFile.GetFile(
+                        destination,
+                        readOnly: true)
+                    .Codecs.First();
+            Assert.Equal(
+                88_200u,
+                outputCodec.Samplerate);
+            Assert.Equal(
+                24u,
+                outputCodec.BitsPerSample);
+        }
+        finally
+        {
+            File.Delete(reference);
+        }
+    }
+
+    [Fact]
     public async Task ReviewedStageVerifiesImplicitLossyToIntegerProjection()
     {
         string? ffmpeg = Environment.GetEnvironmentVariable(
@@ -420,6 +516,10 @@ public sealed class TranscodeRealToolIntegrationTests
         var adapter = new AudioTranscodeAdapter(
             settings,
             new ManagedProcessRunner());
+        var correction =
+            new TranscodeCorrectionVerificationService(
+                settings,
+                new ManagedProcessRunner());
         string source = MediaFixtures.Path_("sample.flac");
         (string FormatId,
             string EncoderId,
@@ -475,7 +575,11 @@ public sealed class TranscodeRealToolIntegrationTests
                     ? AudioTranscodeRateMode.Lossless
                     : AudioTranscodeRateMode.VariableQuality,
                 Quality:
-                    pair.Lossless ? null : 3);
+                    pair.Lossless ? null : 3,
+                CreateCorrectionFile:
+                    pair.EncoderId ==
+                    AudioTranscodeEncoderIds
+                        .OptimFrogOfs);
             string destination = Path.Combine(
                 temp.Path,
                 pair.Executable +
@@ -493,6 +597,47 @@ public sealed class TranscodeRealToolIntegrationTests
             Assert.True(
                 new FileInfo(destination).Length > 0,
                 pair.FormatId);
+
+            if (pair.EncoderId ==
+                AudioTranscodeEncoderIds.OptimFrogOfs)
+            {
+                string correctionPath =
+                    Path.ChangeExtension(
+                        destination,
+                        ".ofc");
+                Assert.True(
+                    new FileInfo(correctionPath)
+                        .Length > 0);
+                string reconstructed =
+                    await correction.ReconstructAsync(
+                        destination,
+                        AudioTranscodeToolKind.OptimFrog,
+                        TestContext.Current
+                            .CancellationToken);
+                try
+                {
+                    AnalysisReport report =
+                        await new
+                                DecodedAudioVerificationService(
+                                    new FfmpegRunner())
+                            .VerifyAsync(
+                                ffmpeg,
+                                [
+                                    new(
+                                        source,
+                                        reconstructed,
+                                        "OptimFROG DualStream " +
+                                        "correction"),
+                                ],
+                                ct: TestContext.Current
+                                    .CancellationToken);
+                    Assert.Empty(report.Findings);
+                }
+                finally
+                {
+                    File.Delete(reconstructed);
+                }
+            }
 
             if (pair.EncoderId ==
                 AudioTranscodeEncoderIds.OptimFrogOff)
