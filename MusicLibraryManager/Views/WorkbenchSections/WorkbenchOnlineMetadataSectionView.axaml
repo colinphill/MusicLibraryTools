@@ -397,7 +397,7 @@
             <CheckBox Margin="0,0,16,0"
                       Content="{DynamicResource Loc.Workbench.Online.Field.ReleaseDetails}"
                       IsChecked="{Binding ReleaseImport.ReleaseDetails, Mode=TwoWay}" />
-            <CheckBox Content="{DynamicResource Loc.Workbench.Online.Field.MusicBrainzIds}"
+            <CheckBox Content="{DynamicResource Loc.Technical.MusicBrainzIds}"
                       IsChecked="{Binding ReleaseImport.MusicBrainzIdentifiers, Mode=TwoWay}" />
           </WrapPanel>
         </Grid>

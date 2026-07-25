@@ -389,6 +389,85 @@ public sealed class WorkbenchInteractionTests
     }
 
     [AvaloniaFact]
+    public async Task Inspector_drawer_cycles_focus_forward_and_reverse()
+    {
+        using ServiceProvider services = BuildServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(window, services, 900, 640);
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            WorkbenchTrackViewModel track =
+                Track("inspector-focus-cycle.flac");
+            model.Files.Add(track);
+            Assert.True(
+                await model.TrySetSelectedFilesAsync(
+                    [track]));
+            Render();
+
+            view.FindControl<Button>(
+                    "WorkbenchInspectorToggle")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            Render();
+
+            Control inspectorDrawer =
+                view.FindControl<Control>(
+                    "WorkbenchInspectorDrawer")!;
+            Assert.True(
+                inspectorDrawer.IsEffectivelyVisible);
+            AssertDrawerCyclesForwardAndReverse(
+                window,
+                view,
+                inspectorDrawer);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Columns_drawer_cycles_focus_forward_and_reverse()
+    {
+        using ServiceProvider services = BuildServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(window, services, 900, 640);
+            view.FindControl<Button>(
+                    "WorkbenchColumnsButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            Render();
+
+            Control columnsDrawer =
+                view.FindControl<Control>(
+                    "WorkbenchColumnsDrawer")!;
+            Assert.True(
+                columnsDrawer.IsEffectivelyVisible);
+            AssertDrawerCyclesForwardAndReverse(
+                window,
+                view,
+                columnsDrawer);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Every_bulk_operation_descriptor_exposes_exactly_its_contextual_panels()
     {
         using ServiceProvider services = BuildServices();
@@ -634,6 +713,73 @@ public sealed class WorkbenchInteractionTests
                 $"workbench-transcode-drawer-" +
                 $"{width}x{height}.png"),
             PngBitmapEncoderOptions.Default);
+    }
+
+    private static void AssertDrawerCyclesForwardAndReverse(
+        MainWindow window,
+        WorkbenchView view,
+        Control drawer)
+    {
+        Control[] focusable =
+        [
+            .. drawer
+                .GetVisualDescendants()
+                .OfType<Control>()
+                .Where(control =>
+                    control.IsEffectivelyVisible &&
+                    control.IsEffectivelyEnabled &&
+                    control.Focusable),
+        ];
+        Assert.True(
+            focusable.Length >= 3,
+            $"Expected a populated {drawer.Name} focus cycle, but found " +
+            $"{focusable.Length} effective target(s).");
+
+        AssertWraps(
+            focusable[^1],
+            KeyModifiers.None,
+            focusable[0]);
+        AssertWraps(
+            focusable[0],
+            KeyModifiers.Shift,
+            focusable[^1]);
+
+        void AssertWraps(
+            Control startingControl,
+            KeyModifiers modifiers,
+            Control expected)
+        {
+            startingControl.Focus();
+            Render();
+            Assert.Same(
+                startingControl,
+                window.FocusManager!
+                    .GetFocusedElement());
+
+            view.RaiseEvent(
+                new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = Key.Tab,
+                    KeyModifiers = modifiers,
+                });
+            Render();
+
+            Control focused =
+                Assert.IsAssignableFrom<Control>(
+                    window.FocusManager!
+                        .GetFocusedElement());
+            Assert.Same(
+                expected,
+                focused);
+            Assert.True(
+                ReferenceEquals(
+                    focused,
+                    drawer) ||
+                focused.GetVisualAncestors()
+                    .Contains(drawer));
+        }
     }
 
     private static HashSet<string> ExpectedPanels(

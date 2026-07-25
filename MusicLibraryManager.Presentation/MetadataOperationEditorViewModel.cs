@@ -128,6 +128,8 @@ public static class PendingMetadataOperationRowBuilder
                     ? ""
                     : $" · {Text(
                         localization,
+                        TechnicalLabelResourceKeys.For(
+                            group.Key.TextEncodingPolicy.Value) ??
                         $"MetadataEditor.Choice.Id3EncodingPolicy.{group.Key.TextEncodingPolicy}")}"),
                 localization);
 
@@ -418,6 +420,8 @@ public static class MetadataPreviewRowBuilder
                         "MetadataEditor.Preview.EncodingSuffix",
                         Text(
                             localization,
+                            TechnicalLabelResourceKeys.For(
+                                version.TextEncodingPolicy.Value) ??
                             $"MetadataEditor.Choice.Id3EncodingPolicy.{version.TextEncodingPolicy}"));
                 destination.Add(new(
                     Path.GetFileName(file.Path),

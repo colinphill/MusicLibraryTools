@@ -382,6 +382,124 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Shell_navigation_keys_move_focus_selection_and_destination_across_groups()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            window.Activate();
+            RenderUi();
+
+            INavigationService navigation =
+                services.GetRequiredService<
+                    INavigationService>();
+            ListBox primary =
+                window.FindControl<ListBox>(
+                    "PrimaryNavigation")!;
+            ListBox secondary =
+                window.FindControl<ListBox>(
+                    "SecondaryNavigation")!;
+            Button home =
+                window.FindControl<Button>(
+                    "HomeNav")!;
+            Button library =
+                window.FindControl<Button>(
+                    "LibraryNav")!;
+            Button health =
+                window.FindControl<Button>(
+                    "HealthNav")!;
+            Button operations =
+                window.FindControl<Button>(
+                    "OperationsNav")!;
+            Button settings =
+                window.FindControl<Button>(
+                    "SettingsNav")!;
+            Button about =
+                window.FindControl<Button>(
+                    "AboutNav")!;
+
+            AssertNavigation(
+                home,
+                Key.Down,
+                library,
+                ShellDestination.Library);
+            AssertNavigation(
+                operations,
+                Key.Down,
+                settings,
+                ShellDestination.Settings);
+            AssertNavigation(
+                settings,
+                Key.Up,
+                operations,
+                ShellDestination.Operations);
+            AssertNavigation(
+                health,
+                Key.Home,
+                home,
+                ShellDestination.Home);
+            AssertNavigation(
+                health,
+                Key.End,
+                about,
+                ShellDestination.About);
+
+            void AssertNavigation(
+                Button startingButton,
+                Key key,
+                Button expectedButton,
+                ShellDestination expectedDestination)
+            {
+                startingButton.Focus();
+                RenderUi();
+                Assert.Same(
+                    startingButton,
+                    window.FocusManager?
+                        .GetFocusedElement());
+
+                startingButton.RaiseEvent(
+                    new KeyEventArgs
+                    {
+                        RoutedEvent =
+                            InputElement.KeyDownEvent,
+                        Key = key,
+                    });
+                RenderUi();
+
+                Assert.Equal(
+                    expectedDestination,
+                    navigation.Current);
+                Assert.Same(
+                    expectedButton,
+                    window.FocusManager?
+                        .GetFocusedElement());
+                bool secondaryDestination =
+                    expectedDestination is
+                        ShellDestination.Settings or
+                        ShellDestination.About;
+                Assert.Same(
+                    secondaryDestination
+                        ? null
+                        : expectedButton,
+                    primary.SelectedItem);
+                Assert.Same(
+                    secondaryDestination
+                        ? expectedButton
+                        : null,
+                    secondary.SelectedItem);
+            }
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Top_search_focus_is_drawn_by_the_full_composite_control()
     {
         using ServiceProvider services = BuildIsolatedServices();
@@ -997,6 +1115,112 @@ public sealed class UiControlTests
             Dispatcher.UIThread.RunJobs();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
             Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Settings_category_list_and_picker_keep_keyboard_selection_synchronized()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.WindowState = WindowState.Normal;
+            window.Width = 1440;
+            window.Height = 900;
+            window.Show();
+            services.GetRequiredService<
+                    INavigationService>()
+                .Navigate(
+                    ShellDestination.Settings);
+            RenderUi();
+
+            SettingsView settings =
+                Assert.IsType<SettingsView>(
+                    window.FindControl<
+                        ContentControl>(
+                        "ContentHost")!.Content);
+            SettingsViewModel model =
+                Assert.IsType<SettingsViewModel>(
+                    settings.DataContext);
+            ListBox categoryList =
+                settings.FindControl<ListBox>(
+                    "SettingsCategoryList")!;
+            ComboBox categoryPicker =
+                settings.FindControl<ComboBox>(
+                    "SettingsCategoryPicker")!;
+            TabControl tabs =
+                settings.FindControl<TabControl>(
+                    "SettingsTabs")!;
+
+            Assert.True(
+                categoryList.IsEffectivelyVisible);
+            categoryList.SelectedIndex = 4;
+            AssertSelection(4);
+            SendKey(categoryList, Key.Down);
+            AssertSelection(5);
+            SendKey(categoryList, Key.Up);
+            AssertSelection(4);
+            SendKey(categoryList, Key.End);
+            AssertSelection(
+                categoryList.ItemCount - 1);
+            SendKey(categoryList, Key.Home);
+            AssertSelection(0);
+
+            window.Width = 900;
+            window.Height = 600;
+            RenderUi();
+            Assert.False(
+                categoryList.IsEffectivelyVisible);
+            Assert.True(
+                categoryPicker.IsEffectivelyVisible);
+
+            categoryPicker.SelectedIndex = 4;
+            AssertSelection(4);
+            SendKey(categoryPicker, Key.Down);
+            AssertSelection(5);
+            SendKey(categoryPicker, Key.Up);
+            AssertSelection(4);
+
+            void SendKey(
+                Control control,
+                Key key)
+            {
+                control.Focus();
+                RenderUi();
+                control.RaiseEvent(
+                    new KeyEventArgs
+                    {
+                        RoutedEvent =
+                            InputElement.KeyDownEvent,
+                        Key = key,
+                    });
+                RenderUi();
+            }
+
+            void AssertSelection(
+                int expected)
+            {
+                RenderUi();
+                Assert.Equal(
+                    expected,
+                    model.SelectedTabIndex);
+                Assert.Equal(
+                    expected,
+                    tabs.SelectedIndex);
+                Assert.Equal(
+                    expected,
+                    categoryList.SelectedIndex);
+                Assert.Equal(
+                    expected,
+                    categoryPicker.SelectedIndex);
+            }
+        }
+        finally
+        {
+            window.Hide();
         }
     }
 

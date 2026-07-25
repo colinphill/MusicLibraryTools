@@ -12,6 +12,8 @@
              Link="BuildTools\SyncerResourceVerifier.cs" />
     <Compile Include="..\BuildTools\LocalizationCatalogGenerator\CatalogGeneratorCommandLine.cs"
              Link="BuildTools\CatalogGeneratorCommandLine.cs" />
+    <Compile Include="..\BuildTools\LocalizationCatalogGenerator\LocalizationProtectedTerms.cs"
+             Link="BuildTools\LocalizationProtectedTerms.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>

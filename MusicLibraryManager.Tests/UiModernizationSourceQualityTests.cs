@@ -970,6 +970,21 @@ public sealed partial class UiModernizationSourceQualityTests
     }
 
     [Fact]
+    public void Neutral_catalog_uses_the_single_ellipsis_character()
+    {
+        string[] violations = LoadNeutralResources()
+            .Where(item =>
+                item.Value.Contains(
+                    "...",
+                    StringComparison.Ordinal))
+            .Select(item =>
+                $"{item.Key}={item.Value}")
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
     public void Shared_technical_choice_resources_use_canonical_spelling()
     {
         Dictionary<string, string> resources =
@@ -978,34 +993,46 @@ public sealed partial class UiModernizationSourceQualityTests
             new Dictionary<string, string>(
                 StringComparer.Ordinal)
             {
-                ["Workbench.Choice.ReportFormat.Csv"] =
+                ["Technical.Format.Csv"] =
                     "CSV",
-                ["Workbench.Choice.ReportFormat.Html"] =
+                ["Technical.Format.Html"] =
                     "HTML",
-                ["Workbench.Choice.ReportFormat.Rtf"] =
+                ["Technical.Format.Rtf"] =
                     "RTF",
-                ["Workbench.Choice.ReportEncoding.Utf8"] =
+                ["Technical.PlaylistFormat.M3u"] =
+                    "M3U",
+                ["Technical.PlaylistFormat.M3u8"] =
+                    "M3U8",
+                ["Technical.PlaylistFormat.M3uFamily"] =
+                    "M3U/M3U8",
+                ["Technical.PlaylistFormat.Wpl"] =
+                    "Windows Media Player (WPL)",
+                ["Technical.Encoding.Ascii"] =
+                    "ASCII",
+                ["Technical.Encoding.Utf8"] =
                     "UTF-8",
-                ["Workbench.Choice.ReportEncoding.Utf8WithBom"] =
+                ["Technical.Encoding.Utf8WithBom"] =
                     "UTF-8 with BOM",
-                ["Workbench.Choice.ReportEncoding.Utf16LittleEndian"] =
+                ["Technical.Encoding.Utf16Le"] =
                     "UTF-16 LE",
-                ["Workbench.Choice.PlaylistLineEnding.CrLf"] =
-                    "CRLF",
-                ["Workbench.Choice.PlaylistLineEnding.Lf"] =
-                    "LF",
-                ["Workbench.Choice.Id3EncodingPolicy.Latin1"] =
+                ["Technical.Encoding.Utf16Be"] =
+                    "UTF-16 BE",
+                ["Technical.LineEnding.CrLf"] =
+                    "Windows (CRLF)",
+                ["Technical.LineEnding.Lf"] =
+                    "Unix (LF)",
+                ["Technical.Encoding.Latin1"] =
                     "Latin-1",
-                ["Workbench.Choice.Id3EncodingPolicy.Utf16"] =
+                ["Technical.Encoding.Utf16"] =
                     "UTF-16",
-                ["Workbench.Choice.Id3EncodingPolicy.Utf8"] =
-                    "UTF-8",
-                ["Workbench.Choice.Id3Version.V22"] =
+                ["Technical.Id3Version.V22"] =
                     "ID3v2.2",
-                ["Workbench.Choice.Id3Version.V23"] =
+                ["Technical.Id3Version.V23"] =
                     "ID3v2.3",
-                ["Workbench.Choice.Id3Version.V24"] =
+                ["Technical.Id3Version.V24"] =
                     "ID3v2.4",
+                ["Technical.MusicBrainzIds"] =
+                    "MusicBrainz IDs",
             };
 
         Assert.All(

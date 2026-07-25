@@ -2,7 +2,10 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using MusicFileUtilities;
+using MusicLibrary.Core.Services;
 using MusicLibraryManager.Presentation;
+using MusicLibraryTools.Localization;
 using Xunit;
 
 namespace MusicLibraryManager.Tests;
@@ -30,98 +33,147 @@ public sealed partial class LocalizationCatalogTests
         "zh-TW",
     ];
 
-    private static readonly string[] ProtectedCatalogTokens =
-    [
-        "Music Library Manager",
-        "MusicLibraryManager",
-        "MusicLibraryTools",
-        "MusicBrainz",
-        "Cover Art Archive",
-        "Discogs",
-        "AcoustID",
-        "FFmpeg",
-        "ffmpeg",
-        "ffprobe",
-        "iTunes",
-        "ReplayGain",
-        "WavPack",
-        "MAC",
-        "OptimFROG",
-        "Matroska",
-        "WebM",
-        "Vorbis Comment",
-        "Vorbis",
-        "ID3v2.4",
-        "ID3v2.3",
-        "ID3v2",
-        "ID3v1",
-        "ID3",
-        "APEv2",
-        "SHA-256",
-        "ISO-8859-1",
-        "Windows-1252",
-        "Unicode",
-        "UTF-16LE",
-        "UTF-16BE",
-        "UTF-16",
-        "UTF-8",
-        "FLAC",
-        "Ogg",
-        "Opus",
-        "MP3",
-        "MP4",
-        "AAC",
-        "ALAC",
-        "CPU",
-        "CBR",
-        "ABR",
-        "VBR",
-        "ADTS",
-        "M4A",
-        "PCM",
-        "RF64",
-        "OFR",
-        "OFS",
-        "OFF",
-        "DualStream",
-        "Float",
-        "WAV",
-        "AIFF",
-        "DSF",
-        "DSD",
-        "ASF",
-        "WMA",
-        "APE",
-        "MPC",
-        "TTA",
-        "TAK",
-        "MKA",
-        "M3U8",
-        "M3U",
-        "PLS",
-        "JSON",
-        "CSV",
-        "TSV",
-        "XML",
-        "HTML",
-        "BPM",
-        "ISRC",
-        "URI",
-        "URL",
-        "Ctrl+Z",
-        "Ctrl+Y",
-        "Ctrl+Shift+Z",
-        "Shift+F10",
-        "Avalonia UI",
-        "AvaloniaUI",
-        "Avalonia",
-        "SkiaSharp",
-        "MIT License",
-    ];
+    private static readonly string[]
+        MandatoryProtectedLiteralTokens =
+        [
+            "Music Library Manager",
+            "MusicLibraryManager",
+            "MusicLibraryTools",
+            "MusicBrainz",
+            "Cover Art Archive",
+            "Discogs",
+            "AcoustID",
+            "Avalonia UI",
+            "SkiaSharp",
+            "Windows Media Player",
+            "FFmpeg",
+            "ffprobe",
+            "WavPack",
+            "MAC",
+            "OptimFROG",
+            "fpcalc",
+            "Chromaprint",
+            "ID3v1",
+            "ID3v2.2",
+            "ID3v2.3",
+            "ID3v2.4",
+            "APEv2",
+            "Vorbis Comment",
+            "ReplayGain",
+            "Matroska",
+            "WebM",
+            "FLAC",
+            "Ogg",
+            "Opus",
+            "MP3",
+            "MP4",
+            "AAC",
+            "ALAC",
+            "WAV",
+            "AIFF",
+            "DSF",
+            "DSD",
+            "ASF",
+            "WMA",
+            "APE",
+            "MPC",
+            "TTA",
+            "TAK",
+            "MKA",
+            "SHA-256",
+            "ISO-8859-1",
+            "Windows-1252",
+            "UTF-8",
+            "UTF-16",
+            "UTF-16 LE",
+            "UTF-16 BE",
+            "Latin-1",
+            "CRLF",
+            "LF",
+            "CBR",
+            "ABR",
+            "VBR",
+            "PCM",
+            "RF64",
+            "M3U",
+            "M3U8",
+            "WPL",
+            "CSV",
+            "HTML",
+            "RTF",
+            "JSON",
+            "XML",
+            "BPM",
+            "ISRC",
+            "URI",
+            "URL",
+            "CLI",
+        ];
 
     public static IEnumerable<object[]> ShippingCultureData =>
         ShippingCultures.Select(
             cultureName => new object[] { cultureName });
+
+    public static IEnumerable<object[]> ProtectedTermMutationData
+    {
+        get
+        {
+            yield return
+            [
+                "product name",
+                "Open Windows Media Player (WPL).",
+                "Öffnen Sie Windows Medien Player (WPL).",
+            ];
+            yield return
+            [
+                "package name",
+                "Avalonia UI uses SkiaSharp.",
+                "Avalonia Benutzeroberfläche uses SkiaSharp.",
+            ];
+            yield return
+            [
+                "tool name",
+                "Run FFmpeg and ffprobe.",
+                "Run FFMpeg and ffprobe.",
+            ];
+            yield return
+            [
+                "codec",
+                "Store FLAC in Matroska.",
+                "Store Flac in Matroska.",
+            ];
+            yield return
+            [
+                "tag format",
+                "Write ID3v2.4 and APEv2.",
+                "Write ID3v2.3 and APEv2.",
+            ];
+            yield return
+            [
+                "keyboard gesture",
+                "Press Ctrl+Shift+Z.",
+                "Press Ctrl+Umschalt+Z.",
+            ];
+            yield return
+            [
+                "CLI flag",
+                "Run --check.",
+                "Run --verify.",
+            ];
+            yield return
+            [
+                "path",
+                @"Use C:\Tools\ffmpeg.exe.",
+                @"Use C:\Werkzeuge\ffmpeg.exe.",
+            ];
+            yield return
+            [
+                "MIME type",
+                "Accept image/jpeg.",
+                "Accept image/jpg.",
+            ];
+        }
+    }
 
     [Fact]
     public void Catalog_keys_are_unique_and_format_resources_are_valid()
@@ -283,26 +335,137 @@ public sealed partial class LocalizationCatalogTests
         foreach ((string key, string source) in neutral)
         {
             string translated = satellite[key];
-            foreach (string token in ProtectedCatalogTokens)
-            {
-                int expected = CountProtectedToken(
+            IReadOnlyList<string> mismatches =
+                LocalizationProtectedTerms.FindMismatches(
                     source,
-                    token);
-                if (expected == 0)
-                    continue;
-                int actual = CountProtectedToken(
-                    translated,
-                    token);
-                Assert.True(
-                    expected == actual,
-                    $"{cultureName}:{key} changed protected token " +
-                    $"'{token}' ({expected} expected, {actual} actual).");
-            }
-
-            Assert.Equal(
-                DynamicProtectedTokenSignature(source),
-                DynamicProtectedTokenSignature(translated));
+                    translated);
+            Assert.True(
+                mismatches.Count == 0,
+                $"{cultureName}:{key} changed protected terms: " +
+                string.Join("; ", mismatches));
         }
+    }
+
+    [Fact]
+    public void Protected_literal_glossary_contains_independent_mandatory_baseline()
+    {
+        Assert.All(
+            MandatoryProtectedLiteralTokens,
+            token => Assert.Contains(
+                token,
+                LocalizationProtectedTerms.LiteralTokens));
+    }
+
+    [Theory]
+    [MemberData(nameof(ShippingCultureData))]
+    public void Windows_media_player_uses_its_canonical_name_in_every_satellite(
+        string cultureName)
+    {
+        CatalogEntry entry = Assert.Single(
+            LoadCatalog(cultureName),
+            item => string.Equals(
+                item.Key,
+                "Technical.PlaylistFormat.Wpl",
+                StringComparison.Ordinal));
+
+        Assert.Equal(
+            "Windows Media Player (WPL)",
+            entry.Value);
+    }
+
+    [Theory]
+    [MemberData(nameof(ProtectedTermMutationData))]
+    public void Protected_term_contract_rejects_independent_mutation_examples(
+        string category,
+        string source,
+        string mutated)
+    {
+        Assert.True(
+            LocalizationProtectedTerms.FindMismatches(
+                    source,
+                    mutated)
+                .Count > 0,
+            $"The independent {category} mutation was not rejected.");
+    }
+
+    [Fact]
+    public void Protected_term_contract_covers_gestures_mime_and_contextual_keys()
+    {
+        const string source =
+            "Use Meta+F8, image/jpeg, or an Avalonia key name such as P, Enter, Delete, or F8.";
+
+        Assert.Empty(
+            LocalizationProtectedTerms.FindMismatches(
+                source,
+                "Verwenden Sie Meta+F8, image/jpeg oder einen Avalonia-Tastennamen wie P, Enter, Delete oder F8."));
+        Assert.NotEmpty(
+            LocalizationProtectedTerms.FindMismatches(
+                source,
+                "Verwenden Sie Strg+F8, bild/jpeg oder einen Tastennamen wie P, Eingabe, Löschen oder F8."));
+    }
+
+    [Fact]
+    public void Ordinary_labels_are_not_treated_as_invariant_identifiers()
+    {
+        Assert.Empty(
+            LocalizationProtectedTerms.FindMismatches(
+                "Delete the Name and Encoder values, then select OK.",
+                "Löschen Sie die Werte für Name und Encoder, und wählen Sie dann OK."));
+        Assert.Empty(
+            LocalizationProtectedTerms.FindMismatches(
+                "Set an oversized width or height near 1,000 pixels.",
+                "Legen Sie eine Überbreite oder -höhe nahe 1.000 Pixel fest."));
+    }
+
+    [Fact]
+    public void Source_cli_flags_are_preserved_without_matching_hyphenated_prose()
+    {
+        const string source =
+            "Run --check before using -version.";
+
+        Assert.Empty(
+            LocalizationProtectedTerms.FindMismatches(
+                source,
+                "Führen Sie --check aus, bevor Sie -version verwenden."));
+        Assert.NotEmpty(
+            LocalizationProtectedTerms.FindMismatches(
+                source,
+                "Führen Sie die Prüfung aus, bevor Sie die Version anzeigen."));
+    }
+
+    [Fact]
+    public void Semantic_technical_choices_share_resource_keys()
+    {
+        Assert.Equal(
+            "Technical.Format.Csv",
+            TechnicalLabelResourceKeys.For(ReportFormat.Csv));
+        Assert.Equal(
+            "Technical.Encoding.Utf8",
+            TechnicalLabelResourceKeys.For(ReportEncoding.Utf8));
+        Assert.Equal(
+            "Technical.Encoding.Utf16Le",
+            TechnicalLabelResourceKeys.For(
+                PlaylistWorkspaceEncoding.Utf16LittleEndian));
+        Assert.Equal(
+            "Technical.LineEnding.CrLf",
+            TechnicalLabelResourceKeys.For(
+                PlaylistLineEnding.CrLf));
+        Assert.Equal(
+            "Technical.Id3Version.V24",
+            TechnicalLabelResourceKeys.For(
+                ID3v2Version.V24));
+        Assert.Equal(
+            "Technical.Encoding.Latin1",
+            TechnicalLabelResourceKeys.For(
+                ID3TextEncodingPolicy.Latin1));
+        Assert.Equal(
+            "Technical.Encoding.Utf16Be",
+            TechnicalLabelResourceKeys.ForSettingsChoice(
+                "PlaylistEncoding",
+                "utf-16be"));
+        Assert.Null(
+            TechnicalLabelResourceKeys.For(
+                ReportFormat.Text));
     }
 
     [Theory]
@@ -344,6 +507,11 @@ public sealed partial class LocalizationCatalogTests
     [Fact]
     public void Cjk_satellites_contain_no_unprotected_latin_prose()
     {
+        Dictionary<string, string> neutral = LoadCatalog()
+            .ToDictionary(
+                entry => entry.Key,
+                entry => entry.Value,
+                StringComparer.Ordinal);
         foreach (string cultureName in CjkCultures)
         {
             foreach (CatalogEntry entry in
@@ -356,13 +524,22 @@ public sealed partial class LocalizationCatalogTests
                         entry.Key))
                     continue;
 
-                string value = DynamicProtectedPattern()
+                string value =
+                    LocalizationProtectedTerms.DynamicTokenPattern
                     .Replace(entry.Value, "");
                 foreach (string token in
-                         CjkAllowedLatinTokens)
+                          CjkAllowedLatinTokens)
                     value = ProtectedTokenPattern(
                             token,
-                            ignoreCase: true)
+                            ignoreCase: false)
+                        .Replace(value, "");
+                foreach (string token in
+                         LocalizationProtectedTerms
+                             .SourceDerivedTokens(
+                                 neutral[entry.Key]))
+                    value = ProtectedTokenPattern(
+                            token,
+                            ignoreCase: false)
                         .Replace(value, "");
                 string[] residual = LatinWordPattern()
                     .Matches(value)
@@ -404,13 +581,6 @@ public sealed partial class LocalizationCatalogTests
                     token => token,
                     StringComparer.Ordinal));
 
-    private static int CountProtectedToken(
-        string value,
-        string token) =>
-        ProtectedTokenPattern(token)
-            .Matches(value)
-            .Count;
-
     private static Regex ProtectedTokenPattern(
         string token,
         bool ignoreCase = false) =>
@@ -422,17 +592,6 @@ public sealed partial class LocalizationCatalogTests
             (ignoreCase
                 ? RegexOptions.IgnoreCase
                 : RegexOptions.None));
-
-    private static string DynamicProtectedTokenSignature(
-        string value) =>
-        string.Join(
-            "\u001f",
-            DynamicProtectedPattern()
-                .Matches(value)
-                .Select(match => match.Value)
-                .OrderBy(
-                    token => token,
-                    StringComparer.Ordinal));
 
     private static IReadOnlyList<CatalogEntry>
         LoadCatalog(string? cultureName = null)
@@ -479,18 +638,6 @@ public sealed partial class LocalizationCatalogTests
     private static partial Regex PlaceholderPattern();
 
     [GeneratedRegex(
-        @"(?<!\{)\{\d+(?:,[^}:]+)?(?::[^}]*)?\}(?!\})|" +
-        @"(?<!\{)\{[A-Za-z][A-Za-z0-9]*\}(?!\})|" +
-        @"(?<![\p{L}\p{N}])[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*){2,}(?![\p{L}\p{N}])|" +
-        @"(?<![\p{L}\p{N}])--?[a-z][a-z0-9-]*(?:=[^\s,;)]+)?|" +
-        @"(?:[A-Za-z]:\\|(?<!\S)/)[^\s\r\n,;)]*|" +
-        @"\.[a-z0-9]{2,5}(?![\p{L}\p{N}])|" +
-        @"\\[nrt]",
-        RegexOptions.IgnoreCase |
-        RegexOptions.CultureInvariant)]
-    private static partial Regex DynamicProtectedPattern();
-
-    [GeneratedRegex(
         @"[A-Za-z][A-Za-z'-]*",
         RegexOptions.CultureInvariant)]
     private static partial Regex LatinWordPattern();
@@ -507,92 +654,7 @@ public sealed partial class LocalizationCatalogTests
 
     private static readonly string[] CjkAllowedLatinTokens =
     [
-        .. ProtectedCatalogTokens,
-        "MusicLibraryTools",
-        "Glob",
-        "Vorbis",
-        "ReplayGain",
-        "CD",
-        "EXTINF",
-        "JPEG",
-        "PNG",
-        "ASCII",
-        "WAVE",
-        "ASIN",
-        "BOM",
-        "Bom",
-        "Latin-1",
-        "CRLF",
-        "LF",
-        "LE",
-        "CR",
-        "Lf",
-        "Cr",
-        "ETA",
-        "KiB",
-        "MiB",
-        "KB",
-        "MB",
-        "GB",
-        "TB",
-        "kbps",
-        "Hz",
-        "Name",
-        "Extension",
-        "Codec",
-        "Encoder",
-        "SampleRate",
-        "BitsPerSample",
-        "ADB",
-        "adb",
-        "fpcalc",
-        "Chromaprint",
-        "Android",
-        "Windows",
-        "Unix",
-        "Sonos",
-        "Avalonia",
-        "ITL",
-        "NBSP",
-        "GUID",
-        "LRA",
-        "WPL",
-        "SD",
-        "DJ",
-        "KC",
-        "KD",
-        "UTF",
-        "px",
-        "loudnorm",
-        "ofr",
-        "ofs",
-        "DiscNumLengthLimit",
-        "LengthLimit",
-        "FileNameWithoutExtension",
-        "Monkey's Audio",
-        "True Audio",
-        "Musepack",
-        "Latin1",
-        "Utf16",
-        "Utf8",
-        "RTF",
-        "Rtf",
-        "HTML",
-        "Html",
-        "CSV",
-        "Csv",
-        "ID",
-        "IDs",
-        "Id",
-        "Ids",
-        "OK",
-        "Ctrl",
-        "Shift",
-        "Alt",
-        "Meta",
-        "Delete",
-        "Enter",
-        "Esc",
+        .. LocalizationProtectedTerms.CjkAllowedLatinTokens,
     ];
 
     private sealed record CatalogEntry(

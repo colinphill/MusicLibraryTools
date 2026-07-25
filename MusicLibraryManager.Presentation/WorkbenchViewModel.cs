@@ -1688,6 +1688,8 @@ public partial class WorkbenchViewModel :
                 LF(
                     "Workbench.Operation.ReencodeId3",
                     L(
+                        TechnicalLabelResourceKeys.For(
+                            SelectedId3EncodingPolicy) ??
                         $"Workbench.Choice.Id3EncodingPolicy.{SelectedId3EncodingPolicy}")),
                 progress,
                 ct),
@@ -5849,7 +5851,7 @@ public partial class WorkbenchViewModel :
         RefreshChoices(
             Id3VersionChoices,
             Id3Versions,
-            "Workbench.Choice.Id3Version");
+            keyPrefix: null);
         RefreshChoices(
             Id3EncodingPolicyChoices,
             Id3EncodingPolicies,
@@ -5865,7 +5867,7 @@ public partial class WorkbenchViewModel :
     private void RefreshChoices<T>(
         ObservableCollection<LocalizedChoice<T>> target,
         IEnumerable<T> values,
-        string keyPrefix,
+        string? keyPrefix,
         string keySuffix = "")
     {
         foreach (T value in values)
@@ -5876,7 +5878,8 @@ public partial class WorkbenchViewModel :
                         item.Value,
                         value));
             string label = L(
-                $"{keyPrefix}.{value}{keySuffix}");
+                TechnicalLabelResourceKeys.For(value) ??
+                $"{keyPrefix!}.{value}{keySuffix}");
             if (choice is null)
                 target.Add(new(value, label));
             else

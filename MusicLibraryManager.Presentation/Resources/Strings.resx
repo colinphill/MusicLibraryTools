@@ -94,6 +94,66 @@
   <data name="ArtworkPreview.Size.MegabytesFormat" xml:space="preserve">
     <value>{0:0.##} MB</value>
   </data>
+  <data name="Technical.Format.Csv" xml:space="preserve">
+    <value>CSV</value>
+  </data>
+  <data name="Technical.Format.Html" xml:space="preserve">
+    <value>HTML</value>
+  </data>
+  <data name="Technical.Format.Rtf" xml:space="preserve">
+    <value>RTF</value>
+  </data>
+  <data name="Technical.PlaylistFormat.M3u" xml:space="preserve">
+    <value>M3U</value>
+  </data>
+  <data name="Technical.PlaylistFormat.M3u8" xml:space="preserve">
+    <value>M3U8</value>
+  </data>
+  <data name="Technical.PlaylistFormat.M3uFamily" xml:space="preserve">
+    <value>M3U/M3U8</value>
+  </data>
+  <data name="Technical.PlaylistFormat.Wpl" xml:space="preserve">
+    <value>Windows Media Player (WPL)</value>
+  </data>
+  <data name="Technical.Encoding.Ascii" xml:space="preserve">
+    <value>ASCII</value>
+  </data>
+  <data name="Technical.Encoding.Latin1" xml:space="preserve">
+    <value>Latin-1</value>
+  </data>
+  <data name="Technical.Encoding.Utf8" xml:space="preserve">
+    <value>UTF-8</value>
+  </data>
+  <data name="Technical.Encoding.Utf8WithBom" xml:space="preserve">
+    <value>UTF-8 with BOM</value>
+  </data>
+  <data name="Technical.Encoding.Utf16" xml:space="preserve">
+    <value>UTF-16</value>
+  </data>
+  <data name="Technical.Encoding.Utf16Le" xml:space="preserve">
+    <value>UTF-16 LE</value>
+  </data>
+  <data name="Technical.Encoding.Utf16Be" xml:space="preserve">
+    <value>UTF-16 BE</value>
+  </data>
+  <data name="Technical.LineEnding.CrLf" xml:space="preserve">
+    <value>Windows (CRLF)</value>
+  </data>
+  <data name="Technical.LineEnding.Lf" xml:space="preserve">
+    <value>Unix (LF)</value>
+  </data>
+  <data name="Technical.Id3Version.V22" xml:space="preserve">
+    <value>ID3v2.2</value>
+  </data>
+  <data name="Technical.Id3Version.V23" xml:space="preserve">
+    <value>ID3v2.3</value>
+  </data>
+  <data name="Technical.Id3Version.V24" xml:space="preserve">
+    <value>ID3v2.4</value>
+  </data>
+  <data name="Technical.MusicBrainzIds" xml:space="preserve">
+    <value>MusicBrainz IDs</value>
+  </data>
   <data name="Common.ApplyReviewedPlan" xml:space="preserve">
     <value>Apply reviewed plan</value>
   </data>
@@ -1515,9 +1575,6 @@
   </data>
   <data name="Library.Release.Field.DiscogsReleaseId" xml:space="preserve">
     <value>Discogs release ID</value>
-  </data>
-  <data name="Library.Release.Field.MusicBrainzIds" xml:space="preserve">
-    <value>MusicBrainz IDs</value>
   </data>
   <data name="Library.Artwork.Description" xml:space="preserve">
     <value>Preview local artwork for the current Library scope, or use release artwork for confirmed mappings.</value>
@@ -3705,18 +3762,6 @@
   <data name="Settings.Choice.ExportExtraFileDisposition.Delete" xml:space="preserve">
     <value>Delete</value>
   </data>
-  <data name="Settings.Choice.PlaylistType.m3u" xml:space="preserve">
-    <value>M3U</value>
-  </data>
-  <data name="Settings.Choice.PlaylistType.m3u8" xml:space="preserve">
-    <value>M3U8</value>
-  </data>
-  <data name="Settings.Choice.PlaylistType.wpl" xml:space="preserve">
-    <value>Windows Media Player (WPL)</value>
-  </data>
-  <data name="Settings.Choice.PlaylistSourceType.m3u" xml:space="preserve">
-    <value>M3U/M3U8</value>
-  </data>
   <data name="Settings.Choice.PlaylistPathStyle.legacy" xml:space="preserve">
     <value>Legacy</value>
   </data>
@@ -3729,26 +3774,8 @@
   <data name="Settings.Choice.PlaylistPathStyle.relative" xml:space="preserve">
     <value>Relative</value>
   </data>
-  <data name="Settings.Choice.PlaylistEncoding.utf_8" xml:space="preserve">
-    <value>UTF-8</value>
-  </data>
-  <data name="Settings.Choice.PlaylistEncoding.utf_16" xml:space="preserve">
-    <value>UTF-16</value>
-  </data>
-  <data name="Settings.Choice.PlaylistEncoding.utf_16be" xml:space="preserve">
-    <value>UTF-16 big-endian</value>
-  </data>
-  <data name="Settings.Choice.PlaylistEncoding.ascii" xml:space="preserve">
-    <value>ASCII</value>
-  </data>
   <data name="Settings.Choice.PlaylistLineEnding.platform" xml:space="preserve">
     <value>Platform default</value>
-  </data>
-  <data name="Settings.Choice.PlaylistLineEnding.crlf" xml:space="preserve">
-    <value>Windows (CRLF)</value>
-  </data>
-  <data name="Settings.Choice.PlaylistLineEnding.lf" xml:space="preserve">
-    <value>Unix (LF)</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.legacy" xml:space="preserve">
     <value>Legacy</value>
@@ -4082,8 +4109,6 @@
   <data name="Inspector.Activity.PreviewingTracks.Other" xml:space="preserve"><value>Previewing {0:N0} tracks</value></data>
   <data name="Inspector.Activity.RemoveArtwork" xml:space="preserve"><value>Remove artwork</value></data>
   <data name="Inspector.Activity.ReplaceArtwork" xml:space="preserve"><value>Replace artwork</value></data>
-  <data name="Inspector.Activity.SaveArtworkChanges" xml:space="preserve"><value>Save artwork changes</value></data>
-  <data name="Inspector.Activity.SaveTags" xml:space="preserve"><value>Save tags</value></data>
   <data name="Inspector.Activity.UpdatingTracks.One" xml:space="preserve"><value>Updating {0:N0} track</value></data>
   <data name="Inspector.Activity.UpdatingTracks.Other" xml:space="preserve"><value>Updating {0:N0} tracks</value></data>
   <data name="Inspector.Artwork.DefaultFileName" xml:space="preserve"><value>artwork</value></data>
@@ -4144,14 +4169,9 @@
   <data name="Inspector.Dialog.Revert.Confirm" xml:space="preserve"><value>Revert changes</value></data>
   <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>{0} for {1}. Revert to the values currently stored in the files?</value></data>
   <data name="Inspector.Dialog.Revert.Title" xml:space="preserve"><value>Revert unsaved metadata changes?</value></data>
-  <data name="Inspector.Dialog.SaveArtworkSet.DirectMessage" xml:space="preserve"><value>Replace the embedded artwork set on {0:N0} selected tracks with these {1:N0} images? This writes the files directly; no recovery journal is created.</value></data>
-  <data name="Inspector.Dialog.SaveArtworkSet.Message" xml:space="preserve"><value>Replace the embedded artwork set on {0:N0} selected tracks with these {1:N0} images?</value></data>
-  <data name="Inspector.Dialog.SaveArtworkSet.Title" xml:space="preserve"><value>Save artwork changes</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.ArtworkOnly" xml:space="preserve"><value>Replace the embedded artwork set on {0:N0} selected tracks with these {1:N0} images?</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.TagsAndArtwork" xml:space="preserve"><value>Apply {0:N0} tag changes and replace the embedded artwork set with {1:N0} images on {2:N0} selected tracks?</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.TagsOnly" xml:space="preserve"><value>Apply {0:N0} tag changes to {1:N0} selected tracks?</value></data>
-  <data name="Inspector.Dialog.SaveTags.Confirm" xml:space="preserve"><value>Save tags</value></data>
-  <data name="Inspector.Dialog.SaveTags.Title" xml:space="preserve"><value>Save tag changes</value></data>
   <data name="Inspector.Error.MetadataServiceUnavailable" xml:space="preserve"><value>The shared metadata operation service is unavailable.</value></data>
   <data name="Inspector.Field.Album" xml:space="preserve"><value>Album</value></data>
   <data name="Inspector.Field.AlbumArtist" xml:space="preserve"><value>Album artist</value></data>
@@ -4936,9 +4956,8 @@
   <data name="Organize.Status.PreviewMoves.One" xml:space="preserve"><value>{0:N0} move is ready for review.</value></data>
   <data name="Organize.Status.PreviewMoves.Other" xml:space="preserve"><value>{0:N0} moves are ready for review.</value></data>
   <data name="Organize.Status.Ready" xml:space="preserve"><value>Preview the moves needed to organize the library.</value></data>
-  <data name="Inspector.View.AddArtwork" xml:space="preserve"><value>Add artwork...</value></data>
+  <data name="Inspector.View.AddArtwork" xml:space="preserve"><value>Add artwork…</value></data>
   <data name="Inspector.View.AddArtworkAutomation" xml:space="preserve"><value>Add artwork</value></data>
-  <data name="Inspector.View.AllFields" xml:space="preserve"><value>All fields...</value></data>
   <data name="Inspector.View.Artwork" xml:space="preserve"><value>Artwork</value></data>
   <data name="Inspector.View.ArtworkActions" xml:space="preserve"><value>Artwork actions</value></data>
   <data name="Inspector.View.ArtworkDescription" xml:space="preserve"><value>Artwork description</value></data>
@@ -4958,12 +4977,11 @@
   <data name="Inspector.View.RemoveAllAutomation" xml:space="preserve"><value>Remove all artwork</value></data>
   <data name="Inspector.View.RemoveArtwork" xml:space="preserve"><value>Remove artwork</value></data>
   <data name="Inspector.View.RemoveArtworkAutomation" xml:space="preserve"><value>Remove artwork</value></data>
-  <data name="Inspector.View.ReplaceArtwork" xml:space="preserve"><value>Replace artwork...</value></data>
+  <data name="Inspector.View.ReplaceArtwork" xml:space="preserve"><value>Replace artwork…</value></data>
   <data name="Inspector.View.ReplaceArtworkAutomation" xml:space="preserve"><value>Replace artwork</value></data>
   <data name="Inspector.View.Revert" xml:space="preserve"><value>Discard edits</value></data>
-  <data name="Inspector.View.SaveArtworkToFile" xml:space="preserve"><value>Save to file...</value></data>
+  <data name="Inspector.View.SaveArtworkToFile" xml:space="preserve"><value>Save to file…</value></data>
   <data name="Inspector.View.SaveArtworkToFileAutomation" xml:space="preserve"><value>Save artwork to file</value></data>
-  <data name="Inspector.View.SaveTags" xml:space="preserve"><value>Save tags</value></data>
   <data name="Inspector.View.Selection" xml:space="preserve"><value>SELECTION</value></data>
   <data name="Inspector.View.UnverifiedValue" xml:space="preserve"><value>Current value not verified across all selected tracks.</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Contains" xml:space="preserve"><value>Contains</value></data>
@@ -5114,12 +5132,6 @@
   <data name="Workbench.Choice.FieldEditMode.RemoveValues" xml:space="preserve"><value>Remove Values</value></data>
   <data name="Workbench.Choice.FieldEditMode.Replace" xml:space="preserve"><value>Replace</value></data>
   <data name="Workbench.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>Automatic</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin-1</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>UTF-16</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>UTF-8</value></data>
-  <data name="Workbench.Choice.Id3Version.V22" xml:space="preserve"><value>ID3v2.2</value></data>
-  <data name="Workbench.Choice.Id3Version.V23" xml:space="preserve"><value>ID3v2.3</value></data>
-  <data name="Workbench.Choice.Id3Version.V24" xml:space="preserve"><value>ID3v2.4</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>Ignore</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>Preserve Empty Value</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>Remove Field</value></data>
@@ -5132,21 +5144,10 @@
   <data name="Workbench.Choice.OnlineProvider.MusicBrainz" xml:space="preserve"><value>MusicBrainz</value></data>
   <data name="Workbench.Choice.OnlineScope.AllFiles" xml:space="preserve"><value>All Files</value></data>
   <data name="Workbench.Choice.OnlineScope.SelectedFile" xml:space="preserve"><value>Selected File</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8 with BOM</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.CrLf" xml:space="preserve"><value>CRLF</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.Lf" xml:space="preserve"><value>LF</value></data>
   <data name="Workbench.Choice.PlaylistLineEnding.Platform" xml:space="preserve"><value>Platform</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Absolute" xml:space="preserve"><value>Absolute</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.AsProvided" xml:space="preserve"><value>As Provided</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Relative" xml:space="preserve"><value>Relative</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8 with BOM</value></data>
-  <data name="Workbench.Choice.ReportFormat.Csv" xml:space="preserve"><value>CSV</value></data>
-  <data name="Workbench.Choice.ReportFormat.Html" xml:space="preserve"><value>HTML</value></data>
-  <data name="Workbench.Choice.ReportFormat.Rtf" xml:space="preserve"><value>RTF</value></data>
   <data name="Workbench.Choice.ReportFormat.Text" xml:space="preserve"><value>Text</value></data>
   <data name="Workbench.Choice.ReportSortType.DateTime" xml:space="preserve"><value>Date Time</value></data>
   <data name="Workbench.Choice.ReportSortType.Natural" xml:space="preserve"><value>Natural</value></data>
@@ -5314,7 +5315,6 @@
   <data name="Workbench.Online.Field.AlbumDate" xml:space="preserve"><value>Album Date</value></data>
   <data name="Workbench.Online.Field.DiscogsReleaseId" xml:space="preserve"><value>Discogs Release ID</value></data>
   <data name="Workbench.Online.Field.GenresStyles" xml:space="preserve"><value>Genres Styles</value></data>
-  <data name="Workbench.Online.Field.MusicBrainzIds" xml:space="preserve"><value>MusicBrainz IDs</value></data>
   <data name="Workbench.Online.Field.Numbering" xml:space="preserve"><value>Numbering</value></data>
   <data name="Workbench.Online.Field.ReleaseDetails" xml:space="preserve"><value>Release Details</value></data>
   <data name="Workbench.Online.Field.Titles" xml:space="preserve"><value>Titles</value></data>
@@ -5463,7 +5463,7 @@
   <data name="Workbench.Representative.Status.Ready.One" xml:space="preserve"><value>{1} / {0:N0} proposed field change</value></data>
   <data name="Workbench.Representative.Status.Ready.Other" xml:space="preserve"><value>{1} / {0:N0} proposed field changes</value></data>
   <data name="Workbench.Representative.Status.Unavailable" xml:space="preserve"><value>Draft preview unavailable.</value></data>
-  <data name="Workbench.Representative.Status.Updating" xml:space="preserve"><value>Updating draft preview for {0}...</value></data>
+  <data name="Workbench.Representative.Status.Updating" xml:space="preserve"><value>Updating draft preview for {0}</value></data>
   <data name="Workbench.Representative.ValueSeparator" xml:space="preserve"><value> / </value></data>
   <data name="Workbench.Section.AllFields" xml:space="preserve"><value>All fields</value></data>
   <data name="Workbench.Section.AllFieldsAutomation" xml:space="preserve"><value>All metadata fields</value></data>
@@ -5534,7 +5534,7 @@
   <data name="Workbench.Shortcuts.Validation.ModifierAndKeyRequired" xml:space="preserve"><value>A modifier and a key are required.</value></data>
   <data name="Workbench.Shortcuts.Validation.OneKey" xml:space="preserve"><value>A shortcut can contain only one non-modifier key.</value></data>
   <data name="Workbench.Shortcuts.Validation.RepeatedModifier" xml:space="preserve"><value>Modifier &apos;{0}&apos; is repeated.</value></data>
-  <data name="Workbench.Shortcuts.Validation.Reserved" xml:space="preserve"><value>{0} is reserved by the application shell.</value></data>
+  <data name="Workbench.Shortcuts.Validation.Reserved" xml:space="preserve"><value>{0} is reserved by the application.</value></data>
   <data name="Workbench.Size.Bytes" xml:space="preserve"><value>B</value></data>
   <data name="Workbench.Size.Gigabytes" xml:space="preserve"><value>GB</value></data>
   <data name="Workbench.Size.Kilobytes" xml:space="preserve"><value>KB</value></data>
@@ -5546,7 +5546,7 @@
   <data name="Workbench.Source.ChooseFilesAutomation" xml:space="preserve"><value>Choose Files</value></data>
   <data name="Workbench.Source.ChooseFolder" xml:space="preserve"><value>Choose folder</value></data>
   <data name="Workbench.Source.ChooseFolderAutomation" xml:space="preserve"><value>Choose Folder</value></data>
-  <data name="Workbench.Source.Description" xml:space="preserve"><value>Choose files, a folder, playlist, cuesheet, or a recent location.</value></data>
+  <data name="Workbench.Source.Description" xml:space="preserve"><value>Choose files, a folder, a playlist, a CUE sheet, or a recent location.</value></data>
   <data name="Workbench.Source.IncludeSubfolders" xml:space="preserve"><value>Include subfolders</value></data>
   <data name="Workbench.Source.RecentAutomation" xml:space="preserve"><value>Recent</value></data>
   <data name="Workbench.Source.RecentLocation" xml:space="preserve"><value>Recent location</value></data>
@@ -5681,7 +5681,7 @@
   <data name="Workbench.Tools.Preview" xml:space="preserve"><value>Preview tool</value></data>
   <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>Reviewed invocation</value></data>
   <data name="Workbench.Tools.Run" xml:space="preserve"><value>Run</value></data>
-  <data name="Workbench.Tools.Safety" xml:space="preserve"><value>No shell is used, but the selected executable can still change files. External tools are outside MusicLibraryManager recovery and always require confirmation.</value></data>
+  <data name="Workbench.Tools.Safety" xml:space="preserve"><value>Commands run without a command shell, but the selected executable can still change files. External tools are not covered by MusicLibraryManager recovery and always require confirmation.</value></data>
   <data name="Workbench.Tools.Save" xml:space="preserve"><value>Save tool</value></data>
   <data name="Workbench.Tools.SavedPlaceholder" xml:space="preserve"><value>Saved</value></data>
   <data name="Workbench.Tools.Status.Deleted" xml:space="preserve"><value>Deleted personal tool &apos;{0}&apos;.</value></data>
@@ -6007,9 +6007,6 @@
   <data name="MetadataEditor.Choice.ConditionOperator.Missing" xml:space="preserve"><value>Missing</value></data>
   <data name="MetadataEditor.Choice.ConditionOperator.Present" xml:space="preserve"><value>Present</value></data>
   <data name="MetadataEditor.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>Automatic</value></data>
-  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin-1</value></data>
-  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>UTF-16</value></data>
-  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>UTF-8</value></data>
   <data name="MetadataEditor.Choice.Operation.Assign" xml:space="preserve"><value>Assign</value></data>
   <data name="MetadataEditor.Choice.Operation.ChangeCase" xml:space="preserve"><value>Change case</value></data>
   <data name="MetadataEditor.Choice.Operation.Combine" xml:space="preserve"><value>Combine fields</value></data>

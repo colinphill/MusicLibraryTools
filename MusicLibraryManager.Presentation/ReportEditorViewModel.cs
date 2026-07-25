@@ -400,7 +400,7 @@ public partial class ReportEditorViewModel : ObservableObject
         RefreshChoices(
             EncodingChoices,
             Encodings,
-            "Workbench.Choice.ReportEncoding");
+            keyPrefix: null);
         RefreshChoices(
             SortTypeChoices,
             SortTypes,
@@ -410,7 +410,7 @@ public partial class ReportEditorViewModel : ObservableObject
     private void RefreshChoices<T>(
         ObservableCollection<LocalizedChoice<T>> target,
         IEnumerable<T> values,
-        string keyPrefix)
+        string? keyPrefix)
     {
         foreach (T value in values)
         {
@@ -419,7 +419,9 @@ public partial class ReportEditorViewModel : ObservableObject
                     EqualityComparer<T>.Default.Equals(
                         item.Value,
                         value));
-            string label = L($"{keyPrefix}.{value}");
+            string label = L(
+                TechnicalLabelResourceKeys.For(value) ??
+                $"{keyPrefix!}.{value}");
             if (choice is null)
                 target.Add(new(value, label));
             else

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
+using MusicLibraryTools.Localization;
 
 return CatalogGeneratorCommandLine.Run(
     args,
@@ -22,173 +23,6 @@ internal static partial class CatalogGenerator
         new("zh-CN", "简体中文（中国）"),
         new("zh-TW", "繁體中文（台灣）"),
     ];
-
-    private static readonly string[] ProtectedLiteralTokens =
-    [
-        "Music Library Manager",
-        "MusicLibraryManager",
-        "MusicLibraryTools",
-        "MusicBrainz",
-        "Cover Art Archive",
-        "Discogs",
-        "AcoustID",
-        "FFmpeg",
-        "ffprobe",
-        "WavPack",
-        "MAC",
-        "OptimFROG",
-        "Matroska",
-        "WebM",
-        "Vorbis Comment",
-        "Vorbis",
-        "Glob",
-        "ReplayGain",
-        "ID3v2.4",
-        "ID3v2.3",
-        "ID3v2",
-        "ID3v1",
-        "ID3",
-        "APEv2",
-        "SHA-256",
-        "ISO-8859-1",
-        "Unicode",
-        "Windows-1252",
-        "UTF-16LE",
-        "UTF-16BE",
-        "UTF-16",
-        "UTF-8",
-        "FLAC",
-        "Ogg",
-        "Opus",
-        "MP3",
-        "MP4",
-        "AAC",
-        "ALAC",
-        "WAV",
-        "AIFF",
-        "DSF",
-        "DSD",
-        "ASF",
-        "WMA",
-        "APE",
-        "MPC",
-        "TTA",
-        "TAK",
-        "MKA",
-        "CD",
-        "EXTINF",
-        "JPEG",
-        "PNG",
-        "ASCII",
-        "WAVE",
-        "ASIN",
-        "BOM",
-        "CRLF",
-        "LF",
-        "LE",
-        "CR",
-        "ETA",
-        "KiB",
-        "MiB",
-        "KB",
-        "MB",
-        "GB",
-        "TB",
-        "kbps",
-        "Hz",
-        "CPU",
-        "CBR",
-        "ABR",
-        "VBR",
-        "ADTS",
-        "M4A",
-        "PCM",
-        "RF64",
-        "OFR",
-        "OFS",
-        "OFF",
-        "DualStream",
-        "Float",
-        "Name",
-        "Extension",
-        "Codec",
-        "Encoder",
-        "SampleRate",
-        "BitsPerSample",
-        "ADB",
-        "adb",
-        "fpcalc",
-        "Chromaprint",
-        "Android",
-        "Windows",
-        "Unix",
-        "Sonos",
-        "Avalonia UI",
-        "AvaloniaUI",
-        "Avalonia",
-        "SkiaSharp",
-        "MIT License",
-        "ITL",
-        "NBSP",
-        "GUID",
-        "LRA",
-        "WPL",
-        "SD",
-        "DJ",
-        "KC",
-        "KD",
-        "UTF",
-        "px",
-        "loudnorm",
-        "ofr",
-        "ofs",
-        "DiscNumLengthLimit",
-        "LengthLimit",
-        "FileNameWithoutExtension",
-        "iTunes",
-        "Monkey's Audio",
-        "True Audio",
-        "Musepack",
-        "Latin-1",
-        "Latin1",
-        "Utf16",
-        "Utf8",
-        "RTF",
-        "HTML",
-        "CSV",
-        "ID",
-        "IDs",
-        "JSON",
-        "TSV",
-        "CSV",
-        "XML",
-        "HTML",
-        "M3U8",
-        "M3U",
-        "PLS",
-        "BPM",
-        "ISRC",
-        "URI",
-        "URL",
-        "CLI",
-        "Ctrl+Z",
-        "Ctrl+Y",
-        "Ctrl+Shift+Z",
-        "Shift+F10",
-        "Ctrl",
-        "Shift",
-        "Alt",
-        "Meta",
-        "OK",
-    ];
-
-    private static readonly string[]
-        CaseSensitiveProtectedLiteralTokens =
-        [
-            "Delete",
-            "Enter",
-            "Esc",
-        ];
 
     private static readonly Dictionary<string, string> NativeAutonyms =
         new(StringComparer.Ordinal)
@@ -320,7 +154,9 @@ internal static partial class CatalogGenerator
                     !CjkInvariantExampleKeys.Contains(key))
                 {
                     string[] residualLatinWords =
-                        FindUnprotectedLatinWords(translated);
+                        FindUnprotectedLatinWords(
+                            translated,
+                            source);
                     residualCjkWords.UnionWith(
                         residualLatinWords);
                 }
@@ -439,12 +275,20 @@ internal static partial class CatalogGenerator
                 key,
                 out IReadOnlyDictionary<string, string>?
                     editorialTranslations))
-            return editorialTranslations[locale.Name];
+            return ValidateProtectedTerms(
+                key,
+                source,
+                editorialTranslations[locale.Name],
+                locale.Name);
         if (ExactResourceTranslations.TryGetValue(
                 key,
                 out IReadOnlyDictionary<string, string>?
                     exactTranslations))
-            return exactTranslations[locale.Name];
+            return ValidateProtectedTerms(
+                key,
+                source,
+                exactTranslations[locale.Name],
+                locale.Name);
 
         ProtectedText protectedText = Protect(source);
         string result = protectedText.Text;
@@ -479,35 +323,43 @@ internal static partial class CatalogGenerator
                 $"Translation-memory entries do not cover '{key}': " +
                 string.Join(", ", uncoveredSourceWords));
 
-        return new ProtectedText(
-                result,
-                tokens)
-            .Restore(result);
+        return ValidateProtectedTerms(
+            key,
+            source,
+            new ProtectedText(
+                    result,
+                    tokens)
+                .Restore(result),
+            locale.Name);
     }
 
     private static ProtectedText Protect(string value)
     {
         var tokens = new List<string>();
-        string protectedValue = DynamicProtectedPattern().Replace(
+        IReadOnlyList<string> sourceDerivedTokens =
+            LocalizationProtectedTerms.SourceDerivedTokens(value);
+        string protectedValue =
+            LocalizationProtectedTerms.DynamicTokenPattern.Replace(
             value,
             match => AddProtectedToken(match.Value, tokens));
-        foreach (string literal in ProtectedLiteralTokens
-                     .OrderByDescending(token => token.Length))
+        foreach (string literal in
+                 LocalizationProtectedTerms.LiteralTokens
+                      .OrderByDescending(token => token.Length))
         {
             protectedValue = Regex.Replace(
                 protectedValue,
                 $@"(?<![A-Za-z0-9]){Regex.Escape(literal)}(?![A-Za-z0-9])",
                 match => AddProtectedToken(match.Value, tokens),
-                RegexOptions.IgnoreCase |
                 RegexOptions.CultureInvariant);
         }
-        foreach (string literal in
-                 CaseSensitiveProtectedLiteralTokens)
+        foreach (string sourceDerivedToken in
+                 sourceDerivedTokens.OrderByDescending(
+                     token => token.Length))
         {
             protectedValue = Regex.Replace(
                 protectedValue,
                 $@"(?<![A-Za-z0-9])" +
-                Regex.Escape(literal) +
+                Regex.Escape(sourceDerivedToken) +
                 @"(?![A-Za-z0-9])",
                 match => AddProtectedToken(
                     match.Value,
@@ -515,6 +367,23 @@ internal static partial class CatalogGenerator
                 RegexOptions.CultureInvariant);
         }
         return new ProtectedText(protectedValue, tokens);
+    }
+
+    private static string ValidateProtectedTerms(
+        string key,
+        string source,
+        string translated,
+        string cultureName)
+    {
+        IReadOnlyList<string> mismatches =
+            LocalizationProtectedTerms.FindMismatches(
+                source,
+                translated);
+        if (mismatches.Count > 0)
+            throw new InvalidDataException(
+                $"{cultureName}:{key}: protected localization terms changed: " +
+                string.Join("; ", mismatches));
+        return translated;
     }
 
     private static string AddProtectedToken(
@@ -538,14 +407,39 @@ internal static partial class CatalogGenerator
         cultureName.StartsWith("zh", StringComparison.Ordinal);
 
     private static string[] FindUnprotectedLatinWords(
-        string value) =>
-        EnglishWordPattern()
-            .Matches(Protect(value).Text)
+        string value,
+        string? source = null)
+    {
+        string protectedValue = Protect(value).Text;
+        foreach (string token in
+                 LocalizationProtectedTerms.CjkAllowedLatinTokens
+                     .OrderByDescending(token => token.Length))
+            protectedValue = Regex.Replace(
+                protectedValue,
+                $@"(?<![A-Za-z0-9])" +
+                Regex.Escape(token) +
+                @"(?![A-Za-z0-9])",
+                "",
+                RegexOptions.CultureInvariant);
+        foreach (string token in
+                 LocalizationProtectedTerms.SourceDerivedTokens(
+                     source ?? ""))
+            protectedValue = Regex.Replace(
+                protectedValue,
+                $@"(?<![A-Za-z0-9])" +
+                Regex.Escape(token) +
+                @"(?![A-Za-z0-9])",
+                "",
+                RegexOptions.CultureInvariant);
+
+        return EnglishWordPattern()
+            .Matches(protectedValue)
             .Select(match => match.Value)
             .Where(word => word.Length > 1)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(word => word, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
 
     private static string TranslateInflectedWords(
         string value,
@@ -867,19 +761,31 @@ internal static partial class CatalogGenerator
                         actualValue))
                     failures.Add(
                         $"{locale.Name}:{key}: shipping placeholder mismatch");
+                IReadOnlyList<string> protectedTermMismatches =
+                    LocalizationProtectedTerms.FindMismatches(
+                        source,
+                        actualValue);
+                if (protectedTermMismatches.Count > 0)
+                    failures.Add(
+                        $"{locale.Name}:{key}: protected localization terms changed: " +
+                        string.Join(
+                            "; ",
+                            protectedTermMismatches));
                 if (IsCjk(locale.Name) &&
                     !NativeAutonyms.ContainsKey(key) &&
                     !CjkInvariantExampleKeys.Contains(key))
                 {
                     string[] residual =
                         FindUnprotectedLatinWords(
-                            actualValue);
+                            actualValue,
+                            source);
                     if (residual.Length > 0)
                         failures.Add(
                             $"{locale.Name}:{key}: unprotected Latin text: " +
                             string.Join(", ", residual));
                 }
-                if (!string.Equals(
+                if (protectedTermMismatches.Count == 0 &&
+                    !string.Equals(
                         actualValue,
                         generated[key],
                         StringComparison.Ordinal))
@@ -1078,17 +984,6 @@ internal static partial class CatalogGenerator
     }
 
     [GeneratedRegex(
-        @"(?<!\{)\{(?:\d+(?:,[^}:]+)?(?::[^}]*)?|[A-Za-z][A-Za-z0-9]*)\}(?!\})|" +
-        @"(?<![\p{L}\p{N}])[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*){2,}(?![\p{L}\p{N}])|" +
-        @"(?<![\p{L}\p{N}])--?[a-z][a-z0-9-]*(?:=[^\s,;)]+)?|" +
-        @"(?:[A-Za-z]:\\|(?<!\S)/)[^\s\r\n,;)]*|" +
-        @"\.[a-z0-9]{2,5}(?![\p{L}\p{N}])|" +
-        @"\\[nrt]",
-        RegexOptions.IgnoreCase |
-        RegexOptions.CultureInvariant)]
-    private static partial Regex DynamicProtectedPattern();
-
-    [GeneratedRegex(
         @"(?<!\{)\{(?:\d+(?:,[^}:]+)?(?::[^}]*)?|[A-Za-z][A-Za-z0-9]*)\}(?!\})",
         RegexOptions.CultureInvariant)]
     private static partial Regex PlaceholderPattern();
@@ -1266,6 +1161,8 @@ internal static partial class CatalogGenerator
     private static readonly string TranslationRows =
         """
         # English|de-DE|es-ES|fr-FR|it-IT|pt-BR|ja-JP|ko-KR|zh-CN|zh-TW
+        IDs|IDs|ID|ID|ID|IDs|ID|ID|ID|ID
+        ID|ID|ID|ID|ID|ID|ID|ID|ID|ID
         effort|Aufwand|esfuerzo|effort|intensità|esforço|強度|강도|强度|強度
         about|Über|Acerca de|À propos|Informazioni|Sobre|このアプリについて|정보|关于|關於
         pending changes|ausstehende Änderungen|cambios pendientes|modifications en attente|modifiche in sospeso|alterações pendentes|保留中の変更|보류 중인 변경 사항|待处理更改|待處理變更

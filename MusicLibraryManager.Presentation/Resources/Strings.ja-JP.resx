@@ -83,7 +83,7 @@
     <value>フル解像度の {0} アートワーク</value>
   </data>
   <data name="ArtworkPreview.DetailsFormat" xml:space="preserve">
-    <value>{0:N0} x {1:N0} ピクセル · {2} · {3}</value>
+    <value>{0:N0} × {1:N0} ピクセル · {2} · {3}</value>
   </data>
   <data name="ArtworkPreview.Size.BytesFormat" xml:space="preserve">
     <value>{0:N0} バイト</value>
@@ -93,6 +93,66 @@
   </data>
   <data name="ArtworkPreview.Size.MegabytesFormat" xml:space="preserve">
     <value>{0:0.##} MB</value>
+  </data>
+  <data name="Technical.Format.Csv" xml:space="preserve">
+    <value>CSV</value>
+  </data>
+  <data name="Technical.Format.Html" xml:space="preserve">
+    <value>HTML</value>
+  </data>
+  <data name="Technical.Format.Rtf" xml:space="preserve">
+    <value>RTF</value>
+  </data>
+  <data name="Technical.PlaylistFormat.M3u" xml:space="preserve">
+    <value>M3U</value>
+  </data>
+  <data name="Technical.PlaylistFormat.M3u8" xml:space="preserve">
+    <value>M3U8</value>
+  </data>
+  <data name="Technical.PlaylistFormat.M3uFamily" xml:space="preserve">
+    <value>M3U/M3U8</value>
+  </data>
+  <data name="Technical.PlaylistFormat.Wpl" xml:space="preserve">
+    <value>Windows Media Player (WPL)</value>
+  </data>
+  <data name="Technical.Encoding.Ascii" xml:space="preserve">
+    <value>ASCII</value>
+  </data>
+  <data name="Technical.Encoding.Latin1" xml:space="preserve">
+    <value>Latin-1</value>
+  </data>
+  <data name="Technical.Encoding.Utf8" xml:space="preserve">
+    <value>UTF-8</value>
+  </data>
+  <data name="Technical.Encoding.Utf8WithBom" xml:space="preserve">
+    <value>UTF-8 付き BOM</value>
+  </data>
+  <data name="Technical.Encoding.Utf16" xml:space="preserve">
+    <value>UTF-16</value>
+  </data>
+  <data name="Technical.Encoding.Utf16Le" xml:space="preserve">
+    <value>UTF-16 LE</value>
+  </data>
+  <data name="Technical.Encoding.Utf16Be" xml:space="preserve">
+    <value>UTF-16 BE</value>
+  </data>
+  <data name="Technical.LineEnding.CrLf" xml:space="preserve">
+    <value>Windows (CRLF)</value>
+  </data>
+  <data name="Technical.LineEnding.Lf" xml:space="preserve">
+    <value>Unix (LF)</value>
+  </data>
+  <data name="Technical.Id3Version.V22" xml:space="preserve">
+    <value>ID3v2.2</value>
+  </data>
+  <data name="Technical.Id3Version.V23" xml:space="preserve">
+    <value>ID3v2.3</value>
+  </data>
+  <data name="Technical.Id3Version.V24" xml:space="preserve">
+    <value>ID3v2.4</value>
+  </data>
+  <data name="Technical.MusicBrainzIds" xml:space="preserve">
+    <value>MusicBrainz ID</value>
   </data>
   <data name="Common.ApplyReviewedPlan" xml:space="preserve">
     <value>確認済みプランを適用</value>
@@ -104,7 +164,7 @@
     <value>ベータ</value>
   </data>
   <data name="Common.Back" xml:space="preserve">
-    <value>背面</value>
+    <value>戻る</value>
   </data>
   <data name="Common.Browse" xml:space="preserve">
     <value>参照</value>
@@ -146,7 +206,7 @@
     <value>AcoustID</value>
   </data>
   <data name="Column.Action" xml:space="preserve">
-    <value>アクション</value>
+    <value>操作</value>
   </data>
   <data name="Column.After" xml:space="preserve">
     <value>変更後</value>
@@ -197,10 +257,10 @@
     <value>チャンネル</value>
   </data>
   <data name="Column.Codec" xml:space="preserve">
-    <value>Codec</value>
+    <value>コーデック</value>
   </data>
   <data name="Column.CodecType" xml:space="preserve">
-    <value>Codec 種類</value>
+    <value>コーデックの種類</value>
   </data>
   <data name="Column.Comment" xml:space="preserve">
     <value>コメント</value>
@@ -221,7 +281,7 @@
     <value>日付</value>
   </data>
   <data name="Column.Destination" xml:space="preserve">
-    <value>宛先</value>
+    <value>保存先</value>
   </data>
   <data name="Column.DestinationPath" xml:space="preserve">
     <value>出力先のパス</value>
@@ -284,7 +344,7 @@
     <value>グループ</value>
   </data>
   <data name="Column.Grouping" xml:space="preserve">
-    <value>グループ化</value>
+    <value>グループ</value>
   </data>
   <data name="Column.Job" xml:space="preserve">
     <value>ジョブ</value>
@@ -299,7 +359,7 @@
     <value>一致 位置</value>
   </data>
   <data name="Column.Modified" xml:space="preserve">
-    <value>変更済み</value>
+    <value>更新日時</value>
   </data>
   <data name="Column.MusicBrainzRecordingIds" xml:space="preserve">
     <value>MusicBrainz 録音 ID</value>
@@ -362,7 +422,7 @@
     <value>スタイル</value>
   </data>
   <data name="Column.TagType" xml:space="preserve">
-    <value>タグ 種類</value>
+    <value>タグの種類</value>
   </data>
   <data name="Column.Thumbnail" xml:space="preserve">
     <value>サムネイル</value>
@@ -377,7 +437,7 @@
     <value>トラック</value>
   </data>
   <data name="Column.TrackTotal" xml:space="preserve">
-    <value>トラック総数</value>
+    <value>総トラック数</value>
   </data>
   <data name="Column.Type" xml:space="preserve">
     <value>種類</value>
@@ -392,7 +452,7 @@
     <value>場合</value>
   </data>
   <data name="Column.WorkingDirectory" xml:space="preserve">
-    <value>処理中 ディレクトリ</value>
+    <value>作業ディレクトリ</value>
   </data>
   <data name="Column.Year" xml:space="preserve">
     <value>年</value>
@@ -413,7 +473,7 @@
     <value>自動検出 adb</value>
   </data>
   <data name="Devices.AdoptDescription" xml:space="preserve">
-    <value>現在の出力先の内容を信頼済みとして採用し、最初の同期プレビューに含めます。</value>
+    <value>既存の保存先を採用すると、現在の内容を信頼し、最初の同期プレビューに含めます。</value>
   </data>
   <data name="Devices.AdoptExisting" xml:space="preserve">
     <value>既存の空でない出力先を採用</value>
@@ -458,7 +518,7 @@
     <value>Android デバイスを検出中</value>
   </data>
   <data name="Devices.DestinationAliasDescription" xml:space="preserve">
-    <value>「音楽」エイリアスではリムーバブル SD ストレージのみを選択します。内部共有ストレージには /sdcard/Music を使用してください。</value>
+    <value>「music」エイリアスは、リムーバブル SD ストレージのみを選択します。内部共有ストレージには /sdcard/Music を使用してください。</value>
   </data>
   <data name="Devices.ExclusionGlobs" xml:space="preserve">
     <value>除外グロブ (1 行に 1 つ)</value>
@@ -485,7 +545,7 @@
     <value>最大 削除</value>
   </data>
   <data name="Devices.MaximumRemovalsDescription" xml:space="preserve">
-    <value>空欄の場合は数に制限がなく、0 の場合は削除を許可しません。</value>
+    <value>空欄の場合は削除数に制限がなく、0 の場合は削除できません。</value>
   </data>
   <data name="Devices.MirrorProfile" xml:space="preserve">
     <value>ミラー プロファイル</value>
@@ -497,16 +557,16 @@
     <value>変更時刻の許容範囲 (秒)</value>
   </data>
   <data name="Devices.MultipleReady" xml:space="preserve">
-    <value>準備完了のデバイスが複数接続されています。上から 1 台を選択するか、同期する前にデバイスのシリアル番号を入力してください。</value>
+    <value>使用可能なデバイスが複数接続されています。同期する前に上から選択するか、シリアル番号を入力してください。</value>
   </data>
   <data name="Devices.NoActions.Description" xml:space="preserve">
-    <value>出力先を構成し、プレビューを実行してローカルソースと比較してください。</value>
+    <value>保存先を構成してプレビューを実行し、ローカルソースと比較してください。</value>
   </data>
   <data name="Devices.NoActions.Title" xml:space="preserve">
-    <value>同期操作はありません</value>
+    <value>同期する項目はありません</value>
   </data>
   <data name="Devices.NoDevices" xml:space="preserve">
-    <value>ADB から Android デバイスが報告されませんでした。デバイスを接続するか、シリアル番号を手動で入力してください。</value>
+    <value>ADB で Android デバイスが見つかりませんでした。デバイスを接続するか、シリアル番号を手動で入力してください。</value>
   </data>
   <data name="Devices.Policy" xml:space="preserve">
     <value>ポリシー</value>
@@ -515,13 +575,13 @@
     <value>Android デバイスを更新</value>
   </data>
   <data name="Devices.Subtitle" xml:space="preserve">
-    <value>ローカル音楽フォルダーを、ADB 経由で検証済みの管理対象 Android 出力先にミラーします。</value>
+    <value>ADB を使用して、ローカルの音楽フォルダーを検証済みの管理対象 Android 保存先へ同期します。</value>
   </data>
   <data name="Devices.Title" xml:space="preserve">
     <value>デバイス</value>
   </data>
   <data name="Devices.Unavailable" xml:space="preserve">
-    <value>このデバイスは利用できません。承認または再接続して更新してから、同期してください。</value>
+    <value>このデバイスは利用できません。承認または再接続し、更新してから同期してください。</value>
   </data>
   <data name="Dialog.AutomationName" xml:space="preserve">
     <value>ダイアログ</value>
@@ -617,7 +677,7 @@
     <value>最近 アクティビティ</value>
   </data>
   <data name="Home.Roots.Description" xml:space="preserve">
-    <value>オフラインのルートからキャッシュ済みトラックが削除されることはありません。再び利用可能になったら再接続してインデックスを作成してください。</value>
+    <value>オフラインのルートでも、キャッシュ済みトラックは削除されません。利用可能になったら再接続してインデックスを作成してください。</value>
   </data>
   <data name="Home.Roots.Title" xml:space="preserve">
     <value>ライブラリ ルート</value>
@@ -629,7 +689,7 @@
     <value>ライブラリルートを追加</value>
   </data>
   <data name="Home.Step.Browse.Description" xml:space="preserve">
-    <value>インデックス済みのコレクションを参照し、健全性監査を実行します。</value>
+    <value>インデックス済みのコレクションを参照し、状態チェックを実行します。</value>
   </data>
   <data name="Home.Step.Browse.Title" xml:space="preserve">
     <value>参照と確認</value>
@@ -647,10 +707,10 @@
     <value>ライブラリをインデックス化</value>
   </data>
   <data name="Home.Subtitle" xml:space="preserve">
-    <value>コレクション、その健全性、次に確認すべき項目をすっきり表示します。</value>
+    <value>コレクションの状態と、次に確認する項目をすっきり表示します。</value>
   </data>
   <data name="Home.Title" xml:space="preserve">
-    <value>音楽を明確に管理</value>
+    <value>音楽をわかりやすく管理</value>
   </data>
   <data name="Health.Action.ApplyActiveMerges" xml:space="preserve">
     <value>有効な統合を適用</value>
@@ -686,7 +746,7 @@
     <value>日付</value>
   </data>
   <data name="Health.AlbumMatrix.Description" xml:space="preserve">
-    <value>問題のあるアルバムフォルダーだけを表示します。琥珀色のセルは、アーティスト、アルバム、日付、トラック／ディスク番号、合計値の欠落または競合を示します。理由を確認するにはセルにポインターを合わせてください。同名のアルバムでも、フォルダーパスが異なる場合は別々に扱われます。</value>
+    <value>問題のあるアルバムフォルダーのみ表示されます。琥珀色のセルは情報の欠落や不一致を示します。理由を確認するにはセルにポインターを合わせてください。同名のアルバムでもフォルダーパスが異なる場合は別々に扱われます。</value>
   </data>
   <data name="Health.AlbumMatrix.Disc" xml:space="preserve">
     <value>ディスク</value>
@@ -695,7 +755,7 @@
     <value>ディスク総数</value>
   </data>
   <data name="Health.AlbumMatrix.Empty" xml:space="preserve">
-    <value>アルバムメタデータの不整合は見つかりませんでした。</value>
+    <value>アルバムのメタデータに不一致は見つかりませんでした。</value>
   </data>
   <data name="Health.AlbumMatrix.FlagReason" xml:space="preserve">
     <value>指摘された理由</value>
@@ -722,7 +782,7 @@
     <value>正規 対象</value>
   </data>
   <data name="Health.Artist.Description" xml:space="preserve">
-    <value>各グループの正規名を選び、名前を変更するバリエーションだけを「有効」にします。フィルターを使用すると、バリエーションのトラックをライブラリに送れます。</value>
+    <value>各グループの標準名を選び、名前を変更する表記のみを有効にします。「フィルター」で、その表記のトラックをライブラリに表示できます。</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
     <value>有効な表記で {0} トラックを選択</value>
@@ -767,7 +827,7 @@
     <value>類似アーティストのあいまい一致しきい値</value>
   </data>
   <data name="Health.Artist.ThresholdTooltip" xml:space="preserve">
-    <value>正規化後の最大編集距離です。値が小さいほど厳密になり、0 では正規化後に同じ表記だけを許可します。</value>
+    <value>正規化した編集距離の上限です。値が小さいほど厳密になり、0 では正規化後に同一となる表記のみ許可されます。</value>
   </data>
   <data name="Health.Artwork.Description" xml:space="preserve">
     <value>複数の画像があるアルバムでは使用するカバーを選択し、必要な修復を有効にしてから適用します。各操作では、設定にある修復用のサイズと寸法の上限を使用します。</value>
@@ -803,7 +863,7 @@
     <value>影響を受けるファイル ({0})</value>
   </data>
   <data name="Health.Artwork.Empty" xml:space="preserve">
-    <value>この監査で自動修復できるアートワークはありません。</value>
+    <value>この監査で利用できる自動アートワーク修復はありません。</value>
   </data>
   <data name="Health.Artwork.Plan" xml:space="preserve">
     <value>アートワーク修復プラン</value>
@@ -812,7 +872,7 @@
     <value>アートワークの自動修復を確認</value>
   </data>
   <data name="Health.Audit.Description" xml:space="preserve">
-    <value>品質、一貫性、ファイルの整合性を検査します。</value>
+    <value>品質、一貫性、ファイルの整合性を確認します。</value>
   </data>
   <data name="Health.Audit.Menu.AlbumMatrix" xml:space="preserve">
     <value>アルバムメタデータマトリックス</value>
@@ -845,7 +905,7 @@
     <value>監査</value>
   </data>
   <data name="Health.Deferred.Description" xml:space="preserve">
-    <value>監査ではキャッシュ済みのメタデータを使用し、これらのファイルを読み取りませんでした。強制解析を実行すると、埋め込みアートワークを読み取って結果を更新できます。</value>
+    <value>監査ではメタデータのキャッシュを使用し、これらのファイルは読み取りませんでした。「保留分を強制スキャン」を実行すると、埋め込みアートワークを読み取って結果を更新します。</value>
   </data>
   <data name="Health.Deferred.Count.One" xml:space="preserve">
     <value>{0} 件のアートワークファイルを保留しました</value>
@@ -926,13 +986,13 @@
     <value>メタデータ修復階層のサイズを変更</value>
   </data>
   <data name="Health.NoSelection.Description" xml:space="preserve">
-    <value>監査を実行するか修復を準備すると、結果がここに表示されます。</value>
+    <value>監査を実行するか修復を準備すると、ここで結果を確認できます。</value>
   </data>
   <data name="Health.NoSelection.Title" xml:space="preserve">
     <value>分析が選択されていません</value>
   </data>
   <data name="Health.Repair.Description" xml:space="preserve">
-    <value>確認可能なプランを作成します。適用するまで変更は行われません。</value>
+    <value>確認可能なプランを作成します。適用するまで何も変更されません。</value>
   </data>
   <data name="Health.Repair.Menu.AlbumArtistConflicts" xml:space="preserve">
     <value>アルバムアーティスト 競合</value>
@@ -992,7 +1052,7 @@
     <value>確認済みの iTunes 修復 {0} 件</value>
   </data>
   <data name="Health.Subtitle" xml:space="preserve">
-    <value>コレクションを監査し、提案された変更を確認して、安全な修復を適用します。</value>
+    <value>コレクションを監査し、提案された変更をすべて確認して、安全な修復を適用します。</value>
   </data>
   <data name="Health.Tab.AlbumMatrix" xml:space="preserve">
     <value>アルバムマトリックス</value>
@@ -1031,7 +1091,7 @@
     <value>その他</value>
   </data>
   <data name="Ingest.Action.MoreAutomation" xml:space="preserve">
-    <value>その他の取り込み操作</value>
+    <value>取り込みのその他の操作</value>
   </data>
   <data name="Ingest.Action.OpenRecovery" xml:space="preserve">
     <value>復旧で開く</value>
@@ -1043,10 +1103,10 @@
     <value>更新 履歴</value>
   </data>
   <data name="Ingest.Action.RunPreflight" xml:space="preserve">
-    <value>事前確認のみを実行</value>
+    <value>事前チェックのみ実行</value>
   </data>
   <data name="Ingest.Empty.Description" xml:space="preserve">
-    <value>受信フォルダーを選択してプレビューを実行すると、アルバム、出力、競合、クリーンアップを確認できます。</value>
+    <value>入力フォルダーを選んでプレビューを実行し、アルバム、出力、競合、クリーンアップを確認してください。</value>
   </data>
   <data name="Ingest.Empty.Title" xml:space="preserve">
     <value>確認する項目はまだありません</value>
@@ -1097,7 +1157,7 @@
     <value>最近使用した取り込みフォルダー</value>
   </data>
   <data name="Ingest.Subtitle" xml:space="preserve">
-    <value>事前確認とプレビューを行い、音楽をアクティブなライブラリへ安全に取り込みます。</value>
+    <value>事前チェックとプレビューを行い、アクティブなライブラリへ安全に音楽を取り込みます。</value>
   </data>
   <data name="Ingest.Tab.History" xml:space="preserve">
     <value>履歴</value>
@@ -1112,19 +1172,19 @@
     <value>デバイス</value>
   </data>
   <data name="Navigation.DevicesDisabledTooltip" xml:space="preserve">
-    <value>デバイス (先にエクスポートプロファイルを構成してください)</value>
+    <value>デバイス (先にエクスポートプロファイルを設定してください)</value>
   </data>
   <data name="Navigation.Health" xml:space="preserve">
     <value>健全性</value>
   </data>
   <data name="Navigation.HealthDisabledTooltip" xml:space="preserve">
-    <value>健全性 (先にライブラリ構成を読み込んでください)</value>
+    <value>健全性 (先にライブラリ設定を読み込んでください)</value>
   </data>
   <data name="Library.Title" xml:space="preserve">
     <value>ライブラリ</value>
   </data>
   <data name="Library.Subtitle" xml:space="preserve">
-    <value>参照 対象の キャッシュ すぐに, でも 場合 音楽 ルート です オフライン.</value>
+    <value>音楽フォルダーがオフラインでも、キャッシュをすぐに参照できます。</value>
   </data>
   <data name="Library.Action.Index" xml:space="preserve">
     <value>インデックス ライブラリ</value>
@@ -1133,7 +1193,7 @@
     <value>インスペクター</value>
   </data>
   <data name="Library.Action.InspectorTooltip" xml:space="preserve">
-    <value>表示 または 非表示 対象の メタデータ インスペクター</value>
+    <value>メタデータインスペクターの表示を切り替えます</value>
   </data>
   <data name="Library.Action.HideInspector" xml:space="preserve">
     <value>非表示 インスペクター</value>
@@ -1145,13 +1205,13 @@
     <value>その他</value>
   </data>
   <data name="Library.Action.MoreAutomation" xml:space="preserve">
-    <value>その他 ライブラリ アクション</value>
+    <value>ライブラリのその他の操作</value>
   </data>
   <data name="Library.Action.ReloadCache" xml:space="preserve">
-    <value>再読み込み キャッシュ済み ライブラリ</value>
+    <value>ライブラリのキャッシュを再読み込み</value>
   </data>
   <data name="Library.Action.OpenSelectedInWorkbench" xml:space="preserve">
-    <value>開く 選択したファイル 内 ワークベンチ</value>
+    <value>選択したファイルをワークベンチで開く</value>
   </data>
   <data name="Library.Action.CancelIndexing" xml:space="preserve">
     <value>キャンセル インデックス作成中</value>
@@ -1163,16 +1223,16 @@
     <value>フィルターまたは構文を使用（例: Artist:Name AND NOT Codec:MP3）</value>
   </data>
   <data name="Library.Filter.Automation" xml:space="preserve">
-    <value>フィルター ライブラリ</value>
+    <value>ライブラリをフィルター</value>
   </data>
   <data name="Library.Filter.ModeAutomation" xml:space="preserve">
-    <value>フィルター 一致 モード</value>
+    <value>フィルターの一致方法</value>
   </data>
   <data name="Library.Filter.ClearTooltip" xml:space="preserve">
-    <value>クリア 対象の テキスト フィルター</value>
+    <value>テキストフィルターをクリア</value>
   </data>
   <data name="Library.Filter.HelpTooltip" xml:space="preserve">
-    <value>表示 フィルター構文 ヘルプ</value>
+    <value>フィルター構文のヘルプを表示</value>
   </data>
   <data name="Library.Filter.HelpAutomation" xml:space="preserve">
     <value>フィルター構文 ヘルプ</value>
@@ -1196,22 +1256,22 @@
     <value>操作</value>
   </data>
   <data name="Library.Split.LibraryInspector" xml:space="preserve">
-    <value>サイズ変更 ライブラリ および インスペクター</value>
+    <value>ライブラリとインスペクターの幅を変更</value>
   </data>
   <data name="Library.Grid.Automation" xml:space="preserve">
-    <value>ライブラリ トラック</value>
+    <value>ライブラリのトラック</value>
   </data>
   <data name="Library.Selection.CountFormat" xml:space="preserve">
-    <value>{0:N0} 選択済み</value>
+    <value>{0:N0} 件を選択</value>
   </data>
   <data name="Library.Loading" xml:space="preserve">
-    <value>読み込み中 対象の キャッシュ済み ライブラリ…</value>
+    <value>ライブラリのキャッシュを読み込んでいます…</value>
   </data>
   <data name="Library.Columns.Title" xml:space="preserve">
     <value>列</value>
   </data>
   <data name="Library.Columns.CloseTooltip" xml:space="preserve">
-    <value>閉じる 列 セレクター</value>
+    <value>列の選択画面を閉じる</value>
   </data>
   <data name="Library.Columns.MetadataColumns" xml:space="preserve">
     <value>メタデータ 列</value>
@@ -1238,16 +1298,16 @@
     <value>保存済み ビュー</value>
   </data>
   <data name="Library.SavedViews.CloseTooltip" xml:space="preserve">
-    <value>閉じる 保存済み ビュー</value>
+    <value>保存済みビューを閉じる</value>
   </data>
   <data name="Library.SavedViews.ChoosePlaceholder" xml:space="preserve">
-    <value>選択 1つの 保存済み ビュー</value>
+    <value>保存済みビューを選択</value>
   </data>
   <data name="Library.SavedViews.Automation" xml:space="preserve">
-    <value>保存済み ライブラリ ビュー</value>
+    <value>保存済みのライブラリビュー</value>
   </data>
   <data name="Library.SavedViews.Description" xml:space="preserve">
-    <value>保存 対象の 現在 フィルター, 列, および 並べ替え</value>
+    <value>現在のフィルター、列、並び順を保存します</value>
   </data>
   <data name="Library.SavedViews.NamePlaceholder" xml:space="preserve">
     <value>ビュー名</value>
@@ -1259,7 +1319,7 @@
     <value>保存 ビュー</value>
   </data>
   <data name="Library.SavedViews.Action.Delete" xml:space="preserve">
-    <value>削除 選択済み</value>
+    <value>選択したビューを削除</value>
   </data>
   <data name="Library.VisualFilter.Title" xml:space="preserve">
     <value>ビジュアル フィルター</value>
@@ -1274,22 +1334,22 @@
     <value>値</value>
   </data>
   <data name="Library.VisualFilter.CloseTooltip" xml:space="preserve">
-    <value>閉じる ビジュアル フィルター</value>
+    <value>ビジュアルフィルターを閉じる</value>
   </data>
   <data name="Library.VisualFilter.Description" xml:space="preserve">
-    <value>条件 付き 対象の 同じ グループ 番号 です 結合済み 付き および. ルート モード 結合 対象の 番号 グループ.</value>
+    <value>同じグループ番号の条件は AND で結合されます。ルートモードでは、番号付きグループを結合します。</value>
   </data>
   <data name="Library.VisualFilter.Action.AddCondition" xml:space="preserve">
     <value>追加 条件</value>
   </data>
   <data name="Library.VisualFilter.FieldPlaceholder" xml:space="preserve">
-    <value>技術 または ファイル フィールド</value>
+    <value>技術情報またはファイルのフィールド</value>
   </data>
   <data name="Library.VisualFilter.ValuePlaceholder" xml:space="preserve">
-    <value>比較 値 (ではない 必要 用 存在/不足)</value>
+    <value>比較値（「存在する」または「存在しない」では不要）</value>
   </data>
   <data name="Library.VisualFilter.Negate" xml:space="preserve">
-    <value>否定 この 条件</value>
+    <value>この条件を反転</value>
   </data>
   <data name="Library.VisualFilter.Action.Apply" xml:space="preserve">
     <value>適用 ビジュアル フィルター</value>
@@ -1373,7 +1433,7 @@
     <value>任意 抽出 パターン</value>
   </data>
   <data name="Library.Operations.ExtractionPlaceholder" xml:space="preserve">
-    <value>正規 式 付き 1つの 名前 キャプチャ</value>
+    <value>名前付きキャプチャグループを含む正規表現</value>
   </data>
   <data name="Library.Operations.CaptureGroup" xml:space="preserve">
     <value>キャプチャ グループ</value>
@@ -1516,9 +1576,6 @@
   <data name="Library.Release.Field.DiscogsReleaseId" xml:space="preserve">
     <value>Discogs リリース ID</value>
   </data>
-  <data name="Library.Release.Field.MusicBrainzIds" xml:space="preserve">
-    <value>MusicBrainz IDs</value>
-  </data>
   <data name="Library.Artwork.Description" xml:space="preserve">
     <value>プレビュー ローカル アートワーク 用 対象の 現在 ライブラリ 範囲, または 使用 リリース アートワーク 用 確認済み マッピング.</value>
   </data>
@@ -1640,7 +1697,7 @@
     <value>検索 による オーディオ</value>
   </data>
   <data name="Library.Audio.Action.PreviewIds" xml:space="preserve">
-    <value>プレビュー 選択済み IDs</value>
+    <value>プレビュー 選択済み ID</value>
   </data>
   <data name="Library.Audio.Action.FindReleases" xml:space="preserve">
     <value>検索 リリース</value>
@@ -1702,7 +1759,7 @@
     <value>整理</value>
   </data>
   <data name="Navigation.OrganizeDisabledTooltip" xml:space="preserve">
-    <value>整理 (ファイル移動を許可するルートが必要です)</value>
+    <value>整理 (ファイルの移動が許可されたルートが必要です)</value>
   </data>
   <data name="Navigation.Settings" xml:space="preserve">
     <value>設定</value>
@@ -1711,7 +1768,7 @@
     <value>ワークベンチ</value>
   </data>
   <data name="Navigation.WorkbenchAutomation" xml:space="preserve">
-    <value>メタデータ ワークベンチ</value>
+    <value>メタデータワークベンチ</value>
   </data>
   <data name="Organize.Action.Apply" xml:space="preserve">
     <value>適用 移動</value>
@@ -1753,7 +1810,7 @@
     <value>メンテナンス…</value>
   </data>
   <data name="Operations.Action.MaintenanceAutomation" xml:space="preserve">
-    <value>復旧メンテナンス操作</value>
+    <value>復元データのメンテナンス操作</value>
   </data>
   <data name="Operations.Action.OpenRun" xml:space="preserve">
     <value>開く 実行</value>
@@ -1789,10 +1846,10 @@
     <value>再調整</value>
   </data>
   <data name="Operations.Recovery.EmptyDescription" xml:space="preserve">
-    <value>ルートを選択してスキャンし、ジャーナルに記録された操作を検出します。</value>
+    <value>ルートを選択してスキャンを実行し、記録済みの操作を検索してください。</value>
   </data>
   <data name="Operations.Recovery.EmptyTitle" xml:space="preserve">
-    <value>復旧実行が見つかりません</value>
+    <value>復元可能な実行履歴がありません</value>
   </data>
   <data name="Operations.Recovery.Retention" xml:space="preserve">
     <value>復旧データの保持期間 (日)</value>
@@ -1807,13 +1864,13 @@
     <value>復旧を検索するルート</value>
   </data>
   <data name="Operations.Entry.Recovery.Compact" xml:space="preserve">
-    <value>コンパクト復旧 · 保持 {0:N0} バイト · 節約 {1:N0} バイト</value>
+    <value>コンパクト復元 · 保持 {0:N0} バイト · 節約 {1:N0} バイト</value>
   </data>
   <data name="Operations.Entry.Recovery.Full" xml:space="preserve">
-    <value>ファイル全体の復旧 · 保持 {0:N0} バイト</value>
+    <value>ファイル全体の復元 · 保持 {0:N0} バイト</value>
   </data>
   <data name="Operations.Subtitle" xml:space="preserve">
-    <value>統合ジョブの実行、履歴の確認、ジャーナルに記録された変更の復旧を行います。</value>
+    <value>統合ジョブの実行、履歴の確認、記録済み変更の復元を行います。</value>
   </data>
   <data name="Operations.Tab.History" xml:space="preserve">
     <value>ジョブ 履歴</value>
@@ -1849,13 +1906,13 @@
     <value>出力先または隔離フォルダー</value>
   </data>
   <data name="ReviewedFileOperation.KindAutomation" xml:space="preserve">
-    <value>ファイル 操作</value>
+    <value>ファイル操作</value>
   </data>
   <data name="ReviewedFileOperation.PreserveRelativeFolders" xml:space="preserve">
     <value>相対フォルダーを保持</value>
   </data>
   <data name="ReviewedFileOperation.Preview" xml:space="preserve">
-    <value>プレビュー 宛先</value>
+    <value>保存先をプレビュー</value>
   </data>
   <data name="ReviewedFileOperation.PreviewAutomation" xml:space="preserve">
     <value>確認済みファイル操作のプレビュー</value>
@@ -1870,7 +1927,7 @@
     <value>ファイル名テンプレート</value>
   </data>
   <data name="Shell.OpenLibraryConfiguration" xml:space="preserve">
-    <value>ライブラリ構成を開く</value>
+    <value>ライブラリ設定を開く</value>
   </data>
   <data name="Shell.Search" xml:space="preserve">
     <value>検索</value>
@@ -1879,10 +1936,10 @@
     <value>ライブラリを検索</value>
   </data>
   <data name="Shell.Quit.Title" xml:space="preserve">
-    <value>処理の実行中に終了しますか？</value>
+    <value>処理中に終了しますか?</value>
   </data>
   <data name="Shell.Quit.Message" xml:space="preserve">
-    <value>ライブラリ操作がまだ実行中です。次回のアプリ起動時に復旧状態を確認できる場合にのみ終了してください。</value>
+    <value>ライブラリ操作がまだ実行中です。次回の起動時に復旧状態を確認できる場合にのみ終了してください。</value>
   </data>
   <data name="Shell.Quit.Action" xml:space="preserve">
     <value>終了</value>
@@ -1891,7 +1948,7 @@
     <value>選択済み</value>
   </data>
   <data name="Shell.Selection.NotSelected" xml:space="preserve">
-    <value>ではない 選択済み</value>
+    <value>未選択</value>
   </data>
   <data name="Settings.Category.Appearance" xml:space="preserve">
     <value>外観</value>
@@ -1900,25 +1957,25 @@
     <value>構成</value>
   </data>
   <data name="Settings.Category.EffectivePolicy" xml:space="preserve">
-    <value>有効なポリシー</value>
+    <value>適用ポリシー</value>
   </data>
   <data name="Settings.Category.FieldMappings" xml:space="preserve">
-    <value>フィールド マッピング</value>
+    <value>フィールドマッピング</value>
   </data>
   <data name="Settings.Category.Health" xml:space="preserve">
     <value>健全性</value>
   </data>
   <data name="Settings.Category.IngestPolicy" xml:space="preserve">
-    <value>取り込み ポリシー</value>
+    <value>取り込みポリシー</value>
   </data>
   <data name="Settings.Category.LibraryRoots" xml:space="preserve">
-    <value>ライブラリ ルート</value>
+    <value>ライブラリルート</value>
   </data>
   <data name="Settings.Category.Playlists" xml:space="preserve">
     <value>プレイリスト</value>
   </data>
   <data name="Settings.Category.RootNamingPolicy" xml:space="preserve">
-    <value>ルート および 命名 ポリシー</value>
+    <value>ルートと命名のポリシー</value>
   </data>
   <data name="Settings.Category.Tools" xml:space="preserve">
     <value>ツール</value>
@@ -1936,13 +1993,13 @@
     <value>ポリシー</value>
   </data>
   <data name="Settings.CategoryGroup.ToolsQuality" xml:space="preserve">
-    <value>ツール および 品質</value>
+    <value>ツールと品質</value>
   </data>
   <data name="Settings.Appearance.DisplayLanguage" xml:space="preserve">
     <value>表示言語</value>
   </data>
   <data name="Settings.Appearance.DisplayLanguageDescription" xml:space="preserve">
-    <value>アプリケーションの表示テキストを直ちに変更します。ライブラリのメタデータ、ファイル名、地域別の書式、解析、並べ替えには影響しません。現在は英語（米国）を利用できます。</value>
+    <value>アプリケーションの表示テキストをすぐに変更します。ライブラリのメタデータ、ファイル名、地域別の書式、解析、並べ替えには影響しません。現在は英語（米国）を利用できます。</value>
   </data>
   <data name="Activity.Cancelling" xml:space="preserve">
     <value>キャンセル中…</value>
@@ -1954,10 +2011,10 @@
     <value>{0:N0} ファイル</value>
   </data>
   <data name="Home.LoadConfigurationHealth" xml:space="preserve">
-    <value>構成を読み込むとライブラリの健全性を確認できます。</value>
+    <value>ライブラリの状態を確認するには構成を読み込んでください。</value>
   </data>
   <data name="Home.NoScanHistory" xml:space="preserve">
-    <value>スキャン履歴はまだありません。キャッシュ済みライブラリはオフラインでも利用できます。</value>
+    <value>スキャン履歴はまだありません。キャッシュ済みのライブラリはオフラインでも利用できます。</value>
   </data>
   <data name="Home.NotIndexedYet" xml:space="preserve">
     <value>まだインデックスが作成されていません</value>
@@ -2047,7 +2104,7 @@
     <value>ライブラリを選択</value>
   </data>
   <data name="Shell.ConfigurationNeedsAttention" xml:space="preserve">
-    <value>構成を確認してください</value>
+    <value>設定を確認してください</value>
   </data>
   <data name="Activity.Finished" xml:space="preserve">
     <value>完了しました。</value>
@@ -2164,7 +2221,7 @@
     <value>アートワーク</value>
   </data>
   <data name="Settings.Common.Codec" xml:space="preserve">
-    <value>Codec</value>
+    <value>コーデック</value>
   </data>
   <data name="Settings.Common.CollisionBehavior" xml:space="preserve">
     <value>競合 動作</value>
@@ -2185,46 +2242,46 @@
     <value>名前</value>
   </data>
   <data name="Settings.Common.StableId" xml:space="preserve">
-    <value>安定 ID</value>
+    <value>安定ID</value>
   </data>
   <data name="Settings.Appearance.Description" xml:space="preserve">
     <value>テーマの変更はすぐに適用されます。「システム」はオペレーティングシステムの設定に従います。各パレットのアクセント色は、選択、フォーカス、進行状況、安全な操作に使用されます。</value>
   </data>
   <data name="Settings.Appearance.ThemeAutomation" xml:space="preserve">
-    <value>アプリケーション テーマ</value>
+    <value>アプリケーションのテーマ</value>
   </data>
   <data name="Settings.Configuration.Active" xml:space="preserve">
-    <value>有効 構成</value>
+    <value>現在の構成</value>
   </data>
   <data name="Settings.Configuration.ChooseRecent" xml:space="preserve">
-    <value>選択 最近 構成</value>
+    <value>最近の構成を選択</value>
   </data>
   <data name="Settings.Configuration.ClearHistory" xml:space="preserve">
-    <value>クリア 履歴</value>
+    <value>履歴を消去</value>
   </data>
   <data name="Settings.Configuration.EditFull" xml:space="preserve">
-    <value>編集 完全 構成</value>
+    <value>構成全体を編集</value>
   </data>
   <data name="Settings.Configuration.GuidedSetup" xml:space="preserve">
-    <value>ガイド付き セットアップ</value>
+    <value>ガイド付き設定</value>
   </data>
   <data name="Settings.Configuration.LoadSelected" xml:space="preserve">
-    <value>読み込む 選択済み</value>
+    <value>選択した構成を読み込む</value>
   </data>
   <data name="Settings.Configuration.New" xml:space="preserve">
-    <value>新規 構成</value>
+    <value>新しい構成</value>
   </data>
   <data name="Settings.Configuration.NoneLoaded" xml:space="preserve">
-    <value>いいえ 構成 読み込み済み</value>
+    <value>構成が読み込まれていません</value>
   </data>
   <data name="Settings.Configuration.Open" xml:space="preserve">
-    <value>開く 構成</value>
+    <value>構成を開く</value>
   </data>
   <data name="Settings.Configuration.Path" xml:space="preserve">
-    <value>構成 パス</value>
+    <value>構成のパス</value>
   </data>
   <data name="Settings.Configuration.Recent" xml:space="preserve">
-    <value>最近 構成</value>
+    <value>最近の構成</value>
   </data>
   <data name="Settings.LibraryRoots.Add" xml:space="preserve">
     <value>追加 ルート</value>
@@ -2578,43 +2635,43 @@
     <value>WavPack 実行ファイル</value>
   </data>
   <data name="Settings.Health.AnalysisDescription" xml:space="preserve">
-    <value>対象の 監査 フラグ アートワーク 超過 いずれか 制限.</value>
+    <value>監査では、いずれかの上限を超えるアートワークにフラグを付けます。</value>
   </data>
   <data name="Settings.Health.AnalysisTitle" xml:space="preserve">
-    <value>アートワーク 分析 しきい値</value>
+    <value>アートワーク解析のしきい値</value>
   </data>
   <data name="Settings.Health.DefaultsDescription" xml:space="preserve">
-    <value>解析の既定値: 2 MiB、2,000 ピクセル。修復の既定値: 225 KiB、600 ピクセル。解析のしきい値と完全に等しいアートワークは問題として報告されません。</value>
+    <value>解析の既定値：2 MiB、2,000 ピクセル。修復の既定値：225 KiB、600 ピクセル。解析のしきい値と完全に一致するアートワークにはフラグを付けません。</value>
   </data>
   <data name="Settings.Health.OversizedDimension" xml:space="preserve">
-    <value>大きすぎる 幅 または 高さ (ピクセル)</value>
+    <value>大きすぎる幅または高さ（ピクセル）</value>
   </data>
   <data name="Settings.Health.OversizedDimensionAutomation" xml:space="preserve">
-    <value>大きすぎる アートワーク 幅 または 高さ しきい値 内 ピクセル</value>
+    <value>大きすぎるアートワークの幅または高さのしきい値（ピクセル）</value>
   </data>
   <data name="Settings.Health.OversizedSize" xml:space="preserve">
-    <value>大きすぎる エンコード済み サイズ (MiB)</value>
+    <value>大きすぎるエンコードサイズ（MiB）</value>
   </data>
   <data name="Settings.Health.OversizedSizeAutomation" xml:space="preserve">
-    <value>大きすぎる アートワーク エンコード済み サイズ しきい値 内 メビバイト</value>
+    <value>アートワークのエンコードサイズのしきい値（メビバイト）</value>
   </data>
   <data name="Settings.Health.RepairDescription" xml:space="preserve">
-    <value>修復 出力 使用します これら 独立 制限.</value>
+    <value>修復後の出力には、これらの独立した上限が適用されます。</value>
   </data>
   <data name="Settings.Health.RepairDimension" xml:space="preserve">
-    <value>修復 対象 幅 または 高さ (ピクセル)</value>
+    <value>修復後の幅または高さ（ピクセル）</value>
   </data>
   <data name="Settings.Health.RepairDimensionAutomation" xml:space="preserve">
-    <value>アートワーク 修復 幅 または 高さ 対象 内 ピクセル</value>
+    <value>アートワーク修復後の幅または高さ（ピクセル）</value>
   </data>
   <data name="Settings.Health.RepairSize" xml:space="preserve">
-    <value>修復 対象 エンコード済み サイズ (MiB)</value>
+    <value>修復後のエンコードサイズ（MiB）</value>
   </data>
   <data name="Settings.Health.RepairSizeAutomation" xml:space="preserve">
-    <value>アートワーク 修復 エンコード済み サイズ 対象 内 メビバイト</value>
+    <value>アートワーク修復後のエンコードサイズ（メビバイト）</value>
   </data>
   <data name="Settings.Health.RepairTitle" xml:space="preserve">
-    <value>自動 修復 対象</value>
+    <value>自動修復の目標値</value>
   </data>
   <data name="Settings.RootPolicy.AddSidecarRule" xml:space="preserve">
     <value>追加 サイドカー ルール</value>
@@ -2827,7 +2884,7 @@
     <value>有効化 レシピ</value>
   </data>
   <data name="Settings.Ingest.Encoder" xml:space="preserve">
-    <value>Encoder (空白 = 自動)</value>
+    <value>エンコーダー (空白 = 自動)</value>
   </data>
   <data name="Settings.Ingest.ExtensionsPlaceholder" xml:space="preserve">
     <value>.flac, .m4a</value>
@@ -2908,46 +2965,46 @@
     <value>使用 宛先 ルート 競合 動作</value>
   </data>
   <data name="Settings.EffectivePolicy.Description" xml:space="preserve">
-    <value>すべてのプレビューに適用される動作を確認します。オフラインのパスは警告として扱われます。無効なポリシー参照や矛盾する権限がある場合は保存できません。</value>
+    <value>すべてのプレビューに適用される動作を確認します。オフラインのパスは警告になり、無効なポリシー参照や矛盾するアクセス許可があると保存できません。</value>
   </data>
   <data name="Settings.EffectivePolicy.DetailsAutomation" xml:space="preserve">
-    <value>有効なポリシーの詳細</value>
+    <value>適用ポリシーの詳細</value>
   </data>
   <data name="Settings.EffectivePolicy.GuidedStep" xml:space="preserve">
-    <value>ステップ 2 の 2: 検証 パス, アクセス許可, 修復, 取り込み, および 統合 変更前 作成 対象の ライブラリ.</value>
+    <value>手順 2/2：ライブラリを作成する前に、パス、アクセス許可、修復、取り込み、連携を確認します。</value>
   </data>
   <data name="Settings.EffectivePolicy.SaveLibrary" xml:space="preserve">
-    <value>保存 ライブラリ</value>
+    <value>ライブラリを保存</value>
   </data>
   <data name="Settings.EffectivePolicy.Title" xml:space="preserve">
-    <value>有効 ライブラリ ポリシー</value>
+    <value>ライブラリの適用ポリシー</value>
   </data>
   <data name="Settings.FieldMappings.Add" xml:space="preserve">
-    <value>追加 マッピング</value>
+    <value>マッピングを追加</value>
   </data>
   <data name="Settings.FieldMappings.CanonicalField" xml:space="preserve">
-    <value>正規 フィールド</value>
+    <value>標準フィールド</value>
   </data>
   <data name="Settings.FieldMappings.Description" xml:space="preserve">
-    <value>特定の形式ファミリーで、正規フィールドに使うネイティブのテキストキーを上書きします。一覧にないフィールドでは、引き続き組み込みのパーサーマッピングが使われます。</value>
+    <value>形式ファミリーごとに、標準フィールドで使うネイティブのテキストキーを上書きします。一覧にないフィールドでは、引き続き組み込みのパーサーマッピングが使われます。</value>
   </data>
   <data name="Settings.FieldMappings.Footer" xml:space="preserve">
-    <value>マッピングされた書き込みでは、まず組み込み表現を削除し、その形式のパーサーを使って設定済みのネイティブキーを書き込みます。プレビューと復元の要件は変わりません。</value>
+    <value>マッピングされた書き込みでは、組み込みの表現を先に削除し、その形式のパーサーを使って設定済みのネイティブキーを書き込みます。プレビューと復旧の要件は変わりません。</value>
   </data>
   <data name="Settings.FieldMappings.FormatFamily" xml:space="preserve">
-    <value>形式 ファミリー</value>
+    <value>形式ファミリー</value>
   </data>
   <data name="Settings.FieldMappings.NativeField" xml:space="preserve">
     <value>ネイティブフィールド名</value>
   </data>
   <data name="Settings.FieldMappings.NativeFieldPlaceholder" xml:space="preserve">
-    <value>形式固有のネイティブキー</value>
+    <value>形式固有のキー</value>
   </data>
   <data name="Settings.FieldMappings.Save" xml:space="preserve">
-    <value>保存 マッピング</value>
+    <value>マッピングを保存</value>
   </data>
   <data name="Settings.FieldMappings.Status.Description" xml:space="preserve">
-    <value>マッピング です 個人 アプリケーション 設定 および 適用 へ ワークベンチ および ライブラリ 編集.</value>
+    <value>マッピングは個人用のアプリケーション設定で、ワークベンチとライブラリの編集に適用されます。</value>
   </data>
   <data name="Settings.FieldMappings.Status.Saved.One" xml:space="preserve">
     <value>形式固有のフィールドマッピングを {0:N0} 件保存しました。</value>
@@ -2956,10 +3013,10 @@
     <value>形式固有のフィールドマッピングを {0:N0} 件保存しました。</value>
   </data>
   <data name="Settings.FieldMappings.Status.SaveFailed" xml:space="preserve">
-    <value>可能でした ではない 保存 フィールド マッピング: {0}</value>
+    <value>フィールドマッピングを保存できませんでした：{0}</value>
   </data>
   <data name="Settings.FieldMappings.Title" xml:space="preserve">
-    <value>正規フィールドからネイティブフィールドへのマッピング</value>
+    <value>標準フィールドからネイティブフィールドへのマッピング</value>
   </data>
   <data name="Settings.DestinationRoot.Missing" xml:space="preserve">
     <value>不足 ルート ({0:D})</value>
@@ -3214,79 +3271,79 @@
     <value>解決 対象の 検証 問題 変更前 保存.</value>
   </data>
   <data name="Settings.Validation.AddLibraryRoot" xml:space="preserve">
-    <value>追加 で 最小 1件 ライブラリ ルート.</value>
+    <value>ライブラリルートを 1 つ以上追加してください。</value>
   </data>
   <data name="Settings.Validation.ArtworkDimensionThreshold" xml:space="preserve">
-    <value>大きすぎる アートワーク 寸法 しきい値 必要です する 間 64 および 100,000 ピクセル.</value>
+    <value>大きすぎるアートワークの寸法しきい値は、64～100,000 ピクセルにしてください。</value>
   </data>
   <data name="Settings.Validation.ArtworkRepairDimension" xml:space="preserve">
-    <value>アートワーク 修復 寸法 対象 必要です する 間 64 および 100,000 ピクセル.</value>
+    <value>アートワーク修復後の寸法は、64～100,000 ピクセルにしてください。</value>
   </data>
   <data name="Settings.Validation.ArtworkRepairSize" xml:space="preserve">
-    <value>アートワーク 修復 サイズ 対象 必要です する 間 0.0625 および 1,024 MiB.</value>
+    <value>アートワーク修復後のサイズは、0.0625～1,024 MiB にしてください。</value>
   </data>
   <data name="Settings.Validation.ArtworkSizeThreshold" xml:space="preserve">
-    <value>大きすぎる アートワーク サイズ しきい値 必要です する 間 0.25 および 1,024 MiB.</value>
+    <value>大きすぎるアートワークのサイズしきい値は、0.25～1,024 MiB にしてください。</value>
   </data>
   <data name="Settings.Validation.ChooseIngestProfile" xml:space="preserve">
-    <value>選択 1つの 有効 取り込み プロファイル.</value>
+    <value>有効な取り込みプロファイルを選択してください。</value>
   </data>
   <data name="Settings.Validation.ChooseRootPolicy" xml:space="preserve">
-    <value>選択 1つの ルート/命名 ポリシー.</value>
+    <value>ルートと命名のポリシーを選択してください。</value>
   </data>
   <data name="Settings.Validation.DuplicateExportId" xml:space="preserve">
-    <value>重複 エクスポート プロファイル ID '{0}'.</value>
+    <value>エクスポートプロファイル ID「{0}」が重複しています。</value>
   </data>
   <data name="Settings.Validation.ExportError" xml:space="preserve">
-    <value>エクスポート プロファイル: {0}</value>
+    <value>エクスポートプロファイル：{0}</value>
   </data>
   <data name="Settings.Validation.ExportUnknownNamingProfile" xml:space="preserve">
-    <value>エクスポート プロファイル '{0}' 参照 不明 命名 プロファイル '{1}'.</value>
+    <value>エクスポートプロファイル「{0}」は、不明な命名プロファイル「{1}」を参照しています。</value>
   </data>
   <data name="Settings.Validation.ExportUnknownRecipe" xml:space="preserve">
-    <value>エクスポート プロファイル '{0}' 参照 不明 取り込み レシピ '{1}'.</value>
+    <value>エクスポートプロファイル「{0}」は、不明な取り込みレシピ「{1}」を参照しています。</value>
   </data>
   <data name="Settings.Validation.Header" xml:space="preserve">
-    <value>修正 対象の 従う 変更前 保存:</value>
+    <value>保存する前に、次の問題を修正してください：</value>
   </data>
   <data name="Settings.Validation.IngestError" xml:space="preserve">
-    <value>取り込み プロファイル: {0}</value>
+    <value>取り込みプロファイル：{0}</value>
   </data>
   <data name="Settings.Validation.IngestUnknownRoot" xml:space="preserve">
-    <value>取り込み レシピ '{0}' 参照 不明 宛先 ルート '{1:D}'.</value>
+    <value>取り込みレシピ「{0}」は、不明な保存先ルート「{1:D}」を参照しています。</value>
   </data>
   <data name="Settings.Validation.Item" xml:space="preserve">
     <value>• {0}</value>
   </data>
   <data name="Settings.Validation.LibraryRootError" xml:space="preserve">
-    <value>ライブラリ ルート '{0}': {1}</value>
+    <value>ライブラリルート「{0}」：{1}</value>
   </data>
   <data name="Settings.Validation.PlaylistSourceType" xml:space="preserve">
-    <value>プレイリスト ソース '{0}' 必要です あります 1つの 種類 の m3u.</value>
+    <value>プレイリストソース「{0}」の種類は m3u にしてください。</value>
   </data>
   <data name="Settings.Validation.PlaylistTargetSetRequired" xml:space="preserve">
-    <value>プレイリスト 対象 '{0}' 必要です 選択 で 最小 1件 スキャン 設定.</value>
+    <value>プレイリストの保存先「{0}」では、スキャンセットを 1 つ以上選択してください。</value>
   </data>
   <data name="Settings.Validation.PlaylistTargetType" xml:space="preserve">
-    <value>プレイリスト 対象 '{0}' あります 非対応 種類 '{1}'.</value>
+    <value>プレイリストの保存先「{0}」には、サポートされていない種類「{1}」が指定されています。</value>
   </data>
   <data name="Settings.Validation.PlaylistTrackRequired" xml:space="preserve">
-    <value>プレイリスト 対象 '{0}' 必要です 許可 で 最小 1件 トラック.</value>
+    <value>プレイリストの保存先「{0}」では、トラックを 1 つ以上許可してください。</value>
   </data>
   <data name="Settings.Validation.PlaylistUnknownSets" xml:space="preserve">
-    <value>プレイリストの出力先「{0}」が不明なスキャンセットを参照しています: {1}</value>
+    <value>プレイリストの保存先「{0}」は、不明なスキャンセットを参照しています：{1}</value>
   </data>
   <data name="Settings.Validation.PlaylistUnsupportedOption" xml:space="preserve">
-    <value>プレイリスト 対象 '{0}' 含む 1つの 非対応 出力 オプション.</value>
+    <value>プレイリストの保存先「{0}」に、サポートされていない出力オプションがあります。</value>
   </data>
   <data name="Settings.Validation.PolicyError" xml:space="preserve">
-    <value>ルート ポリシー: {0}</value>
+    <value>ルートポリシー：{0}</value>
   </data>
   <data name="Settings.Validation.SyncOutputNotAllowed" xml:space="preserve">
-    <value>ライブラリ ルート '{0}' です 1つの 同期 対象 ただし 実行 ではない 許可 同期 出力.</value>
+    <value>ライブラリルート「{0}」は同期先ですが、同期出力が許可されていません。</value>
   </data>
   <data name="Settings.Validation.UnknownRootProfile" xml:space="preserve">
-    <value>ライブラリ ルート '{0}' 参照 不明 プロファイル '{1}'.</value>
+    <value>ライブラリルート「{0}」は、不明なプロファイル「{1}」を参照しています。</value>
   </data>
   <data name="Settings.PolicySummary.NoRootPolicy" xml:space="preserve">
     <value>いいえ ルート ポリシー プロファイル です 選択済み.</value>
@@ -3705,18 +3762,6 @@
   <data name="Settings.Choice.ExportExtraFileDisposition.Delete" xml:space="preserve">
     <value>削除</value>
   </data>
-  <data name="Settings.Choice.PlaylistType.m3u" xml:space="preserve">
-    <value>M3U</value>
-  </data>
-  <data name="Settings.Choice.PlaylistType.m3u8" xml:space="preserve">
-    <value>M3U8</value>
-  </data>
-  <data name="Settings.Choice.PlaylistType.wpl" xml:space="preserve">
-    <value>Windows メディア プレーヤー (WPL)</value>
-  </data>
-  <data name="Settings.Choice.PlaylistSourceType.m3u" xml:space="preserve">
-    <value>M3U/M3U8</value>
-  </data>
   <data name="Settings.Choice.PlaylistPathStyle.legacy" xml:space="preserve">
     <value>従来</value>
   </data>
@@ -3729,26 +3774,8 @@
   <data name="Settings.Choice.PlaylistPathStyle.relative" xml:space="preserve">
     <value>相対</value>
   </data>
-  <data name="Settings.Choice.PlaylistEncoding.utf_8" xml:space="preserve">
-    <value>UTF-8</value>
-  </data>
-  <data name="Settings.Choice.PlaylistEncoding.utf_16" xml:space="preserve">
-    <value>UTF-16</value>
-  </data>
-  <data name="Settings.Choice.PlaylistEncoding.utf_16be" xml:space="preserve">
-    <value>UTF-16 ビッグ-エンディアン</value>
-  </data>
-  <data name="Settings.Choice.PlaylistEncoding.ascii" xml:space="preserve">
-    <value>ASCII</value>
-  </data>
   <data name="Settings.Choice.PlaylistLineEnding.platform" xml:space="preserve">
     <value>プラットフォーム 既定</value>
-  </data>
-  <data name="Settings.Choice.PlaylistLineEnding.crlf" xml:space="preserve">
-    <value>Windows (CRLF)</value>
-  </data>
-  <data name="Settings.Choice.PlaylistLineEnding.lf" xml:space="preserve">
-    <value>Unix (LF)</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.legacy" xml:space="preserve">
     <value>従来</value>
@@ -3880,7 +3907,7 @@
     <value>エンコード済み による</value>
   </data>
   <data name="Settings.Choice.TagFields.EncoderSettings" xml:space="preserve">
-    <value>Encoder 設定</value>
+    <value>エンコーダー 設定</value>
   </data>
   <data name="Settings.Choice.TagFields.Engineer" xml:space="preserve">
     <value>エンジニア</value>
@@ -4077,13 +4104,11 @@
   <data name="Common.Restore" xml:space="preserve"><value>復元</value></data>
   <data name="Common.Run" xml:space="preserve"><value>実行</value></data>
   <data name="Common.Save" xml:space="preserve"><value>保存</value></data>
-  <data name="Inspector.Activity.OptimizeArtwork" xml:space="preserve"><value>最適化 アートワーク</value></data>
+  <data name="Inspector.Activity.OptimizeArtwork" xml:space="preserve"><value>アートワークを最適化</value></data>
   <data name="Inspector.Activity.PreviewingTracks.One" xml:space="preserve"><value>{0:N0} トラックをプレビュー中</value></data>
   <data name="Inspector.Activity.PreviewingTracks.Other" xml:space="preserve"><value>{0:N0} トラックをプレビュー中</value></data>
-  <data name="Inspector.Activity.RemoveArtwork" xml:space="preserve"><value>削除 アートワーク</value></data>
-  <data name="Inspector.Activity.ReplaceArtwork" xml:space="preserve"><value>置換 アートワーク</value></data>
-  <data name="Inspector.Activity.SaveArtworkChanges" xml:space="preserve"><value>アートワークの変更を保存</value></data>
-  <data name="Inspector.Activity.SaveTags" xml:space="preserve"><value>タグを保存</value></data>
+  <data name="Inspector.Activity.RemoveArtwork" xml:space="preserve"><value>アートワークを削除</value></data>
+  <data name="Inspector.Activity.ReplaceArtwork" xml:space="preserve"><value>アートワークを置換</value></data>
   <data name="Inspector.Activity.UpdatingTracks.One" xml:space="preserve"><value>{0:N0} トラックを更新中</value></data>
   <data name="Inspector.Activity.UpdatingTracks.Other" xml:space="preserve"><value>{0:N0} トラックを更新中</value></data>
   <data name="Inspector.Artwork.DefaultFileName" xml:space="preserve"><value>アートワーク</value></data>
@@ -4097,61 +4122,56 @@
   <data name="Inspector.Artwork.Shared.One" xml:space="preserve"><value> · {0:N0} トラックで共有</value></data>
   <data name="Inspector.Artwork.Shared.Other" xml:space="preserve"><value> · {0:N0} トラックで共有</value></data>
   <data name="Inspector.Artwork.Type.Other.Label" xml:space="preserve"><value>その他</value></data>
-  <data name="Inspector.Artwork.Type.FileIcon.Label" xml:space="preserve"><value>ファイル アイコン</value></data>
+  <data name="Inspector.Artwork.Type.FileIcon.Label" xml:space="preserve"><value>ファイルアイコン</value></data>
   <data name="Inspector.Artwork.Type.OtherFileIcon.Label" xml:space="preserve"><value>その他のファイルアイコン</value></data>
-  <data name="Inspector.Artwork.Type.FrontCover.Label" xml:space="preserve"><value>前面 カバー</value></data>
-  <data name="Inspector.Artwork.Type.BackCover.Label" xml:space="preserve"><value>背面 カバー</value></data>
-  <data name="Inspector.Artwork.Type.LeafletPage.Label" xml:space="preserve"><value>リーフレット ページ</value></data>
+  <data name="Inspector.Artwork.Type.FrontCover.Label" xml:space="preserve"><value>表紙</value></data>
+  <data name="Inspector.Artwork.Type.BackCover.Label" xml:space="preserve"><value>裏表紙</value></data>
+  <data name="Inspector.Artwork.Type.LeafletPage.Label" xml:space="preserve"><value>ブックレットのページ</value></data>
   <data name="Inspector.Artwork.Type.Media.Label" xml:space="preserve"><value>メディア</value></data>
-  <data name="Inspector.Artwork.Type.LeadArtist.Label" xml:space="preserve"><value>先頭 アーティスト</value></data>
+  <data name="Inspector.Artwork.Type.LeadArtist.Label" xml:space="preserve"><value>メインアーティスト</value></data>
   <data name="Inspector.Artwork.Type.Arist.Label" xml:space="preserve"><value>アーティスト</value></data>
   <data name="Inspector.Artwork.Type.Conductor.Label" xml:space="preserve"><value>指揮者</value></data>
   <data name="Inspector.Artwork.Type.Band.Label" xml:space="preserve"><value>バンド</value></data>
   <data name="Inspector.Artwork.Type.Composer.Label" xml:space="preserve"><value>作曲者</value></data>
   <data name="Inspector.Artwork.Type.Lyricist.Label" xml:space="preserve"><value>作詞者</value></data>
-  <data name="Inspector.Artwork.Type.RecordingLocation.Label" xml:space="preserve"><value>録音 場所</value></data>
-  <data name="Inspector.Artwork.Type.DuringRecording.Label" xml:space="preserve"><value>中 録音</value></data>
-  <data name="Inspector.Artwork.Type.DuringPerformance.Label" xml:space="preserve"><value>中 演奏</value></data>
+  <data name="Inspector.Artwork.Type.RecordingLocation.Label" xml:space="preserve"><value>録音場所</value></data>
+  <data name="Inspector.Artwork.Type.DuringRecording.Label" xml:space="preserve"><value>録音中</value></data>
+  <data name="Inspector.Artwork.Type.DuringPerformance.Label" xml:space="preserve"><value>演奏中</value></data>
   <data name="Inspector.Artwork.Type.VideoScreenCapture.Label" xml:space="preserve"><value>動画の画面キャプチャ</value></data>
   <data name="Inspector.Artwork.Type.BrightColoredFish.Label" xml:space="preserve"><value>色鮮やかな魚</value></data>
   <data name="Inspector.Artwork.Type.Illustration.Label" xml:space="preserve"><value>イラスト</value></data>
   <data name="Inspector.Artwork.Type.BandLogo.Label" xml:space="preserve"><value>バンドロゴ</value></data>
   <data name="Inspector.Artwork.Type.StudioLogo.Label" xml:space="preserve"><value>スタジオロゴ</value></data>
-  <data name="Inspector.Common.None" xml:space="preserve"><value>(なし)</value></data>
+  <data name="Inspector.Common.None" xml:space="preserve"><value>（なし）</value></data>
   <data name="Inspector.Common.Unknown" xml:space="preserve"><value>不明</value></data>
-  <data name="Inspector.Diagnostic.PathError" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="Inspector.Diagnostic.PathError" xml:space="preserve"><value>{0}：{1}</value></data>
   <data name="Inspector.Dialog.ApplyReviewed.Message" xml:space="preserve"><value>{0} 確認済みプランは {1:N0} ファイルを変更し、古いファイルの検査、復旧ジャーナル、元に戻す機能を使用します。</value></data>
   <data name="Inspector.Dialog.ApplyReviewed.Title" xml:space="preserve"><value>確認済みの操作「{0}」を適用しますか？</value></data>
   <data name="Inspector.Dialog.DirectWriteWarning" xml:space="preserve"><value>ファイルへ直接書き込みます。復旧ジャーナルは作成されません。</value></data>
-  <data name="Inspector.Dialog.Discard.Confirm" xml:space="preserve"><value>破棄 変更</value></data>
+  <data name="Inspector.Dialog.Discard.Confirm" xml:space="preserve"><value>変更を破棄</value></data>
   <data name="Inspector.Dialog.Discard.Message" xml:space="preserve"><value>{1} の {0}。破棄して続行しますか？</value></data>
   <data name="Inspector.Dialog.Discard.Title" xml:space="preserve"><value>未保存のメタデータ変更を破棄しますか？</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.Confirm" xml:space="preserve"><value>最適化</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.DirectMessage" xml:space="preserve"><value>{1:N0} トラックのアートワークを再エンコードし、{0:N0}px 以下にしますか？ファイルへ直接書き込むため、復旧ジャーナルは作成されません。</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.Message" xml:space="preserve"><value>{1:N0} トラックのアートワークを再エンコードし、{0:N0}px 以下にしますか？</value></data>
-  <data name="Inspector.Dialog.OptimizeArtwork.Title" xml:space="preserve"><value>最適化 アートワーク</value></data>
+  <data name="Inspector.Dialog.OptimizeArtwork.Title" xml:space="preserve"><value>アートワークを最適化</value></data>
   <data name="Inspector.Dialog.RemoveArtwork.DirectMessage.One" xml:space="preserve"><value>選択した {0:N0} トラックからすべての埋め込みアートワークを削除しますか？ファイルへ直接書き込むため、復旧ジャーナルは作成されません。</value></data>
   <data name="Inspector.Dialog.RemoveArtwork.DirectMessage.Other" xml:space="preserve"><value>選択した {0:N0} トラックからすべての埋め込みアートワークを削除しますか？ファイルへ直接書き込むため、復旧ジャーナルは作成されません。</value></data>
   <data name="Inspector.Dialog.RemoveArtwork.Message.One" xml:space="preserve"><value>選択した {0:N0} トラックからすべての埋め込みアートワークを削除しますか？</value></data>
   <data name="Inspector.Dialog.RemoveArtwork.Message.Other" xml:space="preserve"><value>選択した {0:N0} トラックからすべての埋め込みアートワークを削除しますか？</value></data>
-  <data name="Inspector.Dialog.RemoveArtwork.Title" xml:space="preserve"><value>削除 アートワーク</value></data>
+  <data name="Inspector.Dialog.RemoveArtwork.Title" xml:space="preserve"><value>アートワークを削除</value></data>
   <data name="Inspector.Dialog.ReplaceArtwork.Confirm" xml:space="preserve"><value>置換</value></data>
-  <data name="Inspector.Dialog.ReplaceArtwork.Title" xml:space="preserve"><value>置換 アートワーク</value></data>
+  <data name="Inspector.Dialog.ReplaceArtwork.Title" xml:space="preserve"><value>アートワークを置換</value></data>
   <data name="Inspector.Dialog.ReplaceFrontCover.DirectMessage.One" xml:space="preserve"><value>選択した {0:N0} トラックのフロントカバーを置き換えますか？ファイルへ直接書き込むため、復旧ジャーナルは作成されません。</value></data>
   <data name="Inspector.Dialog.ReplaceFrontCover.DirectMessage.Other" xml:space="preserve"><value>選択した {0:N0} トラックのフロントカバーを置き換えますか？ファイルへ直接書き込むため、復旧ジャーナルは作成されません。</value></data>
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.One" xml:space="preserve"><value>選択した {0:N0} トラックのフロントカバーを置き換えますか？</value></data>
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.Other" xml:space="preserve"><value>選択した {0:N0} トラックのフロントカバーを置き換えますか？</value></data>
-  <data name="Inspector.Dialog.Revert.Confirm" xml:space="preserve"><value>元に戻す 変更</value></data>
+  <data name="Inspector.Dialog.Revert.Confirm" xml:space="preserve"><value>変更を元に戻す</value></data>
   <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>{1} の {0}。ファイルに現在保存されている値へ戻しますか？</value></data>
   <data name="Inspector.Dialog.Revert.Title" xml:space="preserve"><value>未保存のメタデータ変更を元に戻しますか？</value></data>
-  <data name="Inspector.Dialog.SaveArtworkSet.DirectMessage" xml:space="preserve"><value>選択した {0:N0} トラックの埋め込みアートワーク一式を、これら {1:N0} 枚の画像で置き換えますか？ファイルへ直接書き込むため、復旧ジャーナルは作成されません。</value></data>
-  <data name="Inspector.Dialog.SaveArtworkSet.Message" xml:space="preserve"><value>選択した {0:N0} トラックの埋め込みアートワーク一式を、これら {1:N0} 枚の画像で置き換えますか？</value></data>
-  <data name="Inspector.Dialog.SaveArtworkSet.Title" xml:space="preserve"><value>アートワークの変更を保存</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.ArtworkOnly" xml:space="preserve"><value>選択した {0:N0} トラックの埋め込みアートワーク一式を、これら {1:N0} 枚の画像で置き換えますか？</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.TagsAndArtwork" xml:space="preserve"><value>選択した {2:N0} トラックにタグ変更 {0:N0} 件を適用し、埋め込みアートワーク一式を {1:N0} 枚の画像で置き換えますか？</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.TagsOnly" xml:space="preserve"><value>選択した {1:N0} トラックにタグ変更 {0:N0} 件を適用しますか？</value></data>
-  <data name="Inspector.Dialog.SaveTags.Confirm" xml:space="preserve"><value>タグを保存</value></data>
-  <data name="Inspector.Dialog.SaveTags.Title" xml:space="preserve"><value>タグの変更を保存</value></data>
   <data name="Inspector.Error.MetadataServiceUnavailable" xml:space="preserve"><value>共有メタデータ操作サービスを利用できません。</value></data>
   <data name="Inspector.Field.Album" xml:space="preserve"><value>アルバム</value></data>
   <data name="Inspector.Field.AlbumArtist" xml:space="preserve"><value>アルバムアーティスト</value></data>
@@ -4159,15 +4179,15 @@
   <data name="Inspector.Field.Comment" xml:space="preserve"><value>コメント</value></data>
   <data name="Inspector.Field.Composer" xml:space="preserve"><value>作曲者</value></data>
   <data name="Inspector.Field.Disc" xml:space="preserve"><value>ディスク</value></data>
-  <data name="Inspector.Field.DiscTotal" xml:space="preserve"><value>ディスク総数</value></data>
+  <data name="Inspector.Field.DiscTotal" xml:space="preserve"><value>総ディスク数</value></data>
   <data name="Inspector.Field.Genre" xml:space="preserve"><value>ジャンル</value></data>
   <data name="Inspector.Field.MixedPlaceholder" xml:space="preserve"><value>値が混在 — 入力して置換</value></data>
-  <data name="Inspector.Field.MixedValues" xml:space="preserve"><value>(混在 値)</value></data>
-  <data name="Inspector.Field.NoValuePlaceholder" xml:space="preserve"><value>いいえ 値</value></data>
-  <data name="Inspector.Field.ReleaseDate" xml:space="preserve"><value>リリース 日付</value></data>
+  <data name="Inspector.Field.MixedValues" xml:space="preserve"><value>（複数の値）</value></data>
+  <data name="Inspector.Field.NoValuePlaceholder" xml:space="preserve"><value>値なし</value></data>
+  <data name="Inspector.Field.ReleaseDate" xml:space="preserve"><value>リリース日</value></data>
   <data name="Inspector.Field.Title" xml:space="preserve"><value>タイトル</value></data>
-  <data name="Inspector.Field.Track" xml:space="preserve"><value>トラック</value></data>
-  <data name="Inspector.Field.TrackTotal" xml:space="preserve"><value>トラック総数</value></data>
+  <data name="Inspector.Field.Track" xml:space="preserve"><value>トラック番号</value></data>
+  <data name="Inspector.Field.TrackTotal" xml:space="preserve"><value>総トラック数</value></data>
   <data name="Inspector.Field.UnverifiedHelp" xml:space="preserve"><value>選択したすべてのトラックについて、このフィールドがキャッシュに含まれているわけではありません。現在の値は表示されません。値を入力すると、選択全体のフィールドが意図的に置き換えられます。</value></data>
   <data name="Inspector.Field.UnverifiedPlaceholder" xml:space="preserve"><value>選択範囲全体では未検証 — 入力して置換</value></data>
   <data name="Inspector.Operation.EditArtwork" xml:space="preserve"><value>インスペクターでアートワークを編集</value></data>
@@ -4177,16 +4197,16 @@
   <data name="Inspector.Operation.OptimizeLibraryArtwork" xml:space="preserve"><value>ライブラリのアートワークを最適化</value></data>
   <data name="Inspector.Operation.RemoveLibraryArtwork" xml:space="preserve"><value>ライブラリのアートワークを削除</value></data>
   <data name="Inspector.Operation.ReplaceFrontCover" xml:space="preserve"><value>ライブラリのフロントカバーを置換</value></data>
-  <data name="Inspector.Overview.EmptyDistribution" xml:space="preserve"><value>{0}: 0</value></data>
-  <data name="Inspector.Overview.FileFormats" xml:space="preserve"><value>ファイル 形式</value></data>
+  <data name="Inspector.Overview.EmptyDistribution" xml:space="preserve"><value>{0}：0</value></data>
+  <data name="Inspector.Overview.FileFormats" xml:space="preserve"><value>ファイル形式</value></data>
   <data name="Inspector.Overview.LargeSelectionNote" xml:space="preserve"><value>キャッシュにあるフィールドの共通値は、選択範囲全体で確認済みです。キャッシュに保存されていないフィールドは未検証と表示され、明示的に置き換えるまで空欄のままです。</value></data>
   <data name="Inspector.Overview.SelectTrack" xml:space="preserve"><value>メタデータを確認するトラックを選択してください。</value></data>
-  <data name="Inspector.Overview.TagFormats" xml:space="preserve"><value>タグ 形式</value></data>
+  <data name="Inspector.Overview.TagFormats" xml:space="preserve"><value>タグ形式</value></data>
   <data name="Inspector.Pending.Artwork" xml:space="preserve"><value>アートワーク</value></data>
   <data name="Inspector.Pending.CurrentArtworkSet" xml:space="preserve"><value>(現在の埋め込みアートワーク一式)</value></data>
-  <data name="Inspector.Pending.Images.One" xml:space="preserve"><value>{0:N0} 画像</value></data>
-  <data name="Inspector.Pending.Images.Other" xml:space="preserve"><value>{0:N0} 画像</value></data>
-  <data name="Inspector.Picker.ChooseArtwork" xml:space="preserve"><value>選択 アートワーク</value></data>
+  <data name="Inspector.Pending.Images.One" xml:space="preserve"><value>画像 {0:N0} 枚</value></data>
+  <data name="Inspector.Pending.Images.Other" xml:space="preserve"><value>画像 {0:N0} 枚</value></data>
+  <data name="Inspector.Picker.ChooseArtwork" xml:space="preserve"><value>アートワークを選択</value></data>
   <data name="Inspector.Picker.ChooseCoverArtwork" xml:space="preserve"><value>カバーアートワークを選択</value></data>
   <data name="Inspector.Picker.ChooseReplacementArtwork" xml:space="preserve"><value>置換用アートワークを選択</value></data>
   <data name="Inspector.Picker.Images" xml:space="preserve"><value>画像</value></data>
@@ -4194,7 +4214,7 @@
   <data name="Inspector.Progress.PreviewedCombined.One" xml:space="preserve"><value>{0:N0} ファイルの変更をまとめてプレビューしました</value></data>
   <data name="Inspector.Progress.PreviewedCombined.Other" xml:space="preserve"><value>{0:N0} ファイルの変更をまとめてプレビューしました</value></data>
   <data name="Inspector.Progress.UpdatedOfTotal" xml:space="preserve"><value>{0:N0}/{1:N0} を更新</value></data>
-  <data name="Inspector.Selection.NothingSelected" xml:space="preserve"><value>なし 選択済み</value></data>
+  <data name="Inspector.Selection.NothingSelected" xml:space="preserve"><value>何も選択されていません</value></data>
   <data name="Inspector.Selection.TracksSelected.One" xml:space="preserve"><value>{0:N0} トラックを選択</value></data>
   <data name="Inspector.Selection.TracksSelected.Other" xml:space="preserve"><value>{0:N0} トラックを選択</value></data>
   <data name="Inspector.Size.Bytes.One" xml:space="preserve"><value>{0:N0} バイト</value></data>
@@ -4232,7 +4252,7 @@
   <data name="Inspector.Status.UpdatedTagsAndArtwork.One" xml:space="preserve"><value>{0:N0} トラックのタグとアートワークを更新しました。</value></data>
   <data name="Inspector.Status.UpdatedTagsAndArtwork.Other" xml:space="preserve"><value>{0:N0} トラックのタグとアートワークを更新しました。</value></data>
   <data name="Inspector.Status.UpdatedTagsSummary" xml:space="preserve"><value>保存 {0:N0}、スキップ {1:N0}、失敗 {2:N0}、キャッシュ更新失敗 {3:N0}</value></data>
-  <data name="Inspector.TagFormat.VorbisComments" xml:space="preserve"><value>Vorbis コメント</value></data>
+  <data name="Inspector.TagFormat.VorbisComments" xml:space="preserve"><value>Vorbis Comment</value></data>
   <data name="Inspector.Unsaved.Artwork" xml:space="preserve"><value>未保存のアートワーク変更</value></data>
   <data name="Inspector.Unsaved.None" xml:space="preserve"><value>未保存の変更はありません</value></data>
   <data name="Inspector.Unsaved.TagChanges.One" xml:space="preserve"><value>未保存のタグ変更 {0:N0} 件</value></data>
@@ -4260,22 +4280,22 @@
   <data name="Library.Dialog.Leave.Title" xml:space="preserve"><value>残す 対象の ライブラリ 操作?</value></data>
   <data name="Library.Dialog.Restore.Message" xml:space="preserve"><value>現在 ファイル します する 置換済み による 対象の 保持済み 元. 競合 バックアップ です 作成済み 場合 必須.</value></data>
   <data name="Library.Dialog.Restore.Title" xml:space="preserve"><value>復元 対象の 最新 メタデータ 操作?</value></data>
-  <data name="Library.Empty.Default.Message" xml:space="preserve"><value>調整 この ビュー または 再読み込み 対象の ライブラリ.</value></data>
-  <data name="Library.Empty.Default.Title" xml:space="preserve"><value>いいえ トラック へ 表示</value></data>
-  <data name="Library.Empty.Error.Action" xml:space="preserve"><value>試す 再度</value></data>
-  <data name="Library.Empty.Error.Title" xml:space="preserve"><value>対象の ライブラリ 可能でした ではない する 読み込み済み</value></data>
-  <data name="Library.Empty.Filtered.Action" xml:space="preserve"><value>クリア フィルター</value></data>
-  <data name="Library.Empty.Filtered.Message" xml:space="preserve"><value>クリア または 修正 対象の フィルター へ 表示 トラック 再度.</value></data>
-  <data name="Library.Empty.Filtered.Title" xml:space="preserve"><value>いいえ トラック 一致 この フィルター</value></data>
-  <data name="Library.Empty.Health.Action" xml:space="preserve"><value>クリア 健全性 フィルター</value></data>
-  <data name="Library.Empty.Health.Message" xml:space="preserve"><value>クリア 対象の 健全性 フィルター へ 戻す へ 対象の 完全 ライブラリ.</value></data>
-  <data name="Library.Empty.Health.Title" xml:space="preserve"><value>いいえ トラック 一致 対象の 健全性 結果</value></data>
-  <data name="Library.Empty.NoConfiguration.Action" xml:space="preserve"><value>開く 設定</value></data>
-  <data name="Library.Empty.NoConfiguration.Message" xml:space="preserve"><value>開く 設定 へ 選択 または 作成 1つの 構成 変更前 参照.</value></data>
-  <data name="Library.Empty.NoConfiguration.Title" xml:space="preserve"><value>選択 1つの ライブラリ 構成</value></data>
-  <data name="Library.Empty.NotIndexed.Action" xml:space="preserve"><value>インデックス ライブラリ</value></data>
-  <data name="Library.Empty.NotIndexed.Message" xml:space="preserve"><value>インデックス 対象の 構成済み 音楽 ルート へ 入力 対象の キャッシュ済み ライブラリ.</value></data>
-  <data name="Library.Empty.NotIndexed.Title" xml:space="preserve"><value>この ライブラリ あります ではない 済み インデックス済み</value></data>
+  <data name="Library.Empty.Default.Message" xml:space="preserve"><value>このビューを調整するか、ライブラリを再読み込みしてください。</value></data>
+  <data name="Library.Empty.Default.Title" xml:space="preserve"><value>表示するトラックがありません</value></data>
+  <data name="Library.Empty.Error.Action" xml:space="preserve"><value>もう一度試す</value></data>
+  <data name="Library.Empty.Error.Title" xml:space="preserve"><value>ライブラリを読み込めませんでした</value></data>
+  <data name="Library.Empty.Filtered.Action" xml:space="preserve"><value>フィルターをクリア</value></data>
+  <data name="Library.Empty.Filtered.Message" xml:space="preserve"><value>トラックを再表示するには、フィルターをクリアするか変更してください。</value></data>
+  <data name="Library.Empty.Filtered.Title" xml:space="preserve"><value>このフィルターに一致するトラックはありません</value></data>
+  <data name="Library.Empty.Health.Action" xml:space="preserve"><value>状態フィルターをクリア</value></data>
+  <data name="Library.Empty.Health.Message" xml:space="preserve"><value>ライブラリ全体に戻るには、状態フィルターをクリアしてください。</value></data>
+  <data name="Library.Empty.Health.Title" xml:space="preserve"><value>状態チェックの結果に一致するトラックはありません</value></data>
+  <data name="Library.Empty.NoConfiguration.Action" xml:space="preserve"><value>設定を開く</value></data>
+  <data name="Library.Empty.NoConfiguration.Message" xml:space="preserve"><value>ライブラリを参照する前に、設定を開いて構成を選択または作成してください。</value></data>
+  <data name="Library.Empty.NoConfiguration.Title" xml:space="preserve"><value>ライブラリ構成を選択してください</value></data>
+  <data name="Library.Empty.NotIndexed.Action" xml:space="preserve"><value>ライブラリのインデックスを作成</value></data>
+  <data name="Library.Empty.NotIndexed.Message" xml:space="preserve"><value>構成済みの音楽フォルダーにインデックスを作成し、ライブラリのキャッシュに登録してください。</value></data>
+  <data name="Library.Empty.NotIndexed.Title" xml:space="preserve"><value>このライブラリはまだインデックスが作成されていません</value></data>
   <data name="Library.Error.ChooseDiscogsRelease" xml:space="preserve"><value>選択 1つの Discogs リリース.</value></data>
   <data name="Library.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>選択 1つの MusicBrainz リリース.</value></data>
   <data name="Library.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs です 利用不可.</value></data>
@@ -4413,58 +4433,58 @@
   <data name="Library.Picker.PlaylistOutput" xml:space="preserve"><value>選択 プレイリスト 出力</value></data>
   <data name="Library.Picker.ReportFolder" xml:space="preserve"><value>選択 レポート 出力 フォルダー</value></data>
   <data name="Library.Picker.ReportOutput" xml:space="preserve"><value>選択 レポート 出力</value></data>
-  <data name="Library.Progress.ApplyingMetadataChanges" xml:space="preserve"><value>適用中 確認済み メタデータ 変更</value></data>
-  <data name="Library.Progress.BuildingArtworkPreview" xml:space="preserve"><value>ビルド アートワーク プレビュー</value></data>
+  <data name="Library.Progress.ApplyingMetadataChanges" xml:space="preserve"><value>確認済みのメタデータ変更を適用しています</value></data>
+  <data name="Library.Progress.BuildingArtworkPreview" xml:space="preserve"><value>アートワークのプレビューを作成しています</value></data>
   <data name="Library.Progress.BuildingAudioIdentifierPreview" xml:space="preserve"><value>ビルド オーディオ 識別子 プレビュー</value></data>
   <data name="Library.Progress.BuildingClipboardPreview" xml:space="preserve"><value>ビルド クリップボード メタデータ プレビュー</value></data>
   <data name="Library.Progress.BuildingDiscogsArtworkPreview" xml:space="preserve"><value>Discogs アートワーク プレビューの構築</value></data>
   <data name="Library.Progress.BuildingDiscogsMetadataPreview" xml:space="preserve"><value>Discogs メタデータ プレビューの構築</value></data>
-  <data name="Library.Progress.BuildingMetadataPreview" xml:space="preserve"><value>メタデータのプレビューを構築する</value></data>
+  <data name="Library.Progress.BuildingMetadataPreview" xml:space="preserve"><value>メタデータのプレビューを作成しています</value></data>
   <data name="Library.Progress.BuildingMusicBrainzMetadataPreview" xml:space="preserve"><value>MusicBrainz メタデータ プレビューの構築</value></data>
   <data name="Library.Progress.BuildingPlaylistPreview" xml:space="preserve"><value>プレイリストのプレビューを構築する</value></data>
   <data name="Library.Progress.BuildingReportPreview" xml:space="preserve"><value>構築レポートのプレビュー</value></data>
   <data name="Library.Progress.FindingCoverArt" xml:space="preserve"><value>Cover Art Archive 画像の検索</value></data>
   <data name="Library.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>アートワークのサムネイル {1:N0} の {0:N0} を読み込み中</value></data>
   <data name="Library.Progress.LoadingDiscogsDetails" xml:space="preserve"><value>Discogs リリースの詳細を読み込んでいます</value></data>
-  <data name="Library.Progress.MappingMetadataImport" xml:space="preserve"><value>マッピングメタデータのインポート</value></data>
+  <data name="Library.Progress.MappingMetadataImport" xml:space="preserve"><value>メタデータのインポートを対応付けています</value></data>
   <data name="Library.Progress.MatchingDiscogsTracks" xml:space="preserve"><value>ライブラリ ファイルを Discogs トラックに一致させる</value></data>
   <data name="Library.Progress.MatchingReleaseTracks" xml:space="preserve"><value>ライブラリファイルとリリーストラックのマッチング</value></data>
   <data name="Library.Progress.PreparingAudioDiscovery" xml:space="preserve"><value>音声指紋検出の準備</value></data>
   <data name="Library.Progress.ReadingFile" xml:space="preserve"><value>読み取り中 {0}</value></data>
-  <data name="Library.Progress.RegeneratingMetadataPreview" xml:space="preserve"><value>メタデータのプレビューを再生成しています</value></data>
+  <data name="Library.Progress.RegeneratingMetadataPreview" xml:space="preserve"><value>メタデータのプレビューを再作成しています</value></data>
   <data name="Library.Progress.ResolvingMusicBrainzReleases" xml:space="preserve"><value>MusicBrainz リリース エディションの解決</value></data>
   <data name="Library.Progress.RestoredFiles.One" xml:space="preserve"><value>{0:N0} ファイルを復元しました</value></data>
   <data name="Library.Progress.RestoredFiles.Other" xml:space="preserve"><value>復元された {0:N0} ファイル</value></data>
-  <data name="Library.Progress.RestoringMetadataOperation" xml:space="preserve"><value>最新のメタデータ操作の復元</value></data>
+  <data name="Library.Progress.RestoringMetadataOperation" xml:space="preserve"><value>最新のメタデータ操作を復元しています</value></data>
   <data name="Library.Progress.RunningExternalTool" xml:space="preserve"><value>実行中 {0}</value></data>
   <data name="Library.Progress.SearchingDiscogsReleases" xml:space="preserve"><value>Discogs リリースを検索しています</value></data>
   <data name="Library.Progress.SearchingMusicBrainzReleases" xml:space="preserve"><value>MusicBrainz リリースを検索しています</value></data>
-  <data name="Library.Progress.WritingPlaylist" xml:space="preserve"><value>レビュー済みプレイリストの作成</value></data>
-  <data name="Library.Progress.WritingReport" xml:space="preserve"><value>レビュー済みレポートの作成</value></data>
+  <data name="Library.Progress.WritingPlaylist" xml:space="preserve"><value>確認済みのプレイリストを書き込んでいます</value></data>
+  <data name="Library.Progress.WritingReport" xml:space="preserve"><value>確認済みのレポートを書き込んでいます</value></data>
   <data name="Library.ProviderSource.Cache" xml:space="preserve"><value>キャッシュ</value></data>
   <data name="Library.ProviderSource.Discogs" xml:space="preserve"><value>Discogs</value></data>
   <data name="Library.ProviderSource.OfflineCache" xml:space="preserve"><value>オフラインキャッシュ</value></data>
   <data name="Library.Results.OfTotal" xml:space="preserve"><value>{0:N0}/{1:N0}</value></data>
   <data name="Library.Results.Tracks.One" xml:space="preserve"><value>{0:N0} トラック</value></data>
   <data name="Library.Results.Tracks.Other" xml:space="preserve"><value>{0:N0} トラック</value></data>
-  <data name="Library.Status.ChooseConfiguration" xml:space="preserve"><value>[設定] でライブラリ構成を選択します。</value></data>
+  <data name="Library.Status.ChooseConfiguration" xml:space="preserve"><value>設定でライブラリ構成を選択してください。</value></data>
   <data name="Library.Status.Filtered" xml:space="preserve"><value>{1:N0} トラック中 {0:N0}</value></data>
-  <data name="Library.Status.FilteredPreserved" xml:space="preserve"><value>{1:N0} トラックの {0:N0} · 未保存の変更が表示された状態で選択された {2:N0}</value></data>
-  <data name="Library.Status.HealthFiltered" xml:space="preserve"><value>{0:N0} 合計 {1:N0} の健全性フィルタリングされたトラック</value></data>
-  <data name="Library.Status.HealthFilteredPreserved" xml:space="preserve"><value>{0:N0} 合計 {1:N0} のヘルス フィルタリングされたトラック · {2:N0} が選択され、未保存の変更が表示されたままになっています</value></data>
+  <data name="Library.Status.FilteredPreserved" xml:space="preserve"><value>{1:N0} 件中 {0:N0} 件 · 未保存の変更がある選択済みトラック {2:N0} 件は引き続き表示されます</value></data>
+  <data name="Library.Status.HealthFiltered" xml:space="preserve"><value>状態チェックの結果: {1:N0} 件中 {0:N0} 件</value></data>
+  <data name="Library.Status.HealthFilteredPreserved" xml:space="preserve"><value>状態チェックの結果: {1:N0} 件中 {0:N0} 件 · 未保存の変更がある選択済みトラック {2:N0} 件は引き続き表示されます</value></data>
   <data name="Library.Status.InvalidFilter" xml:space="preserve"><value>フィルターが無効です。</value></data>
-  <data name="Library.Status.LoadConfiguration" xml:space="preserve"><value>設定をロードしてライブラリを参照します。</value></data>
-  <data name="Library.Status.LoadFailed" xml:space="preserve"><value>キャッシュされたライブラリをロードできませんでした。</value></data>
-  <data name="Library.Status.LoadingCache" xml:space="preserve"><value>キャッシュされたライブラリをロードしています…</value></data>
+  <data name="Library.Status.LoadConfiguration" xml:space="preserve"><value>ライブラリを参照するには構成を読み込んでください。</value></data>
+  <data name="Library.Status.LoadFailed" xml:space="preserve"><value>ライブラリのキャッシュを読み込めませんでした。</value></data>
+  <data name="Library.Status.LoadingCache" xml:space="preserve"><value>ライブラリのキャッシュを読み込んでいます…</value></data>
   <data name="Library.Status.Tracks.One" xml:space="preserve"><value>{0:N0} トラック</value></data>
   <data name="Library.Status.Tracks.Other" xml:space="preserve"><value>{0:N0} トラック</value></data>
-  <data name="Library.Status.TracksPreserved.One" xml:space="preserve"><value>{0:N0} トラック · {1:N0} が選択され、未保存の変更が表示されたままになります</value></data>
-  <data name="Library.Status.TracksPreserved.Other" xml:space="preserve"><value>{0:N0} トラック · {1:N0} が選択され、未保存の変更が表示されたままになります</value></data>
+  <data name="Library.Status.TracksPreserved.One" xml:space="preserve"><value>{0:N0} 件のトラック · 未保存の変更がある選択済みトラック {1:N0} 件は引き続き表示されます</value></data>
+  <data name="Library.Status.TracksPreserved.Other" xml:space="preserve"><value>{0:N0} 件のトラック · 未保存の変更がある選択済みトラック {1:N0} 件は引き続き表示されます</value></data>
   <data name="Library.Tools.ApplicationDefault" xml:space="preserve"><value>(アプリケーション 既定)</value></data>
-  <data name="Library.VisualFilter.Status.Applied" xml:space="preserve"><value>ビジュアルフィルターが適用されました。</value></data>
-  <data name="Library.VisualFilter.Status.Cleared" xml:space="preserve"><value>ビジュアルフィルターがクリアされました。</value></data>
+  <data name="Library.VisualFilter.Status.Applied" xml:space="preserve"><value>ビジュアルフィルターを適用しました。</value></data>
+  <data name="Library.VisualFilter.Status.Cleared" xml:space="preserve"><value>ビジュアルフィルターをクリアしました。</value></data>
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>ビジュアルフィルターが無効です。</value></data>
-  <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>アクティブな視覚フィルタはありません。</value></data>
+  <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>有効なビジュアルフィルターはありません。</value></data>
   <data name="Column.TechnicalDetails" xml:space="preserve"><value>技術的な詳細</value></data>
   <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>ライブラリ内のフィルター</value></data>
   <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>混在</value></data>
@@ -4485,7 +4505,7 @@
   <data name="Health.Duration.Seconds" xml:space="preserve"><value>{0:N0}</value></data>
   <data name="Health.Field.Id3TagVersion" xml:space="preserve"><value>ID3タグのバージョン</value></data>
   <data name="Health.Field.Path" xml:space="preserve"><value>パス</value></data>
-  <data name="Health.Findings.Empty.NoMatches" xml:space="preserve"><value>この分析では、一致するトラックが見つかりませんでした。</value></data>
+  <data name="Health.Findings.Empty.NoMatches" xml:space="preserve"><value>この分析では一致するトラックが見つかりませんでした。</value></data>
   <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>結果ブランチを選択します。</value></data>
   <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>キャッシュ済み メタデータ</value></data>
   <data name="Health.Itl.DifferenceFormat" xml:space="preserve"><value>{0}: {1}</value></data>
@@ -4749,8 +4769,8 @@
   <data name="Devices.Error.NoRecovery" xml:space="preserve"><value>回復実行は使用できません。</value></data>
   <data name="Devices.Error.NoRecoveryDestination" xml:space="preserve"><value>利用可能な回復先がありません。</value></data>
   <data name="Devices.Error.PreviewRequired" xml:space="preserve"><value>同期を適用する前に、同期をプレビューします。</value></data>
-  <data name="Devices.Issue.DirectMode" xml:space="preserve"><value>ダイレクトモードが有効になります。置換と削除には回復情報がありません。</value></data>
-  <data name="Devices.Issue.GenericBlocker" xml:space="preserve"><value>この計画を適用するには、障害となる問題を解決する必要があります。</value></data>
+  <data name="Devices.Issue.DirectMode" xml:space="preserve"><value>直接モードが有効です。置換や削除の復元情報は保存されません。</value></data>
+  <data name="Devices.Issue.GenericBlocker" xml:space="preserve"><value>このプランを適用する前に、処理を妨げている問題を解決してください。</value></data>
   <data name="Devices.Issue.GenericInformation" xml:space="preserve"><value>この同期に関するメモを確認してください。</value></data>
   <data name="Devices.Issue.GenericWarning" xml:space="preserve"><value>プランを適用する前に、この同期に関する警告を確認してください。</value></data>
   <data name="Devices.Issue.RemovalLimit" xml:space="preserve"><value>計画された削除は、設定された安全制限を超えています。</value></data>
@@ -4769,7 +4789,7 @@
   <data name="Devices.Progress.Phase.Validating" xml:space="preserve"><value>操作を検証しています…</value></data>
   <data name="Devices.Progress.RestoreComplete" xml:space="preserve"><value>Android 同期が復元されました。</value></data>
   <data name="Devices.Progress.Restoring" xml:space="preserve"><value>以前の Android 同期を復元しています…</value></data>
-  <data name="Devices.Progress.ScanningBoth" xml:space="preserve"><value>ソースと管理された Android 宛先をスキャンしています…</value></data>
+  <data name="Devices.Progress.ScanningBoth" xml:space="preserve"><value>ソースと管理対象の Android 保存先をスキャンしています…</value></data>
   <data name="Devices.Progress.ScanningDestination" xml:space="preserve"><value>管理対象の Android 宛先をスキャンしています…</value></data>
   <data name="Devices.Progress.ScanningSource" xml:space="preserve"><value>同期ソースをスキャンしています…</value></data>
   <data name="Devices.Progress.SelectingChanges" xml:space="preserve"><value>同期の変更を選択しています…</value></data>
@@ -4778,7 +4798,7 @@
   <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>ファイルを Android デバイスに転送しています…</value></data>
   <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>保存された同期計画から影響を受けるパスを検証しています…</value></data>
   <data name="Devices.Selection.Manual" xml:space="preserve"><value>自動または手動シリアル</value></data>
-  <data name="Devices.Selection.ManualDetails" xml:space="preserve"><value>唯一の準備ができたデバイスを使用するには、シリアルを空白のままにしておきます。</value></data>
+  <data name="Devices.Selection.ManualDetails" xml:space="preserve"><value>シリアル番号を空欄にすると、唯一の使用可能なデバイスが選択されます。</value></data>
   <data name="Devices.Selection.PreviouslySelected" xml:space="preserve"><value>以前に選択したデバイス</value></data>
   <data name="Devices.Selection.ReadyDetails" xml:space="preserve"><value>{0} · {1}</value></data>
   <data name="Devices.Selection.RememberedDetails" xml:space="preserve"><value>{0} · 現在、ADB によって報告されていません</value></data>
@@ -4808,10 +4828,10 @@
   <data name="Ingest.Activity.Preflight.Title" xml:space="preserve"><value>事前確認 取り込み</value></data>
   <data name="Ingest.Activity.Preview.Starting" xml:space="preserve"><value>受信した音楽をスキャンする</value></data>
   <data name="Ingest.Activity.Preview.Title" xml:space="preserve"><value>プレビュー 取り込み</value></data>
-  <data name="Ingest.Configuration.Diagnostic.NotLoaded" xml:space="preserve"><value>ライブラリ構成をロードします。</value></data>
+  <data name="Ingest.Configuration.Diagnostic.NotLoaded" xml:space="preserve"><value>ライブラリ構成を読み込んでください。</value></data>
   <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>{0:N0} 構成の問題は、プレビューする前に解決する必要があります。</value></data>
   <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>{0:N0} 構成の問題は、プレビューする前に解決する必要があります。</value></data>
-  <data name="Ingest.Configuration.Ready" xml:space="preserve"><value>取り込み構成の準備が完了しました。</value></data>
+  <data name="Ingest.Configuration.Ready" xml:space="preserve"><value>取り込み構成の準備ができました。</value></data>
   <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>{0:N0} アルバムをインポートし、{1:N0} 出力ファイルを作成し、{2:N0} ソース アイテムをクリーンアップしますか?リカバリが可能です。完了したアルバムとクリーンアップ操作は操作ジャーナルに記録されます。</value></data>
   <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>適用 取り込み</value></data>
   <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>インジェストプランを適用する</value></data>
@@ -4828,8 +4848,8 @@
   <data name="Ingest.File.Type.HiResFlac" xml:space="preserve"><value>ハイレゾ FLAC</value></data>
   <data name="Ingest.File.Type.Output" xml:space="preserve"><value>{0} 出力</value></data>
   <data name="Ingest.File.Type.Unsupported" xml:space="preserve"><value>未対応または音声ではありません</value></data>
-  <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>取り込み処理中です。入力を置き換える前に、現在の操作をキャンセルするか完了してください。</value></data>
-  <data name="Ingest.Handoff.CommonTreeRequired" xml:space="preserve"><value>選択したファイルは 1 つのボリューム上のソース ツリーを共有する必要があります。共通の受信フォルダーの下にあるファイルを選択します。</value></data>
+  <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>取り込み処理中です。入力を置き換える前に、現在の操作をキャンセルまたは完了してください。</value></data>
+  <data name="Ingest.Handoff.CommonTreeRequired" xml:space="preserve"><value>選択したファイルは、同じボリューム上の共通ソースフォルダー内にある必要があります。</value></data>
   <data name="Ingest.Handoff.InvalidPaths" xml:space="preserve"><value>選択したパスは無効です。原因となったエラーは診断の詳細で確認してください。</value></data>
   <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>最初に 1 つ以上のワークベンチ ファイルを選択します。</value></data>
   <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>{0:N0} ワークベンチで選択されたファイルの準備ができました。プリフライトまたはプレビューを実行します。</value></data>
@@ -4891,7 +4911,7 @@
   <data name="Ingest.Status.ApplyProgress" xml:space="preserve"><value>{0}: {1} ({2:N0}/{3:N0})</value></data>
   <data name="Ingest.Status.ApplyResult" xml:space="preserve"><value>インストールされたファイル: {0:N0};失敗したアルバム: {1:N0}。</value></data>
   <data name="Ingest.Status.ApplyResultNoLibrary" xml:space="preserve"><value>インストールされたファイル: {0:N0};失敗したアルバム: {1:N0}。ライブラリ構成がロードされていないため、インデックスの再作成はスキップされました。</value></data>
-  <data name="Ingest.Status.ChooseSource" xml:space="preserve"><value>受信フォルダーを選択し、プリフライトまたはプレビューを実行します。</value></data>
+  <data name="Ingest.Status.ChooseSource" xml:space="preserve"><value>入力フォルダーを選択してから、事前チェックまたはプレビューを実行してください。</value></data>
   <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>音楽以外のクリーンアップが完了しました。</value></data>
   <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>派生は拒否されました。実行全体がキャンセルされ、何も変更されませんでした。</value></data>
   <data name="Ingest.Status.InputsChanged" xml:space="preserve"><value>入力が変更されました。適用する前にもう一度プレビューしてください。</value></data>
@@ -4900,7 +4920,7 @@
   <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>プリフライトで {0:N0} ブロック エラーが見つかりました。</value></data>
   <data name="Ingest.Status.PreflightErrors.Other" xml:space="preserve"><value>プリフライトで {0:N0} ブロック エラーが見つかりました。</value></data>
   <data name="Ingest.Status.PreflightFailed" xml:space="preserve"><value>プリフライトを完了できませんでした。</value></data>
-  <data name="Ingest.Status.PreflightPassed" xml:space="preserve"><value>プリフライトは通過しました。ソースをスキャンする準備ができました。</value></data>
+  <data name="Ingest.Status.PreflightPassed" xml:space="preserve"><value>事前チェックが完了しました。ソースをスキャンできます。</value></data>
   <data name="Ingest.Status.PreflightWarnings.One" xml:space="preserve"><value>プリフライトは{0:N0}警告とともにパスしました。プレビューする前に確認してください。</value></data>
   <data name="Ingest.Status.PreflightWarnings.Other" xml:space="preserve"><value>プリフライトは{0:N0}警告とともにパスしました。プレビューする前に確認してください。</value></data>
   <data name="Ingest.Status.PreviewCancelled" xml:space="preserve"><value>プレビューがキャンセルされました。</value></data>
@@ -4911,8 +4931,8 @@
   <data name="Ingest.Status.PreviewFailed" xml:space="preserve"><value>取り込みプレビューを完了できませんでした。</value></data>
   <data name="Ingest.Status.PreviewFound" xml:space="preserve"><value>{0} ({1:N0} が見つかりました)</value></data>
   <data name="Ingest.Status.PreviewProgress" xml:space="preserve"><value>{0} ({1:N0}/{2:N0})</value></data>
-  <data name="Ingest.Status.PreviewReady" xml:space="preserve"><value>アルバム: {0:N0};ソース ファイル: {1:N0};派生の承認: {2:N0}。確認してから適用してください。</value></data>
-  <data name="Ingest.Status.PreviewScanning" xml:space="preserve"><value>スキャンと計画中…</value></data>
+  <data name="Ingest.Status.PreviewReady" xml:space="preserve"><value>アルバム: {0:N0}、ソースファイル: {1:N0}、変換の承認: {2:N0}。確認してから適用してください。</value></data>
+  <data name="Ingest.Status.PreviewScanning" xml:space="preserve"><value>スキャンしてプランを作成しています…</value></data>
   <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>取り込みがコミットされました。ライブラリのインデックスを再作成しています…</value></data>
   <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>ワークベンチ ファイルの選択がクリアされました。受信フォルダーを選択します。</value></data>
   <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>ドロップから選択されたソース フォルダー。プリフライトまたはプレビューを実行します。</value></data>
@@ -4937,33 +4957,31 @@
   <data name="Organize.Status.PreviewMoves.Other" xml:space="preserve"><value>{0:N0} の移動はレビューの準備ができています。</value></data>
   <data name="Organize.Status.Ready" xml:space="preserve"><value>ライブラリを整理するために必要な動きをプレビューします。</value></data>
   <data name="Inspector.View.AddArtwork" xml:space="preserve"><value>アートワークを追加…</value></data>
-  <data name="Inspector.View.AddArtworkAutomation" xml:space="preserve"><value>追加 アートワーク</value></data>
-  <data name="Inspector.View.AllFields" xml:space="preserve"><value>すべてのフィールド…</value></data>
+  <data name="Inspector.View.AddArtworkAutomation" xml:space="preserve"><value>アートワークを追加</value></data>
   <data name="Inspector.View.Artwork" xml:space="preserve"><value>アートワーク</value></data>
-  <data name="Inspector.View.ArtworkActions" xml:space="preserve"><value>アートワーク アクション</value></data>
+  <data name="Inspector.View.ArtworkActions" xml:space="preserve"><value>アートワークの操作</value></data>
   <data name="Inspector.View.ArtworkDescription" xml:space="preserve"><value>アートワーク 説明</value></data>
-  <data name="Inspector.View.ArtworkPreview" xml:space="preserve"><value>アートワーク プレビュー</value></data>
+  <data name="Inspector.View.ArtworkPreview" xml:space="preserve"><value>アートワークのプレビュー</value></data>
   <data name="Inspector.View.ArtworkPreviewHelp" xml:space="preserve"><value>ダブルクリックするか Enter を押して、フルサイズのアートワークを開きます。</value></data>
-  <data name="Inspector.View.ArtworkType" xml:space="preserve"><value>アートワーク 種類</value></data>
-  <data name="Inspector.View.Close" xml:space="preserve"><value>閉じる インスペクター</value></data>
+  <data name="Inspector.View.ArtworkType" xml:space="preserve"><value>アートワークの種類</value></data>
+  <data name="Inspector.View.Close" xml:space="preserve"><value>インスペクターを閉じる</value></data>
   <data name="Inspector.View.DescriptionPlaceholder" xml:space="preserve"><value>任意 説明</value></data>
   <data name="Inspector.View.EmptyDescription" xml:space="preserve"><value>1 つ以上のトラックを選択して、メタデータとアートワークを確認します。</value></data>
   <data name="Inspector.View.EmptyTitle" xml:space="preserve"><value>選択なし</value></data>
   <data name="Inspector.View.MaximumDimension" xml:space="preserve"><value>最大寸法</value></data>
   <data name="Inspector.View.MaximumDimensionAutomation" xml:space="preserve"><value>アートワークの最大寸法</value></data>
-  <data name="Inspector.View.MixedArtwork" xml:space="preserve"><value>混在 アートワーク</value></data>
+  <data name="Inspector.View.MixedArtwork" xml:space="preserve"><value>複数のアートワーク</value></data>
   <data name="Inspector.View.Optimize" xml:space="preserve"><value>最適化</value></data>
-  <data name="Inspector.View.OptimizeAutomation" xml:space="preserve"><value>最適化 アートワーク</value></data>
-  <data name="Inspector.View.RemoveAll" xml:space="preserve"><value>削除 すべて</value></data>
+  <data name="Inspector.View.OptimizeAutomation" xml:space="preserve"><value>アートワークを最適化</value></data>
+  <data name="Inspector.View.RemoveAll" xml:space="preserve"><value>すべて削除</value></data>
   <data name="Inspector.View.RemoveAllAutomation" xml:space="preserve"><value>すべてのアートワークを削除する</value></data>
-  <data name="Inspector.View.RemoveArtwork" xml:space="preserve"><value>削除 アートワーク</value></data>
-  <data name="Inspector.View.RemoveArtworkAutomation" xml:space="preserve"><value>削除 アートワーク</value></data>
+  <data name="Inspector.View.RemoveArtwork" xml:space="preserve"><value>アートワークを削除</value></data>
+  <data name="Inspector.View.RemoveArtworkAutomation" xml:space="preserve"><value>アートワークを削除</value></data>
   <data name="Inspector.View.ReplaceArtwork" xml:space="preserve"><value>アートワークを置換…</value></data>
-  <data name="Inspector.View.ReplaceArtworkAutomation" xml:space="preserve"><value>置換 アートワーク</value></data>
+  <data name="Inspector.View.ReplaceArtworkAutomation" xml:space="preserve"><value>アートワークを置換</value></data>
   <data name="Inspector.View.Revert" xml:space="preserve"><value>編集を破棄</value></data>
   <data name="Inspector.View.SaveArtworkToFile" xml:space="preserve"><value>ファイルに保存…</value></data>
   <data name="Inspector.View.SaveArtworkToFileAutomation" xml:space="preserve"><value>アートワークをファイルに保存</value></data>
-  <data name="Inspector.View.SaveTags" xml:space="preserve"><value>タグを保存</value></data>
   <data name="Inspector.View.Selection" xml:space="preserve"><value>選択</value></data>
   <data name="Inspector.View.UnverifiedValue" xml:space="preserve"><value>現在の値は、選択されたすべてのトラックにわたって検証されていません。</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Contains" xml:space="preserve"><value>含む</value></data>
@@ -4972,7 +4990,7 @@
   <data name="Library.VisualFilter.Choice.Comparison.GreaterThanOrEqual" xml:space="preserve"><value>以上</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.LessThan" xml:space="preserve"><value>少なく より</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.LessThanOrEqual" xml:space="preserve"><value>以下</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.MatchesRegularExpression" xml:space="preserve"><value>正規表現と一致する</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.MatchesRegularExpression" xml:space="preserve"><value>正規表現に一致</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Missing" xml:space="preserve"><value>不足</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Present" xml:space="preserve"><value>存在</value></data>
   <data name="Library.VisualFilter.Choice.FieldKind.CustomMetadata" xml:space="preserve"><value>カスタム メタデータ</value></data>
@@ -4982,20 +5000,20 @@
   <data name="Library.VisualFilter.Choice.RootMode.Any" xml:space="preserve"><value>任意</value></data>
   <data name="Library.VisualFilter.ConditionSummary" xml:space="preserve"><value>グループ {0}: {1} {2}</value></data>
   <data name="Library.VisualFilter.ConditionValue" xml:space="preserve"><value> {0}</value></data>
-  <data name="Library.VisualFilter.Editor.Error.FieldRequired" xml:space="preserve"><value>すべての条件にはフィールドが必要です。</value></data>
+  <data name="Library.VisualFilter.Editor.Error.FieldRequired" xml:space="preserve"><value>各条件にフィールドが必要です。</value></data>
   <data name="Library.VisualFilter.Editor.Error.ValueRequired" xml:space="preserve"><value>{0} には比較値が必要です。</value></data>
-  <data name="Library.VisualFilter.Editor.Status.EditCondition" xml:space="preserve"><value>選択した条件を編集し、フィルターを適用します。</value></data>
+  <data name="Library.VisualFilter.Editor.Status.EditCondition" xml:space="preserve"><value>選択した条件を編集してから、フィルターを適用してください。</value></data>
   <data name="Library.VisualFilter.Field.Custom" xml:space="preserve"><value>カスタム</value></data>
   <data name="Library.VisualFilter.Field.Known" xml:space="preserve"><value>既知</value></data>
   <data name="Library.VisualFilter.Field.Technical" xml:space="preserve"><value>技術</value></data>
   <data name="ReviewedFileOperation.Activity.Applying" xml:space="preserve"><value>レビューされたファイル操作を適用する</value></data>
-  <data name="ReviewedFileOperation.Activity.Planning" xml:space="preserve"><value>計画中 {0}</value></data>
+  <data name="ReviewedFileOperation.Activity.Planning" xml:space="preserve"><value>{0}を計画しています</value></data>
   <data name="ReviewedFileOperation.Choice.CollisionPolicy.Stop" xml:space="preserve"><value>停止</value></data>
-  <data name="ReviewedFileOperation.Choice.CollisionPolicy.Suffix" xml:space="preserve"><value>接尾辞</value></data>
+  <data name="ReviewedFileOperation.Choice.CollisionPolicy.Suffix" xml:space="preserve"><value>接尾辞を追加</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Copy" xml:space="preserve"><value>コピー</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Move" xml:space="preserve"><value>移動</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Quarantine" xml:space="preserve"><value>隔離</value></data>
-  <data name="ReviewedFileOperation.Choice.Kind.Rename" xml:space="preserve"><value>名前変更</value></data>
+  <data name="ReviewedFileOperation.Choice.Kind.Rename" xml:space="preserve"><value>名前を変更</value></data>
   <data name="ReviewedFileOperation.Dialog.Apply.Message.One" xml:space="preserve"><value>{0:N0} でレビューされたファイルの変更を適用しますか?永続的なジャーナルは、履歴および適格な復元のために保持されます。</value></data>
   <data name="ReviewedFileOperation.Dialog.Apply.Message.Other" xml:space="preserve"><value>{0:N0} でレビューされたファイルの変更を適用しますか?永続的なジャーナルは、履歴および適格な復元のために保持されます。</value></data>
   <data name="ReviewedFileOperation.Dialog.Apply.Title" xml:space="preserve"><value>{0} を適用しますか?</value></data>
@@ -5049,18 +5067,18 @@
   <data name="Workbench.Activity.SearchingMusicBrainz" xml:space="preserve"><value>MusicBrainz リリースを検索しています</value></data>
   <data name="Workbench.Activity.WritingPlaylist" xml:space="preserve"><value>レビュー済みプレイリストの作成</value></data>
   <data name="Workbench.Activity.WritingReport" xml:space="preserve"><value>レビュー済みレポートの作成</value></data>
-  <data name="Workbench.AllFields.Action.Copy" xml:space="preserve"><value>コピー フィールド</value></data>
-  <data name="Workbench.AllFields.Action.CopyTooltip" xml:space="preserve"><value>コピー フィールド</value></data>
+  <data name="Workbench.AllFields.Action.Copy" xml:space="preserve"><value>フィールドをコピー</value></data>
+  <data name="Workbench.AllFields.Action.CopyTooltip" xml:space="preserve"><value>タグの識別情報を含めてフィールド値をコピー</value></data>
   <data name="Workbench.AllFields.Action.NewCustomField" xml:space="preserve"><value>新しいカスタムフィールド</value></data>
   <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>新しい既知のフィールド</value></data>
   <data name="Workbench.AllFields.Action.PastePreview" xml:space="preserve"><value>貼り付け+プレビュー</value></data>
   <data name="Workbench.AllFields.Action.PastePreviewTooltip" xml:space="preserve"><value>貼り付け+プレビュー</value></data>
   <data name="Workbench.AllFields.Action.Preview" xml:space="preserve"><value>プレビュー</value></data>
-  <data name="Workbench.AllFields.Description" xml:space="preserve"><value>現在の選択範囲全体の既知のメタデータとカスタム メタデータを検査して編集します。</value></data>
-  <data name="Workbench.AllFields.ExistingField" xml:space="preserve"><value>既存 フィールド</value></data>
-  <data name="Workbench.AllFields.OrderedValues" xml:space="preserve"><value>順序 値</value></data>
+  <data name="Workbench.AllFields.Description" xml:space="preserve"><value>現在の選択項目に含まれる既知およびカスタムのメタデータを確認して編集します。</value></data>
+  <data name="Workbench.AllFields.ExistingField" xml:space="preserve"><value>既存のフィールド</value></data>
+  <data name="Workbench.AllFields.OrderedValues" xml:space="preserve"><value>順序付きの値</value></data>
   <data name="Workbench.AllFields.Title" xml:space="preserve"><value>すべてのメタデータ フィールド</value></data>
-  <data name="Workbench.AllFields.ValueAction" xml:space="preserve"><value>値 アクション</value></data>
+  <data name="Workbench.AllFields.ValueAction" xml:space="preserve"><value>値の操作</value></data>
   <data name="Workbench.Bulk.Action.AddToRecipe" xml:space="preserve"><value>レシピに追加</value></data>
   <data name="Workbench.Bulk.Action.DeleteRecipe" xml:space="preserve"><value>レシピを削除</value></data>
   <data name="Workbench.Bulk.Action.DuplicateStep" xml:space="preserve"><value>ステップを複製</value></data>
@@ -5073,32 +5091,32 @@
   <data name="Workbench.Bulk.Action.StepActions" xml:space="preserve"><value>ステップ操作</value></data>
   <data name="Workbench.Bulk.Action.StepActionsAutomation" xml:space="preserve"><value>ステップ操作</value></data>
   <data name="Workbench.Bulk.AssignmentPlaceholder" xml:space="preserve"><value>割り当て</value></data>
-  <data name="Workbench.Bulk.CaptureGroup" xml:space="preserve"><value>キャプチャ グループ</value></data>
+  <data name="Workbench.Bulk.CaptureGroup" xml:space="preserve"><value>キャプチャグループ</value></data>
   <data name="Workbench.Bulk.Case" xml:space="preserve"><value>大文字/小文字</value></data>
   <data name="Workbench.Bulk.Condition" xml:space="preserve"><value>条件</value></data>
-  <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>条件 値</value></data>
-  <data name="Workbench.Bulk.Description" xml:space="preserve"><value>再利用可能なメタデータ レシピを構築し、その効果をプレビューし、レビューされた変更のみを適用します。</value></data>
-  <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>宛先 フィールド</value></data>
-  <data name="Workbench.Bulk.EnableCondition" xml:space="preserve"><value>有効化 条件</value></data>
-  <data name="Workbench.Bulk.ExtractionPattern" xml:space="preserve"><value>抽出 パターン</value></data>
+  <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>条件値</value></data>
+  <data name="Workbench.Bulk.Description" xml:space="preserve"><value>再利用できるメタデータレシピを作成し、その結果をプレビューして、確認済みの変更だけを適用します。</value></data>
+  <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>対象フィールド</value></data>
+  <data name="Workbench.Bulk.EnableCondition" xml:space="preserve"><value>条件を有効にする</value></data>
+  <data name="Workbench.Bulk.ExtractionPattern" xml:space="preserve"><value>抽出パターン</value></data>
   <data name="Workbench.Bulk.ExtractionPatternPlaceholder" xml:space="preserve"><value>抽出 パターン</value></data>
   <data name="Workbench.Bulk.Field" xml:space="preserve"><value>フィールド</value></data>
   <data name="Workbench.Bulk.Find" xml:space="preserve"><value>検索</value></data>
   <data name="Workbench.Bulk.FindPlaceholder" xml:space="preserve"><value>検索</value></data>
   <data name="Workbench.Bulk.Operation" xml:space="preserve"><value>操作</value></data>
   <data name="Workbench.Bulk.OrderedRecipe" xml:space="preserve"><value>順序 レシピ</value></data>
-  <data name="Workbench.Bulk.ParentLevel" xml:space="preserve"><value>親 レベル</value></data>
-  <data name="Workbench.Bulk.PathComponent" xml:space="preserve"><value>パス コンポーネント</value></data>
+  <data name="Workbench.Bulk.ParentLevel" xml:space="preserve"><value>親階層</value></data>
+  <data name="Workbench.Bulk.PathComponent" xml:space="preserve"><value>パス要素</value></data>
   <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>保留中 操作</value></data>
   <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>保留中 操作</value></data>
   <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>個人 レシピ</value></data>
   <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>レシピ名</value></data>
-  <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>置換 付き</value></data>
+  <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>置換後</value></data>
   <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>現在の操作を編集すると、軽量のドラフト プレビューが更新されます。</value></data>
   <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>代表 下書き</value></data>
-  <data name="Workbench.Bulk.ReviewedChanges" xml:space="preserve"><value>確認済み 変更</value></data>
-  <data name="Workbench.Bulk.Safety" xml:space="preserve"><value>プレビューによってファイルが変更されることはありません。適用では、古いファイルのチェック、リカバリ ジャーナル、および元に戻す機能が使用されます。</value></data>
-  <data name="Workbench.Bulk.SavedRecipePlaceholder" xml:space="preserve"><value>保存済み レシピ</value></data>
+  <data name="Workbench.Bulk.ReviewedChanges" xml:space="preserve"><value>確認済みの変更</value></data>
+  <data name="Workbench.Bulk.Safety" xml:space="preserve"><value>プレビューではファイルは変更されません。適用時には、古くなったファイルの検査、復旧ジャーナル、元に戻す機能が使用されます。</value></data>
+  <data name="Workbench.Bulk.SavedRecipePlaceholder" xml:space="preserve"><value>保存済みレシピ</value></data>
   <data name="Workbench.Bulk.SecondSourceField" xml:space="preserve"><value>2番目のソースフィールド</value></data>
   <data name="Workbench.Bulk.Separator" xml:space="preserve"><value>区切り文字</value></data>
   <data name="Workbench.Bulk.Sequence" xml:space="preserve"><value>連番</value></data>
@@ -5106,23 +5124,17 @@
   <data name="Workbench.Bulk.SequenceStartAutomation" xml:space="preserve"><value>連番 開始</value></data>
   <data name="Workbench.Bulk.UseRegularExpression" xml:space="preserve"><value>正規表現を使用する</value></data>
   <data name="Workbench.Bulk.Value" xml:space="preserve"><value>値</value></data>
-  <data name="Workbench.Bulk.ValueOrder" xml:space="preserve"><value>値 順序</value></data>
+  <data name="Workbench.Bulk.ValueOrder" xml:space="preserve"><value>値の順序</value></data>
   <data name="Workbench.Choice.ExternalToolInvocationMode.OnceForSelection" xml:space="preserve"><value>選択範囲に 1 回</value></data>
   <data name="Workbench.Choice.ExternalToolInvocationMode.OncePerFile" xml:space="preserve"><value>ファイルごとに 1 回</value></data>
   <data name="Workbench.Choice.FieldEditMode.Append" xml:space="preserve"><value>追加</value></data>
-  <data name="Workbench.Choice.FieldEditMode.RemoveField" xml:space="preserve"><value>削除 フィールド</value></data>
-  <data name="Workbench.Choice.FieldEditMode.RemoveValues" xml:space="preserve"><value>削除 値</value></data>
+  <data name="Workbench.Choice.FieldEditMode.RemoveField" xml:space="preserve"><value>フィールドを削除</value></data>
+  <data name="Workbench.Choice.FieldEditMode.RemoveValues" xml:space="preserve"><value>値を削除</value></data>
   <data name="Workbench.Choice.FieldEditMode.Replace" xml:space="preserve"><value>置換</value></data>
   <data name="Workbench.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>自動</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin-1</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>UTF-16</value></data>
-  <data name="Workbench.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>UTF-8</value></data>
-  <data name="Workbench.Choice.Id3Version.V22" xml:space="preserve"><value>ID3v2.2</value></data>
-  <data name="Workbench.Choice.Id3Version.V23" xml:space="preserve"><value>ID3v2.3</value></data>
-  <data name="Workbench.Choice.Id3Version.V24" xml:space="preserve"><value>ID3v2.4</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>無視</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>空の値を保持する</value></data>
-  <data name="Workbench.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>削除 フィールド</value></data>
+  <data name="Workbench.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>フィールドを削除</value></data>
   <data name="Workbench.Choice.MetadataGridFieldKind.Custom" xml:space="preserve"><value>カスタム</value></data>
   <data name="Workbench.Choice.MetadataGridFieldKind.Known" xml:space="preserve"><value>既知</value></data>
   <data name="Workbench.Choice.MetadataGridSortType.Date" xml:space="preserve"><value>日付</value></data>
@@ -5130,23 +5142,12 @@
   <data name="Workbench.Choice.MetadataGridSortType.Text" xml:space="preserve"><value>テキスト</value></data>
   <data name="Workbench.Choice.OnlineProvider.Discogs" xml:space="preserve"><value>Discogs</value></data>
   <data name="Workbench.Choice.OnlineProvider.MusicBrainz" xml:space="preserve"><value>MusicBrainz</value></data>
-  <data name="Workbench.Choice.OnlineScope.AllFiles" xml:space="preserve"><value>すべて ファイル</value></data>
-  <data name="Workbench.Choice.OnlineScope.SelectedFile" xml:space="preserve"><value>選択済み ファイル</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
-  <data name="Workbench.Choice.PlaylistEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8（BOM 付き）</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.CrLf" xml:space="preserve"><value>CRLF</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.Lf" xml:space="preserve"><value>LF</value></data>
+  <data name="Workbench.Choice.OnlineScope.AllFiles" xml:space="preserve"><value>すべてのファイル</value></data>
+  <data name="Workbench.Choice.OnlineScope.SelectedFile" xml:space="preserve"><value>選択したファイル</value></data>
   <data name="Workbench.Choice.PlaylistLineEnding.Platform" xml:space="preserve"><value>プラットフォーム</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Absolute" xml:space="preserve"><value>絶対</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.AsProvided" xml:space="preserve"><value>として 提供済み</value></data>
   <data name="Workbench.Choice.PlaylistPathStyle.Relative" xml:space="preserve"><value>相対</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf16LittleEndian" xml:space="preserve"><value>UTF-16 LE</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8" xml:space="preserve"><value>UTF-8</value></data>
-  <data name="Workbench.Choice.ReportEncoding.Utf8WithBom" xml:space="preserve"><value>UTF-8（BOM 付き）</value></data>
-  <data name="Workbench.Choice.ReportFormat.Csv" xml:space="preserve"><value>CSV</value></data>
-  <data name="Workbench.Choice.ReportFormat.Html" xml:space="preserve"><value>HTML</value></data>
-  <data name="Workbench.Choice.ReportFormat.Rtf" xml:space="preserve"><value>RTF</value></data>
   <data name="Workbench.Choice.ReportFormat.Text" xml:space="preserve"><value>テキスト</value></data>
   <data name="Workbench.Choice.ReportSortType.DateTime" xml:space="preserve"><value>日付 時間</value></data>
   <data name="Workbench.Choice.ReportSortType.Natural" xml:space="preserve"><value>自然</value></data>
@@ -5154,15 +5155,15 @@
   <data name="Workbench.Choice.ReportSortType.Text" xml:space="preserve"><value>テキスト</value></data>
   <data name="Workbench.Choice.ShortcutTargetKind.Command" xml:space="preserve"><value>コマンド</value></data>
   <data name="Workbench.Choice.ShortcutTargetKind.Recipe" xml:space="preserve"><value>レシピ</value></data>
-  <data name="Workbench.Columns.Action.Save" xml:space="preserve"><value>保存 列</value></data>
+  <data name="Workbench.Columns.Action.Save" xml:space="preserve"><value>列を保存</value></data>
   <data name="Workbench.Columns.AllowInlineEditing" xml:space="preserve"><value>インライン編集を許可する</value></data>
   <data name="Workbench.Columns.Close" xml:space="preserve"><value>閉じる</value></data>
-  <data name="Workbench.Columns.Description" xml:space="preserve"><value>表示される列を選択し、保存されているメタデータを変更せずにメタデータ列を作成します。</value></data>
-  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>インライン編集は、サポートされている既知のフィールドでのみ使用できます。</value></data>
-  <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>既知 フィールド</value></data>
+  <data name="Workbench.Columns.Description" xml:space="preserve"><value>保存済みのメタデータを変更せずに、表示する列を選択したりメタデータ列を作成したりできます。</value></data>
+  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>インライン編集は、対応している既知のフィールドでのみ使用できます。</value></data>
+  <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>既知のフィールド</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>ラベル</value></data>
   <data name="Workbench.Columns.Metadata" xml:space="preserve"><value>メタデータ</value></data>
-  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>既知のフィールドを選ぶか、カスタムフィールド名を入力してください。</value></data>
+  <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>既知のフィールドを選択するか、カスタムフィールド名を入力してください。</value></data>
   <data name="Workbench.Columns.Status.EnterLabel" xml:space="preserve"><value>列のラベルを入力してください。</value></data>
   <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>新しい未保存のメタデータ列。</value></data>
   <data name="Workbench.Columns.Status.Removed" xml:space="preserve"><value>メタデータ列「{0}」を削除しました。</value></data>
@@ -5190,9 +5191,9 @@
   <data name="Workbench.Error.NoImportRowsMatched" xml:space="preserve"><value>このワークベンチ セッションに一致するインポート行はありません。</value></data>
   <data name="Workbench.FileOperations.PendingMetadataPreflight" xml:space="preserve"><value>ファイルを移動する前に、現在のメタデータとアートワークの編集を適用または破棄します。</value></data>
   <data name="Workbench.Grid.Header.After" xml:space="preserve"><value>変更後</value></data>
-  <data name="Workbench.Grid.Header.AppliesTo" xml:space="preserve"><value>適用 へ</value></data>
+  <data name="Workbench.Grid.Header.AppliesTo" xml:space="preserve"><value>適用先</value></data>
   <data name="Workbench.Grid.Header.Approved" xml:space="preserve"><value>承認済み</value></data>
-  <data name="Workbench.Grid.Header.ArchiveId" xml:space="preserve"><value>アーカイブ ID</value></data>
+  <data name="Workbench.Grid.Header.ArchiveId" xml:space="preserve"><value>アーカイブID</value></data>
   <data name="Workbench.Grid.Header.Arguments" xml:space="preserve"><value>引数</value></data>
   <data name="Workbench.Grid.Header.ArtistCredit" xml:space="preserve"><value>アーティスト クレジット</value></data>
   <data name="Workbench.Grid.Header.Back" xml:space="preserve"><value>背面</value></data>
@@ -5203,7 +5204,7 @@
   <data name="Workbench.Grid.Header.Confidence" xml:space="preserve"><value>信頼度</value></data>
   <data name="Workbench.Grid.Header.Country" xml:space="preserve"><value>国</value></data>
   <data name="Workbench.Grid.Header.Date" xml:space="preserve"><value>日付</value></data>
-  <data name="Workbench.Grid.Header.Destination" xml:space="preserve"><value>宛先</value></data>
+  <data name="Workbench.Grid.Header.Destination" xml:space="preserve"><value>出力先</value></data>
   <data name="Workbench.Grid.Header.DiscogsReleaseId" xml:space="preserve"><value>Discogs リリース ID</value></data>
   <data name="Workbench.Grid.Header.DiscogsTrack" xml:space="preserve"><value>Discogs トラック</value></data>
   <data name="Workbench.Grid.Header.Duration" xml:space="preserve"><value>長さ</value></data>
@@ -5239,7 +5240,7 @@
   <data name="Workbench.Grid.Header.Types" xml:space="preserve"><value>種類</value></data>
   <data name="Workbench.Grid.Header.Use" xml:space="preserve"><value>使用</value></data>
   <data name="Workbench.Grid.Header.Values" xml:space="preserve"><value>値</value></data>
-  <data name="Workbench.Grid.Header.WorkingDirectory" xml:space="preserve"><value>処理中 ディレクトリ</value></data>
+  <data name="Workbench.Grid.Header.WorkingDirectory" xml:space="preserve"><value>作業ディレクトリ</value></data>
   <data name="Workbench.Grid.Header.Year" xml:space="preserve"><value>年</value></data>
   <data name="Workbench.Inspector.AddApeV2Automation" xml:space="preserve"><value>APEv2 タグレイヤーを追加</value></data>
   <data name="Workbench.Inspector.AddId3v1Automation" xml:space="preserve"><value>ID3v1 タグレイヤーを追加</value></data>
@@ -5285,45 +5286,44 @@
   <data name="Workbench.Navigation.Section.Shortcuts" xml:space="preserve"><value>ショートカット</value></data>
   <data name="Workbench.Navigation.Section.Tools" xml:space="preserve"><value>外部ツール</value></data>
   <data name="Workbench.Navigation.SectionAutomation" xml:space="preserve"><value>セクション</value></data>
-  <data name="Workbench.Online.AddImage" xml:space="preserve"><value>追加 画像</value></data>
-  <data name="Workbench.Online.AdvancedIdentifiers" xml:space="preserve"><value>詳細設定 識別子</value></data>
+  <data name="Workbench.Online.AddImage" xml:space="preserve"><value>画像を追加</value></data>
+  <data name="Workbench.Online.AdvancedIdentifiers" xml:space="preserve"><value>高度な識別子</value></data>
   <data name="Workbench.Online.AlbumPlaceholder" xml:space="preserve"><value>アルバム</value></data>
   <data name="Workbench.Online.ArtistPlaceholder" xml:space="preserve"><value>アーティスト</value></data>
   <data name="Workbench.Online.Artwork" xml:space="preserve"><value>アートワーク</value></data>
-  <data name="Workbench.Online.ArtworkActions" xml:space="preserve"><value>アートワーク アクション</value></data>
-  <data name="Workbench.Online.ArtworkActionsAutomation" xml:space="preserve"><value>アートワーク アクション</value></data>
-  <data name="Workbench.Online.ArtworkDescription" xml:space="preserve"><value>注文された埋め込みアートワーク セットを編集するか、確認されたリリース マッピングのアートワークを使用します。</value></data>
-  <data name="Workbench.Online.ArtworkRole" xml:space="preserve"><value>アートワーク 役割</value></data>
-  <data name="Workbench.Online.AudioCandidates" xml:space="preserve"><value>オーディオ 候補</value></data>
-  <data name="Workbench.Online.AudioCandidatesDescription" xml:space="preserve"><value>候補を選択して、その識別子をステージングするか、一致するリリース エディションを見つけます。</value></data>
+  <data name="Workbench.Online.ArtworkActions" xml:space="preserve"><value>アートワークの操作</value></data>
+  <data name="Workbench.Online.ArtworkActionsAutomation" xml:space="preserve"><value>アートワークの操作</value></data>
+  <data name="Workbench.Online.ArtworkDescription" xml:space="preserve"><value>埋め込みアートワークの順序を編集するか、確認済みのリリース対応付けからアートワークを使用します。</value></data>
+  <data name="Workbench.Online.ArtworkRole" xml:space="preserve"><value>アートワークの種類</value></data>
+  <data name="Workbench.Online.AudioCandidates" xml:space="preserve"><value>音声候補</value></data>
+  <data name="Workbench.Online.AudioCandidatesDescription" xml:space="preserve"><value>候補を選択して識別子を準備するか、一致するリリースの版を検索します。</value></data>
   <data name="Workbench.Online.BarcodePlaceholder" xml:space="preserve"><value>バーコード</value></data>
-  <data name="Workbench.Online.BuildMapping" xml:space="preserve"><value>ビルド マッピング</value></data>
-  <data name="Workbench.Online.CatalogNumberPlaceholder" xml:space="preserve"><value>カタログ 番号</value></data>
+  <data name="Workbench.Online.BuildMapping" xml:space="preserve"><value>対応付けを作成</value></data>
+  <data name="Workbench.Online.CatalogNumberPlaceholder" xml:space="preserve"><value>カタログ番号</value></data>
   <data name="Workbench.Online.Description" xml:space="preserve"><value>説明</value></data>
   <data name="Workbench.Online.DiscogsArtworkDescription" xml:space="preserve"><value>Discogs リリース {0}</value></data>
-  <data name="Workbench.Online.DiscogsEditions" xml:space="preserve"><value>Discogs エディション</value></data>
+  <data name="Workbench.Online.DiscogsEditions" xml:space="preserve"><value>Discogs の版</value></data>
   <data name="Workbench.Online.DiscogsEditionsDescription" xml:space="preserve"><value>版を選択して詳細をすべて読み込み、ファイルとトラックの対応を確認します。</value></data>
   <data name="Workbench.Online.DiscogsReleaseIdPlaceholder" xml:space="preserve"><value>Discogs リリース ID</value></data>
-  <data name="Workbench.Online.Discover" xml:space="preserve"><value>検出</value></data>
-  <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>選択したファイルのフィンガープリントを実行し、AcoustID および MusicBrainz の録音候補を見つけます。何も提出されません。</value></data>
+  <data name="Workbench.Online.Discover" xml:space="preserve"><value>録音を検索</value></data>
+  <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>選択したファイルのフィンガープリントを生成し、AcoustID と MusicBrainz で録音候補を検索します。データは送信されません。</value></data>
   <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>オーディオを識別</value></data>
   <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>埋め込みアートワークセット</value></data>
-  <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>エクスポート アートワーク</value></data>
-  <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>エクスポート アートワーク</value></data>
-  <data name="Workbench.Online.Field.AlbumArtistDate" xml:space="preserve"><value>アルバムアーティスト 日付</value></data>
-  <data name="Workbench.Online.Field.AlbumDate" xml:space="preserve"><value>アルバム 日付</value></data>
+  <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>アートワークをエクスポート</value></data>
+  <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>アートワークをエクスポート</value></data>
+  <data name="Workbench.Online.Field.AlbumArtistDate" xml:space="preserve"><value>アルバム、アーティスト、日付</value></data>
+  <data name="Workbench.Online.Field.AlbumDate" xml:space="preserve"><value>アルバムと日付</value></data>
   <data name="Workbench.Online.Field.DiscogsReleaseId" xml:space="preserve"><value>Discogs リリース ID</value></data>
-  <data name="Workbench.Online.Field.GenresStyles" xml:space="preserve"><value>ジャンル スタイル</value></data>
-  <data name="Workbench.Online.Field.MusicBrainzIds" xml:space="preserve"><value>MusicBrainz IDs</value></data>
-  <data name="Workbench.Online.Field.Numbering" xml:space="preserve"><value>番号付け</value></data>
+  <data name="Workbench.Online.Field.GenresStyles" xml:space="preserve"><value>ジャンルとスタイル</value></data>
+  <data name="Workbench.Online.Field.Numbering" xml:space="preserve"><value>番号</value></data>
   <data name="Workbench.Online.Field.ReleaseDetails" xml:space="preserve"><value>リリースの詳細</value></data>
   <data name="Workbench.Online.Field.Titles" xml:space="preserve"><value>タイトル</value></data>
-  <data name="Workbench.Online.Field.TrackArtists" xml:space="preserve"><value>トラック アーティスト</value></data>
+  <data name="Workbench.Online.Field.TrackArtists" xml:space="preserve"><value>トラックアーティスト</value></data>
   <data name="Workbench.Online.Field.TrackDiscNumbers" xml:space="preserve"><value>トラックディスク番号</value></data>
   <data name="Workbench.Online.FindReleaseArtwork" xml:space="preserve"><value>リリースアートワークを探す</value></data>
   <data name="Workbench.Online.FindReleaseEditions" xml:space="preserve"><value>リリース エディションを探す</value></data>
   <data name="Workbench.Online.LoadDetails" xml:space="preserve"><value>詳細を読み込む</value></data>
-  <data name="Workbench.Online.MappingReviewDescription" xml:space="preserve"><value>選択したフィールドを通常のプレビューに追加する前に、ファイルからトラックへの提案をすべて確認してください。</value></data>
+  <data name="Workbench.Online.MappingReviewDescription" xml:space="preserve"><value>選択したフィールドを通常のプレビューに追加する前に、提案されたファイルとトラックの対応をすべて確認します。</value></data>
   <data name="Workbench.Online.MaximumDimension" xml:space="preserve"><value>プレビュー/適用の最大幅または高さ (0 はサイズを維持)</value></data>
   <data name="Workbench.Online.MoveArtworkDown" xml:space="preserve"><value>アートワークを下に移動</value></data>
   <data name="Workbench.Online.MoveArtworkDownAutomation" xml:space="preserve"><value>アートワークを下に移動</value></data>
@@ -5331,30 +5331,30 @@
   <data name="Workbench.Online.MoveArtworkUpAutomation" xml:space="preserve"><value>アートワークを上に移動</value></data>
   <data name="Workbench.Online.MusicBrainzReleaseIdPlaceholder" xml:space="preserve"><value>MusicBrainz リリース ID</value></data>
   <data name="Workbench.Online.PreviewArtworkSet" xml:space="preserve"><value>アートワークセットのプレビュー</value></data>
-  <data name="Workbench.Online.PreviewCover" xml:space="preserve"><value>プレビュー カバー</value></data>
+  <data name="Workbench.Online.PreviewCover" xml:space="preserve"><value>アートワークをプレビュー</value></data>
   <data name="Workbench.Online.PreviewMappedMetadata" xml:space="preserve"><value>マップされたメタデータのプレビュー</value></data>
   <data name="Workbench.Online.PreviewReleaseCover" xml:space="preserve"><value>プレビュー リリースの表紙</value></data>
   <data name="Workbench.Online.PreviewSelectedIds" xml:space="preserve"><value>選択した ID をプレビュー</value></data>
   <data name="Workbench.Online.ProviderAutomation" xml:space="preserve"><value>プロバイダー</value></data>
   <data name="Workbench.Online.ReleaseArtworkCandidates" xml:space="preserve"><value>リリース作品候補</value></data>
-  <data name="Workbench.Online.ReleaseEditions" xml:space="preserve"><value>リリース エディション</value></data>
-  <data name="Workbench.Online.RemoveArtwork" xml:space="preserve"><value>削除 アートワーク</value></data>
-  <data name="Workbench.Online.RemoveArtworkAutomation" xml:space="preserve"><value>削除 アートワーク</value></data>
-  <data name="Workbench.Online.ReplaceArtwork" xml:space="preserve"><value>置換 アートワーク</value></data>
-  <data name="Workbench.Online.ReplaceArtworkAutomation" xml:space="preserve"><value>置換 アートワーク</value></data>
-  <data name="Workbench.Online.ResultsDescription" xml:space="preserve"><value>候補を選択し、マッピングとフィールドを確認して、結果を保留中の変更に追加します。</value></data>
+  <data name="Workbench.Online.ReleaseEditions" xml:space="preserve"><value>リリースの版</value></data>
+  <data name="Workbench.Online.RemoveArtwork" xml:space="preserve"><value>アートワークを削除</value></data>
+  <data name="Workbench.Online.RemoveArtworkAutomation" xml:space="preserve"><value>アートワークを削除</value></data>
+  <data name="Workbench.Online.ReplaceArtwork" xml:space="preserve"><value>アートワークを置換</value></data>
+  <data name="Workbench.Online.ReplaceArtworkAutomation" xml:space="preserve"><value>アートワークを置換</value></data>
+  <data name="Workbench.Online.ResultsDescription" xml:space="preserve"><value>候補を選び、対応付けとフィールドを確認して、結果を保留中の変更に追加します。</value></data>
   <data name="Workbench.Online.ResultsTitle" xml:space="preserve"><value>一致を確認</value></data>
   <data name="Workbench.Online.ScopeAutomation" xml:space="preserve"><value>範囲</value></data>
   <data name="Workbench.Online.Search" xml:space="preserve"><value>検索</value></data>
-  <data name="Workbench.Online.SearchDescription" xml:space="preserve"><value>プロバイダーを選択して検索し、以下のエディションを確認してマッピングします。</value></data>
+  <data name="Workbench.Online.SearchDescription" xml:space="preserve"><value>プロバイダーを選択して検索し、下の版を確認して対応付けます。</value></data>
   <data name="Workbench.Online.SearchTitle" xml:space="preserve"><value>リリースを検索</value></data>
-  <data name="Workbench.Online.SelectedImage" xml:space="preserve"><value>選択済み 画像</value></data>
+  <data name="Workbench.Online.SelectedImage" xml:space="preserve"><value>選択中の画像</value></data>
   <data name="Workbench.Online.Source.Cache" xml:space="preserve"><value>キャッシュ</value></data>
   <data name="Workbench.Online.Source.OfflineCache" xml:space="preserve"><value>オフラインキャッシュ</value></data>
   <data name="Workbench.Online.Thumbnail.Bytes" xml:space="preserve"><value>{0:N0} バイト</value></data>
   <data name="Workbench.Online.Thumbnail.Cached" xml:space="preserve"><value>キャッシュ済み</value></data>
-  <data name="Workbench.Online.TrackMapping" xml:space="preserve"><value>トラック マッピング</value></data>
-  <data name="Workbench.Online.TrackMappingDescription" xml:space="preserve"><value>リリースを選択し、提案されたすべてのファイルとトラックのマッピングを確認してから、プレビューするフィールド グループを選択します。</value></data>
+  <data name="Workbench.Online.TrackMapping" xml:space="preserve"><value>トラックの対応付け</value></data>
+  <data name="Workbench.Online.TrackMappingDescription" xml:space="preserve"><value>リリースを選択し、提案されたファイルとトラックの対応をすべて確認して、プレビューするフィールドグループを選びます。</value></data>
   <data name="Workbench.Operation.ConvertId3Version" xml:space="preserve"><value>ID3v2.{0} に変換します</value></data>
   <data name="Workbench.Operation.ConvertTagLayer" xml:space="preserve"><value>{0} を {1} に変換します</value></data>
   <data name="Workbench.Operation.CoverArtArchive" xml:space="preserve"><value>Cover Art Archive: {0}</value></data>
@@ -5379,7 +5379,7 @@
   <data name="Workbench.PendingChanges.Close" xml:space="preserve"><value>閉じる</value></data>
   <data name="Workbench.PendingChanges.Count.One" xml:space="preserve"><value>{0:N0} 編集保留中</value></data>
   <data name="Workbench.PendingChanges.Count.Other" xml:space="preserve"><value>{0:N0} 保留中の編集</value></data>
-  <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>書き込み前に、保留中のすべての編集とファイル操作を確認します。</value></data>
+  <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>書き込み前に、保留中の編集とファイル操作をすべて確認します。</value></data>
   <data name="Workbench.PendingChanges.Empty" xml:space="preserve"><value>保留中の変更はありません。グリッド、インスペクター、ファイル操作、トランスコードでの編集はここに表示されます。</value></data>
   <data name="Workbench.PendingChanges.EmptyDescription" xml:space="preserve"><value>グリッド、インスペクター、ファイル操作、トランスコードでの編集は、書き込み前にここに表示されます。</value></data>
   <data name="Workbench.PendingChanges.EmptyTitle" xml:space="preserve"><value>保留中の変更はありません</value></data>
@@ -5387,7 +5387,7 @@
   <data name="Workbench.PendingChanges.RevertTooltip" xml:space="preserve"><value>保留中の変更をすべて破棄</value></data>
   <data name="Workbench.PendingChanges.Review.One" xml:space="preserve"><value>変更 ({0:N0})</value></data>
   <data name="Workbench.PendingChanges.Review.Other" xml:space="preserve"><value>変更 ({0:N0})</value></data>
-  <data name="Workbench.PendingChanges.ReviewAutomation" xml:space="preserve"><value>確認</value></data>
+  <data name="Workbench.PendingChanges.ReviewAutomation" xml:space="preserve"><value>変更内容を確認</value></data>
   <data name="Workbench.PendingChanges.Title" xml:space="preserve"><value>変更を確認</value></data>
   <data name="Workbench.Picker.AddArtwork.Title" xml:space="preserve"><value>アートワークを追加</value></data>
   <data name="Workbench.Picker.AddFolder.Title" xml:space="preserve"><value>ソースフォルダーを追加</value></data>
@@ -5405,19 +5405,19 @@
   <data name="Workbench.Picker.ReportFolder.Title" xml:space="preserve"><value>レポートフォルダーを選択</value></data>
   <data name="Workbench.Picker.ReportOutput.Title" xml:space="preserve"><value>レポートを保存</value></data>
   <data name="Workbench.Picker.SupportedSources" xml:space="preserve"><value>対応 ソース</value></data>
-  <data name="Workbench.Playlists.Action.Preview" xml:space="preserve"><value>プレビュー プレイリスト</value></data>
+  <data name="Workbench.Playlists.Action.Preview" xml:space="preserve"><value>プレイリストをプレビュー</value></data>
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>書き込む</value></data>
-  <data name="Workbench.Playlists.DefaultName" xml:space="preserve"><value>音楽 プレイリスト</value></data>
-  <data name="Workbench.Playlists.Description" xml:space="preserve"><value>出力を書き込む前に、プレイリストの宛先と内容をプレビューします。</value></data>
-  <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>エンコーディング</value></data>
-  <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>拡張 情報</value></data>
+  <data name="Workbench.Playlists.DefaultName" xml:space="preserve"><value>音楽プレイリスト</value></data>
+  <data name="Workbench.Playlists.Description" xml:space="preserve"><value>書き込み前に、プレイリストの出力先と内容を確認します。</value></data>
+  <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>文字エンコーディング</value></data>
+  <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>拡張情報</value></data>
   <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>改行コード</value></data>
   <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>名前</value></data>
   <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>グループごとに 1 つ</value></data>
   <data name="Workbench.Playlists.Grouping" xml:space="preserve"><value>グループ化</value></data>
-  <data name="Workbench.Playlists.PathStyle" xml:space="preserve"><value>パス スタイル</value></data>
+  <data name="Workbench.Playlists.PathStyle" xml:space="preserve"><value>パス形式</value></data>
   <data name="Workbench.Playlists.Reviewed" xml:space="preserve"><value>確認済み</value></data>
-  <data name="Workbench.Playlists.Safety" xml:space="preserve"><value>プレイリストの出力はメタデータの変更とは別のものであり、レビュー後にのみ書き込まれます。</value></data>
+  <data name="Workbench.Playlists.Safety" xml:space="preserve"><value>プレイリストの出力はメタデータの変更とは別に扱われ、確認後にのみ書き込まれます。</value></data>
   <data name="Workbench.Playlists.Title" xml:space="preserve"><value>プレイリスト</value></data>
   <data name="Workbench.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>アートワークのサムネイルを読み込み中 ({0:N0}/{1:N0})</value></data>
   <data name="Workbench.Progress.ReadingFile" xml:space="preserve"><value>読み取り中 {0}</value></data>
@@ -5427,33 +5427,33 @@
   <data name="Workbench.Reports.Action.Preview" xml:space="preserve"><value>プレビュー</value></data>
   <data name="Workbench.Reports.Action.Write" xml:space="preserve"><value>書き込む</value></data>
   <data name="Workbench.Reports.Columns" xml:space="preserve"><value>列</value></data>
-  <data name="Workbench.Reports.ColumnActions" xml:space="preserve"><value>列 アクション</value></data>
-  <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>音楽ライブラリ レポート</value></data>
+  <data name="Workbench.Reports.ColumnActions" xml:space="preserve"><value>列の操作</value></data>
+  <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>音楽ライブラリレポート</value></data>
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>降順</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>フィールド、グループ化、並べ替えを選択し、すべての出力先を確認します。</value></data>
   <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>サンプルあたりのビット数</value></data>
-  <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>Codec 種類</value></data>
+  <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>コーデックの種類</value></data>
   <data name="Workbench.Reports.Field.File" xml:space="preserve"><value>ファイル — {0}</value></data>
   <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>ファイル名</value></data>
-  <data name="Workbench.Reports.Field.FileSize" xml:space="preserve"><value>ファイル サイズ</value></data>
+  <data name="Workbench.Reports.Field.FileSize" xml:space="preserve"><value>ファイルサイズ</value></data>
   <data name="Workbench.Reports.Field.MaximumBitrate" xml:space="preserve"><value>最大ビットレート</value></data>
   <data name="Workbench.Reports.Field.Metadata" xml:space="preserve"><value>メタデータ — {0}</value></data>
   <data name="Workbench.Reports.Field.SampleRate" xml:space="preserve"><value>サンプルレート</value></data>
   <data name="Workbench.Reports.Field.Technical" xml:space="preserve"><value>技術情報 — {0}</value></data>
-  <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>グループ による</value></data>
-  <data name="Workbench.Reports.GroupFileNamePattern" xml:space="preserve"><value>グループ ファイル name パターン</value></data>
-  <data name="Workbench.Reports.GroupFileNameHelp" xml:space="preserve"><value>使用 {Group} 用 対象の 選択済み グループ 値 および {Format} 用 対象の レポート ファイル extension.</value></data>
+  <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>グループ化</value></data>
+  <data name="Workbench.Reports.GroupFileNamePattern" xml:space="preserve"><value>グループのファイル名パターン</value></data>
+  <data name="Workbench.Reports.GroupFileNameHelp" xml:space="preserve"><value>選択したグループ値には {Group}、レポートの拡張子には {Format} を使用します。</value></data>
   <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>名前</value></data>
-  <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>いいえ グループ化</value></data>
+  <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>グループ化しない</value></data>
   <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>グループごとに 1 つ</value></data>
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>確認済み</value></data>
   <data name="Workbench.Reports.Safety" xml:space="preserve"><value>レポート出力ではメディア ファイルが変更されることはありません。</value></data>
-  <data name="Workbench.Reports.SortBy" xml:space="preserve"><value>並べ替え による</value></data>
+  <data name="Workbench.Reports.SortBy" xml:space="preserve"><value>並べ替え</value></data>
   <data name="Workbench.Reports.Source.Custom" xml:space="preserve"><value>カスタム: {0}</value></data>
   <data name="Workbench.Reports.Source.File" xml:space="preserve"><value>ファイル: {0}</value></data>
   <data name="Workbench.Reports.Source.Metadata" xml:space="preserve"><value>メタデータ: {0}</value></data>
-  <data name="Workbench.Reports.Source.Technical" xml:space="preserve"><value>技術: {0}</value></data>
-  <data name="Workbench.Reports.SourceOrder" xml:space="preserve"><value>ソース 順序</value></data>
+  <data name="Workbench.Reports.Source.Technical" xml:space="preserve"><value>技術情報: {0}</value></data>
+  <data name="Workbench.Reports.SourceOrder" xml:space="preserve"><value>ソースの順序</value></data>
   <data name="Workbench.Reports.Title" xml:space="preserve"><value>レポート</value></data>
   <data name="Workbench.Representative.Error.NoFile" xml:space="preserve"><value>代表的なプレビューではファイルが返されませんでした。</value></data>
   <data name="Workbench.Representative.Missing" xml:space="preserve"><value>(不足)</value></data>
@@ -5470,7 +5470,7 @@
   <data name="Workbench.Section.BulkOperation" xml:space="preserve"><value>一括 操作</value></data>
   <data name="Workbench.Section.BulkOperationAutomation" xml:space="preserve"><value>バルクメタデータ操作</value></data>
   <data name="Workbench.Section.Files" xml:space="preserve"><value>ファイル</value></data>
-  <data name="Workbench.Section.FilesAutomation" xml:space="preserve"><value>確認済み ファイル操作</value></data>
+  <data name="Workbench.Section.FilesAutomation" xml:space="preserve"><value>確認済みファイル操作</value></data>
   <data name="Workbench.Section.OnlineMetadata" xml:space="preserve"><value>オンラインメタデータ</value></data>
   <data name="Workbench.Section.OnlineMetadataAutomation" xml:space="preserve"><value>オンラインメタデータ</value></data>
   <data name="Workbench.Section.Playlists" xml:space="preserve"><value>プレイリスト</value></data>
@@ -5478,7 +5478,7 @@
   <data name="Workbench.Section.Reports" xml:space="preserve"><value>レポート</value></data>
   <data name="Workbench.Section.ReportsAutomation" xml:space="preserve"><value>レポート</value></data>
   <data name="Workbench.Section.Session" xml:space="preserve"><value>セッション</value></data>
-  <data name="Workbench.Section.SessionAutomation" xml:space="preserve"><value>ワークベンチ セッション</value></data>
+  <data name="Workbench.Section.SessionAutomation" xml:space="preserve"><value>ワークベンチセッション</value></data>
   <data name="Workbench.Section.Shortcuts" xml:space="preserve"><value>ショートカット</value></data>
   <data name="Workbench.Section.ShortcutsAutomation" xml:space="preserve"><value>ワークベンチ ショートカット</value></data>
   <data name="Workbench.Section.Tools" xml:space="preserve"><value>ツール</value></data>
@@ -5488,18 +5488,18 @@
   <data name="Workbench.Session.Action.Clear" xml:space="preserve"><value>セッションをクリア</value></data>
   <data name="Workbench.Session.Action.RemoveSelected" xml:space="preserve"><value>セッションから削除</value></data>
   <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>取り込みへ送る</value></data>
-  <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>{0:N0} アートワーク</value></data>
-  <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>{0:N0} アートワーク</value></data>
+  <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>{0:N0} 件のアートワーク</value></data>
+  <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>{0:N0} 件のアートワーク</value></data>
   <data name="Workbench.Session.Columns" xml:space="preserve"><value>列</value></data>
-  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>空 セル</value></data>
-  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>空 セル</value></data>
+  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>空のセル</value></data>
+  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>インポートした空のセルの処理</value></data>
   <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>オーディオファイルまたはフォルダーを追加して、セッションの確認と編集を始めます。</value></data>
   <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>このセッションにはファイルがありません</value></data>
-  <data name="Workbench.Session.FieldsCount.One" xml:space="preserve"><value>{0:N0} フィールド</value></data>
-  <data name="Workbench.Session.FieldsCount.Other" xml:space="preserve"><value>{0:N0} フィールド</value></data>
-  <data name="Workbench.Session.GridAutomation" xml:space="preserve"><value>グリッド</value></data>
-  <data name="Workbench.Session.ImportDelimited" xml:space="preserve"><value>インポート CSV/TSV</value></data>
-  <data name="Workbench.Session.SelectionActions" xml:space="preserve"><value>選択 アクション</value></data>
+  <data name="Workbench.Session.FieldsCount.One" xml:space="preserve"><value>{0:N0} 件のフィールド</value></data>
+  <data name="Workbench.Session.FieldsCount.Other" xml:space="preserve"><value>{0:N0} 件のフィールド</value></data>
+  <data name="Workbench.Session.GridAutomation" xml:space="preserve"><value>セッショングリッド</value></data>
+  <data name="Workbench.Session.ImportDelimited" xml:space="preserve"><value>CSV/TSV をインポート</value></data>
+  <data name="Workbench.Session.SelectionActions" xml:space="preserve"><value>選択項目の操作</value></data>
   <data name="Workbench.Session.TagsFormat" xml:space="preserve"><value>タグ: {0}</value></data>
   <data name="Workbench.Shortcuts.BindingTitle" xml:space="preserve"><value>ショートカットの詳細</value></data>
   <data name="Workbench.Shortcuts.Command" xml:space="preserve"><value>コマンド</value></data>
@@ -5510,31 +5510,31 @@
   <data name="Workbench.Shortcuts.Command.PreviewCurrentRecipe" xml:space="preserve"><value>現在のレシピをプレビュー</value></data>
   <data name="Workbench.Shortcuts.Command.PreviewInlineEdits" xml:space="preserve"><value>インライン編集をプレビュー</value></data>
   <data name="Workbench.Shortcuts.Command.Redo" xml:space="preserve"><value>やり直す</value></data>
-  <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>直前のレシピを繰り返す</value></data>
-  <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>直前の適用を元に戻す</value></data>
-  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>修飾子と Avalonia キー名を使用します (例: Ctrl+Alt+R、Meta+F8、または Ctrl+Shift+Enter)。</value></data>
-  <data name="Workbench.Shortcuts.GesturePlaceholder" xml:space="preserve"><value>ジェスチャー</value></data>
-  <data name="Workbench.Shortcuts.InputWarning" xml:space="preserve"><value>テキスト エディターまたは選択エディターにフォーカスがある間は、ショートカットは無視されます。 Ctrl+K と Ctrl+I は、グローバル検索とインデックス作成用に予約されたままになります。</value></data>
+  <data name="Workbench.Shortcuts.Command.RepeatLastRecipe" xml:space="preserve"><value>最後のレシピを繰り返す</value></data>
+  <data name="Workbench.Shortcuts.Command.UndoLastApply" xml:space="preserve"><value>前回の適用を元に戻す</value></data>
+  <data name="Workbench.Shortcuts.GestureHelp" xml:space="preserve"><value>修飾キーと Avalonia のキー名を使用します。例: Ctrl+Alt+R、Meta+F8、Ctrl+Shift+Enter。</value></data>
+  <data name="Workbench.Shortcuts.GesturePlaceholder" xml:space="preserve"><value>キー操作</value></data>
+  <data name="Workbench.Shortcuts.InputWarning" xml:space="preserve"><value>テキストまたは選択エディターにフォーカスがある間、ショートカットは無視されます。Ctrl+K と Ctrl+I はグローバル検索とインデックス作成用に予約されています。</value></data>
   <data name="Workbench.Shortcuts.New" xml:space="preserve"><value>新規</value></data>
   <data name="Workbench.Shortcuts.Recipe" xml:space="preserve"><value>レシピ</value></data>
   <data name="Workbench.Shortcuts.RecipePlaceholder" xml:space="preserve"><value>レシピ</value></data>
-  <data name="Workbench.Shortcuts.Safety" xml:space="preserve"><value>レシピのショートカットは、現在のワークベンチ ファイルのプレビューのみを再生成します。変更が自動的に適用されることはありません。</value></data>
-  <data name="Workbench.Shortcuts.Save" xml:space="preserve"><value>保存 ショートカット</value></data>
-  <data name="Workbench.Shortcuts.Status.New" xml:space="preserve"><value>新しい未保存のショートカット。</value></data>
+  <data name="Workbench.Shortcuts.Safety" xml:space="preserve"><value>レシピのショートカットは、現在のワークベンチファイルのプレビューだけを再生成します。変更が自動的に適用されることはありません。</value></data>
+  <data name="Workbench.Shortcuts.Save" xml:space="preserve"><value>ショートカットを保存</value></data>
+  <data name="Workbench.Shortcuts.Status.New" xml:space="preserve"><value>新しい未保存のショートカットです。</value></data>
   <data name="Workbench.Shortcuts.Status.Removed" xml:space="preserve"><value>{0} を削除しました。</value></data>
-  <data name="Workbench.Shortcuts.Status.Saved" xml:space="preserve"><value>{0} を {1} に保存しました。</value></data>
+  <data name="Workbench.Shortcuts.Status.Saved" xml:space="preserve"><value>{1} に {0} を保存しました。</value></data>
   <data name="Workbench.Shortcuts.Target.Recipe" xml:space="preserve"><value>レシピ</value></data>
   <data name="Workbench.Shortcuts.Target" xml:space="preserve"><value>対象</value></data>
   <data name="Workbench.Shortcuts.Title" xml:space="preserve"><value>ショートカット</value></data>
-  <data name="Workbench.Shortcuts.Validation.ChooseTarget" xml:space="preserve"><value>ショートカットのターゲットを選択します。</value></data>
+  <data name="Workbench.Shortcuts.Validation.ChooseTarget" xml:space="preserve"><value>ショートカットの対象を選択してください。</value></data>
   <data name="Workbench.Shortcuts.Validation.Conflict" xml:space="preserve"><value>{0} はすでに {1} に割り当てられています。</value></data>
   <data name="Workbench.Shortcuts.Validation.Invalid" xml:space="preserve"><value>ショートカットが無効です。</value></data>
-  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>P、Enter、Delete、F8 などの Avalonia キー名を使用します。</value></data>
-  <data name="Workbench.Shortcuts.Validation.ModifierAndKeyExample" xml:space="preserve"><value>Ctrl+Shift+P など、少なくとも 1 つの修飾子とキーを使用します。</value></data>
-  <data name="Workbench.Shortcuts.Validation.ModifierAndKeyRequired" xml:space="preserve"><value>修飾子とキーが必要です。</value></data>
-  <data name="Workbench.Shortcuts.Validation.OneKey" xml:space="preserve"><value>ショートカットには非修飾キーを 1 つだけ含めることができます。</value></data>
-  <data name="Workbench.Shortcuts.Validation.RepeatedModifier" xml:space="preserve"><value>修飾子「{0}」が繰り返されています。</value></data>
-  <data name="Workbench.Shortcuts.Validation.Reserved" xml:space="preserve"><value>{0} はアプリケーション シェルによって予約されています。</value></data>
+  <data name="Workbench.Shortcuts.Validation.KeyName" xml:space="preserve"><value>P、Enter、Delete、F8 などの Avalonia キー名を使用してください。</value></data>
+  <data name="Workbench.Shortcuts.Validation.ModifierAndKeyExample" xml:space="preserve"><value>Ctrl+Shift+P のように、1 つ以上の修飾キーとキーを使用してください。</value></data>
+  <data name="Workbench.Shortcuts.Validation.ModifierAndKeyRequired" xml:space="preserve"><value>修飾キーとキーが必要です。</value></data>
+  <data name="Workbench.Shortcuts.Validation.OneKey" xml:space="preserve"><value>ショートカットに含められる修飾キー以外のキーは 1 つだけです。</value></data>
+  <data name="Workbench.Shortcuts.Validation.RepeatedModifier" xml:space="preserve"><value>修飾キー「{0}」が重複しています。</value></data>
+  <data name="Workbench.Shortcuts.Validation.Reserved" xml:space="preserve"><value>{0} はアプリケーションによって予約されています。</value></data>
   <data name="Workbench.Size.Bytes" xml:space="preserve"><value>B</value></data>
   <data name="Workbench.Size.Gigabytes" xml:space="preserve"><value>GB</value></data>
   <data name="Workbench.Size.Kilobytes" xml:space="preserve"><value>KB</value></data>
@@ -5542,16 +5542,16 @@
   <data name="Workbench.Size.Terabytes" xml:space="preserve"><value>TB</value></data>
   <data name="Workbench.Source.AddAutomation" xml:space="preserve"><value>追加</value></data>
   <data name="Workbench.Source.AddRecent" xml:space="preserve"><value>最近の場所を追加</value></data>
-  <data name="Workbench.Source.ChooseFiles" xml:space="preserve"><value>選択 ファイル</value></data>
-  <data name="Workbench.Source.ChooseFilesAutomation" xml:space="preserve"><value>選択 ファイル</value></data>
-  <data name="Workbench.Source.ChooseFolder" xml:space="preserve"><value>選択 フォルダー</value></data>
-  <data name="Workbench.Source.ChooseFolderAutomation" xml:space="preserve"><value>選択 フォルダー</value></data>
-  <data name="Workbench.Source.Description" xml:space="preserve"><value>ファイル、フォルダー、プレイリスト、キューシート、または最近の場所を選択します。</value></data>
-  <data name="Workbench.Source.IncludeSubfolders" xml:space="preserve"><value>含める サブフォルダー</value></data>
-  <data name="Workbench.Source.RecentAutomation" xml:space="preserve"><value>最近</value></data>
-  <data name="Workbench.Source.RecentLocation" xml:space="preserve"><value>最近 場所</value></data>
+  <data name="Workbench.Source.ChooseFiles" xml:space="preserve"><value>ファイルを選択</value></data>
+  <data name="Workbench.Source.ChooseFilesAutomation" xml:space="preserve"><value>ファイルを選択</value></data>
+  <data name="Workbench.Source.ChooseFolder" xml:space="preserve"><value>フォルダーを選択</value></data>
+  <data name="Workbench.Source.ChooseFolderAutomation" xml:space="preserve"><value>フォルダーを選択</value></data>
+  <data name="Workbench.Source.Description" xml:space="preserve"><value>ファイル、フォルダー、プレイリスト、CUE シート、または最近使用した場所を選択します。</value></data>
+  <data name="Workbench.Source.IncludeSubfolders" xml:space="preserve"><value>サブフォルダーを含める</value></data>
+  <data name="Workbench.Source.RecentAutomation" xml:space="preserve"><value>最近使用した場所</value></data>
+  <data name="Workbench.Source.RecentLocation" xml:space="preserve"><value>最近使用した場所</value></data>
   <data name="Workbench.Source.RecentPlaceholder" xml:space="preserve"><value>最近の場所を選択してください</value></data>
-  <data name="Workbench.Source.Title" xml:space="preserve"><value>追加 ソース</value></data>
+  <data name="Workbench.Source.Title" xml:space="preserve"><value>ソースを追加</value></data>
   <data name="Workbench.Split.Resize" xml:space="preserve"><value>サイズ変更</value></data>
   <data name="Workbench.Split.ResizeAutomation" xml:space="preserve"><value>ワークベンチとインスペクター ペインのサイズを変更する</value></data>
   <data name="Workbench.Status.Applied.One" xml:space="preserve"><value>{0:N0} ファイルを適用しました。オリジナルはワークベンチのリカバリに保持され、オペレーションから復元できます。</value></data>
@@ -5665,31 +5665,31 @@
   <data name="Workbench.Status.SourcesAddedWithWarnings.Other" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチ セッションでは {1:N0} が発生し、{2:N0} 警告が発生しました。</value></data>
   <data name="Workbench.Subtitle" xml:space="preserve"><value>ライブラリ構成を変更せずに、一時的な編集セッションを構築します。</value></data>
   <data name="Workbench.Title" xml:space="preserve"><value>ワークベンチ</value></data>
-  <data name="Workbench.Tools.ApplicationDefault" xml:space="preserve"><value>(アプリケーション 既定)</value></data>
+  <data name="Workbench.Tools.ApplicationDefault" xml:space="preserve"><value>(アプリの既定値)</value></data>
   <data name="Workbench.Tools.ArgumentsLabel" xml:space="preserve"><value>引数</value></data>
-  <data name="Workbench.Tools.BrowseExecutable" xml:space="preserve"><value>参照 実行ファイル</value></data>
-  <data name="Workbench.Tools.BrowseFolder" xml:space="preserve"><value>参照 フォルダー</value></data>
-  <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>外部 ツール</value></data>
+  <data name="Workbench.Tools.BrowseExecutable" xml:space="preserve"><value>実行ファイルを選択</value></data>
+  <data name="Workbench.Tools.BrowseFolder" xml:space="preserve"><value>フォルダーを選択</value></data>
+  <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>外部ツール</value></data>
   <data name="Workbench.Tools.Delete" xml:space="preserve"><value>削除 ツール</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>実行ファイル</value></data>
   <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>呼び出しモード</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>読み込む</value></data>
   <data name="Workbench.Tools.MoreAutomation" xml:space="preserve"><value>その他</value></data>
   <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>名前</value></data>
-  <data name="Workbench.Tools.New" xml:space="preserve"><value>新規 ツール</value></data>
-  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>文書化されたプレースホルダー: 1 つの選択プロセスの場合は {Files}。または、ファイルごとに 1 つのプロセスの場合は、{File}、{Directory}、{FileName}、{FileNameWithoutExtension}、{Extension}、{Index}、および {Count}。 {Files} は独自の引数である必要があります。</value></data>
-  <data name="Workbench.Tools.Preview" xml:space="preserve"><value>プレビュー ツール</value></data>
+  <data name="Workbench.Tools.New" xml:space="preserve"><value>新しいツール</value></data>
+  <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>使用できるプレースホルダー: 選択項目ごとに 1 つのプロセスを実行する場合は {Files}、ファイルごとに実行する場合は {File}、{Directory}、{FileName}、{FileNameWithoutExtension}、{Extension}、{Index}、{Count}。{Files} は単独の引数にする必要があります。</value></data>
+  <data name="Workbench.Tools.Preview" xml:space="preserve"><value>ツールをプレビュー</value></data>
   <data name="Workbench.Tools.ReviewedTitle" xml:space="preserve"><value>確認済みの呼び出し</value></data>
   <data name="Workbench.Tools.Run" xml:space="preserve"><value>実行</value></data>
-  <data name="Workbench.Tools.Safety" xml:space="preserve"><value>シェルは使用されませんが、選択した実行可能ファイルは引き続きファイルを変更できます。外部ツールは MusicLibraryManager リカバリの対象外であり、常に確認が必要です。</value></data>
-  <data name="Workbench.Tools.Save" xml:space="preserve"><value>保存 ツール</value></data>
+  <data name="Workbench.Tools.Safety" xml:space="preserve"><value>シェルは使用されませんが、選択した実行ファイルはファイルを変更できます。外部ツールは MusicLibraryManager の復旧対象外であり、常に確認が必要です。</value></data>
+  <data name="Workbench.Tools.Save" xml:space="preserve"><value>ツールを保存</value></data>
   <data name="Workbench.Tools.SavedPlaceholder" xml:space="preserve"><value>保存済み</value></data>
   <data name="Workbench.Tools.Status.Deleted" xml:space="preserve"><value>個人ツール「{0}」を削除しました。</value></data>
   <data name="Workbench.Tools.Status.Loaded" xml:space="preserve"><value>「{0}」をロードしました。</value></data>
   <data name="Workbench.Tools.Status.New" xml:space="preserve"><value>新しい未保存のツール。</value></data>
   <data name="Workbench.Tools.Status.Saved" xml:space="preserve"><value>「{0}」を個人ツールとして保存しました。</value></data>
   <data name="Workbench.Tools.Title" xml:space="preserve"><value>外部ツール</value></data>
-  <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>処理中 ディレクトリ</value></data>
+  <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>作業ディレクトリ</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
   <data name="Workbench.Value.SampleRate" xml:space="preserve"><value>{0:N0} Hz</value></data>
   <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>開始中 適用</value></data>
@@ -5733,9 +5733,9 @@
   <data name="Operations.Choice.OperationJournalKind.ReviewedChange" xml:space="preserve"><value>確認済みの変更</value></data>
   <data name="Operations.Choice.OperationJournalKind.Sync" xml:space="preserve"><value>同期</value></data>
   <data name="Operations.Choice.OperationJournalState.Completed" xml:space="preserve"><value>完了</value></data>
-  <data name="Operations.Choice.OperationJournalState.Interrupted" xml:space="preserve"><value>中断 — 復旧が必要な可能性があります</value></data>
+  <data name="Operations.Choice.OperationJournalState.Interrupted" xml:space="preserve"><value>中断 — 復元が必要な可能性があります</value></data>
   <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>ロールバック済み 背面</value></data>
-  <data name="Operations.Choice.OperationJournalState.Unknown" xml:space="preserve"><value>隔離データあり — 最終状態は未記録</value></data>
+  <data name="Operations.Choice.OperationJournalState.Unknown" xml:space="preserve"><value>隔離データあり — 最終状態は記録されていません</value></data>
   <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>{1} を適用し、予定されているファイル変更 {0:N0} 件を実行しますか？
 
 {2}</value></data>
@@ -5747,10 +5747,10 @@
   <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>この適用では回復は利用できません。</value></data>
   <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>適用 {0}</value></data>
   <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>検証する iTunes ライブラリを選択します</value></data>
-  <data name="Operations.Dialog.SelectRecoveryRoot" xml:space="preserve"><value>スキャンするソース、同期、またはデバイス ルートを選択します</value></data>
+  <data name="Operations.Dialog.SelectRecoveryRoot" xml:space="preserve"><value>スキャンするソース、同期、またはデバイスのルートを選択</value></data>
   <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>スマートストレージの保存先を選択してください</value></data>
-  <data name="Operations.Diagnostic.NoApplyService" xml:space="preserve"><value>ジョブ「{0}」に対して使用できる型指定された適用サービスはありません。</value></data>
-  <data name="Operations.Diagnostic.NoPreviewService" xml:space="preserve"><value>ジョブ「{0}」では、型指定されたプレビュー サービスを利用できません。</value></data>
+  <data name="Operations.Diagnostic.NoApplyService" xml:space="preserve"><value>ジョブ「{0}」で使用できる型指定済み適用サービスがありません。</value></data>
+  <data name="Operations.Diagnostic.NoPreviewService" xml:space="preserve"><value>ジョブ「{0}」で使用できる型指定済みプレビューサービスがありません。</value></data>
   <data name="Operations.Entry.State.Created" xml:space="preserve"><value>作成済み</value></data>
   <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>作成されたアイテムがありません</value></data>
   <data name="Operations.Entry.State.Deleted" xml:space="preserve"><value>削除済み</value></data>
@@ -5782,7 +5782,7 @@
   <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>冗長性 レポート</value></data>
   <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>構成されたカタログをバケット化されたポータブル ストレージ エクスポートに投影します。</value></data>
   <data name="Operations.Job.SmartStorage.Name" xml:space="preserve"><value>スマート ストレージ</value></data>
-  <data name="Operations.Job.Status.ApplyCancelled" xml:space="preserve"><value>求人への応募がキャンセルされました。リカバリジャーナルの操作を検査します。</value></data>
+  <data name="Operations.Job.Status.ApplyCancelled" xml:space="preserve"><value>ジョブの適用をキャンセルしました。操作ページで復元ジャーナルを確認してください。</value></data>
   <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>{0} は正常に適用されました。</value></data>
   <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>適用はコード {0} で終了しました。出力と操作ジャーナルを確認します。</value></data>
   <data name="Operations.Job.Status.ApplyFailed" xml:space="preserve"><value>ジョブの適用に失敗しました。</value></data>
@@ -5815,7 +5815,7 @@
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} エラー</value></data>
   <data name="Operations.Count.Warnings.One" xml:space="preserve"><value>{0:N0} 警告</value></data>
   <data name="Operations.Count.Warnings.Other" xml:space="preserve"><value>{0:N0} 警告</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Item" xml:space="preserve"><value>{0} {1}: {2}、{3}×{4}、{5:N0} バイト → JPEG、{6}×{7}、{8:N0} バイト</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Item" xml:space="preserve"><value>{0} {1}: {2}、{3}×{4}、{5:N0} バイト → image/jpeg、{6}×{7}、{8:N0} バイト</value></data>
   <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>計画: {0:N0} トラックは検査済み、{1:N0} はすでに有効、{2:N0} メディア ファイルは置き換えられます。</value></data>
   <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>計画: {0:N0} トラックは検査され、{1:N0} はすでに有効で、{2:N0} メディア ファイルは置き換えられます。</value></data>
   <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>適用: {0:N0} メディア ファイルと {1:N0} ITL トラック キャッシュが更新されました。</value></data>
@@ -5860,7 +5860,7 @@
   <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}。保護された中断された実行: {2:N0};保存期間内で実行されます: {3:N0}{4}。</value></data>
   <data name="Operations.PurgePreview.UnsafeRoots.One" xml:space="preserve"><value>。安全でない実行ルート {0:N0} 件を除外</value></data>
   <data name="Operations.PurgePreview.UnsafeRoots.Other" xml:space="preserve"><value>。安全でない実行ルート {0:N0} 件を除外</value></data>
-  <data name="Operations.RestorePreview.None" xml:space="preserve"><value>現在回復可能な選択されたエントリはありません。</value></data>
+  <data name="Operations.RestorePreview.None" xml:space="preserve"><value>選択した項目に復元できるものはありません。</value></data>
   <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>プレビューの復元: {0:N0} 項目、{1:N0} 宛先の衝突、{2:N0} はスキップされました。</value></data>
   <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>プレビューの復元: {0:N0} 項目、{1:N0} 宛先の衝突、{2:N0} はスキップされました。</value></data>
   <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>操作の検出がキャンセルされました。</value></data>
@@ -5869,7 +5869,7 @@
   <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>オペレーションの検出に失敗しました。</value></data>
   <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>{0:N0} 日より古い操作実行を確認しています…</value></data>
   <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>{0:N0} 日より古い操作実行を確認しています…</value></data>
-  <data name="Operations.Status.NoSearchRoots" xml:space="preserve"><value>使用できる構成または検索ルートはありません。スキャンするフォルダーを選択します。</value></data>
+  <data name="Operations.Status.NoSearchRoots" xml:space="preserve"><value>復元データを検索するルートを 1 つ以上選択してください。</value></data>
   <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>{0} オペレーションを開始しています…</value></data>
   <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>オープン操作はキャンセルされました。</value></data>
   <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>操作を開けませんでした。</value></data>
@@ -5897,11 +5897,11 @@
   <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>{0:N0} で検出された操作の実行を表示しています。</value></data>
   <data name="Common.No" xml:space="preserve"><value>いいえ</value></data>
   <data name="Common.Yes" xml:space="preserve"><value>はい</value></data>
-  <data name="Fields.Action.ApplyChanges" xml:space="preserve"><value>適用 変更</value></data>
-  <data name="Fields.Action.CancelSave" xml:space="preserve"><value>キャンセル 保存</value></data>
-  <data name="Fields.Action.DiscardChanges" xml:space="preserve"><value>破棄 変更</value></data>
+  <data name="Fields.Action.ApplyChanges" xml:space="preserve"><value>変更を適用</value></data>
+  <data name="Fields.Action.CancelSave" xml:space="preserve"><value>保存をキャンセル</value></data>
+  <data name="Fields.Action.DiscardChanges" xml:space="preserve"><value>変更を破棄</value></data>
   <data name="Fields.Action.Remove" xml:space="preserve"><value>削除</value></data>
-  <data name="Fields.Action.Save" xml:space="preserve"><value>保存 フィールド</value></data>
+  <data name="Fields.Action.Save" xml:space="preserve"><value>フィールドを保存</value></data>
   <data name="Fields.Action.UndoRemoval" xml:space="preserve"><value>元に戻す</value></data>
   <data name="Fields.Activity.Preview.Completed.One" xml:space="preserve"><value>{0:N0} ファイルをプレビューしました</value></data>
   <data name="Fields.Activity.Preview.Completed.Other" xml:space="preserve"><value>{0:N0} ファイルをプレビューしました</value></data>
@@ -5915,14 +5915,14 @@
   <data name="Fields.Progress.Phase.Completed" xml:space="preserve"><value>メタデータの更新が完了しました</value></data>
   <data name="Fields.Progress.Phase.IndexingSources" xml:space="preserve"><value>ソースメタデータの読み取り</value></data>
   <data name="Fields.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>宛先メタデータの読み取り</value></data>
-  <data name="Fields.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>読み込み中 構成</value></data>
+  <data name="Fields.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>構成を読み込んでいます</value></data>
   <data name="Fields.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>ライブラリのロード</value></data>
   <data name="Fields.Progress.Phase.Planning" xml:space="preserve"><value>メタデータ変更のプレビュー</value></data>
   <data name="Fields.Progress.Phase.RollingBack" xml:space="preserve"><value>メタデータの変更をロールバックする</value></data>
   <data name="Fields.Progress.Phase.Validating" xml:space="preserve"><value>メタデータの変更を検証する</value></data>
   <data name="Fields.Progress.WithPath" xml:space="preserve"><value>{0} — {1}</value></data>
-  <data name="Fields.Row.Kind.KnownField" xml:space="preserve"><value>既知 フィールド</value></data>
-  <data name="Fields.Row.Kind.UserString" xml:space="preserve"><value>ユーザー 文字列</value></data>
+  <data name="Fields.Row.Kind.KnownField" xml:space="preserve"><value>既知のフィールド</value></data>
+  <data name="Fields.Row.Kind.UserString" xml:space="preserve"><value>ユーザー文字列</value></data>
   <data name="Fields.Status.ConfirmDiscard" xml:space="preserve"><value>保存されていないフィールドの変更を破棄しますか? [変更を破棄]を選択して確認します。</value></data>
   <data name="Fields.Status.LoadFailures.One" xml:space="preserve"><value>{0:N0} 選択されたファイルを読み取れませんでした。読み取り可能なファイルのフィールドは引き続き使用できます。</value></data>
   <data name="Fields.Status.LoadFailures.Other" xml:space="preserve"><value>{0:N0} 選択されたファイルを読み取れませんでした。読み取り可能なファイルのフィールドは引き続き使用できます。</value></data>
@@ -6002,83 +6002,80 @@
   <data name="Health.TextDifference.UnicodeName.ZeroWidthSpace" xml:space="preserve"><value>幅ゼロのスペース</value></data>
   <data name="Health.TextDifference.VisibleCodePoint" xml:space="preserve"><value>{0} ‘{1}’ ({2})</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Lower" xml:space="preserve"><value>小文字</value></data>
-  <data name="MetadataEditor.Choice.CaseMode.Sentence" xml:space="preserve"><value>文</value></data>
-  <data name="MetadataEditor.Choice.CaseMode.Title" xml:space="preserve"><value>タイトル</value></data>
+  <data name="MetadataEditor.Choice.CaseMode.Sentence" xml:space="preserve"><value>文頭のみ大文字</value></data>
+  <data name="MetadataEditor.Choice.CaseMode.Title" xml:space="preserve"><value>タイトルケース</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Upper" xml:space="preserve"><value>大文字</value></data>
-  <data name="MetadataEditor.Choice.ConditionOperator.Contains" xml:space="preserve"><value>含む</value></data>
-  <data name="MetadataEditor.Choice.ConditionOperator.Equals" xml:space="preserve"><value>等しい</value></data>
-  <data name="MetadataEditor.Choice.ConditionOperator.MatchesRegularExpression" xml:space="preserve"><value>正規表現と一致します</value></data>
-  <data name="MetadataEditor.Choice.ConditionOperator.Missing" xml:space="preserve"><value>不足</value></data>
-  <data name="MetadataEditor.Choice.ConditionOperator.Present" xml:space="preserve"><value>存在</value></data>
+  <data name="MetadataEditor.Choice.ConditionOperator.Contains" xml:space="preserve"><value>次を含む</value></data>
+  <data name="MetadataEditor.Choice.ConditionOperator.Equals" xml:space="preserve"><value>次と等しい</value></data>
+  <data name="MetadataEditor.Choice.ConditionOperator.MatchesRegularExpression" xml:space="preserve"><value>正規表現に一致</value></data>
+  <data name="MetadataEditor.Choice.ConditionOperator.Missing" xml:space="preserve"><value>なし</value></data>
+  <data name="MetadataEditor.Choice.ConditionOperator.Present" xml:space="preserve"><value>あり</value></data>
   <data name="MetadataEditor.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>自動</value></data>
-  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Latin1" xml:space="preserve"><value>Latin-1</value></data>
-  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Utf16" xml:space="preserve"><value>UTF-16</value></data>
-  <data name="MetadataEditor.Choice.Id3EncodingPolicy.Utf8" xml:space="preserve"><value>UTF-8</value></data>
   <data name="MetadataEditor.Choice.Operation.Assign" xml:space="preserve"><value>割り当て</value></data>
-  <data name="MetadataEditor.Choice.Operation.ChangeCase" xml:space="preserve"><value>変更 大文字/小文字</value></data>
-  <data name="MetadataEditor.Choice.Operation.Combine" xml:space="preserve"><value>結合 フィールド</value></data>
+  <data name="MetadataEditor.Choice.Operation.ChangeCase" xml:space="preserve"><value>大文字と小文字を変更</value></data>
+  <data name="MetadataEditor.Choice.Operation.Combine" xml:space="preserve"><value>フィールドを結合</value></data>
   <data name="MetadataEditor.Choice.Operation.Copy" xml:space="preserve"><value>コピー</value></data>
-  <data name="MetadataEditor.Choice.Operation.Deduplicate" xml:space="preserve"><value>重複排除 値</value></data>
+  <data name="MetadataEditor.Choice.Operation.Deduplicate" xml:space="preserve"><value>重複する値を削除</value></data>
   <data name="MetadataEditor.Choice.Operation.ExtractPathComponent" xml:space="preserve"><value>パスから抽出</value></data>
-  <data name="MetadataEditor.Choice.Operation.Join" xml:space="preserve"><value>結合 値</value></data>
+  <data name="MetadataEditor.Choice.Operation.Join" xml:space="preserve"><value>値を連結</value></data>
   <data name="MetadataEditor.Choice.Operation.Remove" xml:space="preserve"><value>削除</value></data>
-  <data name="MetadataEditor.Choice.Operation.Reorder" xml:space="preserve"><value>並べ替え 値</value></data>
-  <data name="MetadataEditor.Choice.Operation.ReplaceText" xml:space="preserve"><value>置換 テキスト</value></data>
-  <data name="MetadataEditor.Choice.Operation.Sequence" xml:space="preserve"><value>連番</value></data>
-  <data name="MetadataEditor.Choice.Operation.Split" xml:space="preserve"><value>分割 値</value></data>
-  <data name="MetadataEditor.Choice.Operation.TrimWhitespace" xml:space="preserve"><value>正規化 空白</value></data>
+  <data name="MetadataEditor.Choice.Operation.Reorder" xml:space="preserve"><value>値を並べ替え</value></data>
+  <data name="MetadataEditor.Choice.Operation.ReplaceText" xml:space="preserve"><value>テキストを置換</value></data>
+  <data name="MetadataEditor.Choice.Operation.Sequence" xml:space="preserve"><value>連番を付ける</value></data>
+  <data name="MetadataEditor.Choice.Operation.Split" xml:space="preserve"><value>値を分割</value></data>
+  <data name="MetadataEditor.Choice.Operation.TrimWhitespace" xml:space="preserve"><value>空白を正規化</value></data>
   <data name="MetadataEditor.Choice.PathComponent.FileName" xml:space="preserve"><value>ファイル名</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>拡張子を除いたファイル名</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.FullPath" xml:space="preserve"><value>完全 パス</value></data>
-  <data name="MetadataEditor.Choice.PathComponent.ParentFolder" xml:space="preserve"><value>親 フォルダー</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FileNameWithoutExtension" xml:space="preserve"><value>拡張子を除くファイル名</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.FullPath" xml:space="preserve"><value>完全なパス</value></data>
+  <data name="MetadataEditor.Choice.PathComponent.ParentFolder" xml:space="preserve"><value>親フォルダー</value></data>
   <data name="MetadataEditor.Choice.ValueOrder.Ascending" xml:space="preserve"><value>昇順</value></data>
   <data name="MetadataEditor.Choice.ValueOrder.Descending" xml:space="preserve"><value>降順</value></data>
-  <data name="MetadataEditor.Choice.ValueOrder.Reverse" xml:space="preserve"><value>逆</value></data>
-  <data name="MetadataEditor.Pending.ChangedFiles.One" xml:space="preserve"><value>{0:N0} はファイルを変更しました</value></data>
-  <data name="MetadataEditor.Pending.ChangedFiles.Other" xml:space="preserve"><value>{0:N0} がファイルを変更しました</value></data>
+  <data name="MetadataEditor.Choice.ValueOrder.Reverse" xml:space="preserve"><value>逆順</value></data>
+  <data name="MetadataEditor.Pending.ChangedFiles.One" xml:space="preserve"><value>変更されたファイル {0:N0} 件</value></data>
+  <data name="MetadataEditor.Pending.ChangedFiles.Other" xml:space="preserve"><value>変更されたファイル {0:N0} 件</value></data>
   <data name="MetadataEditor.Pending.DefaultStepName" xml:space="preserve"><value>ステップ {0:N0}</value></data>
-  <data name="MetadataEditor.Pending.Description.ChangeCase" xml:space="preserve"><value>{0} を {1} ケースに変更します</value></data>
-  <data name="MetadataEditor.Pending.Description.Combine" xml:space="preserve"><value>{0} と {1} を {2} に結合します</value></data>
-  <data name="MetadataEditor.Pending.Description.Copy" xml:space="preserve"><value>{0} を {1} にコピーします</value></data>
-  <data name="MetadataEditor.Pending.Description.Deduplicate" xml:space="preserve"><value>重複した {0} 値を削除します</value></data>
-  <data name="MetadataEditor.Pending.Description.Extract" xml:space="preserve"><value>{1} から {0} を設定します</value></data>
-  <data name="MetadataEditor.Pending.Description.Join" xml:space="preserve"><value>{0} を「{1}」と結合する</value></data>
-  <data name="MetadataEditor.Pending.Description.Remove" xml:space="preserve"><value>削除 {0}</value></data>
-  <data name="MetadataEditor.Pending.Description.Reorder" xml:space="preserve"><value>{0} 値の並べ替え {1}</value></data>
-  <data name="MetadataEditor.Pending.Description.Replace" xml:space="preserve"><value>{1} の「{0}」を置き換えます</value></data>
-  <data name="MetadataEditor.Pending.Description.Sequence" xml:space="preserve"><value>{1} からの番号 {0}</value></data>
-  <data name="MetadataEditor.Pending.Description.Set" xml:space="preserve"><value>{0} を「{1}」に設定します</value></data>
-  <data name="MetadataEditor.Pending.Description.Split" xml:space="preserve"><value>「{1}」で {0} を分割します</value></data>
-  <data name="MetadataEditor.Pending.Description.Trim" xml:space="preserve"><value>{0} の空白を削除する</value></data>
-  <data name="MetadataEditor.Pending.Description.Unknown" xml:space="preserve"><value>操作タイプ: {0}</value></data>
-  <data name="MetadataEditor.Pending.Files.One" xml:space="preserve"><value>{0:N0} ファイル</value></data>
-  <data name="MetadataEditor.Pending.Files.Other" xml:space="preserve"><value>{0:N0} ファイル</value></data>
+  <data name="MetadataEditor.Pending.Description.ChangeCase" xml:space="preserve"><value>{0} を {1} に変更</value></data>
+  <data name="MetadataEditor.Pending.Description.Combine" xml:space="preserve"><value>{0} と {1} を {2} に結合</value></data>
+  <data name="MetadataEditor.Pending.Description.Copy" xml:space="preserve"><value>{0} を {1} にコピー</value></data>
+  <data name="MetadataEditor.Pending.Description.Deduplicate" xml:space="preserve"><value>{0} の重複する値を削除</value></data>
+  <data name="MetadataEditor.Pending.Description.Extract" xml:space="preserve"><value>{1} から {0} を設定</value></data>
+  <data name="MetadataEditor.Pending.Description.Join" xml:space="preserve"><value>{0} を「{1}」で連結</value></data>
+  <data name="MetadataEditor.Pending.Description.Remove" xml:space="preserve"><value>{0} を削除</value></data>
+  <data name="MetadataEditor.Pending.Description.Reorder" xml:space="preserve"><value>{0} の値を {1} に並べ替え</value></data>
+  <data name="MetadataEditor.Pending.Description.Replace" xml:space="preserve"><value>{1} の「{0}」を置換</value></data>
+  <data name="MetadataEditor.Pending.Description.Sequence" xml:space="preserve"><value>{0} を {1} から連番にする</value></data>
+  <data name="MetadataEditor.Pending.Description.Set" xml:space="preserve"><value>{0} を「{1}」に設定</value></data>
+  <data name="MetadataEditor.Pending.Description.Split" xml:space="preserve"><value>{0} を「{1}」で分割</value></data>
+  <data name="MetadataEditor.Pending.Description.Trim" xml:space="preserve"><value>{0} の空白を整える</value></data>
+  <data name="MetadataEditor.Pending.Description.Unknown" xml:space="preserve"><value>操作の種類: {0}</value></data>
+  <data name="MetadataEditor.Pending.Files.One" xml:space="preserve"><value>{0:N0} 件のファイル</value></data>
+  <data name="MetadataEditor.Pending.Files.Other" xml:space="preserve"><value>{0:N0} 件のファイル</value></data>
   <data name="MetadataEditor.Pending.Operation.AddTagLayer" xml:space="preserve"><value>タグレイヤーを追加</value></data>
-  <data name="MetadataEditor.Pending.Operation.ChangeId3Version" xml:space="preserve"><value>ID3のバージョンを変更する</value></data>
-  <data name="MetadataEditor.Pending.Operation.ChangeId3VersionOrEncoding" xml:space="preserve"><value>ID3のバージョンまたはテキストエンコーディングを変更する</value></data>
-  <data name="MetadataEditor.Pending.Operation.ConvertTagLayer" xml:space="preserve"><value>タグレイヤーの変換</value></data>
-  <data name="MetadataEditor.Pending.Operation.RemoveField" xml:space="preserve"><value>メタデータフィールドを削除する</value></data>
-  <data name="MetadataEditor.Pending.Operation.RemoveTagLayer" xml:space="preserve"><value>タグレイヤーを削除する</value></data>
-  <data name="MetadataEditor.Pending.Operation.SetField" xml:space="preserve"><value>メタデータフィールドを設定する</value></data>
-  <data name="MetadataEditor.Pending.Operation.UpdateArtwork" xml:space="preserve"><value>埋め込まれたアートワークを更新する</value></data>
+  <data name="MetadataEditor.Pending.Operation.ChangeId3Version" xml:space="preserve"><value>ID3 バージョンを変更</value></data>
+  <data name="MetadataEditor.Pending.Operation.ChangeId3VersionOrEncoding" xml:space="preserve"><value>ID3 バージョンまたは文字エンコーディングを変更</value></data>
+  <data name="MetadataEditor.Pending.Operation.ConvertTagLayer" xml:space="preserve"><value>タグレイヤーを変換</value></data>
+  <data name="MetadataEditor.Pending.Operation.RemoveField" xml:space="preserve"><value>メタデータフィールドを削除</value></data>
+  <data name="MetadataEditor.Pending.Operation.RemoveTagLayer" xml:space="preserve"><value>タグレイヤーを削除</value></data>
+  <data name="MetadataEditor.Pending.Operation.SetField" xml:space="preserve"><value>メタデータフィールドを設定</value></data>
+  <data name="MetadataEditor.Pending.Operation.UpdateArtwork" xml:space="preserve"><value>埋め込みアートワークを更新</value></data>
   <data name="MetadataEditor.Pending.Target.Artwork" xml:space="preserve"><value>アートワーク</value></data>
   <data name="MetadataEditor.Preview.Absent" xml:space="preserve"><value>なし</value></data>
   <data name="MetadataEditor.Preview.Bytes.One" xml:space="preserve"><value>{0:N0} バイト</value></data>
   <data name="MetadataEditor.Preview.Bytes.Other" xml:space="preserve"><value>{0:N0} バイト</value></data>
-  <data name="MetadataEditor.Preview.CompatibilityIssues.One" xml:space="preserve"><value>({0:N0} 互換性の問題)</value></data>
-  <data name="MetadataEditor.Preview.CompatibilityIssues.Other" xml:space="preserve"><value>({0:N0} 互換性の問題)</value></data>
+  <data name="MetadataEditor.Preview.CompatibilityIssues.One" xml:space="preserve"><value> (互換性の問題 {0:N0} 件)</value></data>
+  <data name="MetadataEditor.Preview.CompatibilityIssues.Other" xml:space="preserve"><value> (互換性の問題 {0:N0} 件)</value></data>
   <data name="MetadataEditor.Preview.EncodingSuffix" xml:space="preserve"><value>, {0}</value></data>
-  <data name="MetadataEditor.Preview.Id3TextEncoding" xml:space="preserve"><value>ID3テキストエンコーディング</value></data>
+  <data name="MetadataEditor.Preview.Id3TextEncoding" xml:space="preserve"><value>ID3 文字エンコーディング</value></data>
   <data name="MetadataEditor.Preview.Id3Version" xml:space="preserve"><value>ID3 バージョン</value></data>
-  <data name="MetadataEditor.Preview.None" xml:space="preserve"><value>(なし)</value></data>
-  <data name="MetadataEditor.Preview.Present" xml:space="preserve"><value>存在</value></data>
-  <data name="MetadataEditor.Preview.TagLayerConversion" xml:space="preserve"><value>タグ-レイヤー 変換</value></data>
+  <data name="MetadataEditor.Preview.None" xml:space="preserve"><value>（なし）</value></data>
+  <data name="MetadataEditor.Preview.Present" xml:space="preserve"><value>あり</value></data>
+  <data name="MetadataEditor.Preview.TagLayerConversion" xml:space="preserve"><value>タグレイヤーの変換</value></data>
   <data name="MetadataEditor.Preview.TagLayerField" xml:space="preserve"><value>{0} タグレイヤー</value></data>
-  <data name="MetadataEditor.Recipe.CopyName" xml:space="preserve"><value>{0} コピー</value></data>
-  <data name="MetadataEditor.Recipe.NewName" xml:space="preserve"><value>新規 レシピ</value></data>
+  <data name="MetadataEditor.Recipe.CopyName" xml:space="preserve"><value>{0} のコピー</value></data>
+  <data name="MetadataEditor.Recipe.NewName" xml:space="preserve"><value>新しいレシピ</value></data>
   <data name="MetadataEditor.Recipe.OperationName" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="MetadataEditor.Validation.ChooseOperationAndField" xml:space="preserve"><value>操作とフィールドを選択します。</value></data>
-  <data name="MetadataEditor.Validation.PlanRequired" xml:space="preserve"><value>少なくとも 1 つのメタデータ プランが必要です。</value></data>
+  <data name="MetadataEditor.Validation.ChooseOperationAndField" xml:space="preserve"><value>操作とフィールドを選択してください。</value></data>
+  <data name="MetadataEditor.Validation.PlanRequired" xml:space="preserve"><value>少なくとも 1 つのメタデータプランが必要です。</value></data>
   <data name="OnlineMetadata.AudioDiscovery.RecipeName" xml:space="preserve"><value>オーディオ識別子: {0}</value></data>
   <data name="OnlineMetadata.AudioDiscovery.Status.CachedCandidate" xml:space="preserve"><value>キャッシュ済み 候補</value></data>
   <data name="OnlineMetadata.AudioDiscovery.Status.Candidate" xml:space="preserve"><value>候補</value></data>
@@ -6103,14 +6100,14 @@
   <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>設定されたメディアカタログ</value></data>
   <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>いいえ 宛先</value></data>
   <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} から {2}</value></data>
-  <data name="Workbench.Online.Thumbnail.Failed" xml:space="preserve"><value>サムネイル 利用不可</value></data>
+  <data name="Workbench.Online.Thumbnail.Failed" xml:space="preserve"><value>サムネイルを取得できません</value></data>
   <data name="Dialog.DefaultExportFileName" xml:space="preserve"><value>エクスポート</value></data>
   <data name="Dialog.FileType.Format" xml:space="preserve"><value>{0} ファイル</value></data>
   <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>新規 エクスポート</value></data>
-  <data name="Navigation.About" xml:space="preserve"><value>このアプリについて</value></data>
+  <data name="Navigation.About" xml:space="preserve"><value>バージョン情報</value></data>
   <data name="About.Title" xml:space="preserve"><value>このアプリについて</value></data>
-  <data name="About.Subtitle" xml:space="preserve"><value>製品の詳細、謝辞、ライセンス契約。</value></data>
-  <data name="About.Tagline" xml:space="preserve"><value>大切な音楽のための、思いやりのあるワークスペース。</value></data>
+  <data name="About.Subtitle" xml:space="preserve"><value>製品情報、謝辞、使用許諾契約。</value></data>
+  <data name="About.Tagline" xml:space="preserve"><value>大切な音楽のための、使いやすく配慮されたワークスペース。</value></data>
   <data name="About.BrandAutomation" xml:space="preserve"><value>Music Library Manager のロゴ</value></data>
   <data name="About.VersionFormat" xml:space="preserve"><value>バージョン {0}</value></data>
   <data name="About.Mission.Title" xml:space="preserve"><value>長く使える音楽ライブラリのために</value></data>
@@ -6119,40 +6116,40 @@
   <data name="About.OpenSource.Description" xml:space="preserve"><value>Music Library Manager は、これらの参照パッケージによって部分的に可能になります。</value></data>
   <data name="About.Package.VersionFormat" xml:space="preserve"><value>バージョン {0}</value></data>
   <data name="About.Package.Avalonia.Name" xml:space="preserve"><value>Avalonia UI</value></data>
-  <data name="About.Package.Avalonia.Identity" xml:space="preserve"><value>パッケージファミリー: Avalonia</value></data>
-  <data name="About.Package.Avalonia.Description" xml:space="preserve"><value>応答性の高いネイティブデスクトップ体験を実現するクロスプラットフォームのユーザーインターフェイスフレームワーク。</value></data>
+  <data name="About.Package.Avalonia.Identity" xml:space="preserve"><value>パッケージファミリー：Avalonia</value></data>
+  <data name="About.Package.Avalonia.Description" xml:space="preserve"><value>応答性の高いネイティブデスクトップ体験を実現する、クロスプラットフォームのユーザーインターフェイスフレームワーク。</value></data>
   <data name="About.Package.Avalonia.LicenseName" xml:space="preserve"><value>MIT License</value></data>
   <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Avalonia UI ライセンス契約</value></data>
   <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>Avalonia UI ライセンス契約をコピーします</value></data>
   <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>完全な Avalonia UI ライセンス テキスト</value></data>
   <data name="About.Package.SkiaSharp.Name" xml:space="preserve"><value>SkiaSharp</value></data>
-  <data name="About.Package.SkiaSharp.Identity" xml:space="preserve"><value>パッケージ: SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Identity" xml:space="preserve"><value>パッケージ：SkiaSharp</value></data>
   <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>アートワークの検査と最適化のためのクロスプラットフォームの 2D グラフィックスおよび画像処理ライブラリ。</value></data>
   <data name="About.Package.SkiaSharp.LicenseName" xml:space="preserve"><value>MIT License</value></data>
-  <data name="About.Package.SkiaSharp.LicenseAutomation" xml:space="preserve"><value>SkiaSharp のライセンス契約</value></data>
-  <data name="About.Package.SkiaSharp.CopyAutomation" xml:space="preserve"><value>SkiaSharp のライセンス契約をコピー</value></data>
+  <data name="About.Package.SkiaSharp.LicenseAutomation" xml:space="preserve"><value>SkiaSharp の使用許諾契約</value></data>
+  <data name="About.Package.SkiaSharp.CopyAutomation" xml:space="preserve"><value>SkiaSharp の使用許諾契約をコピー</value></data>
   <data name="About.Package.SkiaSharp.LicenseTextAutomation" xml:space="preserve"><value>SkiaSharp の完全なライセンス本文</value></data>
   <data name="About.Package.SkiaSharp.NoticesName" xml:space="preserve"><value>サードパーティに関する通知</value></data>
   <data name="About.Package.SkiaSharp.NoticesAutomation" xml:space="preserve"><value>SkiaSharp のサードパーティに関する通知</value></data>
   <data name="About.Package.SkiaSharp.CopyNoticesAutomation" xml:space="preserve"><value>SkiaSharp のサードパーティに関する通知をコピー</value></data>
   <data name="About.Package.SkiaSharp.NoticesTextAutomation" xml:space="preserve"><value>SkiaSharp のサードパーティに関する通知の全文</value></data>
-  <data name="About.License.Agreement" xml:space="preserve"><value>ライセンス契約</value></data>
+  <data name="About.License.Agreement" xml:space="preserve"><value>使用許諾契約</value></data>
   <data name="About.License.Copy" xml:space="preserve"><value>ライセンスをコピー</value></data>
-  <data name="About.Trademarks" xml:space="preserve"><value>サードパーティの製品名および商標は、それぞれの所有者に帰属します。</value></data>
-  <data name="Transcode.Title" xml:space="preserve"><value>オーディオを変換</value></data>
-  <data name="Transcode.Action.Open" xml:space="preserve"><value>変換…</value></data>
-  <data name="Transcode.Action.Close" xml:space="preserve"><value>変換エディターを閉じる</value></data>
+  <data name="About.Trademarks" xml:space="preserve"><value>サードパーティの製品名および商標は、各所有者に帰属します。</value></data>
+  <data name="Transcode.Title" xml:space="preserve"><value>オーディオをトランスコード</value></data>
+  <data name="Transcode.Action.Open" xml:space="preserve"><value>トランスコード…</value></data>
+  <data name="Transcode.Action.Close" xml:space="preserve"><value>トランスコードエディターを閉じる</value></data>
   <data name="Transcode.Action.ApplyReady" xml:space="preserve"><value>準備済みファイルを適用</value></data>
-  <data name="Transcode.Action.ReplacePending" xml:space="preserve"><value>保留中の変換を置換</value></data>
+  <data name="Transcode.Action.ReplacePending" xml:space="preserve"><value>保留中のトランスコードを置換</value></data>
   <data name="Transcode.Selection.None" xml:space="preserve"><value>ファイルが選択されていません</value></data>
-  <data name="Transcode.Selection.Files.One" xml:space="preserve"><value>{0:N0} ファイルを取得</value></data>
-  <data name="Transcode.Selection.Files.Other" xml:space="preserve"><value>{0:N0} ファイルを取得</value></data>
+  <data name="Transcode.Selection.Files.One" xml:space="preserve"><value>{0:N0} 件のファイルを取得</value></data>
+  <data name="Transcode.Selection.Files.Other" xml:space="preserve"><value>{0:N0} 件のファイルを取得</value></data>
   <data name="Transcode.Preset.Title" xml:space="preserve"><value>プリセット</value></data>
   <data name="Transcode.Preset.Custom" xml:space="preserve"><value>カスタム設定</value></data>
   <data name="Transcode.Preset.Name" xml:space="preserve"><value>プリセット名</value></data>
   <data name="Transcode.Preset.SaveAs" xml:space="preserve"><value>名前を付けて保存</value></data>
   <data name="Transcode.Preset.Update" xml:space="preserve"><value>更新</value></data>
-  <data name="Transcode.Preset.DeleteTitle" xml:space="preserve"><value>変換プリセットを削除しますか？</value></data>
+  <data name="Transcode.Preset.DeleteTitle" xml:space="preserve"><value>トランスコードプリセットを削除しますか?</value></data>
   <data name="Transcode.Preset.DeleteMessage" xml:space="preserve"><value>選択した名前付きプリセットを削除します。オーディオファイルは変更されません。</value></data>
   <data name="Transcode.Encoding.Title" xml:space="preserve"><value>エンコード</value></data>
   <data name="Transcode.Format.Label" xml:space="preserve"><value>形式</value></data>
@@ -6161,7 +6158,7 @@
   <data name="Transcode.Encoder.WavPack" xml:space="preserve"><value>WavPack</value></data>
   <data name="Transcode.Encoder.OptimFrogOfr" xml:space="preserve"><value>OptimFROG ofr</value></data>
   <data name="Transcode.Encoder.OptimFrogOfs" xml:space="preserve"><value>OptimFROG ofs</value></data>
-  <data name="Transcode.Encoder.OptimFrogOff" xml:space="preserve"><value>OptimFROG オフ</value></data>
+  <data name="Transcode.Encoder.OptimFrogOff" xml:space="preserve"><value>OptimFROG off</value></data>
   <data name="Transcode.RateMode.Label" xml:space="preserve"><value>レートモード</value></data>
   <data name="Transcode.Bitrate.Label" xml:space="preserve"><value>ビットレート (kbps)</value></data>
   <data name="Transcode.Quality.Label" xml:space="preserve"><value>品質</value></data>
@@ -6170,20 +6167,20 @@
   <data name="Transcode.CompressionEffort.Label" xml:space="preserve"><value>圧縮レベル (0～10)</value></data>
   <data name="Transcode.Metadata.Preserve" xml:space="preserve"><value>メタデータを保持</value></data>
   <data name="Transcode.Artwork.Preserve" xml:space="preserve"><value>アートワークを保持</value></data>
-  <data name="Transcode.Correction.Create" xml:space="preserve"><value>対応時に補正ファイルを作成</value></data>
+  <data name="Transcode.Correction.Create" xml:space="preserve"><value>対応している場合は補正ファイルを作成</value></data>
   <data name="Transcode.Destination.Title" xml:space="preserve"><value>出力先と名前</value></data>
-  <data name="Transcode.Destination.Alongside" xml:space="preserve"><value>ソースファイルの隣</value></data>
-  <data name="Transcode.Destination.ReplaceOriginal" xml:space="preserve"><value>元ファイルを置換</value></data>
+  <data name="Transcode.Destination.Alongside" xml:space="preserve"><value>ソースファイルと同じ場所</value></data>
+  <data name="Transcode.Destination.ReplaceOriginal" xml:space="preserve"><value>元のファイルを置換</value></data>
   <data name="Transcode.Destination.ChosenFolder" xml:space="preserve"><value>選択したフォルダー</value></data>
   <data name="Transcode.Destination.Folder" xml:space="preserve"><value>出力フォルダー</value></data>
   <data name="Transcode.Destination.PickerTitle" xml:space="preserve"><value>トランスコード出力フォルダーを選択</value></data>
-  <data name="Transcode.Destination.PreserveLayout" xml:space="preserve"><value>相対ソース構造を保持</value></data>
-  <data name="Transcode.Destination.Flatten" xml:space="preserve"><value>1つのフォルダーにまとめる</value></data>
+  <data name="Transcode.Destination.PreserveLayout" xml:space="preserve"><value>ソースの相対構造を保持</value></data>
+  <data name="Transcode.Destination.Flatten" xml:space="preserve"><value>1 つのフォルダーにまとめる</value></data>
   <data name="Transcode.Naming.Label" xml:space="preserve"><value>ファイル名</value></data>
-  <data name="Transcode.Naming.Tokens" xml:space="preserve"><value>トークン: {Name}、{Extension}、{Codec}、{Encoder}、{SampleRate}、{BitsPerSample}</value></data>
-  <data name="Transcode.Collision.Label" xml:space="preserve"><value>出力が存在する場合</value></data>
+  <data name="Transcode.Naming.Tokens" xml:space="preserve"><value>プレースホルダー: {Name}、{Extension}、{Codec}、{Encoder}、{SampleRate}、{BitsPerSample}</value></data>
+  <data name="Transcode.Collision.Label" xml:space="preserve"><value>出力ファイルが存在する場合</value></data>
   <data name="Transcode.Collision.Stop" xml:space="preserve"><value>停止</value></data>
-  <data name="Transcode.Collision.Suffix" xml:space="preserve"><value>数値サフィックスを追加</value></data>
+  <data name="Transcode.Collision.Suffix" xml:space="preserve"><value>連番の接尾辞を追加</value></data>
   <data name="Transcode.Concurrency.Title" xml:space="preserve"><value>CPU 使用率</value></data>
   <data name="Transcode.Concurrency.Automatic" xml:space="preserve"><value>自動適応並列処理</value></data>
   <data name="Transcode.Tools.Refresh" xml:space="preserve"><value>ツール機能を更新</value></data>
@@ -6215,43 +6212,43 @@
   <data name="Transcode.Format.OptimFrog" xml:space="preserve"><value>OptimFROG OFR</value></data>
   <data name="Transcode.Format.OptimFrogDualStream" xml:space="preserve"><value>OptimFROG DualStream (OFS)</value></data>
   <data name="Transcode.Format.OptimFrogFloat" xml:space="preserve"><value>OptimFROG Float (OFF)</value></data>
-  <data name="Transcode.Pending.Field" xml:space="preserve"><value>変換</value></data>
-  <data name="Transcode.Dialog.ReplacePending.Title" xml:space="preserve"><value>保留中の変換を置換しますか？</value></data>
-  <data name="Transcode.Dialog.ReplacePending.Message" xml:space="preserve"><value>選択したソースの少なくとも1つに保留中の変換があります。以前の変換内容を置換しますか？</value></data>
+  <data name="Transcode.Pending.Field" xml:space="preserve"><value>トランスコード</value></data>
+  <data name="Transcode.Dialog.ReplacePending.Title" xml:space="preserve"><value>保留中のトランスコードを置換しますか?</value></data>
+  <data name="Transcode.Dialog.ReplacePending.Message" xml:space="preserve"><value>選択したソースの少なくとも 1 つに保留中のトランスコードがあります。以前の設定を置き換えますか?</value></data>
   <data name="Transcode.Dialog.Partial.Title" xml:space="preserve"><value>一部のファイルを準備できませんでした</value></data>
-  <data name="Transcode.Dialog.Partial.Message.One" xml:space="preserve"><value>{0:N0} ファイルのステージングに失敗しました。 {1:N0} 対応ファイルは引き続き一緒に適用できます。</value></data>
-  <data name="Transcode.Dialog.Partial.Message.Other" xml:space="preserve"><value>{0:N0} ファイルのステージングに失敗しました。 {1:N0} 対応ファイルは引き続き一緒に適用できます。</value></data>
-  <data name="Transcode.Error.NoReadyFiles" xml:space="preserve"><value>適用可能な変換出力がありません。</value></data>
-  <data name="Transcode.Status.Ready" xml:space="preserve"><value>エンコード設定を選択し、確認対象の変更をプレビューします。</value></data>
+  <data name="Transcode.Dialog.Partial.Message.One" xml:space="preserve"><value>{0:N0} 件のファイルをステージングできませんでした。準備済みの {1:N0} 件はまとめて適用できます。</value></data>
+  <data name="Transcode.Dialog.Partial.Message.Other" xml:space="preserve"><value>{0:N0} 件のファイルをステージングできませんでした。準備済みの {1:N0} 件はまとめて適用できます。</value></data>
+  <data name="Transcode.Error.NoReadyFiles" xml:space="preserve"><value>適用できるトランスコード出力がありません。</value></data>
+  <data name="Transcode.Status.Ready" xml:space="preserve"><value>エンコード設定を選択して、確認対象の変更をプレビューします。</value></data>
   <data name="Transcode.Status.ToolsFailed" xml:space="preserve"><value>ツール機能を読み込めませんでした。</value></data>
-  <data name="Transcode.Status.Previewing" xml:space="preserve"><value>変換設定を検証しています…</value></data>
-  <data name="Transcode.Status.PreviewBlocked" xml:space="preserve"><value>プレビュー前に表示された問題を解決してください。</value></data>
-  <data name="Transcode.Status.PreviewFailed" xml:space="preserve"><value>変換プレビューに失敗しました。</value></data>
-  <data name="Transcode.Status.PreviewUnchanged" xml:space="preserve"><value>保留中の変換は変更されませんでした。</value></data>
-  <data name="Transcode.Status.PreviewReady.One" xml:space="preserve"><value>{0:N0} 件の変換を「変更を確認」に追加しました。</value></data>
-  <data name="Transcode.Status.PreviewReady.Other" xml:space="preserve"><value>{0:N0} 件の変換を「変更を確認」に追加しました。</value></data>
-  <data name="Transcode.Status.PendingAdded.One" xml:space="preserve"><value>{0:N0} 件の保留中の変換を追加</value></data>
-  <data name="Transcode.Status.PendingAdded.Other" xml:space="preserve"><value>{0:N0} 件の保留中の変換を追加</value></data>
+  <data name="Transcode.Status.Previewing" xml:space="preserve"><value>トランスコード設定を検証しています…</value></data>
+  <data name="Transcode.Status.PreviewBlocked" xml:space="preserve"><value>プレビューする前に、一覧の問題を解決してください。</value></data>
+  <data name="Transcode.Status.PreviewFailed" xml:space="preserve"><value>トランスコードのプレビューに失敗しました。</value></data>
+  <data name="Transcode.Status.PreviewUnchanged" xml:space="preserve"><value>保留中のトランスコードは変更されませんでした。</value></data>
+  <data name="Transcode.Status.PreviewReady.One" xml:space="preserve"><value>{0:N0} 件のトランスコードを「変更内容を確認」に追加しました。</value></data>
+  <data name="Transcode.Status.PreviewReady.Other" xml:space="preserve"><value>{0:N0} 件のトランスコードを「変更内容を確認」に追加しました。</value></data>
+  <data name="Transcode.Status.PendingAdded.One" xml:space="preserve"><value>保留中のトランスコードを {0:N0} 件追加</value></data>
+  <data name="Transcode.Status.PendingAdded.Other" xml:space="preserve"><value>保留中のトランスコードを {0:N0} 件追加</value></data>
   <data name="Transcode.Status.PresetSaved" xml:space="preserve"><value>プリセットを保存しました。</value></data>
   <data name="Transcode.Status.PresetUpdated" xml:space="preserve"><value>プリセットを更新しました。</value></data>
   <data name="Transcode.Status.PresetDeleted" xml:space="preserve"><value>プリセットを削除しました。</value></data>
   <data name="Transcode.Issue.FormatUnavailable" xml:space="preserve"><value>選択した出力形式は利用できません。</value></data>
   <data name="Transcode.Issue.EncoderUnavailable" xml:space="preserve"><value>選択したエンコーダーは利用できません。</value></data>
-  <data name="Transcode.Issue.SourceUnavailable" xml:space="preserve"><value>構成済みのツールではソースをデコードできません。</value></data>
-  <data name="Transcode.Issue.SettingsInvalid" xml:space="preserve"><value>選択したエンコーダーはこのエンコード設定に対応していません。</value></data>
+  <data name="Transcode.Issue.SourceUnavailable" xml:space="preserve"><value>設定済みのツールではデコードできないソースがあります。</value></data>
+  <data name="Transcode.Issue.SettingsInvalid" xml:space="preserve"><value>選択したエンコーダーはこの設定に対応していません。</value></data>
   <data name="Transcode.Issue.DestinationInvalid" xml:space="preserve"><value>出力パスを利用できないか、別のファイルと競合しています。</value></data>
-  <data name="Transcode.Issue.CorrectionUnavailable" xml:space="preserve"><value>選択したエンコーダーは要求された補正ファイルを作成できません。</value></data>
-  <data name="Transcode.Issue.DsdSettingsRequired" xml:space="preserve"><value>DSD から PCM への変換には、サンプル レートとビット深度が必要です。</value></data>
-  <data name="Transcode.Issue.ReplaceUnsafe" xml:space="preserve"><value>音声プログラムが1つだけではないため、このソースを安全に置換できません。</value></data>
-  <data name="Transcode.Issue.SeparatePrimaryAudio" xml:space="preserve"><value>個別の出力にはプライマリ音声ストリームのみが含まれ、追加のストリームは省略されます。</value></data>
-  <data name="Transcode.Issue.OutputSessionOnly" xml:space="preserve"><value>出力は構成済みのインデックスルート外にあるため、このセッションでのみ利用できます。</value></data>
-  <data name="Transcode.Issue.CatalogRefreshFailed" xml:space="preserve"><value>ファイルは変更されましたが、影響を受けるライブラリエントリを更新できませんでした。</value></data>
-  <data name="Transcode.Progress.Planning" xml:space="preserve"><value>変換を計画しています</value></data>
-  <data name="Transcode.Progress.Preparing" xml:space="preserve"><value>変換を準備しています</value></data>
-  <data name="Transcode.Progress.EncodingUnknown" xml:space="preserve"><value>{0:N0} アクティブ · {1:hh\:mm\:ss}</value></data>
-  <data name="Transcode.Progress.Encoding" xml:space="preserve"><value>{0:N0} アクティブ · {1:hh\:mm\:ss} · {2:0}% エンコード済み</value></data>
-  <data name="Transcode.Progress.Reviewed" xml:space="preserve"><value>{0:N0} 件の変換ファイルを確認しました</value></data>
-  <data name="Transcode.Issue.StageFailed" xml:space="preserve"><value>変換出力を準備できませんでした。</value></data>
+  <data name="Transcode.Issue.CorrectionUnavailable" xml:space="preserve"><value>選択したエンコーダーでは要求された補正ファイルを作成できません。</value></data>
+  <data name="Transcode.Issue.DsdSettingsRequired" xml:space="preserve"><value>DSD から PCM への変換にはサンプルレートとビット深度が必要です。</value></data>
+  <data name="Transcode.Issue.ReplaceUnsafe" xml:space="preserve"><value>このソースにはオーディオプログラムが 1 つだけ含まれていないため、安全に置換できません。</value></data>
+  <data name="Transcode.Issue.SeparatePrimaryAudio" xml:space="preserve"><value>別の出力には主音声ストリームのみが含まれ、追加ストリームは省略されます。</value></data>
+  <data name="Transcode.Issue.OutputSessionOnly" xml:space="preserve"><value>出力は設定済みのインデックスルート外にあるため、このセッションでのみ利用できます。</value></data>
+  <data name="Transcode.Issue.CatalogRefreshFailed" xml:space="preserve"><value>ファイルは変更されましたが、影響を受けたライブラリエントリを更新できませんでした。</value></data>
+  <data name="Transcode.Progress.Planning" xml:space="preserve"><value>トランスコードを計画しています</value></data>
+  <data name="Transcode.Progress.Preparing" xml:space="preserve"><value>トランスコードを準備しています</value></data>
+  <data name="Transcode.Progress.EncodingUnknown" xml:space="preserve"><value>{0:N0} 件を処理中 · {1:hh\:mm\:ss}</value></data>
+  <data name="Transcode.Progress.Encoding" xml:space="preserve"><value>{0:N0} 件を処理中 · {1:hh\:mm\:ss} · {2:0}% エンコード済み</value></data>
+  <data name="Transcode.Progress.Reviewed" xml:space="preserve"><value>{0:N0} 件のトランスコードファイルを確認済み</value></data>
+  <data name="Transcode.Issue.StageFailed" xml:space="preserve"><value>トランスコード出力を準備できませんでした。</value></data>
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>一部のメタデータは出力形式で表現できません。</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>一部のアートワークは出力形式で表現できません。</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>削除</value></data>
@@ -6277,7 +6274,7 @@
   <data name="Ingest.PreflightChecks.Title" xml:space="preserve"><value>事前チェック</value></data>
   <data name="Settings.EffectivePolicy.ProvenanceTitle" xml:space="preserve"><value>技術的な由来</value></data>
   <data name="Settings.FieldMappings.SourceLabel" xml:space="preserve"><value>ソースフィールド</value></data>
-  <data name="Settings.FieldMappings.TargetLabel" xml:space="preserve"><value>ターゲットフィールド</value></data>
+  <data name="Settings.FieldMappings.TargetLabel" xml:space="preserve"><value>対象フィールド</value></data>
   <data name="Inspector.View.ReviewChanges" xml:space="preserve"><value>変更を確認</value></data>
   <data name="Inspector.View.OptimizeOptions" xml:space="preserve"><value>最適化オプション</value></data>
   <data name="Workbench.Common.Advanced" xml:space="preserve"><value>詳細設定</value></data>
@@ -6297,7 +6294,7 @@
   <data name="Workbench.PendingChanges.FileOperation" xml:space="preserve"><value>ファイル操作</value></data>
   <data name="Workbench.PendingChanges.NoDestination" xml:space="preserve"><value>出力先なし</value></data>
   <data name="Settings.Appearance.Density" xml:space="preserve"><value>コンテンツ密度</value></data>
-  <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>コンパクトでは、ナビゲーションやアイコンの操作領域を縮小せずに、行、カード、フォームの間隔を狭めます。</value></data>
+  <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>「コンパクト」では、ナビゲーションやアイコンの操作領域を縮小せずに、行、カード、フォームの間隔を狭めます。</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>標準</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>コンパクト</value></data>
 </root>

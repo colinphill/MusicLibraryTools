@@ -809,6 +809,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             LocalizedChoice<string>? choice = target.FirstOrDefault(item =>
                 string.Equals(item.Value, value, StringComparison.Ordinal));
             string label = _localization.Get(
+                TechnicalLabelResourceKeys.ForSettingsChoice(
+                    group,
+                    value) ??
                 $"Settings.Choice.{group}.{ChoiceToken(value)}");
             if (choice is null)
             {
