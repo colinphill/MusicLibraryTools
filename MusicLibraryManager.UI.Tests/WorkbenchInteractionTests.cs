@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
@@ -53,6 +54,164 @@ public sealed class WorkbenchInteractionTests
             Render();
             Assert.True(menu.IsOpen);
             menu.Close();
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task TranscodeCommandsOpenDrawerFromBothSelectionMenus()
+    {
+        using ServiceProvider services = BuildServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(window, services, 1200, 700);
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            ILocalizationService localization =
+                services.GetRequiredService<
+                    ILocalizationService>();
+            var first = Track("first.flac");
+            var second = Track("second.flac");
+            model.Files.Add(first);
+            model.Files.Add(second);
+            model.SetSelectedFiles([first, second]);
+            Render();
+
+            AppDataGrid grid =
+                view.FindControl<AppDataGrid>(
+                    "WorkbenchGrid")!;
+            Control drawer =
+                view.FindControl<Control>(
+                    "WorkbenchTranscodeDrawer")!;
+            ContextMenu contextMenu =
+                Assert.IsType<ContextMenu>(
+                    grid.ContextMenu);
+            contextMenu.Open(grid);
+            Render();
+            MenuItem contextTranscode =
+                FindTranscodeItem(
+                    contextMenu.Items,
+                    localization);
+
+            contextTranscode.RaiseEvent(
+                new RoutedEventArgs(
+                    MenuItem.ClickEvent));
+            await Task.Yield();
+            Render();
+
+            Assert.True(drawer.IsVisible);
+            Assert.True(
+                model.TranscodeEditor!.HasSelection);
+            Assert.Contains(
+                "2",
+                model.TranscodeEditor
+                    .CapturedSelectionSummary);
+            contextMenu.Close();
+            view.RaiseEvent(new KeyEventArgs
+            {
+                RoutedEvent =
+                    InputElement.KeyDownEvent,
+                Key = Key.Escape,
+            });
+            Render();
+            Assert.False(drawer.IsVisible);
+
+            Button selectionActions =
+                view.FindControl<Button>(
+                    "WorkbenchSessionActionsButton")!;
+            MenuFlyout flyout =
+                Assert.IsType<MenuFlyout>(
+                    selectionActions.Flyout);
+            flyout.ShowAt(selectionActions);
+            Render();
+            MenuItem flyoutTranscode =
+                FindTranscodeItem(
+                    flyout.Items,
+                    localization);
+
+            flyoutTranscode.RaiseEvent(
+                new RoutedEventArgs(
+                    MenuItem.ClickEvent));
+            await Task.Yield();
+            Render();
+
+            Assert.True(drawer.IsVisible);
+            Assert.True(
+                model.TranscodeEditor.HasSelection);
+            Assert.Contains(
+                "2",
+                model.TranscodeEditor
+                    .CapturedSelectionSummary);
+            flyout.Hide();
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void RightClickPreservesSelectedRowsAndSelectsAnUnselectedRow()
+    {
+        using ServiceProvider services = BuildServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(window, services, 1200, 700);
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            var first = Track("first.flac");
+            var second = Track("second.flac");
+            var third = Track("third.flac");
+            model.Files.Add(first);
+            model.Files.Add(second);
+            model.Files.Add(third);
+            Render();
+            AppDataGrid grid =
+                view.FindControl<AppDataGrid>(
+                    "WorkbenchGrid")!;
+            grid.SelectedItems.Clear();
+            grid.SelectedItems.Add(first);
+            grid.SelectedItems.Add(second);
+            grid.SelectedItem = first;
+            model.SetSelectedFiles([first, second]);
+            Render();
+
+            RightClickRow(window, grid, first);
+            Render();
+
+            Assert.Equal(
+                2,
+                grid.SelectedItems.Count);
+            Assert.Equal(
+                [first, second],
+                model.SelectedFiles);
+            grid.ContextMenu?.Close();
+
+            RightClickRow(window, grid, third);
+            Render();
+
+            Assert.Same(
+                third,
+                Assert.Single(
+                    grid.SelectedItems));
+            Assert.Same(
+                third,
+                Assert.Single(
+                    model.SelectedFiles));
+            grid.ContextMenu?.Close();
         }
         finally
         {
@@ -424,6 +583,69 @@ public sealed class WorkbenchInteractionTests
         return Assert.IsType<WorkbenchView>(
             window.FindControl<ContentControl>(
                 "ContentHost")!.Content);
+    }
+
+    private static WorkbenchTrackViewModel Track(
+        string path) =>
+        new(
+            new MediaDocument(
+                Path.GetFullPath(path),
+                [],
+                [],
+                null,
+                new(
+                    Path.GetFullPath(path),
+                    10,
+                    DateTime.UtcNow,
+                    "hash"),
+                true));
+
+    private static MenuItem FindTranscodeItem(
+        IEnumerable<object?> items,
+        ILocalizationService localization) =>
+        items
+            .OfType<MenuItem>()
+            .Single(item =>
+                string.Equals(
+                    item.Header?.ToString(),
+                    localization.Get(
+                        "Transcode.Action.Open"),
+                    StringComparison.Ordinal));
+
+    private static void RightClickRow(
+        MainWindow window,
+        AppDataGrid grid,
+        WorkbenchTrackViewModel item)
+    {
+        DataGridRow row =
+            grid.GetVisualDescendants()
+                .OfType<DataGridRow>()
+                .Single(candidate =>
+                    ReferenceEquals(
+                        candidate.DataContext,
+                        item));
+        Point point =
+            row.TranslatePoint(
+                new Point(
+                    Math.Min(
+                        12,
+                        Math.Max(
+                            2,
+                            row.Bounds.Width / 2)),
+                    Math.Max(
+                        2,
+                        row.Bounds.Height / 2)),
+                window) ??
+            throw new InvalidOperationException(
+                "The Workbench row was not attached.");
+        window.MouseDown(
+            point,
+            MouseButton.Right,
+            RawInputModifiers.None);
+        window.MouseUp(
+            point,
+            MouseButton.Right,
+            RawInputModifiers.None);
     }
 
     private static ServiceProvider BuildServices()

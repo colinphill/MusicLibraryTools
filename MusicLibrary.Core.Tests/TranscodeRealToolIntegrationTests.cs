@@ -76,6 +76,324 @@ public sealed class TranscodeRealToolIntegrationTests
     }
 
     [Fact]
+    public async Task ConfiguredFfmpegDecodesRepresentativeSourceFamiliesWithExactVerification()
+    {
+        string? ffmpeg = Environment.GetEnvironmentVariable(
+            "MUSICLIBRARY_FFMPEG");
+        if (string.IsNullOrWhiteSpace(ffmpeg) ||
+            !File.Exists(ffmpeg))
+            return;
+        using var temp = new TempDirectory();
+        AppSettings settings = CreateSettings(
+            temp,
+            ffmpeg);
+        var processes = new ManagedProcessRunner();
+        using var capabilities =
+            new AudioTranscodeCapabilityService(
+                settings,
+                processes);
+        AudioTranscodeCapabilitySnapshot snapshot =
+            await capabilities.GetAsync(
+                forceRefresh: true,
+                TestContext.Current.CancellationToken);
+        AudioEncoderDescriptor encoder =
+            snapshot.FindEncoder(
+                AudioTranscodeEncoderIds
+                    .Ffmpeg("flac"))!;
+        var adapter = new AudioTranscodeAdapter(
+            settings,
+            processes);
+        var referenceService =
+            new TranscodePcmReferenceService(
+                settings,
+                processes);
+        string[] fixtureNames =
+        [
+            "sample.aac",
+            "sample.aiff",
+            "sample.flac",
+            "sample.mka",
+            "sample.mp3",
+            "sample.mpc",
+            "sample.ogg",
+            "sample.tta",
+            "sample.wav",
+            "sample.webm",
+            "sample.wma",
+            "sample.wv",
+            "sample_aac.m4a",
+            "sample_alac.m4a",
+        ];
+        var decodedPairs =
+            new List<DecodedAudioPair>();
+
+        for (int index = 0;
+             index < fixtureNames.Length;
+             index++)
+        {
+            string source =
+                MediaFixtures.Path_(
+                    fixtureNames[index]);
+            string destination = Path.Combine(
+                temp.Path,
+                $"source-{index:D2}.flac");
+            var reviewed =
+                new AudioTranscodeSettings(
+                    AudioTranscodeFormatIds.Flac,
+                    encoder.Id,
+                    AudioTranscodeRateMode.Lossless);
+
+            await adapter.EncodeAsync(
+                source,
+                destination,
+                reviewed,
+                encoder,
+                threadCount: 1,
+                ct: TestContext.Current
+                    .CancellationToken);
+
+            ICodecProvider sourceCodec =
+                MediaFile.GetFile(
+                        source,
+                        readOnly: true)
+                    .Codecs.First();
+            ICodecProvider outputCodec =
+                MediaFile.GetFile(
+                        destination,
+                        readOnly: true)
+                    .Codecs.First();
+            Assert.Equal(
+                sourceCodec.Channels,
+                outputCodec.Channels);
+            Assert.Equal(
+                sourceCodec.Samplerate,
+                outputCodec.Samplerate);
+            string comparisonPath =
+                AudioTranscodeAdapter
+                    .EffectiveIntegerConversionBitDepth(
+                        reviewed,
+                        source) is null
+                    ? source
+                    : await referenceService.CreateAsync(
+                        source,
+                        reviewed,
+                        destination,
+                        TestContext.Current
+                            .CancellationToken);
+            decodedPairs.Add(new(
+                comparisonPath,
+                destination,
+                fixtureNames[index]));
+        }
+
+        AnalysisReport report =
+            await new DecodedAudioVerificationService(
+                    new FfmpegRunner())
+                .VerifyAsync(
+                    ffmpeg,
+                    decodedPairs,
+                    ct: TestContext.Current
+                        .CancellationToken);
+        Assert.Empty(report.Findings);
+    }
+
+    [Fact]
+    public async Task ConfiguredFfmpegOutputMatchesDeterministicTransformedReference()
+    {
+        string? ffmpeg = Environment.GetEnvironmentVariable(
+            "MUSICLIBRARY_FFMPEG");
+        if (string.IsNullOrWhiteSpace(ffmpeg) ||
+            !File.Exists(ffmpeg))
+            return;
+        using var temp = new TempDirectory();
+        AppSettings settings = CreateSettings(
+            temp,
+            ffmpeg);
+        var processes = new ManagedProcessRunner();
+        using var capabilities =
+            new AudioTranscodeCapabilityService(
+                settings,
+                processes);
+        AudioTranscodeCapabilitySnapshot snapshot =
+            await capabilities.GetAsync(
+                forceRefresh: true,
+                TestContext.Current.CancellationToken);
+        AudioEncoderDescriptor encoder =
+            snapshot.FindEncoder(
+                AudioTranscodeEncoderIds
+                    .Ffmpeg("flac"))!;
+        var adapter = new AudioTranscodeAdapter(
+            settings,
+            processes);
+        var referenceService =
+            new TranscodePcmReferenceService(
+                settings,
+                processes);
+        var reviewed = new AudioTranscodeSettings(
+            AudioTranscodeFormatIds.Flac,
+            encoder.Id,
+            AudioTranscodeRateMode.Lossless,
+            SampleRateHz: 48_000,
+            BitsPerSample: 16);
+        string source =
+            MediaFixtures.Path_(
+                "sample_hires.flac");
+        string destination =
+            Path.Combine(
+                temp.Path,
+                "transformed.flac");
+
+        await adapter.EncodeAsync(
+            source,
+            destination,
+            reviewed,
+            encoder,
+            threadCount: 1,
+            ct: TestContext.Current
+                .CancellationToken);
+        string reference =
+            await referenceService.CreateAsync(
+                source,
+                reviewed,
+                destination,
+                TestContext.Current
+                    .CancellationToken);
+        try
+        {
+            AnalysisReport report =
+                await new DecodedAudioVerificationService(
+                        new FfmpegRunner())
+                    .VerifyAsync(
+                        ffmpeg,
+                        [
+                            new(
+                                reference,
+                                destination,
+                                "96 kHz/24-bit to " +
+                                "48 kHz/16-bit"),
+                        ],
+                        ct: TestContext.Current
+                            .CancellationToken);
+            Assert.Empty(report.Findings);
+            ICodecProvider outputCodec =
+                MediaFile.GetFile(
+                        destination,
+                        readOnly: true)
+                    .Codecs.First();
+            Assert.Equal(
+                48_000u,
+                outputCodec.Samplerate);
+            Assert.Equal(
+                16u,
+                outputCodec.BitsPerSample);
+        }
+        finally
+        {
+            File.Delete(reference);
+        }
+    }
+
+    [Fact]
+    public async Task ReviewedStageVerifiesImplicitLossyToIntegerProjection()
+    {
+        string? ffmpeg = Environment.GetEnvironmentVariable(
+            "MUSICLIBRARY_FFMPEG");
+        if (string.IsNullOrWhiteSpace(ffmpeg) ||
+            !File.Exists(ffmpeg))
+            return;
+        using var temp = new TempDirectory();
+        AppSettings settings = CreateSettings(
+            temp,
+            ffmpeg);
+        var processes = new ManagedProcessRunner();
+        using var capabilities =
+            new AudioTranscodeCapabilityService(
+                settings,
+                processes);
+        var coordinator =
+            new FileMutationCoordinator();
+        var journals =
+            new OperationJournalService(
+                coordinator);
+        var service = new AudioTranscodeService(
+            settings,
+            capabilities,
+            new AudioTranscodeAdapter(
+                settings,
+                processes),
+            new PassthroughProjection(),
+            new TranscodeWorkScheduler(
+                settings,
+                processorCount: 2),
+            new ReviewedChangeBatchService(
+                new FileMutationPlanExecutor(
+                    coordinator),
+                journals),
+            new ReviewedChangeHistoryService(
+                settings,
+                journals),
+            new DecodedAudioVerificationService(
+                new FfmpegRunner()),
+            pcmReference:
+                new TranscodePcmReferenceService(
+                    settings,
+                    processes));
+        AudioTranscodePlan plan =
+            await service.PreviewAsync(
+                new(
+                    [
+                        MediaFixtures.Path_(
+                            "sample.mp3"),
+                    ],
+                    new(
+                        AudioTranscodeFormatIds.Flac,
+                        AudioTranscodeEncoderIds
+                            .Ffmpeg("flac"),
+                        AudioTranscodeRateMode
+                            .Lossless),
+                    new(
+                        AudioTranscodeDestinationMode
+                            .ChosenFolder,
+                        temp.Path,
+                        false,
+                        "reviewed{Extension}",
+                        AudioTranscodeCollisionPolicy
+                            .Stop)),
+                ct: TestContext.Current
+                    .CancellationToken);
+        Assert.True(plan.CanApply);
+
+        AudioTranscodeStageResult stage =
+            await service.StageAsync(
+                plan,
+                ct: TestContext.Current
+                    .CancellationToken);
+        try
+        {
+            AudioTranscodeStagedItem item =
+                Assert.Single(stage.ReadyItems);
+            Assert.NotNull(item.StagedPath);
+            Assert.True(
+                new FileInfo(item.StagedPath).Length >
+                0);
+            Assert.Equal(
+                24u,
+                MediaFile.GetFile(
+                        item.StagedPath,
+                        readOnly: true)
+                    .Codecs.First()
+                    .BitsPerSample);
+        }
+        finally
+        {
+            await service.DiscardStageAsync(
+                stage,
+                TestContext.Current
+                    .CancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task ConfiguredOptimFrogToolsEncodeAndVerifyAllThreeFormats()
     {
         string? directory = Environment.GetEnvironmentVariable(
@@ -391,6 +709,17 @@ public sealed class TranscodeRealToolIntegrationTests
                 "settings.json"));
         settings.LoadConfig(configPath);
         return settings;
+    }
+
+    private sealed class PassthroughProjection :
+        ITranscodeMetadataProjectionService
+    {
+        public IReadOnlyList<OperationIssue> Project(
+            string sourcePath,
+            string destinationPath,
+            bool preserveMetadata,
+            bool preserveArtwork) =>
+            [];
     }
 
     private sealed class TempDirectory : IDisposable

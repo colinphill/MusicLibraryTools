@@ -635,8 +635,12 @@ public sealed class AudioTranscodeAdapter(
         AudioTranscodeSettings settings,
         string sourcePath)
     {
+        int? effectiveBits =
+            EffectiveIntegerConversionBitDepth(
+                settings,
+                sourcePath);
         if (settings.SampleRateHz is null &&
-            settings.BitsPerSample is null)
+            effectiveBits is null)
             return;
         var options = new List<string>();
         if (settings.SampleRateHz is { } rate)
@@ -646,7 +650,7 @@ public sealed class AudioTranscodeAdapter(
         options.Add("filter_size=64");
         options.Add("phase_shift=10");
         options.Add("exact_rational=1");
-        if (settings.BitsPerSample is { } bits)
+        if (effectiveBits is { } bits)
         {
             string format = bits <= 16
                 ? "s16"
@@ -662,6 +666,79 @@ public sealed class AudioTranscodeAdapter(
         arguments.Add(
             "aresample=" +
             string.Join(':', options));
+    }
+
+    internal static int? EffectiveIntegerConversionBitDepth(
+        AudioTranscodeSettings settings,
+        string sourcePath)
+    {
+        if (settings.BitsPerSample is { } requested)
+            return requested;
+        if (!RequiresAutomaticIntegerProjection(
+                sourcePath))
+            return null;
+        if (settings.FormatId ==
+                AudioTranscodeFormatIds.OptimFrogFloat ||
+            settings.EncoderId.EndsWith(
+                "pcm_f32le",
+                StringComparison.Ordinal) ||
+            settings.EncoderId.EndsWith(
+                "pcm_f32be",
+                StringComparison.Ordinal))
+            return null;
+        return settings.FormatId switch
+        {
+            AudioTranscodeFormatIds.Flac or
+            AudioTranscodeFormatIds.AlacM4a or
+            AudioTranscodeFormatIds.TrueAudio => 24,
+            AudioTranscodeFormatIds.PcmWave or
+            AudioTranscodeFormatIds.PcmRf64 or
+            AudioTranscodeFormatIds.PcmAiff
+                when settings.EncoderId.Contains(
+                    "pcm_s16",
+                    StringComparison.Ordinal) ||
+                     settings.EncoderId ==
+                        AudioTranscodeEncoderIds.Automatic =>
+                16,
+            AudioTranscodeFormatIds.PcmWave or
+            AudioTranscodeFormatIds.PcmRf64 or
+            AudioTranscodeFormatIds.PcmAiff
+                when settings.EncoderId.Contains(
+                    "pcm_s24",
+                    StringComparison.Ordinal) =>
+                24,
+            AudioTranscodeFormatIds.PcmWave or
+            AudioTranscodeFormatIds.PcmRf64 or
+            AudioTranscodeFormatIds.PcmAiff or
+            AudioTranscodeFormatIds.WavPack or
+            AudioTranscodeFormatIds.OptimFrog or
+            AudioTranscodeFormatIds.OptimFrogDualStream =>
+                32,
+            _ => null,
+        };
+    }
+
+    private static bool RequiresAutomaticIntegerProjection(
+        string sourcePath)
+    {
+        try
+        {
+            ICodecProvider? codec =
+                MediaFile.GetFile(
+                        sourcePath,
+                        readOnly: true)
+                    .Codecs.FirstOrDefault();
+            return codec is null ||
+                codec.CodecType == CodecType.Lossy ||
+                codec.BitsPerSample == 0 ||
+                codec.CodecName.Contains(
+                    "float",
+                    StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     internal static bool RequiresDither(
@@ -1063,6 +1140,8 @@ public sealed class AudioTranscodeService(
             sources.Length == 0
                 ? null
                 : CommonDirectory(sources);
+        LibraryConfiguration? configuration =
+            settings.GetSnapshot().Configuration;
         var claimed = new HashSet<string>(
             PathComparer);
         var items = new List<AudioTranscodePlanItem>();
@@ -1126,7 +1205,10 @@ public sealed class AudioTranscodeService(
                 request,
                 format,
                 source,
-                commonDirectory,
+                PreferredLayoutRoot(
+                    configuration,
+                    source,
+                    commonDirectory),
                 issues);
             destination = ResolveCollision(
                 source,
@@ -1138,7 +1220,7 @@ public sealed class AudioTranscodeService(
                     format,
                     request.Settings));
             AddInternalCatalogIssues(
-                settings.GetSnapshot().Configuration,
+                configuration,
                 destination,
                 issues);
             string? correctionExtension =
@@ -1505,7 +1587,10 @@ public sealed class AudioTranscodeService(
                             item.Settings);
                         bool transformsPcm =
                             item.Settings.SampleRateHz is not null ||
-                            item.Settings.BitsPerSample is not null;
+                            AudioTranscodeAdapter
+                                .EffectiveIntegerConversionBitDepth(
+                                    item.Settings,
+                                    item.SourcePath) is not null;
                         bool hasCorrection =
                             SidecarsOrEmpty(item.Sidecars).Length > 0;
                         if (format.Lossless &&
@@ -2398,8 +2483,8 @@ public sealed class AudioTranscodeService(
         string destination = Path.Combine(
             directory,
             expanded);
-        if (request.Destination.Mode ==
-                AudioTranscodeDestinationMode.Alongside &&
+        if (request.Destination.Mode !=
+                AudioTranscodeDestinationMode.ReplaceOriginal &&
             PathComparer.Equals(
                 source,
                 destination))
@@ -2408,6 +2493,26 @@ public sealed class AudioTranscodeService(
                 name + " (transcoded)" +
                 format.Extension);
         return Path.GetFullPath(destination);
+    }
+
+    private static string? PreferredLayoutRoot(
+        LibraryConfiguration? configuration,
+        string source,
+        string? commonDirectory)
+    {
+        string sourceDirectory =
+            Path.GetDirectoryName(source)!;
+        string? configuredRoot = configuration?
+            .IndexLocations
+            .Select(location => location.Target)
+            .Where(path =>
+                !string.IsNullOrWhiteSpace(path))
+            .Select(Path.GetFullPath)
+            .Where(root =>
+                IsWithin(sourceDirectory, root))
+            .OrderByDescending(root => root.Length)
+            .FirstOrDefault();
+        return configuredRoot ?? commonDirectory;
     }
 
     internal static string ResolveCollision(
@@ -2654,8 +2759,13 @@ public sealed class AudioTranscodeService(
             codec.Samplerate != rate)
             throw new InvalidDataException(
                 "The generated file has an unexpected sample rate.");
+        int? expectedBits =
+            AudioTranscodeAdapter
+                .EffectiveIntegerConversionBitDepth(
+                    settings,
+                    sourcePath);
         if (format.Lossless &&
-            settings.BitsPerSample is { } bits &&
+            expectedBits is { } bits &&
             codec.BitsPerSample != bits)
             throw new InvalidDataException(
                 "The generated file has an unexpected bit depth.");
@@ -2834,9 +2944,11 @@ public sealed class AudioTranscodeService(
                 $"The reviewed {role} changed: {path}");
     }
 
-    private static string CommonDirectory(
+    internal static string? CommonDirectory(
         IReadOnlyList<string> paths)
     {
+        if (paths.Count == 0)
+            return null;
         string common =
             Path.GetDirectoryName(paths[0])!;
         string root =
@@ -2848,7 +2960,7 @@ public sealed class AudioTranscodeService(
             if (!PathComparer.Equals(
                     Path.GetPathRoot(directory),
                     root))
-                return Path.GetDirectoryName(paths[0])!;
+                return null;
             while (!IsWithin(directory, common))
                 common =
                     Path.GetDirectoryName(common) ??

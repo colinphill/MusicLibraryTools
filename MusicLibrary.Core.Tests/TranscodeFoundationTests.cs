@@ -351,6 +351,222 @@ public sealed class TranscodeFoundationTests
         }
     }
 
+    [Fact]
+    public async Task ChosenFolderPreservesLayoutFromConfiguredLibraryRoot()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "MusicLibraryTools.Tests",
+            Guid.NewGuid().ToString("N"));
+        string libraryRoot = Path.Combine(
+            directory,
+            "library");
+        string sourceDirectory = Path.Combine(
+            libraryRoot,
+            "Artist",
+            "Album");
+        string source = Path.Combine(
+            sourceDirectory,
+            "Track.flac");
+        string outputRoot = Path.Combine(
+            directory,
+            "output");
+        string configPath = Path.Combine(
+            directory,
+            "library.xml");
+        Directory.CreateDirectory(sourceDirectory);
+        try
+        {
+            File.Copy(
+                MediaFixtures.Path_("sample.flac"),
+                source);
+            var editable = new EditableLibraryConfig
+            {
+                IndexTargets =
+                [
+                    new IndexTargetEntry
+                    {
+                        Target = libraryRoot,
+                    },
+                ],
+            };
+            editable.Save(configPath);
+            var settings = new MemorySettings(
+                new LibraryConfiguration(configPath));
+            AudioTranscodeService service =
+                CreatePreviewService(settings);
+
+            AudioTranscodePlan plan =
+                await service.PreviewAsync(
+                    PreviewRequest(
+                        [source],
+                        outputRoot,
+                        preserveLayout: true),
+                    ct: TestContext.Current
+                        .CancellationToken);
+
+            AudioTranscodePlanItem item =
+                Assert.Single(plan.Items);
+            Assert.Equal(
+                Path.Combine(
+                    outputRoot,
+                    "Artist",
+                    "Album",
+                    "Track.flac"),
+                item.DestinationPath);
+            Assert.DoesNotContain(
+                item.Issues,
+                issue => issue.Severity ==
+                    OperationIssueSeverity.Blocker);
+        }
+        finally
+        {
+            Directory.Delete(
+                directory,
+                recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ChosenFolderNeverWritesBackOverSource()
+    {
+        using var source =
+            MediaFixtures.Copy("sample.flac");
+        string sourceDirectory =
+            Path.GetDirectoryName(source.Path)!;
+        AudioTranscodeService service =
+            CreatePreviewService(
+                new MemorySettings());
+
+        AudioTranscodePlan plan =
+            await service.PreviewAsync(
+                PreviewRequest(
+                    [source.Path],
+                    sourceDirectory,
+                    preserveLayout: false),
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        AudioTranscodePlanItem item =
+            Assert.Single(plan.Items);
+        Assert.Equal(
+            Path.Combine(
+                sourceDirectory,
+                Path.GetFileNameWithoutExtension(
+                    source.Path) +
+                " (transcoded).flac"),
+            item.DestinationPath);
+        Assert.NotEqual(
+            source.Path,
+            item.DestinationPath);
+    }
+
+    [Fact]
+    public async Task FlattenedBatchCollisionsStopOrSuffixDeterministically()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "MusicLibraryTools.Tests",
+            Guid.NewGuid().ToString("N"));
+        string firstDirectory = Path.Combine(
+            directory,
+            "first");
+        string secondDirectory = Path.Combine(
+            directory,
+            "second");
+        string outputRoot = Path.Combine(
+            directory,
+            "output");
+        string first = Path.Combine(
+            firstDirectory,
+            "Track.flac");
+        string second = Path.Combine(
+            secondDirectory,
+            "Track.flac");
+        Directory.CreateDirectory(firstDirectory);
+        Directory.CreateDirectory(secondDirectory);
+        try
+        {
+            File.Copy(
+                MediaFixtures.Path_("sample.flac"),
+                first);
+            File.Copy(
+                MediaFixtures.Path_("sample.flac"),
+                second);
+            AudioTranscodeService service =
+                CreatePreviewService(
+                    new MemorySettings());
+
+            AudioTranscodePlan stopped =
+                await service.PreviewAsync(
+                    PreviewRequest(
+                        [second, first],
+                        outputRoot,
+                        preserveLayout: false),
+                    ct: TestContext.Current
+                        .CancellationToken);
+            Assert.Equal(
+                Path.Combine(
+                    outputRoot,
+                    "Track.flac"),
+                stopped.Items[0].DestinationPath);
+            Assert.Contains(
+                stopped.Items[1].Issues,
+                issue => issue.Code ==
+                    "transcode.destination-exists" &&
+                    issue.Severity ==
+                    OperationIssueSeverity.Blocker);
+
+            AudioTranscodeRequest suffixRequest =
+                PreviewRequest(
+                    [second, first],
+                    outputRoot,
+                    preserveLayout: false) with
+                {
+                    Destination =
+                        PreviewRequest(
+                            [second, first],
+                            outputRoot,
+                            preserveLayout: false)
+                        .Destination with
+                        {
+                            CollisionPolicy =
+                                AudioTranscodeCollisionPolicy
+                                    .Suffix,
+                        },
+                };
+            AudioTranscodePlan suffixed =
+                await service.PreviewAsync(
+                    suffixRequest,
+                    ct: TestContext.Current
+                        .CancellationToken);
+
+            Assert.Equal(
+                [
+                    Path.Combine(
+                        outputRoot,
+                        "Track.flac"),
+                    Path.Combine(
+                        outputRoot,
+                        "Track (2).flac"),
+                ],
+                suffixed.Items.Select(
+                    item => item.DestinationPath));
+            Assert.All(
+                suffixed.Items,
+                item => Assert.DoesNotContain(
+                    item.Issues,
+                    issue => issue.Severity ==
+                        OperationIssueSeverity.Blocker));
+        }
+        finally
+        {
+            Directory.Delete(
+                directory,
+                recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData(AudioTranscodeFormatIds.WavPack, ".wvc")]
     [InlineData(
@@ -494,8 +710,62 @@ public sealed class TranscodeFoundationTests
                 24));
         Assert.True(
             AudioTranscodeAdapter.RequiresDither(
-                source,
-                8));
+            source,
+            8));
+    }
+
+    [Fact]
+    public void LossySourceGetsDeterministicAutomaticIntegerProjection()
+    {
+        string source =
+            MediaFixtures.Path_("sample.mp3");
+
+        Assert.Equal(
+            24,
+            AudioTranscodeAdapter
+                .EffectiveIntegerConversionBitDepth(
+                    new(
+                        AudioTranscodeFormatIds.Flac,
+                        AudioTranscodeEncoderIds
+                            .Ffmpeg("flac"),
+                        AudioTranscodeRateMode
+                            .Lossless),
+                    source));
+        Assert.Equal(
+            16,
+            AudioTranscodeAdapter
+                .EffectiveIntegerConversionBitDepth(
+                    new(
+                        AudioTranscodeFormatIds.PcmWave,
+                        AudioTranscodeEncoderIds.Automatic,
+                        AudioTranscodeRateMode
+                            .Lossless),
+                    source));
+        Assert.Null(
+            AudioTranscodeAdapter
+                .EffectiveIntegerConversionBitDepth(
+                    new(
+                        AudioTranscodeFormatIds.OptimFrogFloat,
+                        AudioTranscodeEncoderIds.OptimFrogOff,
+                        AudioTranscodeRateMode
+                            .Lossless),
+                    source));
+    }
+
+    [Fact]
+    public void IntegerLosslessSourcePreservesItsPrecisionByDefault()
+    {
+        Assert.Null(
+            AudioTranscodeAdapter
+                .EffectiveIntegerConversionBitDepth(
+                    new(
+                        AudioTranscodeFormatIds.Flac,
+                        AudioTranscodeEncoderIds
+                            .Ffmpeg("flac"),
+                        AudioTranscodeRateMode
+                            .Lossless),
+                    MediaFixtures.Path_(
+                        "sample.flac")));
     }
 
     [Fact]
@@ -1087,6 +1357,50 @@ public sealed class TranscodeFoundationTests
         return elapsed.Elapsed;
     }
 
+    private static AudioTranscodeRequest PreviewRequest(
+        IEnumerable<string> sourcePaths,
+        string outputRoot,
+        bool preserveLayout) =>
+        new(
+            [.. sourcePaths],
+            new(
+                AudioTranscodeFormatIds.Flac,
+                AudioTranscodeEncoderIds.Ffmpeg(
+                    "flac"),
+                AudioTranscodeRateMode.Lossless),
+            new(
+                AudioTranscodeDestinationMode.ChosenFolder,
+                outputRoot,
+                preserveLayout,
+                "{Name}{Extension}",
+                AudioTranscodeCollisionPolicy.Stop));
+
+    private static AudioTranscodeService CreatePreviewService(
+        IAppSettings settings)
+    {
+        var coordinator =
+            new FileMutationCoordinator();
+        var journals =
+            new OperationJournalService(
+                coordinator);
+        return new(
+            settings,
+            new FixedCapabilityService(),
+            new RecordingAdapter(),
+            new RecordingProjection(),
+            new TranscodeWorkScheduler(
+                settings,
+                processorCount: 2),
+            new ReviewedChangeBatchService(
+                new FileMutationPlanExecutor(
+                    coordinator),
+                journals),
+            new ReviewedChangeHistoryService(
+                settings,
+                journals),
+            new SuccessfulDecodedVerifier());
+    }
+
     private static AudioTranscodeCapabilitySnapshot SnapshotWithTools(
         params AudioToolProbeResult[] tools) =>
         new(
@@ -1169,7 +1483,7 @@ public sealed class TranscodeFoundationTests
             bool forceRefresh = false,
             CancellationToken ct = default) =>
             Task.FromResult(new AudioTranscodeCapabilitySnapshot(
-                [],
+                [FfmpegProbe(["flac"])],
                 [
                     new(
                         AudioTranscodeFormatIds.Flac,
@@ -1375,15 +1689,18 @@ public sealed class TranscodeFoundationTests
         }
     }
 
-    private sealed class MemorySettings : IAppSettings
+    private sealed class MemorySettings(
+        LibraryConfiguration? configuration = null) :
+        IAppSettings
     {
         private readonly ConcurrentDictionary<string, string>
             _preferences = new(StringComparer.Ordinal);
 
         public string? ConfigPath => null;
-        public LibraryConfiguration? Configuration => null;
+        public LibraryConfiguration? Configuration =>
+            configuration;
         public AppConfigurationSnapshot GetSnapshot() =>
-            new(null, null, 1);
+            new(null, configuration, 1);
         public event EventHandler? ConfigurationChanged
         {
             add

@@ -26,8 +26,11 @@ Last updated: 2026-07-25
   RF64 muxer selection, OptimFROG Float mode selection, floating-point
   bridging, its actual `.ofr` extension, and `.ofr` decoder ambiguity. The
   adapter now tries both `ofr` and `off` without shell invocation and the real
-  Float output round-trips through that fallback. The complete advertised
-  codec/source validation matrix remains.
+  Float output round-trips through that fallback. Floating or
+  unspecified-precision decoded sources now receive deterministic,
+  format-appropriate integer projection and dither when the lossless output
+  requires integer PCM; explicit float output remains untouched. The complete
+  advertised codec/source validation matrix remains.
 - [Complete] CFG-01: Existing WavPack executable machine-binding round trip now
   treats WavPack as a known configured tool.
 
@@ -49,11 +52,16 @@ Last updated: 2026-07-25
 
 ## Drawer, destinations, and presets
 
-- [In Progress] DST-01: Alongside, replacement, chosen-folder, relative layout,
+- [Complete] DST-01: Alongside, replacement, chosen-folder, relative layout,
   flattening, stable naming tokens, same-extension suffix, Stop, and numeric
   Suffix planning are implemented in the core preview service. WavPack `.wvc`
   and OptimFROG `.ofc` correction files participate in preview collision
-  checks, suffix selection, staging, commit, and Undo.
+  checks, suffix selection, staging, commit, and Undo. Preserved chosen-folder
+  layout now prefers the most-specific configured library root and falls back
+  to the common source ancestor. Sources without a shared volume fall back
+  safely to flattened planning. Non-replacement output can never resolve back
+  over its source. Tests cover configured-root layout, same-path protection,
+  deterministic flattened Stop/Suffix behavior, and companion collisions.
 - [Complete] PRE-01: Versioned named-preset storage with Save, Update, Rename,
   Delete, and hardware-specific setting exclusion. Unavailable format/encoder
   IDs remain visible and stable across capability refresh instead of silently
@@ -66,10 +74,12 @@ Last updated: 2026-07-25
   retained semantic selections across repeated opens. Choice collections now
   reconcile in place so two-way bindings and live localization never blank the
   selected format, encoder, or rate mode.
-- [In Progress] UI-MENU-01: Session grid context-menu and mirrored Selection
+- [Complete] UI-MENU-01: Session grid context-menu and mirrored Selection
   Actions entries are wired. Right-click preserves an existing multi-selection
   and selects an unselected row; the existing Shift+F10/Menu route opens the
-  mirrored context menu. Interaction tests remain.
+  mirrored context menu. Headless interaction tests invoke Transcode from both
+  menus, verify the captured selection and drawer, preserve a selected
+  multi-row right-click, and select an unselected right-clicked row.
 
 ## Unified pending and media pipeline
 
@@ -108,7 +118,13 @@ Last updated: 2026-07-25
   WavPack `.wvc` and OptimFROG `.ofc` stages are reconstructed with their
   native decoders and the reconstructed audio is decoded-compared against the
   source or transformed reference. The full format verification matrix
-  remains.
+  remains. Real FFmpeg coverage additionally decodes 14 representative AAC,
+  AIFF, FLAC, Matroska, MP3, Musepack, Ogg, TTA, WAV, WebM, ASF/WMA, WavPack,
+  AAC/M4A, and ALAC/M4A sources into verified lossless output.
+  Integer-lossless inputs compare directly; lossy/floating decoder output is
+  compared with an independently generated deterministic integer reference.
+  A 96 kHz/24-bit to 48 kHz/16-bit case verifies matching resampling and
+  bit-depth reduction end to end.
 
 ## Transaction, recovery, catalog, and history
 
@@ -186,9 +202,11 @@ Last updated: 2026-07-25
 - Source layout, aggregate progress, transformed reference, native correction
   reconstruction, platform parser variants, specialist fallback, and
   advertised source-family validation pass the targeted transcode foundation
-  suite: 48 tests. Scheduler validation includes a conservative multi-file
+  suite: 53 tests. Scheduler validation includes a conservative multi-file
   performance comparison and high-contention per-volume I/O gating across two
   independently progressing volumes.
+- Targeted Workbench interaction validation passes: 6 tests, including both
+  Transcode menu entry points and right-click selection behavior.
 - Targeted Transcode editor/Workbench pending tests pass: 9 tests, including
   Apply-ready and Back behavior after a partially failed stage.
 - Targeted transcode/catalog/iTunes integration suites pass: 30 tests.
@@ -207,7 +225,10 @@ Last updated: 2026-07-25
   WavPack test now covers lossless output, hybrid correction output, and native
   correction reconstruction; no WavPack executable was available on this
   validation machine, so that external-tool path remains target-machine
-  validation.
+  validation. Six FFmpeg-enabled real-tool cases now include the 14-family
+  source matrix, deterministic transformed-reference equality, and a complete
+  reviewed MP3-to-FLAC staging pass through scheduling, output validation, and
+  decoded verification.
 - Headless Workbench matrix validation passes for the required viewports,
   light/dark themes, normal/18 px type, 40%-expanded pseudo-locale, German,
   Japanese, Korean, and Simplified/Traditional Chinese. Three dedicated
@@ -219,21 +240,20 @@ Last updated: 2026-07-25
   SkiaSharp licenses/notices, and the embedded four-ABI Syncer server payload;
   no ImageSharp artifact is present. Native installer/package creation still
   requires validation on each target operating system.
-- Full portable Release tests pass: Core 1,063; MusicLibraryManager 226;
-  MusicLibraryManager UI 82; MusicFileUtilities 506; DumpITL 78.
+- Full portable Release tests pass: Core 1,071; MusicLibraryManager 226;
+  MusicLibraryManager UI 84; MusicFileUtilities 506; DumpITL 78.
 - The MusicLibraryManager Release project builds with 0 warnings and 0 errors.
 - `git diff --check` passes; Git reports only existing line-ending
   normalization notices.
 - No database/index schema, scan configuration, or rescan behavior has changed.
-- The primary engine checkpoint is commit `c069eec`; the Operations,
-  scheduler, real-tool test, and cross-runtime publish-validation follow-up is
-  ready for its next reviewable commit.
+- The primary engine checkpoint is commit `c069eec`; Operations, scheduler,
+  and cross-runtime validation are committed in `7a760e8`. The destination,
+  Workbench interaction, and expanded media-verification batch is ready for
+  its next reviewable commit.
 
 ## Resume next
 
-1. Expand the transformed-PCM/output verification matrix across writable
-   fixture families and specialist correction modes.
+1. Add valid decodable APE and DSF media fixtures, then finish their
+   transformed-PCM and specialist correction-mode verification.
 2. Run target-native installer/package verification and the opt-in WavPack
    real-tool integration on a machine with WavPack installed.
-3. Complete destination/collision edge cases and the remaining end-to-end
-   Workbench menu interaction coverage.

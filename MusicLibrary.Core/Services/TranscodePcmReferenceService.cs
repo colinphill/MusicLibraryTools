@@ -52,7 +52,12 @@ public sealed class TranscodePcmReferenceService(
             sourcePath);
         arguments.Add("-c:a");
         arguments.Add("flac");
-        if (settings.BitsPerSample is { } bits)
+        int? effectiveBits =
+            AudioTranscodeAdapter
+                .EffectiveIntegerConversionBitDepth(
+                    settings,
+                    sourcePath);
+        if (effectiveBits is { } bits)
         {
             arguments.Add("-sample_fmt");
             arguments.Add(
