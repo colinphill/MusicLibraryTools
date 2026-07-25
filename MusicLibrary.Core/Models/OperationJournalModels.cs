@@ -18,6 +18,16 @@ public enum OperationJournalState
     Unknown,
 }
 
+public sealed record ReviewedChangeTransactionSummary(
+    Guid Id,
+    string CoordinatorManifestPath,
+    IReadOnlyList<string> ParticipantJournalPaths,
+    int AppliedParticipantCount)
+{
+    public int ParticipantCount =>
+        ParticipantJournalPaths.Count;
+}
+
 /// <summary>A lightweight, read-only description of one discovered mutation/quarantine run.</summary>
 public sealed record OperationJournalSummary(
     string ToolName,
@@ -26,7 +36,9 @@ public sealed record OperationJournalSummary(
     string RunPath,
     string? JournalPath,
     DateTimeOffset CreatedAtUtc,
-    int? AffectedItemCount);
+    int? AffectedItemCount,
+    ReviewedChangeTransactionSummary?
+        ReviewedChangeTransaction = null);
 
 public sealed record OperationJournalDiscoveryResult(
     IReadOnlyList<OperationJournalSummary> Runs,

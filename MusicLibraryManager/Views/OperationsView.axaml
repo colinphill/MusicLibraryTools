@@ -68,7 +68,21 @@
               <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding SearchRoot, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Operations.Recovery.SearchRoot}" AutomationProperties.Name="{DynamicResource Loc.Operations.Recovery.SearchRootAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseRootCommand}" /><Button Grid.Column="2" Classes="app" Content="{DynamicResource Loc.Common.Scan}" Command="{Binding RefreshCommand}" /></Grid>
               <Grid Grid.Row="1">
                 <ListBox ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
-                  <ListBox.ItemTemplate><DataTemplate><Border Classes="card" Padding="11" Margin="0,0,0,6"><StackPanel Spacing="3"><TextBlock Text="{Binding ToolName}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding State}" /><TextBlock Classes="faint" Text="{Binding Created}" /></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="card" Padding="11" Margin="0,0,0,6">
+                        <StackPanel Spacing="3">
+                          <TextBlock Text="{Binding ToolName}" FontWeight="SemiBold" />
+                          <TextBlock Classes="muted" Text="{Binding State}" />
+                          <TextBlock Classes="muted"
+                                     Text="{Binding ReviewedTransactionDetail}"
+                                     IsVisible="{Binding HasReviewedTransaction}" />
+                          <TextBlock Classes="faint" Text="{Binding AffectedItems}" />
+                          <TextBlock Classes="faint" Text="{Binding Created}" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
                 </ListBox>
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
                             IsVisible="{Binding IsRunListEmpty}" MaxWidth="300">

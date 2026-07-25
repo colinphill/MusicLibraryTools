@@ -688,6 +688,106 @@ public sealed class TranscodeFoundationTests
     }
 
     [Fact]
+    public async Task AutomaticSchedulerCompletesMultiFileBatchFasterThanSingleWorker()
+    {
+        var scheduler = new TranscodeWorkScheduler(
+            new MemorySettings(),
+            processorCount: 4,
+            perVolumeLimit: 4);
+        TranscodeWorkItem<int>[] items =
+        [
+            .. Enumerable.Range(0, 8).Select(index =>
+                new TranscodeWorkItem<int>(
+                    index,
+                    index,
+                    $"volume-{index}",
+                    AudioEncoderThreadingMode
+                        .SingleThreaded)),
+        ];
+
+        scheduler.SaveSettings(new(
+            Automatic: false,
+            MaximumProcesses: 1));
+        TimeSpan serial =
+            await MeasureSchedulerAsync(
+                scheduler,
+                items);
+        scheduler.SaveSettings(new(
+            Automatic: true,
+            MaximumProcesses: 4));
+        TimeSpan parallel =
+            await MeasureSchedulerAsync(
+                scheduler,
+                items);
+
+        Assert.True(
+            parallel < serial * 0.75,
+            $"Automatic scheduling took {parallel}; " +
+            $"single-worker mode took {serial}.");
+    }
+
+    [Fact]
+    public async Task HighContentionVolumeGatesRemainBoundedWhileBothVolumesProgress()
+    {
+        var scheduler = new TranscodeWorkScheduler(
+            new MemorySettings(),
+            processorCount: 8,
+            perVolumeLimit: 1);
+        int[] activeByVolume = [0, 0];
+        int[] maximumByVolume = [0, 0];
+        int globalActive = 0;
+        int maximumGlobal = 0;
+        TranscodeWorkItem<int>[] items =
+        [
+            .. Enumerable.Range(0, 32).Select(index =>
+                new TranscodeWorkItem<int>(
+                    index,
+                    index,
+                    index % 2 == 0
+                        ? "volume-a"
+                        : "volume-b",
+                    AudioEncoderThreadingMode
+                        .SingleThreaded)),
+        ];
+
+        IReadOnlyList<TranscodeWorkResult<int>> results =
+            await scheduler.RunAsync(
+                items,
+                async (value, _, ct) =>
+                {
+                    int volume = value % 2;
+                    int currentVolume =
+                        Interlocked.Increment(
+                            ref activeByVolume[
+                                volume]);
+                    UpdateMaximum(
+                        ref maximumByVolume[volume],
+                        currentVolume);
+                    int currentGlobal =
+                        Interlocked.Increment(
+                            ref globalActive);
+                    UpdateMaximum(
+                        ref maximumGlobal,
+                        currentGlobal);
+                    await Task.Delay(10, ct);
+                    Interlocked.Decrement(
+                        ref globalActive);
+                    Interlocked.Decrement(
+                        ref activeByVolume[volume]);
+                },
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        Assert.Equal(1, maximumByVolume[0]);
+        Assert.Equal(1, maximumByVolume[1]);
+        Assert.Equal(2, maximumGlobal);
+        Assert.All(
+            results,
+            result => Assert.True(
+                result.Succeeded));
+    }
+
+    [Fact]
     public async Task ControllableEncoderThreadAllocationsStayWithinCpuBudget()
     {
         var scheduler = new TranscodeWorkScheduler(
@@ -970,6 +1070,21 @@ public sealed class TranscodeFoundationTests
                     current) == current)
                 return;
         }
+    }
+
+    private static async Task<TimeSpan>
+        MeasureSchedulerAsync(
+        ITranscodeWorkScheduler scheduler,
+        IReadOnlyList<TranscodeWorkItem<int>> items)
+    {
+        var elapsed = Stopwatch.StartNew();
+        await scheduler.RunAsync(
+            items,
+            (_, _, ct) =>
+                Task.Delay(50, ct),
+            ct: TestContext.Current
+                .CancellationToken);
+        return elapsed.Elapsed;
     }
 
     private static AudioTranscodeCapabilitySnapshot SnapshotWithTools(

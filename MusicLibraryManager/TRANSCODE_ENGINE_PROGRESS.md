@@ -39,8 +39,11 @@ Last updated: 2026-07-25
   per-volume I/O gates. Tests cover concurrent single-threaded work, manual
   budgets, aggregate FFmpeg thread limits, per-volume gates, deterministic
   ordering, and queued/active cancellation.
-- [In Progress] SCH-02: Scheduler unit tests are present; utilization benchmark
-  and per-volume bridge/hash stress coverage remain.
+- [Complete] SCH-02: Scheduler coverage includes a conservative multi-file
+  throughput benchmark showing Automatic mode materially outperforms a forced
+  single worker, plus a 32-item high-contention test proving per-volume
+  bridge/hash gates stay bounded while independent volumes continue in
+  parallel.
 - [Complete] UI-SET-01: The drawer exposes Automatic/manual machine-local
   concurrency and live tool readiness without storing it in presets.
 
@@ -144,17 +147,21 @@ Last updated: 2026-07-25
   membership in the compatible v2 history record, and never initiate a scan.
   Post-commit cache failures surface as warnings without misreporting the
   already-committed filesystem transaction.
-- [In Progress] OPS-01: MusicLibraryManager journals now appear as localized
+- [Complete] OPS-01: MusicLibraryManager journals now appear as localized
   Reviewed changes in Operations. Hash-verified created outputs are visible
   and selectable for recovery removal alongside retained originals and
-  compact-payload storage/savings. Coordinator-level grouping and state detail
-  remain.
+  compact-payload storage/savings. V2 coordinator manifests now group
+  participant journals into one transaction row with localized participant,
+  applied, state, and aggregate affected-item detail. Opening the row browses
+  every participant journal, restore preview remains one atomic action set,
+  unavailable journals surface warnings, and retention safely expands the
+  transaction back into all participant run directories.
 
 ## Localization and accessibility
 
 - [In Progress] LOC-01: Neutral and all nine beta satellite catalogs contain the
   drawer, preset, destination, rate, concurrency, pending, and status strings.
-  The deterministic generator validates 3,506 resources per locale, including
+  The deterministic generator validates 3,508 resources per locale, including
   placeholders, protected codec/tool tokens, and CJK residual text. Preview
   issues use localized summaries while retaining raw tool/parser messages as
   diagnostic detail. Planning, preparation, elapsed time, active-file count,
@@ -175,11 +182,13 @@ Last updated: 2026-07-25
   journal suites pass: 34 tests. Managed-process coverage additionally checks
   capped diagnostics, shell-free argument passing, and prompt cancellation.
 - Localization catalog/source/XAML validation passes: 37 tests.
-- Localization generator validation passes for 3,506 keys in all 9 satellites.
+- Localization generator validation passes for 3,508 keys in all 9 satellites.
 - Source layout, aggregate progress, transformed reference, native correction
   reconstruction, platform parser variants, specialist fallback, and
   advertised source-family validation pass the targeted transcode foundation
-  suite: 46 tests.
+  suite: 48 tests. Scheduler validation includes a conservative multi-file
+  performance comparison and high-contention per-volume I/O gating across two
+  independently progressing volumes.
 - Targeted Transcode editor/Workbench pending tests pass: 9 tests, including
   Apply-ready and Back behavior after a partially failed stage.
 - Targeted transcode/catalog/iTunes integration suites pass: 30 tests.
@@ -188,27 +197,43 @@ Last updated: 2026-07-25
   output Undo as one unit.
 - Coordinator/history crash-boundary and durable-spool suite passes: 11 tests,
   including unavailable participant-volume retention.
+- Operations coordinator discovery, grouped browsing/restore preview,
+  retention expansion, localized projection, and coordinator terminal-state
+  coverage pass: 33 focused Core cases plus 40 localization/source-validation
+  cases.
 - Opt-in real-tool integration passes: every advertised local FFmpeg pair and
   all three OptimFROG modes encode readable output; Float `.ofr` additionally
-  decodes through the specialist fallback into FLAC.
+  decodes through the specialist fallback into FLAC. An opt-in configured
+  WavPack test now covers lossless output, hybrid correction output, and native
+  correction reconstruction; no WavPack executable was available on this
+  validation machine, so that external-tool path remains target-machine
+  validation.
 - Headless Workbench matrix validation passes for the required viewports,
   light/dark themes, normal/18 px type, 40%-expanded pseudo-locale, German,
   Japanese, Korean, and Simplified/Traditional Chinese. Three dedicated
   transcode-drawer frames were retained under
   `.artifacts/transcode-ui-20260725`.
-- Full portable Release tests pass: Core 1,055; MusicLibraryManager 226;
+- Self-contained `win-x64`, `linux-x64`, and `osx-x64` publishes pass from the
+  Windows validation host. Each output contains its application host, matching
+  native Skia runtime, all nine satellite assemblies, pinned AvaloniaUI and
+  SkiaSharp licenses/notices, and the embedded four-ABI Syncer server payload;
+  no ImageSharp artifact is present. Native installer/package creation still
+  requires validation on each target operating system.
+- Full portable Release tests pass: Core 1,063; MusicLibraryManager 226;
   MusicLibraryManager UI 82; MusicFileUtilities 506; DumpITL 78.
 - The MusicLibraryManager Release project builds with 0 warnings and 0 errors.
 - `git diff --check` passes; Git reports only existing line-ending
   normalization notices.
 - No database/index schema, scan configuration, or rescan behavior has changed.
-- Work is intentionally uncommitted at this checkpoint.
+- The primary engine checkpoint is commit `c069eec`; the Operations,
+  scheduler, real-tool test, and cross-runtime publish-validation follow-up is
+  ready for its next reviewable commit.
 
 ## Resume next
 
-1. Add Operations coordinator-level grouping and state detail for v2 reviewed
-   transactions.
-2. Expand the transformed-PCM/output verification matrix across writable
+1. Expand the transformed-PCM/output verification matrix across writable
    fixture families and specialist correction modes.
-3. Add the scheduler utilization benchmark and high-contention per-volume
-   bridge/hash stress coverage.
+2. Run target-native installer/package verification and the opt-in WavPack
+   real-tool integration on a machine with WavPack installed.
+3. Complete destination/collision edge cases and the remaining end-to-end
+   Workbench menu interaction coverage.

@@ -2039,7 +2039,12 @@ public sealed class OperationRunViewModel : ViewModelBase
     private readonly ILocalizationService? _localization;
 
     public OperationJournalSummary Summary { get; }
-    public string ToolName => Summary.ToolName;
+    public string ToolName =>
+        Summary.Kind ==
+        OperationJournalKind.ReviewedChange
+            ? Get(
+                "Operations.Choice.OperationJournalKind.ReviewedChange")
+            : Summary.ToolName;
     public string Kind => Get(
         Summary.Kind switch
         {
@@ -2085,6 +2090,16 @@ public sealed class OperationRunViewModel : ViewModelBase
                 count)
             : Get(
                 "Operations.Run.AffectedItemsDeferred");
+    public bool HasReviewedTransaction =>
+        Summary.ReviewedChangeTransaction is not null;
+    public string ReviewedTransactionDetail =>
+        Summary.ReviewedChangeTransaction is
+            { } transaction
+            ? FormatCount(
+                "Operations.Run.ReviewedTransaction",
+                transaction.ParticipantCount,
+                transaction.AppliedParticipantCount)
+            : "";
 
     public OperationRunViewModel(
         OperationJournalSummary summary,
@@ -2096,11 +2111,14 @@ public sealed class OperationRunViewModel : ViewModelBase
 
     public void RefreshLocalizedText()
     {
+        OnPropertyChanged(nameof(ToolName));
         OnPropertyChanged(nameof(Kind));
         OnPropertyChanged(nameof(State));
         OnPropertyChanged(nameof(Created));
         OnPropertyChanged(nameof(Journal));
         OnPropertyChanged(nameof(AffectedItems));
+        OnPropertyChanged(
+            nameof(ReviewedTransactionDetail));
     }
 
     private string Get(string key) =>

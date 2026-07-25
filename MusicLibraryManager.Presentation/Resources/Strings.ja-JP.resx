@@ -6236,4 +6236,6 @@
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>一部のメタデータは出力形式で表現できません。</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>一部のアートワークは出力形式で表現できません。</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>削除</value></data>
+  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} 個のボリューム · {1:N0} 個コミット済み</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} 個のボリューム · {1:N0} 個コミット済み</value></data>
 </root>

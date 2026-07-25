@@ -224,6 +224,116 @@ public sealed class TranscodeRealToolIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task ConfiguredWavPackEncodesLosslessAndHybridCorrectionOutputs()
+    {
+        string? wavpack =
+            Environment.GetEnvironmentVariable(
+                "MUSICLIBRARY_WAVPACK");
+        string? ffmpeg =
+            Environment.GetEnvironmentVariable(
+                "MUSICLIBRARY_FFMPEG");
+        if (string.IsNullOrWhiteSpace(wavpack) ||
+            string.IsNullOrWhiteSpace(ffmpeg) ||
+            !File.Exists(wavpack) ||
+            !File.Exists(ffmpeg))
+            return;
+        string wvunpack =
+            TranscodeCorrectionVerificationService
+                .ResolveSiblingTool(
+                    wavpack,
+                    "wvunpack");
+        if (!File.Exists(wvunpack))
+            return;
+        using var temp = new TempDirectory();
+        AppSettings settings = CreateSettings(
+            temp,
+            ffmpeg,
+            wavpack);
+        var processes = new ManagedProcessRunner();
+        var adapter = new AudioTranscodeAdapter(
+            settings,
+            processes);
+        var correction =
+            new TranscodeCorrectionVerificationService(
+                settings,
+                processes);
+        var encoder = new AudioEncoderDescriptor(
+            AudioTranscodeEncoderIds.WavPackCli,
+            AudioTranscodeToolKind.WavPack,
+            "wavpack",
+            AudioEncoderThreadingMode.SingleThreaded,
+            [
+                new(
+                    AudioTranscodeRateMode.Lossless),
+                new(
+                    AudioTranscodeRateMode
+                        .HybridBitrate,
+                    200,
+                    960),
+            ],
+            [],
+            [8, 16, 24, 32],
+            SupportsCorrectionFile: true);
+        string source =
+            MediaFixtures.Path_("sample.flac");
+        string lossless =
+            Path.Combine(temp.Path, "lossless.wv");
+        await adapter.EncodeAsync(
+            source,
+            lossless,
+            new(
+                AudioTranscodeFormatIds.WavPack,
+                encoder.Id,
+                AudioTranscodeRateMode.Lossless),
+            encoder,
+            threadCount: 0,
+            ct: TestContext.Current
+                .CancellationToken);
+        Assert.True(
+            new FileInfo(lossless).Length > 0);
+
+        string hybrid =
+            Path.Combine(temp.Path, "hybrid.wv");
+        await adapter.EncodeAsync(
+            source,
+            hybrid,
+            new(
+                AudioTranscodeFormatIds.WavPack,
+                encoder.Id,
+                AudioTranscodeRateMode
+                    .HybridBitrate,
+                BitrateKbps: 320,
+                CreateCorrectionFile: true),
+            encoder,
+            threadCount: 0,
+            ct: TestContext.Current
+                .CancellationToken);
+        string correctionPath =
+            Path.ChangeExtension(hybrid, ".wvc");
+        Assert.True(
+            new FileInfo(hybrid).Length > 0);
+        Assert.True(
+            new FileInfo(correctionPath).Length > 0);
+
+        string reconstructed =
+            await correction.ReconstructAsync(
+                hybrid,
+                AudioTranscodeToolKind.WavPack,
+                TestContext.Current
+                    .CancellationToken);
+        try
+        {
+            Assert.True(
+                new FileInfo(reconstructed)
+                    .Length > 0);
+        }
+        finally
+        {
+            File.Delete(reconstructed);
+        }
+    }
+
     private static AudioTranscodeSettings SettingsFor(
         AudioTranscodeFormatDescriptor format,
         AudioEncoderDescriptor encoder)
@@ -263,7 +373,9 @@ public sealed class TranscodeRealToolIntegrationTests
 
     private static AppSettings CreateSettings(
         TempDirectory temp,
-        string ffmpeg)
+        string ffmpeg,
+        string wavpack =
+            "__missing_wavpack_for_transcode_test__")
     {
         string configPath = Path.Combine(
             temp.Path,
@@ -271,8 +383,7 @@ public sealed class TranscodeRealToolIntegrationTests
         new EditableLibraryConfig
         {
             FfmpegPath = ffmpeg,
-            WavpackPath =
-                "__missing_wavpack_for_transcode_test__",
+            WavpackPath = wavpack,
         }.Save(configPath);
         var settings = new AppSettings(
             Path.Combine(

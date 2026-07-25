@@ -51,6 +51,154 @@ public sealed class OperationJournalServiceTests
             run.State == OperationJournalState.Unknown);
     }
 
+    [Fact]
+    public async Task DiscoveryGroupsReviewedChangeParticipantsAndBrowsesThemAsOneTransaction()
+    {
+        using var temp = new TempDirectory();
+        string firstRoot = temp.Directory("first");
+        string secondRoot = temp.Directory("second");
+        string firstRun = temp.Directory(
+            "first.MusicLibraryManager-recovery",
+            "20260101-000000000");
+        string secondRun = temp.Directory(
+            "second.MusicLibraryManager-recovery",
+            "20260101-000000000");
+        string firstOutput =
+            Path.Combine(firstRoot, "one.flac");
+        string secondOutput =
+            Path.Combine(secondRoot, "two.flac");
+        File.WriteAllText(firstOutput, "one");
+        File.WriteAllText(secondOutput, "two");
+        string firstJournal =
+            WriteCreatedJournal(
+                firstRun,
+                firstOutput);
+        string secondJournal =
+            WriteCreatedJournal(
+                secondRun,
+                secondOutput);
+        Guid id = Guid.NewGuid();
+        DateTimeOffset created =
+            DateTimeOffset.UtcNow.AddDays(-100);
+        string manifest = Path.Combine(
+            firstRun,
+            $"reviewed-change-v2-{id:N}.tsv");
+        File.WriteAllLines(
+            manifest,
+            [
+                $"BEGIN\t2\t{id:N}\t" +
+                created.UtcDateTime.Ticks,
+                $"PARTICIPANT\t0\t{firstJournal}",
+                $"PARTICIPANT\t1\t{secondJournal}",
+                $"APPLIED\t0\t{firstJournal}",
+                $"APPLIED\t1\t{secondJournal}",
+                $"COMMIT\t{id:N}",
+            ]);
+        var service =
+            new OperationJournalService();
+
+        OperationJournalDiscoveryResult discovery =
+            await service.DiscoverAsync(
+                [firstRoot, secondRoot]);
+
+        OperationJournalSummary summary =
+            Assert.Single(discovery.Runs);
+        Assert.Equal(
+            OperationJournalKind.ReviewedChange,
+            summary.Kind);
+        Assert.Equal(
+            OperationJournalState.Completed,
+            summary.State);
+        Assert.Equal(manifest, summary.JournalPath);
+        Assert.Equal(2, summary.AffectedItemCount);
+        ReviewedChangeTransactionSummary transaction =
+            Assert.IsType<
+                ReviewedChangeTransactionSummary>(
+                summary.ReviewedChangeTransaction);
+        Assert.Equal(id, transaction.Id);
+        Assert.Equal(2, transaction.ParticipantCount);
+        Assert.Equal(2, transaction.AppliedParticipantCount);
+
+        OperationBrowseResult browse =
+            await service.BrowseAsync(summary);
+        Assert.Equal(2, browse.Entries.Count);
+        Assert.All(
+            browse.Entries,
+            entry => Assert.Equal(
+                OperationEntryKind.Created,
+                entry.Kind));
+        OperationRestorePlan restore =
+            await service.PreviewRestoreAsync(
+                summary,
+                browse.Entries);
+        Assert.Equal(2, restore.Actions.Count);
+
+        OperationPurgePlan purge =
+            await service.PreviewPurgeAsync(
+                [summary],
+                30,
+                DateTimeOffset.UtcNow);
+        Assert.Equal(2, purge.Runs.Count);
+        Assert.Contains(
+            purge.Runs,
+            run => run.Run.RunPath == firstRun);
+        Assert.Contains(
+            purge.Runs,
+            run => run.Run.RunPath == secondRun);
+    }
+
+    [Theory]
+    [InlineData(
+        "ROLLED_BACK",
+        OperationJournalState.RolledBack)]
+    [InlineData(
+        "ROLLBACK_FAILED",
+        OperationJournalState.Interrupted)]
+    [InlineData(
+        null,
+        OperationJournalState.Interrupted)]
+    public async Task ReviewedCoordinatorTerminalControlsGroupedState(
+        string? terminal,
+        OperationJournalState expected)
+    {
+        using var temp = new TempDirectory();
+        string root = temp.Directory("library");
+        string run = temp.Directory(
+            "library.MusicLibraryManager-recovery",
+            "20260101-000000000");
+        string output =
+            Path.Combine(root, "track.flac");
+        File.WriteAllText(output, "audio");
+        string journal =
+            WriteCreatedJournal(run, output);
+        Guid id = Guid.NewGuid();
+        var lines = new List<string>
+        {
+            $"BEGIN\t2\t{id:N}\t" +
+            DateTime.UtcNow.Ticks,
+            $"PARTICIPANT\t0\t{journal}",
+            $"APPLIED\t0\t{journal}",
+        };
+        if (terminal is not null)
+            lines.Add(
+                $"{terminal}\t{id:N}");
+        File.WriteAllLines(
+            Path.Combine(
+                run,
+                $"reviewed-change-v2-{id:N}.tsv"),
+            lines);
+
+        OperationJournalSummary summary =
+            Assert.Single(
+                (await new OperationJournalService()
+                    .DiscoverAsync([root]))
+                .Runs);
+
+        Assert.Equal(expected, summary.State);
+        Assert.NotNull(
+            summary.ReviewedChangeTransaction);
+    }
+
     [Theory]
     [InlineData("COMMIT", OperationJournalState.Completed)]
     [InlineData("ROLLED_BACK", OperationJournalState.RolledBack)]
@@ -442,6 +590,30 @@ public sealed class OperationJournalServiceTests
         string destination,
         OperationEntryKind kind) =>
         new(destination, source, Path.GetFileName(destination), kind, true, false);
+
+    private static string WriteCreatedJournal(
+        string run,
+        string output)
+    {
+        var info = new FileInfo(output);
+        string hash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256
+                .HashData(
+                    File.ReadAllBytes(output)));
+        string journal =
+            Path.Combine(run, "journal.tsv");
+        File.WriteAllLines(
+            journal,
+            [
+                "BEGIN\ttranscode",
+                $"CREATE_REVERSIBLE\t1\t{output}\t" +
+                $"{info.Length}\t{hash}\t" +
+                $"{info.LastWriteTimeUtc.Ticks}\t" +
+                $"{(int)info.Attributes}",
+                "COMMIT\ttranscode",
+            ]);
+        return journal;
+    }
 
     private sealed class TempDirectory : IDisposable
     {

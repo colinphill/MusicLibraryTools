@@ -210,6 +210,68 @@ public sealed class OperationsViewModelTests
     }
 
     [Fact]
+    public async Task RefreshProjectsReviewedCoordinatorAsOneLocalizedBatch()
+    {
+        using var temp = new TempDirectory();
+        var settings = new AppSettings(
+            Path.Combine(
+                temp.Path,
+                "settings.json"));
+        string runPath =
+            Path.Combine(temp.Path, "run");
+        var transaction =
+            new ReviewedChangeTransactionSummary(
+                Guid.NewGuid(),
+                Path.Combine(
+                    runPath,
+                    "reviewed-change-v2.tsv"),
+                [
+                    Path.Combine(
+                        runPath,
+                        "first.tsv"),
+                    Path.Combine(
+                        runPath,
+                        "second.tsv"),
+                ],
+                1);
+        var summary = new OperationJournalSummary(
+            "MusicLibraryManager",
+            OperationJournalKind.ReviewedChange,
+            OperationJournalState.Interrupted,
+            runPath,
+            transaction.CoordinatorManifestPath,
+            DateTimeOffset.UtcNow,
+            4,
+            transaction);
+        var viewModel = new OperationsViewModel(
+            new RecordingJournals(
+                new([summary], [])),
+            new StubFiles(),
+            new StubDialogs(),
+            settings)
+        {
+            SearchRoot = temp.Path,
+        };
+
+        await viewModel.RefreshCommand
+            .ExecuteAsync(null);
+
+        OperationRunViewModel run =
+            Assert.Single(viewModel.Runs);
+        Assert.True(run.HasReviewedTransaction);
+        Assert.NotEqual(
+            "MusicLibraryManager",
+            run.ToolName);
+        Assert.Contains(
+            "2",
+            run.ReviewedTransactionDetail);
+        Assert.Contains(
+            "1",
+            run.ReviewedTransactionDetail);
+        Assert.Contains("4", run.AffectedItems);
+    }
+
+    [Fact]
     public async Task RefreshReportsWarningsWithoutDroppingDiscoveredRuns()
     {
         using var temp = new TempDirectory();

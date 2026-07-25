@@ -6236,4 +6236,6 @@
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>Certaines métadonnées ne peuvent pas être représentées dans le format de sortie.</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>Certaines illustrations ne peuvent pas être représentées dans le format de sortie.</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>Supprimer</value></data>
+  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} volume · {1:N0} validé</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} volumes · {1:N0} validés</value></data>
 </root>

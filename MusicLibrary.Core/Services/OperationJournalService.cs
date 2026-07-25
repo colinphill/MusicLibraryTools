@@ -1031,7 +1031,16 @@ public sealed class OperationJournalService : IOperationJournalService
         var purgeRuns = new List<OperationPurgeRun>();
         string previewId = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff") + "-" + Guid.NewGuid().ToString("N");
 
-        foreach (var run in runs.DistinctBy(run => Path.GetFullPath(run.RunPath), PathComparer))
+        OperationJournalSummary[] expandedRuns =
+        [
+            .. runs.SelectMany(
+                ExpandReviewedChangeParticipants),
+        ];
+        foreach (var run in expandedRuns
+                     .DistinctBy(
+                         run => Path.GetFullPath(
+                             run.RunPath),
+                         PathComparer))
         {
             ct.ThrowIfCancellationRequested();
             if (run.State == OperationJournalState.Interrupted)
@@ -1056,6 +1065,47 @@ public sealed class OperationJournalService : IOperationJournalService
             purgeRuns.Add(new(run, staging, CapturePurgeManifest(fullRun, ct)));
         }
         return new(retentionDays, cutoff, purgeRuns, interrupted, unsafeRuns, newer);
+    }
+
+    private static IEnumerable<OperationJournalSummary>
+        ExpandReviewedChangeParticipants(
+        OperationJournalSummary run)
+    {
+        if (run.ReviewedChangeTransaction is not
+            { } transaction)
+        {
+            yield return run;
+            yield break;
+        }
+
+        foreach (string journal in
+                 transaction.ParticipantJournalPaths)
+        {
+            string runPath =
+                Path.GetDirectoryName(journal)!;
+            int? affected = null;
+            if (File.Exists(journal))
+            {
+                try
+                {
+                    affected =
+                        ParseMutationJournal(
+                            File.ReadAllLines(journal))
+                        .Count;
+                }
+                catch
+                {
+                }
+            }
+            yield return new(
+                run.ToolName,
+                run.Kind,
+                run.State,
+                runPath,
+                journal,
+                run.CreatedAtUtc,
+                affected);
+        }
     }
 
     private static IReadOnlyList<OperationPurgeManifestEntry> CapturePurgeManifest(
@@ -1373,26 +1423,76 @@ public sealed class OperationJournalService : IOperationJournalService
         var warnings = new List<string>();
         var entries = new Dictionary<string, OperationFileEntry>(PathComparer);
 
-        if (run.JournalPath is not null && File.Exists(run.JournalPath))
+        string[] journalPaths =
+            run.ReviewedChangeTransaction is { } transaction
+                ?
+                [
+                    .. transaction.ParticipantJournalPaths,
+                ]
+                : run.JournalPath is null
+                    ? []
+                    : [run.JournalPath];
+        foreach (string journalPath in journalPaths)
         {
+            ct.ThrowIfCancellationRequested();
+            if (!File.Exists(journalPath))
+            {
+                warnings.Add(
+                    $"Participant journal is unavailable: " +
+                    $"{journalPath}");
+                continue;
+            }
             try
             {
-                string[] lines = File.ReadAllLines(run.JournalPath);
+                string[] lines = File.ReadAllLines(journalPath);
                 if (run.ToolName == "UpdateCarCard")
                     ReadDeviceEntries(lines, originalRoot, entries, warnings, ct);
                 else
-                    ReadMutationEntries(lines, originalRoot, entries, ct);
+                {
+                    string journalRun =
+                        Path.GetDirectoryName(journalPath)!;
+                    string journalContainer =
+                        ContainerForRun(journalRun);
+                    Match journalMatch =
+                        ContainerName.Match(
+                            Path.GetFileName(
+                                journalContainer));
+                    string journalOriginalRoot =
+                        journalMatch.Success
+                            ? Path.Combine(
+                                Path.GetDirectoryName(
+                                    journalContainer) ??
+                                "",
+                                journalMatch.Groups[
+                                    "base"].Value)
+                            : originalRoot;
+                    ReadMutationEntries(
+                        lines,
+                        journalOriginalRoot,
+                        entries,
+                        ct);
+                }
             }
             catch (Exception ex)
             {
-                warnings.Add($"Could not read journal '{run.JournalPath}': {ex.Message}");
+                warnings.Add(
+                    $"Could not read journal " +
+                    $"'{journalPath}': {ex.Message}");
             }
         }
 
         // Quarantine tools preserve relative paths physically. Walk only after this run is opened;
         // journal-only organize/device operations avoid an unrelated recursive scan.
-        if (run.JournalPath is null || run.ToolName is "IngestMusic" or "SortDownloads" or
-            "CrossSyncMusic" or "AndroidSync" or "UpdateSmartStorage")
+        bool scansPhysicalQuarantine =
+            run.ReviewedChangeTransaction is null &&
+            (run.JournalPath is null ||
+             run.ToolName is
+                 "IngestMusic" or
+                 "SortDownloads" or
+                 "CrossSyncMusic" or
+                 "AndroidSync" or
+                 "UpdateSmartStorage");
+        if (scansPhysicalQuarantine)
             ReadPhysicalEntries(run.RunPath, originalRoot, entries, warnings, ct);
 
         return new OperationBrowseResult(
@@ -1747,11 +1847,166 @@ public sealed class OperationJournalService : IOperationJournalService
             }
         }
 
+        IReadOnlyList<OperationJournalSummary> grouped =
+            GroupReviewedChangeTransactions(
+                runs,
+                warnings,
+                ct);
         return new OperationJournalDiscoveryResult(
-            runs.OrderByDescending(run => run.CreatedAtUtc)
+            grouped.OrderByDescending(run => run.CreatedAtUtc)
                 .ThenBy(run => run.RunPath, PathComparer)
                 .ToList(),
             warnings.Distinct(StringComparer.Ordinal).ToList());
+    }
+
+    private static IReadOnlyList<OperationJournalSummary>
+        GroupReviewedChangeTransactions(
+        IReadOnlyList<OperationJournalSummary> runs,
+        ICollection<string> warnings,
+        CancellationToken ct)
+    {
+        var manifests = new HashSet<string>(
+            PathComparer);
+        foreach (string runPath in runs
+                     .Where(run =>
+                         run.Kind ==
+                         OperationJournalKind.ReviewedChange)
+                     .Select(run => run.RunPath)
+                     .Distinct(PathComparer))
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                foreach (string manifest in
+                         Directory.EnumerateFiles(
+                             runPath,
+                             "reviewed-change-v2-*.tsv",
+                             SearchOption.TopDirectoryOnly))
+                    manifests.Add(
+                        Path.GetFullPath(manifest));
+            }
+            catch (Exception error)
+            {
+                warnings.Add(
+                    $"Could not inspect reviewed-change " +
+                    $"coordinators in '{runPath}': " +
+                    error.Message);
+            }
+        }
+        if (manifests.Count == 0)
+            return runs;
+
+        var grouped =
+            new List<OperationJournalSummary>(runs);
+        foreach (string manifest in manifests
+                     .OrderBy(path => path, PathComparer))
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                string[] lines =
+                    File.ReadAllLines(manifest);
+                string[][] fields =
+                [
+                    .. lines.Select(line =>
+                        line.Split('\t')),
+                ];
+                string[] begin = fields.FirstOrDefault(
+                    value =>
+                        value.Length > 3 &&
+                        value[0] == "BEGIN" &&
+                        value[1] == "2") ??
+                    throw new InvalidDataException(
+                        "The coordinator BEGIN record is missing.");
+                if (!Guid.TryParseExact(
+                        begin[2],
+                        "N",
+                        out Guid id) ||
+                    !long.TryParse(
+                        begin[3],
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out long createdTicks))
+                {
+                    throw new InvalidDataException(
+                        "The coordinator identity is invalid.");
+                }
+                string[] participantJournals =
+                [
+                    .. fields
+                        .Where(value =>
+                            value.Length > 2 &&
+                            value[0] == "PARTICIPANT")
+                        .OrderBy(value =>
+                            int.Parse(
+                                value[1],
+                                CultureInfo.InvariantCulture))
+                        .Select(value =>
+                            Path.GetFullPath(value[2]))
+                        .Distinct(PathComparer),
+                ];
+                if (participantJournals.Length == 0)
+                    throw new InvalidDataException(
+                        "The coordinator has no participants.");
+                int applied = fields
+                    .Where(value =>
+                        value.Length > 1 &&
+                        value[0] == "APPLIED")
+                    .Select(value => value[1])
+                    .Distinct(StringComparer.Ordinal)
+                    .Count();
+                OperationJournalState state =
+                    fields.Any(value =>
+                        value.Length > 0 &&
+                        value[0] == "COMMIT")
+                        ? OperationJournalState.Completed
+                        : fields.Any(value =>
+                            value.Length > 0 &&
+                            value[0] == "ROLLED_BACK")
+                            ? OperationJournalState.RolledBack
+                            : OperationJournalState.Interrupted;
+                int affected = participantJournals
+                    .Where(File.Exists)
+                    .Sum(path =>
+                        ParseMutationJournal(
+                            File.ReadAllLines(path))
+                        .Count);
+                var transaction =
+                    new ReviewedChangeTransactionSummary(
+                        id,
+                        manifest,
+                        participantJournals,
+                        applied);
+                HashSet<string> participants =
+                    participantJournals.ToHashSet(
+                        PathComparer);
+                grouped.RemoveAll(run =>
+                    run.JournalPath is not null &&
+                    participants.Contains(
+                        Path.GetFullPath(
+                            run.JournalPath)));
+                grouped.Add(new(
+                    "MusicLibraryManager",
+                    OperationJournalKind.ReviewedChange,
+                    state,
+                    Path.GetDirectoryName(manifest)!,
+                    manifest,
+                    new DateTimeOffset(
+                        new DateTime(
+                            createdTicks,
+                            DateTimeKind.Utc)),
+                    affected,
+                    transaction));
+            }
+            catch (Exception error)
+            {
+                warnings.Add(
+                    $"Could not read reviewed-change " +
+                    $"coordinator '{manifest}': " +
+                    error.Message);
+            }
+        }
+        return grouped;
     }
 
     private static void AddIfContainer(string path, HashSet<string> containers)
@@ -1833,6 +2088,8 @@ public sealed class OperationJournalService : IOperationJournalService
                 case "QUARANTINE":
                 case "STAGE_DELETE":
                 case "MOVE":
+                case "INSTALL":
+                case "CREATE_REVERSIBLE":
                 case "DELTA_READY":
                 case "COMPACT_REPLACE":
                     if (fields.Length > 2) affected.Add(fields[2]);

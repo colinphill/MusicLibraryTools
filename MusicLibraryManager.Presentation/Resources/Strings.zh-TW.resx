@@ -6236,4 +6236,6 @@
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>部分中繼資料無法由輸出格式表示。</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>部分封面圖片無法由輸出格式表示。</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>刪除</value></data>
+  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} 個磁碟區 · 已提交 {1:N0} 個</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} 個磁碟區 · 已提交 {1:N0} 個</value></data>
 </root>
