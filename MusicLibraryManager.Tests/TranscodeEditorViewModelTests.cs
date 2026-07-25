@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Presentation;
@@ -176,6 +177,83 @@ public sealed class TranscodeEditorViewModelTests
         Assert.Contains(
             editor.EncoderChoices,
             choice => choice.Value == "future:encoder");
+    }
+
+    [Fact]
+    public async Task LiveCultureChangePreservesOpenTranscodeStateAndCapabilityIdentity()
+    {
+        var localization =
+            new SwitchingLocalizationService();
+        var presets = new PresetStore();
+        var preset = new AudioTranscodePreset(
+            Guid.NewGuid(),
+            "Archive",
+            new(
+                AudioTranscodeFormatIds.Flac,
+                AudioTranscodeEncoderIds.Ffmpeg("flac"),
+                AudioTranscodeRateMode.Lossless,
+                SampleRateHz: 48_000,
+                BitsPerSample: 24),
+            true,
+            true,
+            false,
+            "{Name}-{Codec}{Extension}",
+            AudioTranscodeCollisionPolicy.Suffix,
+            DateTimeOffset.UtcNow);
+        presets.Values.Add(preset);
+        var transcodes =
+            new RecordingTranscodeService();
+        var editor = new TranscodeEditorViewModel(
+            transcodes,
+            new CapabilityService(),
+            presets,
+            new Scheduler(),
+            new FilePicker(),
+            new Dialogs(),
+            new RecordingPendingCoordinator(),
+            localization);
+        string first = Path.GetFullPath("one.flac");
+        string second = Path.GetFullPath("two.flac");
+        await editor.OpenAsync(
+            [first, second],
+            TestContext.Current.CancellationToken);
+        editor.SelectedPreset = preset;
+        editor.SelectedFormatId =
+            AudioTranscodeFormatIds.Flac;
+        editor.SelectedEncoderId =
+            AudioTranscodeEncoderIds.Ffmpeg("flac");
+        editor.SelectedRateMode =
+            AudioTranscodeRateMode.Lossless;
+        editor.SelectedSampleRate = 48_000;
+        editor.SelectedBitDepth = 24;
+        string formatLabel =
+            Assert.Single(editor.FormatChoices).Label;
+
+        localization.SetCulture("fr-FR");
+        await editor.PreviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [first, second],
+            transcodes.Request!.SourcePaths);
+        Assert.Same(preset, editor.SelectedPreset);
+        Assert.Equal(
+            AudioTranscodeFormatIds.Flac,
+            editor.SelectedFormatId);
+        Assert.Equal(
+            AudioTranscodeEncoderIds.Ffmpeg("flac"),
+            editor.SelectedEncoderId);
+        Assert.Equal(
+            AudioTranscodeRateMode.Lossless,
+            editor.SelectedRateMode);
+        Assert.Equal(48_000, editor.SelectedSampleRate);
+        Assert.Equal(24, editor.SelectedBitDepth);
+        Assert.NotEqual(
+            formatLabel,
+            Assert.Single(editor.FormatChoices).Label);
+        Assert.StartsWith(
+            "fr-FR:",
+            Assert.Single(editor.FormatChoices).Label,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -615,6 +693,54 @@ public sealed class TranscodeEditorViewModelTests
             string title,
             string message) =>
             Task.CompletedTask;
+    }
+
+    private sealed class SwitchingLocalizationService :
+        ILocalizationService
+    {
+        private CultureInfo _culture =
+            CultureInfo.GetCultureInfo("en-US");
+
+        public CultureInfo CurrentUICulture =>
+            _culture;
+
+        public IReadOnlyList<CultureInfo>
+            SupportedCultures { get; } =
+            [
+                CultureInfo.GetCultureInfo("en-US"),
+                CultureInfo.GetCultureInfo("fr-FR"),
+            ];
+
+        public event EventHandler? CultureChanged;
+
+        public string Get(string key) =>
+            $"{_culture.Name}:{key}";
+
+        public string Format(
+            string key,
+            params object?[] arguments) =>
+            Get(key) + ":" +
+            string.Join("|", arguments);
+
+        public string FormatCount(
+            string key,
+            long count,
+            params object?[] arguments) =>
+            Format(key, [count, .. arguments]);
+
+        public IReadOnlyDictionary<string, string>
+            Snapshot() =>
+            new Dictionary<string, string>();
+
+        public void SetCulture(string cultureName)
+        {
+            _culture =
+                CultureInfo.GetCultureInfo(
+                    cultureName);
+            CultureChanged?.Invoke(
+                this,
+                EventArgs.Empty);
+        }
     }
 
     private sealed class EmptyWorkbenchService :

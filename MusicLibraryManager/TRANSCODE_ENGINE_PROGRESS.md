@@ -86,7 +86,7 @@ Last updated: 2026-07-25
 
 ## Unified pending and media pipeline
 
-- [In Progress] PIPE-01: Immutable per-file preview units, source snapshots and
+- [Complete] PIPE-01: Immutable per-file preview units, source snapshots and
   hashes, staged parallel encoding, metadata/artwork projection, verification,
   decoded-PCM comparison for unmodified lossless conversions, correction
   sidecars, ready/failed results, and stage cleanup exist in the core service.
@@ -138,11 +138,14 @@ Last updated: 2026-07-25
 
 ## Transaction, recovery, catalog, and history
 
-- [In Progress] REC-01: New outputs now receive durable length/SHA-256
+- [Complete] REC-01: New outputs now receive durable length/SHA-256
   reversible-created journal records. Undo prevalidates the output, moves it
   transactionally into the restore root, removes it from the catalog, and
   refuses the whole restore if it changed externally. Restart reconciliation
-  understands created-output removal.
+  understands created-output removal. Transcode replacement with a changed
+  extension is covered end to end: Apply installs the generated output,
+  quarantines the original, mirrors both catalog operations, and Undo removes
+  the unchanged output while restoring the exact original in one history unit.
 - [Complete] REC-02: A dedicated v2 reviewed-change coordinator now writes a
   durable manifest before participants, freezes deterministic participant
   order, commits per-volume journals, rolls earlier participants back when a
@@ -185,14 +188,17 @@ Last updated: 2026-07-25
 
 ## Localization and accessibility
 
-- [In Progress] LOC-01: Neutral and all nine beta satellite catalogs contain the
+- [Complete] LOC-01: Neutral and all nine beta satellite catalogs contain the
   drawer, preset, destination, rate, concurrency, pending, and status strings.
   The deterministic generator validates 3,508 resources per locale, including
   placeholders, protected codec/tool tokens, and CJK residual text. Preview
   issues use localized summaries while retaining raw tool/parser messages as
   diagnostic detail. Planning, preparation, elapsed time, active-file count,
   encoded-time percentage, and reviewed-file progress now use structured
-  localization keys with English fallback text for non-UI hosts.
+  localization keys with English fallback text for non-UI hosts. A live
+  culture-change regression test verifies that an open transcode editor keeps
+  its captured files, selected preset, stable format/encoder/rate identities,
+  sample rate, bit depth, and capability choices while labels refresh.
 - [Complete] A11Y-01: The Transcode surface uses the shared drawer host,
   300-430 px bounds, Escape/scrim dismissal, initial focus, focus restoration,
   keyboard context-menu access, and accessible close naming. These behaviors
@@ -253,9 +259,12 @@ Last updated: 2026-07-25
   Windows validation host. Each output contains its application host, matching
   native Skia runtime, all nine satellite assemblies, pinned AvaloniaUI and
   SkiaSharp licenses/notices, and the embedded four-ABI Syncer server payload;
-  no ImageSharp artifact is present. Native installer/package creation still
-  requires validation on each target operating system.
-- Full portable Release tests pass: Core 1,074; MusicLibraryManager 226;
+  no ImageSharp artifact is present. The Windows-native `win-x64` package path
+  additionally passes with Inno Setup 6.7.3, producing a verified ZIP and
+  installer with SHA-256 sidecars under the isolated
+  `0.0.0-transcode-validation` artifact version. Native Debian and macOS disk
+  image creation still require validation on their target operating systems.
+- Full portable Release tests pass: Core 1,075; MusicLibraryManager 227;
   MusicLibraryManager UI 84; MusicFileUtilities 506; DumpITL 78.
 - The MusicLibraryManager Release project builds with 0 warnings and 0 errors.
 - `git diff --check` passes; Git reports only existing line-ending
@@ -269,6 +278,5 @@ Last updated: 2026-07-25
 
 ## Resume next
 
-1. Run target-native installer/package verification. Cross-runtime publish
-   layouts are already verified; native installer creation still requires each
-   target operating system.
+1. Run Debian package creation on Linux and disk-image creation on macOS.
+   Cross-runtime publish layouts and the Windows-native installer are verified.

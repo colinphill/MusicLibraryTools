@@ -6236,6 +6236,6 @@
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>部分元数据无法由输出格式表示。</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>部分封面图无法由输出格式表示。</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>删除</value></data>
-  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} 个卷 · 已提交 {1:N0} 个</value></data>
-  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} 个卷 · 已提交 {1:N0} 个</value></data>
+  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} 卷 · {1:N0} 已提交</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} 卷 · {1:N0} 已提交</value></data>
 </root>

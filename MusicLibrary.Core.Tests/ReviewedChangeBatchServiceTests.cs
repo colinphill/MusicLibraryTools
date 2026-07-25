@@ -691,6 +691,122 @@ public sealed class ReviewedChangeBatchServiceTests
         Assert.False(File.Exists(output));
     }
 
+    [Fact]
+    public async Task ReviewedTranscodeReplacementQuarantinesAndExactlyRestoresDifferentExtensionSource()
+    {
+        using var temp = new TempDirectory();
+        string library = temp.Directory("library");
+        string source = temp.File(
+            Path.Combine("library", "source.mp3"),
+            "original mp3 bytes");
+        string outputStage = temp.File(
+            "output-stage.flac",
+            "encoded flac bytes");
+        string output = Path.Combine(
+            library,
+            "source.flac");
+        var settings = new MemorySettings();
+        var coordinator = new FileMutationCoordinator();
+        var journals =
+            new OperationJournalService(coordinator);
+        var batch = new ReviewedChangeBatchService(
+            new FileMutationPlanExecutor(coordinator),
+            journals,
+            settings);
+        var reindex = new RecordingReindex(source);
+        var history =
+            new ReviewedChangeHistoryService(
+                settings,
+                journals,
+                reindex);
+        var service = new AudioTranscodeService(
+            settings,
+            new UnusedCapabilityService(),
+            new AudioTranscodeAdapter(
+                settings,
+                new ManagedProcessRunner()),
+            new TranscodeMetadataProjectionService(),
+            new TranscodeWorkScheduler(
+                settings,
+                processorCount: 2),
+            batch,
+            history,
+            new UnusedDecodedVerifier(),
+            reindex: reindex);
+        var request = new AudioTranscodeRequest(
+            [source],
+            new(
+                AudioTranscodeFormatIds.Flac,
+                AudioTranscodeEncoderIds.Automatic,
+                AudioTranscodeRateMode.Lossless),
+            new(
+                AudioTranscodeDestinationMode.ReplaceOriginal,
+                null,
+                true,
+                "{Name}{Extension}",
+                AudioTranscodeCollisionPolicy.Stop));
+        var item = new AudioTranscodePlanItem(
+            Guid.NewGuid(),
+            source,
+            output,
+            Snapshot(source),
+            OperationPathSnapshot.Missing(output),
+            Hash(source),
+            request.Settings,
+            []);
+        var plan = new AudioTranscodePlan(
+            Guid.NewGuid(),
+            request,
+            [item],
+            [],
+            DateTimeOffset.UtcNow,
+            1);
+        var staged = new AudioTranscodeStageResult(
+            plan,
+            [
+                new(
+                    item,
+                    AudioTranscodeStageState.Ready,
+                    outputStage,
+                    Hash(outputStage),
+                    new FileInfo(outputStage).Length),
+            ]);
+
+        AudioTranscodeApplyResult applied =
+            await service.ApplyReviewedBatchAsync(
+                [staged],
+                [],
+                new HashSet<Guid> { item.Id },
+                ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, applied.ChangedFiles);
+        Assert.False(File.Exists(source));
+        Assert.Equal(
+            "encoded flac bytes",
+            File.ReadAllText(output));
+        Assert.Equal([output], reindex.ReindexedPaths);
+        Assert.Equal([source], reindex.RemovedPaths);
+        Assert.Single(history.Entries);
+
+        ReviewedChangeUndoResult undone =
+            await history.UndoLatestAsync(
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        Assert.Equal(2, undone.RestoredFiles);
+        Assert.Equal(
+            "original mp3 bytes",
+            File.ReadAllText(source));
+        Assert.False(File.Exists(output));
+        Assert.Equal(
+            [output, source],
+            reindex.ReindexedPaths);
+        Assert.Equal(
+            [source, output],
+            reindex.RemovedPaths);
+        Assert.True(history.CanRedo);
+    }
+
     private static FileMutationPlan Plan(
         string destinationRoot,
         string recoveryRoot,

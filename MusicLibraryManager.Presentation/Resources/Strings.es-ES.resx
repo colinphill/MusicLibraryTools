@@ -6237,5 +6237,5 @@
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>Algunas ilustraciones no se pueden representar en el formato de salida.</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>Eliminar</value></data>
   <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} volumen · {1:N0} confirmado</value></data>
-  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} volúmenes · {1:N0} confirmados</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} volumen · {1:N0} confirmado</value></data>
 </root>

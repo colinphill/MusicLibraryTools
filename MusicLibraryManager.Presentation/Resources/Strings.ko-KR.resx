@@ -6236,6 +6236,6 @@
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>일부 메타데이터를 출력 형식으로 표현할 수 없습니다.</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>일부 아트워크를 출력 형식으로 표현할 수 없습니다.</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>삭제</value></data>
-  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0}개 볼륨 · {1:N0}개 커밋됨</value></data>
-  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0}개 볼륨 · {1:N0}개 커밋됨</value></data>
+  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} 볼륨 · {1:N0} 커밋됨</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} 볼륨 · {1:N0} 커밋됨</value></data>
 </root>
