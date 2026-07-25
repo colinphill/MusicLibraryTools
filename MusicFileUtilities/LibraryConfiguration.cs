@@ -823,6 +823,30 @@ namespace MusicLibraryTools
             }
         }
 
+        public string MonkeysAudioPath
+        {
+            get
+            {
+                if (machineBindings_?.MonkeysAudioPath is
+                    { } boundMonkeysAudio)
+                    return boundMonkeysAudio;
+                string? value = CleanOptional(
+                    (string?)root_.Element(
+                        "MonkeysAudioPath"));
+                if (value is null)
+                    return "MAC";
+                return Path.IsPathRooted(value) ||
+                       value.Contains(
+                           Path.DirectorySeparatorChar) ||
+                       value.Contains(
+                           Path.AltDirectorySeparatorChar)
+                    ? Path.GetFullPath(
+                        value,
+                        configurationDirectory_)
+                    : value;
+            }
+        }
+
         public LibraryIngestSettings IngestSettings
         {
             get

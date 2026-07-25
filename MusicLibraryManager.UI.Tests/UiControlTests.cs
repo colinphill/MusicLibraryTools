@@ -590,7 +590,12 @@ public sealed class UiControlTests
             recipe.AlbumCondition = LibraryIngestAlbumCondition.HasHighResolution;
             recipe.SourceSelection = LibraryIngestSourceSelection.PreferCdQuality;
             recipe.RequireFallbackApproval = true;
-            recipe.ExtraFfmpegOptions = "-af \"volume=0.9\"";
+            recipe.TranscodeFormatId =
+                AudioTranscodeFormatIds.Flac;
+            recipe.TranscodeEncoderId =
+                AudioTranscodeEncoderIds.Automatic;
+            recipe.TranscodeRateMode =
+                AudioTranscodeRateMode.Lossless;
             recipe.DestinationRootChoice = Assert.Single(
                 recipe.DestinationRootChoices, choice => choice.Id == root.Id);
 
@@ -647,10 +652,26 @@ public sealed class UiControlTests
             Assert.Equal(LibraryIngestSourceSelection.PreferCdQuality,
                 recipe.SourceSelection);
             Assert.True(recipe.RequireFallbackApproval);
-            Assert.Equal("-af \"volume=0.9\"", recipe.ExtraFfmpegOptions);
+            Assert.Equal(
+                AudioTranscodeFormatIds.Flac,
+                recipe.TranscodeFormatId);
+            Assert.Equal(
+                AudioTranscodeEncoderIds.Automatic,
+                recipe.TranscodeEncoderId);
+            Assert.Equal(
+                AudioTranscodeRateMode.Lossless,
+                recipe.TranscodeRateMode);
             Assert.True(recipe.AddToMediaCatalog);
-            Assert.Contains(settings.GetVisualDescendants().OfType<TextBox>(), textBox =>
-                AutomationProperties.GetName(textBox) == "Extra FFmpeg options");
+            Assert.DoesNotContain(
+                settings.GetVisualDescendants().OfType<TextBox>(),
+                textBox =>
+                    AutomationProperties.GetName(textBox) ==
+                    "Extra FFmpeg options");
+            Assert.Contains(
+                settings.GetVisualDescendants().OfType<ComboBox>(),
+                combo => ReferenceEquals(
+                    combo.ItemsSource,
+                    recipe.TranscodeFormatChoices));
             Assert.Equal(root.Id, recipe.DestinationRootId);
             Assert.Equal(@"C:\Music", recipe.DestinationRootChoice?.Label);
             ComboBox destinationRootPicker = Assert.Single(

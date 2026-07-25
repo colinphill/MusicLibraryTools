@@ -19,19 +19,25 @@ public sealed class IngestMusicService : IIngestMusicService
     private readonly IAppSettings? _settings;
     private readonly int _previewParallelism;
     private readonly IItunesMediaMutationService _itunes;
+    private readonly IAudioTranscodeCapabilityService? _transcodeCapabilities;
+    private readonly IAudioTranscodeAdapter? _transcodeAdapter;
 
     public IngestMusicService(
         IFfmpegRunner ffmpeg,
         IAppSettings? settings = null,
         int? previewParallelism = null,
         IItunesMediaMutationService? itunes = null,
-        IWavpackRunner? wavpack = null)
+        IWavpackRunner? wavpack = null,
+        IAudioTranscodeCapabilityService? transcodeCapabilities = null,
+        IAudioTranscodeAdapter? transcodeAdapter = null)
     {
         _ffmpeg = ffmpeg;
         _wavpack = wavpack ?? new WavpackRunner();
         _settings = settings;
         _previewParallelism = Math.Clamp(previewParallelism ?? GetDefaultPreviewParallelism(), 1, 64);
         _itunes = itunes ?? new ItunesMediaMutationService(settings);
+        _transcodeCapabilities = transcodeCapabilities;
+        _transcodeAdapter = transcodeAdapter;
     }
 
     private static int GetDefaultPreviewParallelism()
@@ -653,9 +659,11 @@ public sealed class IngestMusicService : IIngestMusicService
                     continue;
                 }
 
-                string extension = string.IsNullOrWhiteSpace(recipe.OutputExtension)
+                string? configuredExtension =
+                    IngestTranscodeSettingsResolver.OutputExtension(recipe);
+                string extension = string.IsNullOrWhiteSpace(configuredExtension)
                     ? selected.SourceExtension
-                    : NormalizeExtension(recipe.OutputExtension);
+                    : NormalizeExtension(configuredExtension);
                 int? outputChannels = ResolveOutputChannels(
                     recipe.OutputChannels, selected.Channels);
                 LibraryIngestAction action = ResolveRecipeAction(
@@ -740,13 +748,16 @@ public sealed class IngestMusicService : IIngestMusicService
                     DestinationRoot = target?.Target ?? itunesMediaFolder,
                     RecipeId = recipe.Id,
                     Action = action,
-                    OutputCodec = recipe.Codec,
+                    OutputCodec =
+                        IngestTranscodeSettingsResolver.OutputCodec(recipe),
                     Encoder = recipe.Encoder,
                     ExtraFfmpegOptions = recipe.ExtraFfmpegOptions,
                     AddToMediaCatalog = recipe.AddToMediaCatalog,
                     BitrateKbps = recipe.BitrateKbps,
                     SampleRateHz = recipe.SampleRateHz,
                     BitsPerSample = recipe.BitsPerSample,
+                    TranscodeSettings =
+                        IngestTranscodeSettingsResolver.Resolve(recipe),
                     OutputChannels = outputChannels,
                     DeriveCd = usedHighResolutionFallback,
                     PreserveMetadata = recipe.PreserveMetadata,
@@ -1060,8 +1071,41 @@ public sealed class IngestMusicService : IIngestMusicService
         IngestOutputPlan[] plannedOutputs = plan.Albums
             .SelectMany(album => album.Outputs).ToArray();
         bool needsFfmpeg = plannedOutputs.Any(output =>
+            output.TranscodeSettings is null &&
             output.Action != LibraryIngestAction.Copy && !UsesWavpackDsd(output));
-        bool needsWavpack = plannedOutputs.Any(UsesWavpackDsd);
+        bool needsWavpack = plannedOutputs.Any(output =>
+            output.TranscodeSettings is null && UsesWavpackDsd(output));
+        IngestOutputPlan[] sharedTranscodes = plannedOutputs
+            .Where(output => output.TranscodeSettings is not null)
+            .ToArray();
+        if (hasAlbums && sharedTranscodes.Length > 0)
+        {
+            if (_transcodeCapabilities is null || _transcodeAdapter is null)
+                return new IngestResult(
+                    [],
+                    true,
+                    "The shared transcode engine is not available.");
+            AudioTranscodeCapabilitySnapshot snapshot =
+                await _transcodeCapabilities.GetAsync(
+                    forceRefresh: false,
+                    ct).ConfigureAwait(false);
+            foreach (IngestOutputPlan output in sharedTranscodes)
+            {
+                AudioTranscodeSettings settings = output.TranscodeSettings!;
+                if (!IngestTranscodeSettingsResolver.TryResolveCapability(
+                        snapshot,
+                        settings,
+                        out _,
+                        out _,
+                        out string? capabilityError))
+                    return new IngestResult(
+                        [],
+                        true,
+                        $"The transcode setup for ingest recipe '{output.RecipeId}' is unavailable: " +
+                        capabilityError);
+            }
+            EnsureFresh(plan);
+        }
         string? automaticAacEncoder = null;
         if (hasAlbums && needsFfmpeg)
         {
@@ -1545,11 +1589,49 @@ public sealed class IngestMusicService : IIngestMusicService
                     output.SourcePath, stage, ct).ConfigureAwait(false);
                 break;
 
-            case LibraryIngestAction.Transcode when UsesWavpackDsd(output):
+            case LibraryIngestAction.Transcode
+                when output.TranscodeSettings is null &&
+                     UsesWavpackDsd(output):
                 await _wavpack.EncodeDsdAsync(
                     configuration.WavpackPath,
                     output.SourcePath,
                     stage,
+                    ct).ConfigureAwait(false);
+                break;
+
+            case LibraryIngestAction.Transcode
+                when output.TranscodeSettings is { } transcodeSettings:
+                if (_transcodeCapabilities is null || _transcodeAdapter is null)
+                    throw new InvalidOperationException(
+                        "The shared transcode engine is not available.");
+                AudioTranscodeCapabilitySnapshot snapshot =
+                    await _transcodeCapabilities.GetAsync(
+                        forceRefresh: false,
+                        ct).ConfigureAwait(false);
+                if (!IngestTranscodeSettingsResolver.TryResolveCapability(
+                        snapshot,
+                        transcodeSettings,
+                        out _,
+                        out AudioEncoderDescriptor? sharedEncoder,
+                        out string? capabilityError))
+                    throw new InvalidDataException(
+                        capabilityError);
+                AudioEncoderDescriptor resolvedEncoder =
+                    sharedEncoder!;
+                int threadCount = resolvedEncoder.ThreadingMode ==
+                                  AudioEncoderThreadingMode.ThreadCountControllable
+                    ? Math.Max(
+                        1,
+                        Environment.ProcessorCount /
+                        Math.Max(1, _previewParallelism))
+                    : 1;
+                await _transcodeAdapter.EncodeAsync(
+                    output.SourcePath,
+                    stage,
+                    transcodeSettings,
+                    resolvedEncoder,
+                    threadCount,
+                    progress: null,
                     ct).ConfigureAwait(false);
                 break;
 

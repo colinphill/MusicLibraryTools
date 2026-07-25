@@ -842,6 +842,7 @@ public partial class IngestRecipeEditorRow : ObservableObject
     [ObservableProperty] private bool _requireFallbackApproval;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Summary))]
+    [NotifyPropertyChangedFor(nameof(IsTranscode))]
     private LibraryIngestAction _action;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Summary))]
@@ -859,6 +860,17 @@ public partial class IngestRecipeEditorRow : ObservableObject
     [ObservableProperty] private int? _bitrateKbps;
     [ObservableProperty] private int? _sampleRateHz;
     [ObservableProperty] private int? _bitsPerSample;
+    [ObservableProperty] private string? _transcodeFormatId;
+    [ObservableProperty] private string _transcodeEncoderId =
+        AudioTranscodeEncoderIds.Automatic;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasBitrateControl))]
+    [NotifyPropertyChangedFor(nameof(HasQualityControl))]
+    private AudioTranscodeRateMode _transcodeRateMode =
+        AudioTranscodeRateMode.Lossless;
+    [ObservableProperty] private double? _transcodeQuality;
+    [ObservableProperty] private int _transcodeCompressionEffort = 5;
+    [ObservableProperty] private bool _transcodeCreateCorrectionFile;
     [ObservableProperty] private SettingsChannelChoice _outputChannelChoice =
         SettingsChoiceLists.ChannelChoices[0];
     [ObservableProperty] private bool _preserveMetadata = true;
@@ -866,8 +878,81 @@ public partial class IngestRecipeEditorRow : ObservableObject
     [ObservableProperty] private bool _useProfileCollision = true;
     [ObservableProperty] private LibraryPathCollisionPolicy _collisionPolicy;
     private bool _refreshingDestinationRoots;
+    private AudioTranscodeCapabilitySnapshot? _transcodeCapabilities;
+    private bool _refreshingTranscodeChoices;
 
     public ObservableCollection<SettingsRootChoice> DestinationRootChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>> TranscodeFormatChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>> TranscodeEncoderChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<AudioTranscodeRateMode>>
+        TranscodeRateModeChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<int?>> TranscodeSampleRateChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<int?>> TranscodeBitDepthChoices { get; } = [];
+
+    public bool IsTranscode => Action == LibraryIngestAction.Transcode;
+    public bool HasBitrateControl => TranscodeRateMode is
+        AudioTranscodeRateMode.ConstantBitrate or
+        AudioTranscodeRateMode.AverageBitrate or
+        AudioTranscodeRateMode.ConstrainedVariableBitrate or
+        AudioTranscodeRateMode.HybridBitrate;
+    public bool HasQualityControl => TranscodeRateMode is
+        AudioTranscodeRateMode.VariableQuality or
+        AudioTranscodeRateMode.HybridQuality;
+
+    public LocalizedChoice<string>? SelectedTranscodeFormatChoice
+    {
+        get => TranscodeFormatChoices.FirstOrDefault(choice =>
+            choice.Value == TranscodeFormatId);
+        set
+        {
+            if (value is not null)
+                TranscodeFormatId = value.Value;
+        }
+    }
+
+    public LocalizedChoice<string>? SelectedTranscodeEncoderChoice
+    {
+        get => TranscodeEncoderChoices.FirstOrDefault(choice =>
+            choice.Value == TranscodeEncoderId);
+        set
+        {
+            if (value is not null)
+                TranscodeEncoderId = value.Value;
+        }
+    }
+
+    public LocalizedChoice<AudioTranscodeRateMode>? SelectedTranscodeRateModeChoice
+    {
+        get => TranscodeRateModeChoices.FirstOrDefault(choice =>
+            choice.Value == TranscodeRateMode);
+        set
+        {
+            if (value is not null)
+                TranscodeRateMode = value.Value;
+        }
+    }
+
+    public LocalizedChoice<int?>? SelectedTranscodeSampleRateChoice
+    {
+        get => TranscodeSampleRateChoices.FirstOrDefault(choice =>
+            choice.Value == SampleRateHz);
+        set
+        {
+            if (value is not null)
+                SampleRateHz = value.Value;
+        }
+    }
+
+    public LocalizedChoice<int?>? SelectedTranscodeBitDepthChoice
+    {
+        get => TranscodeBitDepthChoices.FirstOrDefault(choice =>
+            choice.Value == BitsPerSample);
+        set
+        {
+            if (value is not null)
+                BitsPerSample = value.Value;
+        }
+    }
 
     public string Summary => _formatText(
         "Settings.IngestRecipe.Summary",
@@ -892,6 +977,7 @@ public partial class IngestRecipeEditorRow : ObservableObject
             localization);
         _getText = localization.Get;
         _formatText = localization.Format;
+        RefreshTranscodeChoices();
         OnPropertyChanged(nameof(Summary));
     }
 
@@ -920,6 +1006,21 @@ public partial class IngestRecipeEditorRow : ObservableObject
         BitrateKbps = recipe.BitrateKbps,
         SampleRateHz = recipe.SampleRateHz,
         BitsPerSample = recipe.BitsPerSample,
+        TranscodeFormatId = recipe.TranscodeFormatId ??
+            InferLegacyFormatId(recipe),
+        TranscodeEncoderId = recipe.TranscodeEncoderId ??
+            InferLegacyEncoderId(recipe),
+        TranscodeRateMode = Enum.TryParse(
+            recipe.TranscodeRateMode,
+            ignoreCase: true,
+            out AudioTranscodeRateMode rateMode)
+                ? rateMode
+                : InferLegacyRateMode(recipe),
+        TranscodeQuality = recipe.TranscodeQuality,
+        TranscodeCompressionEffort =
+            recipe.TranscodeCompressionEffort,
+        TranscodeCreateCorrectionFile =
+            recipe.TranscodeCreateCorrectionFile,
         OutputChannelChoice = SettingsChoiceLists.ChannelChoice(recipe.OutputChannels),
         PreserveMetadata = recipe.PreserveMetadata,
         PreserveArtwork = recipe.PreserveArtwork,
@@ -972,10 +1073,40 @@ public partial class IngestRecipeEditorRow : ObservableObject
             Action = Action,
             DestinationRootId = DestinationRootId,
             DestinationLegacyRole = LibraryIngestRole.None,
-            OutputExtension = Clean(OutputExtension),
-            Codec = Clean(Codec),
-            Encoder = Clean(Encoder),
-            ExtraFfmpegOptions = Clean(ExtraFfmpegOptions),
+            OutputExtension = IsTranscode
+                ? SharedOutputExtension(
+                    TranscodeFormatId)
+                : Clean(OutputExtension),
+            Codec = IsTranscode
+                ? SharedOutputCodec(
+                    TranscodeFormatId)
+                : Clean(Codec),
+            Encoder = IsTranscode
+                ? LegacyEncoder(
+                    TranscodeEncoderId)
+                : Clean(Encoder),
+            ExtraFfmpegOptions = IsTranscode
+                ? null
+                : Clean(ExtraFfmpegOptions),
+            TranscodeFormatId = IsTranscode
+                ? Clean(TranscodeFormatId)
+                : null,
+            TranscodeEncoderId = IsTranscode
+                ? Clean(TranscodeEncoderId) ??
+                  AudioTranscodeEncoderIds.Automatic
+                : null,
+            TranscodeRateMode = IsTranscode
+                ? TranscodeRateMode.ToString()
+                : null,
+            TranscodeQuality = IsTranscode &&
+                HasQualityControl
+                    ? TranscodeQuality
+                    : null,
+            TranscodeCompressionEffort =
+                TranscodeCompressionEffort,
+            TranscodeCreateCorrectionFile =
+                IsTranscode &&
+                TranscodeCreateCorrectionFile,
             AddToMediaCatalog = AddToMediaCatalog,
             BitrateKbps = BitrateKbps,
             SampleRateHz = SampleRateHz,
@@ -990,6 +1121,289 @@ public partial class IngestRecipeEditorRow : ObservableObject
 
     private static string? Clean(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    public void ApplyTranscodeCapabilities(
+        AudioTranscodeCapabilitySnapshot snapshot,
+        ILocalizationService localization)
+    {
+        _transcodeCapabilities = snapshot;
+        _getText = localization.Get;
+        _formatText = localization.Format;
+        RefreshTranscodeChoices();
+    }
+
+    private void RefreshTranscodeChoices()
+    {
+        _refreshingTranscodeChoices = true;
+        try
+        {
+            string? selectedFormat = TranscodeFormatId;
+            TranscodeFormatChoices.Clear();
+            foreach (AudioTranscodeFormatDescriptor format in
+                     _transcodeCapabilities?.Formats ?? [])
+                TranscodeFormatChoices.Add(new(
+                    format.Id,
+                    FormatLabel(format)));
+            if (!string.IsNullOrWhiteSpace(selectedFormat) &&
+                !TranscodeFormatChoices.Any(choice =>
+                    choice.Value == selectedFormat))
+                TranscodeFormatChoices.Add(new(
+                    selectedFormat,
+                    selectedFormat + " — " +
+                    _getText("Transcode.Value.Unavailable")));
+            TranscodeFormatId = selectedFormat ??
+                TranscodeFormatChoices.FirstOrDefault(choice =>
+                    choice.Value == AudioTranscodeFormatIds.Flac)?.Value ??
+                TranscodeFormatChoices.FirstOrDefault()?.Value;
+            RefreshTranscodeEncoderChoices();
+            RefreshChoice(
+                TranscodeSampleRateChoices,
+                new int?[]
+                {
+                    null, 44100, 48000, 88200, 96000, 176400, 192000,
+                },
+                value => value is null
+                    ? _getText("Transcode.Value.Preserve")
+                    : $"{value.Value / 1000d:0.#} kHz");
+            RefreshChoice(
+                TranscodeBitDepthChoices,
+                new int?[] { null, 16, 24, 32 },
+                value => value is null
+                    ? _getText("Transcode.Value.Preserve")
+                    : _formatText(
+                        "Transcode.Value.Bits",
+                        [value.Value]));
+            OnPropertyChanged(
+                nameof(SelectedTranscodeFormatChoice));
+            OnPropertyChanged(
+                nameof(SelectedTranscodeSampleRateChoice));
+            OnPropertyChanged(
+                nameof(SelectedTranscodeBitDepthChoice));
+        }
+        finally
+        {
+            _refreshingTranscodeChoices = false;
+        }
+    }
+
+    private void RefreshTranscodeEncoderChoices()
+    {
+        string selected = TranscodeEncoderId;
+        TranscodeEncoderChoices.Clear();
+        TranscodeEncoderChoices.Add(new(
+            AudioTranscodeEncoderIds.Automatic,
+            _getText("Transcode.Encoder.Auto")));
+        AudioTranscodeFormatDescriptor? format =
+            _transcodeCapabilities?.FindFormat(
+                TranscodeFormatId ?? "");
+        foreach (string id in format?.EncoderIds ?? [])
+            TranscodeEncoderChoices.Add(new(
+                id,
+                EncoderLabel(id)));
+        if (!TranscodeEncoderChoices.Any(choice =>
+                choice.Value == selected))
+            TranscodeEncoderChoices.Add(new(
+                selected,
+                selected + " — " +
+                _getText("Transcode.Value.Unavailable")));
+        TranscodeEncoderId = selected;
+        RefreshTranscodeRateModeChoices();
+        OnPropertyChanged(
+            nameof(SelectedTranscodeEncoderChoice));
+    }
+
+    private void RefreshTranscodeRateModeChoices()
+    {
+        AudioTranscodeFormatDescriptor? format =
+            _transcodeCapabilities?.FindFormat(
+                TranscodeFormatId ?? "");
+        string? encoderId = TranscodeEncoderId ==
+                            AudioTranscodeEncoderIds.Automatic
+            ? format?.EncoderIds.FirstOrDefault()
+            : TranscodeEncoderId;
+        AudioEncoderDescriptor? encoder = encoderId is null
+            ? null
+            : _transcodeCapabilities?.FindEncoder(encoderId);
+        AudioTranscodeRateMode[] modes = encoder is null
+            ? [TranscodeRateMode]
+            : [.. encoder.RateControls.Select(control =>
+                control.Mode).Distinct()];
+        AudioTranscodeRateMode selected = TranscodeRateMode;
+        RefreshChoice(
+            TranscodeRateModeChoices,
+            modes,
+            mode => _getText($"Transcode.RateMode.{mode}"));
+        TranscodeRateMode = modes.Contains(selected)
+            ? selected
+            : modes[0];
+        OnPropertyChanged(
+            nameof(SelectedTranscodeRateModeChoice));
+    }
+
+    private string FormatLabel(
+        AudioTranscodeFormatDescriptor format) =>
+        format.Id switch
+        {
+            AudioTranscodeFormatIds.Flac =>
+                _getText("Transcode.Format.Flac"),
+            AudioTranscodeFormatIds.AlacM4a =>
+                _getText("Transcode.Format.AlacM4a"),
+            AudioTranscodeFormatIds.AacM4a =>
+                _getText("Transcode.Format.AacM4a"),
+            AudioTranscodeFormatIds.AacAdts =>
+                _getText("Transcode.Format.AacAdts"),
+            AudioTranscodeFormatIds.Mp3 =>
+                _getText("Transcode.Format.Mp3"),
+            AudioTranscodeFormatIds.OpusOgg =>
+                _getText("Transcode.Format.OpusOgg"),
+            AudioTranscodeFormatIds.VorbisOgg =>
+                _getText("Transcode.Format.VorbisOgg"),
+            AudioTranscodeFormatIds.WavPack =>
+                _getText("Transcode.Format.WavPack"),
+            AudioTranscodeFormatIds.PcmWave =>
+                _getText("Transcode.Format.PcmWave"),
+            AudioTranscodeFormatIds.PcmRf64 =>
+                _getText("Transcode.Format.PcmRf64"),
+            AudioTranscodeFormatIds.PcmAiff =>
+                _getText("Transcode.Format.PcmAiff"),
+            AudioTranscodeFormatIds.TrueAudio =>
+                _getText("Transcode.Format.TrueAudio"),
+            AudioTranscodeFormatIds.OptimFrog =>
+                _getText("Transcode.Format.OptimFrog"),
+            AudioTranscodeFormatIds.OptimFrogDualStream =>
+                _getText("Transcode.Format.OptimFrogDualStream"),
+            AudioTranscodeFormatIds.OptimFrogFloat =>
+                _getText("Transcode.Format.OptimFrogFloat"),
+            AudioTranscodeFormatIds.MonkeysAudio =>
+                _getText("Transcode.Format.MonkeysAudio"),
+            _ => $"{format.Codec} ({format.Container})",
+        };
+
+    private string EncoderLabel(string id) =>
+        id.StartsWith("ffmpeg:", StringComparison.Ordinal)
+            ? "FFmpeg — " + id["ffmpeg:".Length..]
+            : id switch
+            {
+                AudioTranscodeEncoderIds.WavPackCli =>
+                    _getText("Transcode.Encoder.WavPack"),
+                AudioTranscodeEncoderIds.OptimFrogOfr =>
+                    _getText("Transcode.Encoder.OptimFrogOfr"),
+                AudioTranscodeEncoderIds.OptimFrogOfs =>
+                    _getText("Transcode.Encoder.OptimFrogOfs"),
+                AudioTranscodeEncoderIds.OptimFrogOff =>
+                    _getText("Transcode.Encoder.OptimFrogOff"),
+                AudioTranscodeEncoderIds.MonkeysAudioMac =>
+                    _getText("Transcode.Encoder.MonkeysAudioMac"),
+                _ => id,
+            };
+
+    private static void RefreshChoice<T>(
+        ObservableCollection<LocalizedChoice<T>> choices,
+        IEnumerable<T> values,
+        Func<T, string> label)
+    {
+        choices.Clear();
+        foreach (T value in values)
+            choices.Add(new(value, label(value)));
+    }
+
+    private static string? InferLegacyFormatId(
+        LibraryIngestRecipe recipe)
+    {
+        string? extension = Clean(recipe.OutputExtension)?
+            .ToLowerInvariant();
+        string? codec = Clean(recipe.Codec)?.ToLowerInvariant();
+        return extension switch
+        {
+            ".flac" or "flac" =>
+                AudioTranscodeFormatIds.Flac,
+            ".m4a" or "m4a" when codec == "alac" =>
+                AudioTranscodeFormatIds.AlacM4a,
+            ".m4a" or "m4a" =>
+                AudioTranscodeFormatIds.AacM4a,
+            ".wv" or "wv" =>
+                AudioTranscodeFormatIds.WavPack,
+            ".ape" or "ape" =>
+                AudioTranscodeFormatIds.MonkeysAudio,
+            _ => null,
+        };
+    }
+
+    private static string InferLegacyEncoderId(
+        LibraryIngestRecipe recipe)
+    {
+        if (!string.IsNullOrWhiteSpace(
+                recipe.TranscodeEncoderId))
+            return recipe.TranscodeEncoderId;
+        if (InferLegacyFormatId(recipe) ==
+            AudioTranscodeFormatIds.WavPack)
+            return AudioTranscodeEncoderIds.WavPackCli;
+        if (InferLegacyFormatId(recipe) ==
+            AudioTranscodeFormatIds.MonkeysAudio)
+            return AudioTranscodeEncoderIds.MonkeysAudioMac;
+        return string.IsNullOrWhiteSpace(recipe.Encoder)
+            ? AudioTranscodeEncoderIds.Automatic
+            : recipe.Encoder.Contains(
+                ':',
+                StringComparison.Ordinal)
+                ? recipe.Encoder
+                : AudioTranscodeEncoderIds.Ffmpeg(
+                    recipe.Encoder);
+    }
+
+    private static AudioTranscodeRateMode InferLegacyRateMode(
+        LibraryIngestRecipe recipe) =>
+        recipe.BitrateKbps is not null
+            ? AudioTranscodeRateMode.AverageBitrate
+            : AudioTranscodeRateMode.Lossless;
+
+    private static string? SharedOutputExtension(
+        string? formatId) =>
+        IngestTranscodeSettingsResolver.ResolveFormat(
+            formatId)?.Extension;
+
+    private static string? SharedOutputCodec(
+        string? formatId) =>
+        IngestTranscodeSettingsResolver.ResolveFormat(
+            formatId)?.Codec;
+
+    private static string? LegacyEncoder(string? encoderId) =>
+        encoderId?.StartsWith(
+            "ffmpeg:",
+            StringComparison.Ordinal) == true
+            ? encoderId["ffmpeg:".Length..]
+            : null;
+
+    partial void OnTranscodeFormatIdChanged(string? value)
+    {
+        if (_refreshingTranscodeChoices)
+            return;
+        OnPropertyChanged(
+            nameof(SelectedTranscodeFormatChoice));
+        RefreshTranscodeEncoderChoices();
+    }
+
+    partial void OnTranscodeEncoderIdChanged(string value)
+    {
+        if (_refreshingTranscodeChoices)
+            return;
+        OnPropertyChanged(
+            nameof(SelectedTranscodeEncoderChoice));
+        RefreshTranscodeRateModeChoices();
+    }
+
+    partial void OnTranscodeRateModeChanged(
+        AudioTranscodeRateMode value) =>
+        OnPropertyChanged(
+            nameof(SelectedTranscodeRateModeChoice));
+
+    partial void OnSampleRateHzChanged(int? value) =>
+        OnPropertyChanged(
+            nameof(SelectedTranscodeSampleRateChoice));
+
+    partial void OnBitsPerSampleChanged(int? value) =>
+        OnPropertyChanged(
+            nameof(SelectedTranscodeBitDepthChoice));
 
     partial void OnDestinationRootChoiceChanged(SettingsRootChoice? value)
     {

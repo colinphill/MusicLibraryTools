@@ -170,6 +170,15 @@ public sealed class AudioTranscodeAdapter(
                         progress,
                         ct).ConfigureAwait(false);
                     return;
+                case AudioTranscodeToolKind.MonkeysAudio:
+                    await EncodeMonkeysAudioAsync(
+                        preparedSource,
+                        destinationPath,
+                        settings,
+                        threadCount,
+                        progress,
+                        ct).ConfigureAwait(false);
+                    return;
                 default:
                     throw new ArgumentOutOfRangeException(
                         nameof(encoder.Tool));
@@ -513,6 +522,134 @@ public sealed class AudioTranscodeAdapter(
         }
     }
 
+    private async Task EncodeMonkeysAudioAsync(
+        string sourcePath,
+        string destinationPath,
+        AudioTranscodeSettings settings,
+        int threadCount,
+        IProgress<AudioTranscodeAdapterProgress>? progress,
+        CancellationToken ct)
+    {
+        string executable =
+            appSettings.GetSnapshot()
+                .Configuration?
+                .MonkeysAudioPath ??
+            "MAC";
+        string input = sourcePath;
+        string? bridge = null;
+        try
+        {
+            bool isWave =
+                Path.GetExtension(sourcePath).Equals(
+                    ".wav",
+                    StringComparison.OrdinalIgnoreCase);
+            if (!isWave ||
+                settings.SampleRateHz is not null ||
+                settings.BitsPerSample is not null)
+            {
+                bridge = SiblingTemporary(
+                    destinationPath,
+                    ".wav");
+                AudioTranscodeSettings bridgeSettings =
+                    settings.BitsPerSample is not null
+                        ? settings
+                        : settings with
+                        {
+                            BitsPerSample =
+                                PcmBridgeBitDepth(
+                                    settings,
+                                    sourcePath),
+                        };
+                await EncodePcmBridgeAsync(
+                        sourcePath,
+                        bridge,
+                        bridgeSettings,
+                        ct)
+                    .ConfigureAwait(false);
+                input = bridge;
+            }
+
+            var arguments = new List<string>
+            {
+                input,
+                destinationPath,
+                MonkeysAudioCompressionMode(
+                    settings.CompressionEffort),
+            };
+            if (threadCount > 0)
+                arguments.Add(
+                    "-threads=" +
+                    threadCount.ToString(
+                        CultureInfo.InvariantCulture));
+            progress?.Report(new("encoding"));
+            ManagedProcessResult result =
+                await processes.RunAsync(
+                    executable,
+                    arguments,
+                    ct: ct).ConfigureAwait(false);
+            EnsureSuccess(executable, result);
+            if (!File.Exists(destinationPath) ||
+                new FileInfo(destinationPath).Length == 0)
+                throw new InvalidDataException(
+                    "MAC did not produce a Monkey's Audio output.");
+            ManagedProcessResult verify =
+                await processes.RunAsync(
+                    executable,
+                    [destinationPath, "-v"],
+                    ct: ct).ConfigureAwait(false);
+            EnsureSuccess(executable, verify);
+        }
+        finally
+        {
+            TryDelete(bridge);
+        }
+    }
+
+    internal static string MonkeysAudioCompressionMode(
+        int compressionEffort) =>
+        Math.Clamp(
+            compressionEffort,
+            0,
+            10) switch
+        {
+            <= 1 => "-c1000",
+            <= 3 => "-c2000",
+            <= 5 => "-c3000",
+            <= 7 => "-c4000",
+            _ => "-c5000",
+        };
+
+    internal static int PcmBridgeBitDepth(
+        AudioTranscodeSettings settings,
+        string sourcePath)
+    {
+        int? converted =
+            EffectiveIntegerConversionBitDepth(
+                settings,
+                sourcePath);
+        if (converted is not null)
+            return converted.Value;
+        try
+        {
+            uint sourceBits =
+                MediaFile.GetFile(
+                        sourcePath,
+                        readOnly: true)
+                    .Codecs.FirstOrDefault()?
+                    .BitsPerSample ?? 0;
+            return sourceBits switch
+            {
+                > 0 and <= 16 => 16,
+                <= 24 => 24,
+                _ => 32,
+            };
+        }
+        catch
+        {
+            return 24;
+        }
+    }
+
     private async Task EncodePcmBridgeAsync(
         string sourcePath,
         string destinationPath,
@@ -690,7 +827,9 @@ public sealed class AudioTranscodeAdapter(
         {
             AudioTranscodeFormatIds.Flac or
             AudioTranscodeFormatIds.AlacM4a or
-            AudioTranscodeFormatIds.TrueAudio => 24,
+            AudioTranscodeFormatIds.TrueAudio or
+            AudioTranscodeFormatIds.MonkeysAudio =>
+                24,
             AudioTranscodeFormatIds.PcmWave or
             AudioTranscodeFormatIds.PcmRf64 or
             AudioTranscodeFormatIds.PcmAiff

@@ -178,6 +178,64 @@ public class IngestMusicTests
     }
 
     [Fact]
+    public async Task Apply_SharedRecipeUsesTranscodeCapabilityAndAdapter()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture(
+            "incoming",
+            "one.flac",
+            "sample.flac");
+        IngestPlan original =
+            ManualPlan(tree, [source], requireApproval: false);
+        IngestAlbumPlan originalAlbum =
+            Assert.Single(original.Albums);
+        IngestOutputPlan output =
+            originalAlbum.Outputs.First() with
+            {
+                Kind = IngestOutputKind.Recipe,
+                DestinationRoot = tree.Path("paired"),
+                RecipeId = "shared-flac",
+                SampleRateHz = 44_100,
+                BitsPerSample = 16,
+                TranscodeSettings = new(
+                    AudioTranscodeFormatIds.Flac,
+                    AudioTranscodeEncoderIds.Ffmpeg("flac"),
+                    AudioTranscodeRateMode.Lossless,
+                    CompressionEffort: 7),
+            };
+        IngestPlan plan = original with
+        {
+            Albums =
+            [
+                originalAlbum with
+                {
+                    Outputs = [output],
+                },
+            ],
+        };
+        var ffmpeg = new FakeFfmpeg();
+        var adapter = new FakeTranscodeAdapter();
+        var service = new IngestMusicService(
+            ffmpeg,
+            transcodeCapabilities:
+                new FixedTranscodeCapabilities(),
+            transcodeAdapter: adapter);
+
+        IngestResult result =
+            await service.ApplyAsync(plan, []);
+
+        Assert.False(result.Cancelled);
+        Assert.True(
+            result.Failed == 0,
+            string.Join(
+                Environment.NewLine,
+                result.Albums.Select(album => album.Error)));
+        Assert.Equal(1, adapter.EncodeCalls);
+        Assert.Equal(0, ffmpeg.PreflightCalls);
+        Assert.True(File.Exists(output.DestinationPath));
+    }
+
+    [Fact]
     public async Task Apply_PreservesMissingAlbumArtistInsteadOfWritingArtistFallback()
     {
         using var tree = new TempTree();
@@ -1432,6 +1490,77 @@ public class IngestMusicTests
             block[34] = 3;
             File.WriteAllBytes(output, block);
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeTranscodeAdapter :
+        IAudioTranscodeAdapter
+    {
+        public int EncodeCalls { get; private set; }
+
+        public Task EncodeAsync(
+            string sourcePath,
+            string destinationPath,
+            AudioTranscodeSettings settings,
+            AudioEncoderDescriptor encoder,
+            int threadCount,
+            IProgress<AudioTranscodeAdapterProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            Assert.Equal(
+                AudioTranscodeFormatIds.Flac,
+                settings.FormatId);
+            Assert.Equal("flac", encoder.ExecutableEncoder);
+            File.Copy(
+                Path.Combine(
+                    AppContext.BaseDirectory,
+                    "TestFiles",
+                    "sample.flac"),
+                destinationPath);
+            EncodeCalls++;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FixedTranscodeCapabilities :
+        IAudioTranscodeCapabilityService
+    {
+        public Task<AudioTranscodeCapabilitySnapshot> GetAsync(
+            bool forceRefresh = false,
+            CancellationToken ct = default) =>
+            Task.FromResult(new AudioTranscodeCapabilitySnapshot(
+                [],
+                [
+                    new(
+                        AudioTranscodeFormatIds.Flac,
+                        "flac",
+                        "flac",
+                        ".flac",
+                        true,
+                        [
+                            AudioTranscodeEncoderIds.Ffmpeg(
+                                "flac"),
+                        ]),
+                ],
+                [
+                    new(
+                        AudioTranscodeEncoderIds.Ffmpeg(
+                            "flac"),
+                        AudioTranscodeToolKind.Ffmpeg,
+                        "flac",
+                        AudioEncoderThreadingMode.ThreadCountControllable,
+                        [
+                            new(
+                                AudioTranscodeRateMode.Lossless),
+                        ],
+                        [],
+                        [16, 24]),
+                ],
+                DateTimeOffset.UtcNow,
+                1));
+
+        public void Invalidate()
+        {
         }
     }
 

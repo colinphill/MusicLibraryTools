@@ -261,6 +261,7 @@
               <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Tools.Itunes}" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding ItunesLibraryPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.Itunes}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseItunesLibraryCommand}" /></Grid>
               <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Tools.Ffmpeg}" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding FfmpegPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.FfmpegAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseFfmpegCommand}" /></Grid>
               <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Tools.Wavpack}" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding WavpackPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.WavpackAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseWavpackCommand}" /></Grid>
+              <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Tools.MonkeysAudio}" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding MonkeysAudioPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.MonkeysAudioAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseMonkeysAudioCommand}" /></Grid>
               <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Tools.Fpcalc}" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding FpcalcPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.FpcalcAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseFpcalcCommand}" /></Grid>
               <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Tools.OptimFrog}" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding OptimFrogToolsDirectory, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Tools.OptimFrogPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.OptimFrogAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseOptimFrogToolsCommand}" /></Grid>
               <TextBlock Classes="section-title" Margin="0,12,0,0" Text="{DynamicResource Loc.Settings.Tools.OnlineMetadata}" />
@@ -507,26 +508,54 @@
                           <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.MatchedSourceSelection}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.IngestSourceSelectionChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibraryIngestSourceSelection" local:LocalizedChoiceSelection.Value="{Binding SourceSelection, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" /></StackPanel>
                           <CheckBox Grid.Column="2" Content="{DynamicResource Loc.Settings.Ingest.RequireFallbackApproval}" IsChecked="{Binding RequireFallbackApproval, Mode=TwoWay}" VerticalAlignment="Bottom" />
                         </Grid>
-                        <Grid Classes="responsive-form" ColumnDefinitions="*,*" ColumnSpacing="10">
-                          <StackPanel Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.DestinationRoot}" /><ComboBox Classes="app" ItemsSource="{Binding DestinationRootChoices}" SelectedItem="{Binding DestinationRootChoice, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.DestinationRootAutomation}" /></StackPanel>
-                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.OutputExtension}" /><TextBox Classes="app" Text="{Binding OutputExtension, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Ingest.OutputExtensionPlaceholder}" /></StackPanel>
-                        </Grid>
-                        <Grid Classes="responsive-form" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
-                          <StackPanel Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Common.Codec}" /><TextBox Classes="app" Text="{Binding Codec, Mode=TwoWay}" /></StackPanel>
-                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.Encoder}" /><TextBox Classes="app" Text="{Binding Encoder, Mode=TwoWay}" /></StackPanel>
-                          <StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.Bitrate}" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding BitrateKbps, Mode=TwoWay}" /></StackPanel>
-                          <StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.OutputSampleRate}" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding SampleRateHz, Mode=TwoWay}" /></StackPanel>
-                        </Grid>
                         <StackPanel Spacing="4">
-                          <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.ExtraFfmpegOptions}" />
-                          <TextBox Classes="app" Text="{Binding ExtraFfmpegOptions, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Ingest.ExtraFfmpegPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.ExtraFfmpegAutomation}" />
+                          <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.DestinationRoot}" />
+                          <ComboBox Classes="app" ItemsSource="{Binding DestinationRootChoices}" SelectedItem="{Binding DestinationRootChoice, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.DestinationRootAutomation}" />
+                        </StackPanel>
+                        <StackPanel Spacing="10" IsVisible="{Binding IsTranscode}">
+                          <Grid Classes="responsive-form" ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                            <StackPanel Spacing="4">
+                              <TextBlock Classes="muted" Text="{DynamicResource Loc.Transcode.Format.Label}" />
+                              <ComboBox Classes="app" ItemsSource="{Binding TranscodeFormatChoices}" SelectedItem="{Binding SelectedTranscodeFormatChoice, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                              <TextBlock Classes="muted" Text="{DynamicResource Loc.Transcode.Encoder.Label}" />
+                              <ComboBox Classes="app" ItemsSource="{Binding TranscodeEncoderChoices}" SelectedItem="{Binding SelectedTranscodeEncoderChoice, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                              <TextBlock Classes="muted" Text="{DynamicResource Loc.Transcode.RateMode.Label}" />
+                              <ComboBox Classes="app" ItemsSource="{Binding TranscodeRateModeChoices}" SelectedItem="{Binding SelectedTranscodeRateModeChoice, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" />
+                            </StackPanel>
+                          </Grid>
+                          <Grid Classes="responsive-form" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                            <StackPanel Spacing="4" IsVisible="{Binding HasBitrateControl}">
+                              <TextBlock Classes="muted" Text="{DynamicResource Loc.Transcode.Bitrate.Label}" />
+                              <NumericUpDown Classes="app" Minimum="1" Value="{Binding BitrateKbps, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="4" IsVisible="{Binding HasQualityControl}">
+                              <TextBlock Classes="muted" Text="{DynamicResource Loc.Transcode.Quality.Label}" />
+                              <NumericUpDown Classes="app" Minimum="0" Maximum="10" Increment="0.5" Value="{Binding TranscodeQuality, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                              <TextBlock Classes="muted" Text="{DynamicResource Loc.Transcode.SampleRate.Label}" />
+                              <ComboBox Classes="app" ItemsSource="{Binding TranscodeSampleRateChoices}" SelectedItem="{Binding SelectedTranscodeSampleRateChoice, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                              <TextBlock Classes="muted" Text="{DynamicResource Loc.Transcode.BitDepth.Label}" />
+                              <ComboBox Classes="app" ItemsSource="{Binding TranscodeBitDepthChoices}" SelectedItem="{Binding SelectedTranscodeBitDepthChoice, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" Spacing="4">
+                              <TextBlock Classes="muted" Text="{DynamicResource Loc.Transcode.CompressionEffort.Label}" />
+                              <NumericUpDown Classes="app" Minimum="0" Maximum="10" Value="{Binding TranscodeCompressionEffort, Mode=TwoWay}" />
+                            </StackPanel>
+                          </Grid>
+                          <CheckBox Content="{DynamicResource Loc.Transcode.Correction.Create}" IsChecked="{Binding TranscodeCreateCorrectionFile, Mode=TwoWay}" />
                         </StackPanel>
                         <CheckBox Content="{DynamicResource Loc.Settings.Ingest.AddToCatalog}" IsChecked="{Binding AddToMediaCatalog, Mode=TwoWay}" />
-                        <Grid Classes="responsive-form" ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
-                          <StackPanel Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.OutputBitDepth}" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding BitsPerSample, Mode=TwoWay}" /></StackPanel>
-                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.OutputChannels}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ChannelLocalizedChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibraryChannelSelection" local:LocalizedChoiceSelection.Value="{Binding OutputChannelChoice, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" /></StackPanel>
-                          <CheckBox Grid.Column="2" Content="{DynamicResource Loc.Settings.Ingest.PreserveMetadata}" IsChecked="{Binding PreserveMetadata, Mode=TwoWay}" VerticalAlignment="Bottom" />
-                          <CheckBox Grid.Column="3" Content="{DynamicResource Loc.Settings.Ingest.PreserveArtwork}" IsChecked="{Binding PreserveArtwork, Mode=TwoWay}" VerticalAlignment="Bottom" />
+                        <Grid Classes="responsive-form" ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                          <StackPanel Spacing="4"><TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Ingest.OutputChannels}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ChannelLocalizedChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibraryChannelSelection" local:LocalizedChoiceSelection.Value="{Binding OutputChannelChoice, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" /></StackPanel>
+                          <CheckBox Grid.Column="1" Content="{DynamicResource Loc.Settings.Ingest.PreserveMetadata}" IsChecked="{Binding PreserveMetadata, Mode=TwoWay}" VerticalAlignment="Bottom" />
+                          <CheckBox Grid.Column="2" Content="{DynamicResource Loc.Settings.Ingest.PreserveArtwork}" IsChecked="{Binding PreserveArtwork, Mode=TwoWay}" VerticalAlignment="Bottom" />
                         </Grid>
                         <Grid Classes="responsive-form" ColumnDefinitions="Auto,*" ColumnSpacing="10">
                           <CheckBox Content="{DynamicResource Loc.Settings.Ingest.UseRootCollision}" IsChecked="{Binding UseProfileCollision, Mode=TwoWay}" VerticalAlignment="Center" />

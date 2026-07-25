@@ -45,6 +45,7 @@ public sealed partial class LocalizationCatalogTests
         "iTunes",
         "ReplayGain",
         "WavPack",
+        "MAC",
         "OptimFROG",
         "Matroska",
         "WebM",

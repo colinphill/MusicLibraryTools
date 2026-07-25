@@ -108,6 +108,7 @@ public sealed class EditableLibraryConfig
     public string? ItunesLibraryPath { get; set; }
     public string FfmpegPath { get; set; } = "ffmpeg";
     public string WavpackPath { get; set; } = "wavpack";
+    public string MonkeysAudioPath { get; set; } = "MAC";
     public int LengthLimit { get; set; } = 255;
     public int DiscNumLengthLimit { get; set; } = 255;
     public string AacEncoder { get; set; } = "libfdk_aac";
@@ -178,7 +179,8 @@ public sealed class EditableLibraryConfig
 
     private static readonly HashSet<string> Known = new(StringComparer.Ordinal)
     {
-        "DatabaseFile", "ItunesLibrary", "FfmpegPath", "WavpackPath", "LengthLimit",
+        "DatabaseFile", "ItunesLibrary", "FfmpegPath", "WavpackPath",
+        "MonkeysAudioPath", "LengthLimit",
         "DiscNumLengthLimit",
         "SyncTarget", "SyncPlaylist", "PlaylistSource", "PlaylistTarget", "PlaylistType", "IndexTarget",
         "IngestSettings", "ArtworkHealthSettings", "CrossSyncMusicSettings",
@@ -211,6 +213,10 @@ public sealed class EditableLibraryConfig
                 (string?)root.Element("FfmpegPath") ?? "ffmpeg",
             WavpackPath = parsed.MachineBindings?.WavpackPath ??
                 (string?)root.Element("WavpackPath") ?? "wavpack",
+            MonkeysAudioPath =
+                parsed.MachineBindings?.MonkeysAudioPath ??
+                (string?)root.Element("MonkeysAudioPath") ??
+                "MAC",
             _sourceRoot = new XElement(root),
             _loadedPath = Path.GetFullPath(path),
         };
@@ -454,6 +460,10 @@ public sealed class EditableLibraryConfig
                 string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim()));
             root.Add(new XElement("WavpackPath",
                 string.IsNullOrWhiteSpace(WavpackPath) ? "wavpack" : WavpackPath.Trim()));
+            root.Add(new XElement("MonkeysAudioPath",
+                string.IsNullOrWhiteSpace(MonkeysAudioPath)
+                    ? "MAC"
+                    : MonkeysAudioPath.Trim()));
         }
 
         foreach (var t in IndexTargets)
@@ -998,7 +1008,13 @@ public sealed class EditableLibraryConfig
             new XElement("ToolBinding",
                 new XAttribute("Name", "Wavpack"),
                 new XAttribute("Path",
-                    string.IsNullOrWhiteSpace(WavpackPath) ? "wavpack" : WavpackPath.Trim())));
+                    string.IsNullOrWhiteSpace(WavpackPath) ? "wavpack" : WavpackPath.Trim())),
+            new XElement("ToolBinding",
+                new XAttribute("Name", "MonkeysAudio"),
+                new XAttribute("Path",
+                    string.IsNullOrWhiteSpace(MonkeysAudioPath)
+                        ? "MAC"
+                        : MonkeysAudioPath.Trim())));
 
         if (!string.IsNullOrWhiteSpace(ItunesLibraryPath))
             root.Add(new XElement("ToolBinding",

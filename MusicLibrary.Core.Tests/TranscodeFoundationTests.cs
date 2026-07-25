@@ -14,6 +14,151 @@ namespace MusicLibrary.Core.Tests;
 public sealed class TranscodeFoundationTests
 {
     [Fact]
+    public void IngestTranscodeResolverUsesStableSharedSettings()
+    {
+        LibraryIngestRecipe recipe = IngestRecipe() with
+        {
+            TranscodeFormatId =
+                AudioTranscodeFormatIds.MonkeysAudio,
+            TranscodeEncoderId =
+                AudioTranscodeEncoderIds.MonkeysAudioMac,
+            TranscodeRateMode =
+                AudioTranscodeRateMode.Lossless.ToString(),
+            TranscodeCompressionEffort = 8,
+            SampleRateHz = 48_000,
+            BitsPerSample = 24,
+        };
+
+        AudioTranscodeSettings settings =
+            Assert.IsType<AudioTranscodeSettings>(
+                IngestTranscodeSettingsResolver.Resolve(recipe));
+
+        Assert.Equal(
+            AudioTranscodeFormatIds.MonkeysAudio,
+            settings.FormatId);
+        Assert.Equal(
+            AudioTranscodeEncoderIds.MonkeysAudioMac,
+            settings.EncoderId);
+        Assert.Equal(
+            AudioTranscodeRateMode.Lossless,
+            settings.RateMode);
+        Assert.Equal(8, settings.CompressionEffort);
+        Assert.Equal(".ape",
+            IngestTranscodeSettingsResolver.OutputExtension(recipe));
+        Assert.Equal("ape",
+            IngestTranscodeSettingsResolver.OutputCodec(recipe));
+    }
+
+    [Fact]
+    public void LegacyIngestRecipeRemainsOnLegacyExecutionPath()
+    {
+        LibraryIngestRecipe recipe = IngestRecipe() with
+        {
+            OutputExtension = ".flac",
+            Codec = "flac",
+            Encoder = "flac",
+        };
+
+        Assert.False(
+            IngestTranscodeSettingsResolver.UsesSharedEngine(recipe));
+        Assert.Null(
+            IngestTranscodeSettingsResolver.Resolve(recipe));
+        Assert.Equal(".flac",
+            IngestTranscodeSettingsResolver.OutputExtension(recipe));
+    }
+
+    [Fact]
+    public void IngestTranscodeResolverRejectsUnsupportedRateMode()
+    {
+        AudioTranscodeCapabilitySnapshot snapshot = new(
+            [],
+            [
+                new(
+                    AudioTranscodeFormatIds.MonkeysAudio,
+                    "ape",
+                    "ape",
+                    ".ape",
+                    true,
+                    [
+                        AudioTranscodeEncoderIds
+                            .MonkeysAudioMac,
+                    ]),
+            ],
+            [
+                new(
+                    AudioTranscodeEncoderIds.MonkeysAudioMac,
+                    AudioTranscodeToolKind.MonkeysAudio,
+                    "MAC",
+                    AudioEncoderThreadingMode.ThreadCountControllable,
+                    [
+                        new(AudioTranscodeRateMode.Lossless),
+                    ],
+                    [],
+                    [16, 24]),
+            ],
+            DateTimeOffset.UtcNow,
+            1);
+        var settings = new AudioTranscodeSettings(
+            AudioTranscodeFormatIds.MonkeysAudio,
+            AudioTranscodeEncoderIds.MonkeysAudioMac,
+            AudioTranscodeRateMode.ConstantBitrate,
+            BitrateKbps: 320);
+
+        bool resolved =
+            IngestTranscodeSettingsResolver.TryResolveCapability(
+                snapshot,
+                settings,
+                out _,
+                out _,
+                out string? error);
+
+        Assert.False(resolved);
+        Assert.Contains("Rate mode", error);
+    }
+
+    [Fact]
+    public async Task CapabilityProbeAdvertisesConfiguredMonkeysAudioMac()
+    {
+        using var service = new AudioTranscodeCapabilityService(
+            new MemorySettings(),
+            new MacProbeRunner());
+
+        AudioTranscodeCapabilitySnapshot snapshot =
+            await service.GetAsync(
+                ct: TestContext.Current.CancellationToken);
+
+        AudioTranscodeFormatDescriptor format =
+            Assert.Single(
+                snapshot.Formats,
+                candidate =>
+                    candidate.Id ==
+                    AudioTranscodeFormatIds.MonkeysAudio);
+        AudioEncoderDescriptor encoder = Assert.Single(
+            snapshot.Encoders,
+            candidate =>
+                candidate.Id ==
+                AudioTranscodeEncoderIds.MonkeysAudioMac);
+        Assert.Contains(encoder.Id, format.EncoderIds);
+        Assert.Equal(
+            AudioEncoderThreadingMode.ThreadCountControllable,
+            encoder.ThreadingMode);
+    }
+
+    [Theory]
+    [InlineData(0, "-c1000")]
+    [InlineData(3, "-c2000")]
+    [InlineData(5, "-c3000")]
+    [InlineData(7, "-c4000")]
+    [InlineData(10, "-c5000")]
+    public void MonkeysAudioEffortMapsToNativeCompressionMode(
+        int effort,
+        string expected) =>
+        Assert.Equal(
+            expected,
+            AudioTranscodeAdapter
+                .MonkeysAudioCompressionMode(effort));
+
+    [Fact]
     public void FfmpegTableParserUsesExactIdentifiers()
     {
         const string output = """
@@ -33,6 +178,30 @@ public sealed class TranscodeFoundationTests
         Assert.DoesNotContain("h264", values);
         Assert.DoesNotContain("fla", values);
     }
+
+    private static LibraryIngestRecipe IngestRecipe() => new(
+        Id: "shared-transcode",
+        Name: "Shared transcode",
+        Enabled: true,
+        InputExtensions: [".flac"],
+        RequireLossless: null,
+        MinimumSampleRateHz: null,
+        MinimumBitsPerSample: null,
+        InputChannels: null,
+        MatchAnyQualityMinimum: false,
+        Action: LibraryIngestAction.Transcode,
+        DestinationRootId: Guid.NewGuid(),
+        DestinationLegacyRole: LibraryIngestRole.None,
+        OutputExtension: null,
+        Codec: null,
+        Encoder: null,
+        BitrateKbps: null,
+        SampleRateHz: null,
+        BitsPerSample: null,
+        OutputChannels: null,
+        PreserveMetadata: true,
+        PreserveArtwork: true,
+        CollisionPolicy: LibraryPathCollisionPolicy.Stop);
 
     [Theory]
     [InlineData(
@@ -1692,6 +1861,30 @@ public sealed class TranscodeFoundationTests
             };
             return Task.FromResult(
                 new ManagedProcessResult(0, output, ""));
+        }
+    }
+
+    private sealed class MacProbeRunner :
+        IManagedProcessRunner
+    {
+        public Task<ManagedProcessResult> RunAsync(
+            string executable,
+            IReadOnlyList<string> arguments,
+            string? workingDirectory = null,
+            IProgress<string>? standardOutputLines = null,
+            CancellationToken ct = default)
+        {
+            if (!executable.Equals(
+                    "MAC",
+                    StringComparison.OrdinalIgnoreCase))
+                throw new FileNotFoundException(executable);
+            const string help = """
+                Monkey's Audio Console
+                Compress: input.wav output.ape -c2000 -threads=#
+                Verify: input.ape -v
+                """;
+            return Task.FromResult(
+                new ManagedProcessResult(0, help, ""));
         }
     }
 

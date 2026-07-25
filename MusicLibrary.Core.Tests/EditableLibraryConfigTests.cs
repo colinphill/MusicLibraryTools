@@ -9,6 +9,68 @@ namespace MusicLibrary.Core.Tests;
 public class EditableLibraryConfigTests
 {
     [Fact]
+    public void IngestProfileXml_RoundTripsSharedTranscodeSetup()
+    {
+        LibraryIngestRecipe recipe = new(
+            "ape-copy",
+            "Monkey's Audio",
+            true,
+            [".flac"],
+            true,
+            null,
+            null,
+            null,
+            false,
+            LibraryIngestAction.Transcode,
+            Guid.NewGuid(),
+            LibraryIngestRole.None,
+            null,
+            null,
+            null,
+            null,
+            48_000,
+            24,
+            null,
+            true,
+            true,
+            LibraryPathCollisionPolicy.Stop)
+        {
+            TranscodeFormatId =
+                AudioTranscodeFormatIds.MonkeysAudio,
+            TranscodeEncoderId =
+                AudioTranscodeEncoderIds.MonkeysAudioMac,
+            TranscodeRateMode =
+                AudioTranscodeRateMode.Lossless.ToString(),
+            TranscodeCompressionEffort = 9,
+        };
+        var profile = new LibraryIngestProfile(
+            "ape-profile",
+            "APE profile",
+            new(
+                true,
+                LibrarySourceDisposition.Preserve,
+                true,
+                [recipe]));
+
+        XElement xml = LibraryIngestProfileXml.Write(profile);
+        LibraryIngestRecipe parsed = Assert.Single(
+            LibraryIngestProfileXml.Parse(xml).Ingest.Recipes);
+
+        Assert.Equal(
+            AudioTranscodeFormatIds.MonkeysAudio,
+            parsed.TranscodeFormatId);
+        Assert.Equal(
+            AudioTranscodeEncoderIds.MonkeysAudioMac,
+            parsed.TranscodeEncoderId);
+        Assert.Equal(
+            AudioTranscodeRateMode.Lossless.ToString(),
+            parsed.TranscodeRateMode);
+        Assert.Equal(9, parsed.TranscodeCompressionEffort);
+        Assert.Equal(48_000, parsed.SampleRateHz);
+        Assert.Equal(24, parsed.BitsPerSample);
+    }
+
+    [Fact]
     public void SaveThenLoad_RoundTrips()
     {
         var path = Path.Combine(Path.GetTempPath(), "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
@@ -20,6 +82,7 @@ public class EditableLibraryConfigTests
                 ItunesLibraryPath = @"C:\Music\iTunes Library.itl",
                 FfmpegPath = @"C:\ffmpeg\ffmpeg.exe",
                 WavpackPath = @"C:\wavpack\wavpack.exe",
+                MonkeysAudioPath = @"C:\mac\MAC.exe",
                 LengthLimit = 200,
                 DiscNumLengthLimit = 180,
                 AacEncoder = "aac-test",
@@ -67,6 +130,7 @@ public class EditableLibraryConfigTests
             Assert.Equal(@"C:\Music\iTunes Library.itl", reloaded.ItunesLibraryPath);
             Assert.Equal(@"C:\ffmpeg\ffmpeg.exe", reloaded.FfmpegPath);
             Assert.Equal(@"C:\wavpack\wavpack.exe", reloaded.WavpackPath);
+            Assert.Equal(@"C:\mac\MAC.exe", reloaded.MonkeysAudioPath);
             Assert.Equal(200, reloaded.LengthLimit);
             Assert.Equal(180, reloaded.DiscNumLengthLimit);
             Assert.Equal(200, reloaded.ActiveProfile.Naming.ComponentLengthLimit);
@@ -897,6 +961,8 @@ public class EditableLibraryConfigTests
         string databasePath = Path.Combine(work, "Cache", "library.db");
         string ffmpegPath = Path.Combine(work, "Tools", "ffmpeg");
         string wavpackPath = Path.Combine(work, "Tools", "wavpack");
+        string monkeysAudioPath =
+            Path.Combine(work, "Tools", "MAC");
         string itunesPath = Path.Combine(work, "Catalog", "Library.itl");
         try
         {
@@ -906,6 +972,7 @@ public class EditableLibraryConfigTests
                 DatabaseFile = databasePath,
                 FfmpegPath = ffmpegPath,
                 WavpackPath = wavpackPath,
+                MonkeysAudioPath = monkeysAudioPath,
                 ItunesLibraryPath = itunesPath,
                 IndexTargets = [new IndexTargetEntry { Target = musicPath }],
             };
@@ -919,6 +986,7 @@ public class EditableLibraryConfigTests
             Assert.Null(portable.Root.Element("DatabaseFile"));
             Assert.Null(portable.Root.Element("FfmpegPath"));
             Assert.Null(portable.Root.Element("WavpackPath"));
+            Assert.Null(portable.Root.Element("MonkeysAudioPath"));
             Assert.Null(portable.Root.Element("ItunesLibrary"));
             Assert.Null(portable.Root.Element("IndexTarget")?.Attribute("Path"));
 
@@ -936,6 +1004,9 @@ public class EditableLibraryConfigTests
             Assert.Equal(Path.GetFullPath(databasePath), runtime.DatabaseFile);
             Assert.Equal(Path.GetFullPath(ffmpegPath), runtime.FfmpegPath);
             Assert.Equal(Path.GetFullPath(wavpackPath), runtime.WavpackPath);
+            Assert.Equal(
+                Path.GetFullPath(monkeysAudioPath),
+                runtime.MonkeysAudioPath);
             Assert.Equal(Path.GetFullPath(itunesPath), runtime.ItunesLibraryPath);
 
             EditableLibraryConfig reloaded = EditableLibraryConfig.Load(configPath);

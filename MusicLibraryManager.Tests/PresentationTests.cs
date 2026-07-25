@@ -1699,6 +1699,67 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Ingest_recipe_editor_builds_shared_monkeys_audio_setup()
+    {
+        IngestRecipeEditorRow row =
+            IngestRecipeEditorRow.Create();
+        row.Action = LibraryIngestAction.Transcode;
+        row.ApplyTranscodeCapabilities(
+            new(
+                [],
+                [
+                    new(
+                        AudioTranscodeFormatIds.MonkeysAudio,
+                        "ape",
+                        "ape",
+                        ".ape",
+                        true,
+                        [AudioTranscodeEncoderIds.MonkeysAudioMac]),
+                ],
+                [
+                    new(
+                        AudioTranscodeEncoderIds.MonkeysAudioMac,
+                        AudioTranscodeToolKind.MonkeysAudio,
+                        "MAC",
+                        AudioEncoderThreadingMode.ThreadCountControllable,
+                        [
+                            new(
+                                AudioTranscodeRateMode.Lossless),
+                        ],
+                        [],
+                        [8, 16, 24, 32]),
+                ],
+                DateTimeOffset.UtcNow,
+                1),
+            new ResourceLocalizationService(
+                new FakeSettings()));
+        row.TranscodeFormatId =
+            AudioTranscodeFormatIds.MonkeysAudio;
+        row.TranscodeEncoderId =
+            AudioTranscodeEncoderIds.MonkeysAudioMac;
+        row.TranscodeRateMode =
+            AudioTranscodeRateMode.Lossless;
+        row.TranscodeCompressionEffort = 8;
+        row.SampleRateHz = 48_000;
+        row.BitsPerSample = 24;
+
+        LibraryIngestRecipe recipe = row.Build();
+
+        Assert.Equal(
+            AudioTranscodeFormatIds.MonkeysAudio,
+            recipe.TranscodeFormatId);
+        Assert.Equal(
+            AudioTranscodeEncoderIds.MonkeysAudioMac,
+            recipe.TranscodeEncoderId);
+        Assert.Equal(
+            AudioTranscodeRateMode.Lossless.ToString(),
+            recipe.TranscodeRateMode);
+        Assert.Equal("ape", recipe.Codec);
+        Assert.Null(recipe.Encoder);
+        Assert.Null(recipe.ExtraFfmpegOptions);
+    }
+
+    [Fact]
     public async Task Settings_playlist_sync_target_picker_selects_one_library_root()
     {
         var viewModel = new SettingsViewModel(
@@ -1983,10 +2044,12 @@ public sealed class PresentationTests
             viewModel.AdvancedIngestProfile!.Recipes[0].PreserveMetadata = false;
             IngestRecipeEditorRow aacRecipe = viewModel.AdvancedIngestProfile.Recipes.Single(
                 recipe => recipe.Id == "legacy-aac");
-            aacRecipe.Encoder = "aac-advanced";
+            aacRecipe.TranscodeEncoderId =
+                AudioTranscodeEncoderIds.Ffmpeg(
+                    "aac-advanced");
+            aacRecipe.TranscodeRateMode =
+                AudioTranscodeRateMode.AverageBitrate;
             aacRecipe.BitrateKbps = 320;
-            aacRecipe.ExtraFfmpegOptions =
-                "-af \"loudnorm=I=-16:LRA=11\" -movflags +faststart";
             aacRecipe.AddToMediaCatalog = true;
             SidecarRuleEditorRow newSidecar = SidecarRuleEditorRow.Create();
             newSidecar.Patterns = "*.lrc, lyrics/**";
@@ -2034,11 +2097,18 @@ public sealed class PresentationTests
             Assert.Equal(170, saved.DiscNumLengthLimit);
             Assert.Equal("aac-advanced", saved.AacEncoder);
             Assert.Equal(320, saved.AacBitrateKbps);
-            Assert.Equal("-af \"loudnorm=I=-16:LRA=11\" -movflags +faststart",
+            LibraryIngestRecipe savedAac =
                 saved.ActiveIngestProfile.Ingest.Recipes.Single(recipe =>
-                    recipe.Id == "legacy-aac").ExtraFfmpegOptions);
-            Assert.True(saved.ActiveIngestProfile.Ingest.Recipes.Single(recipe =>
-                recipe.Id == "legacy-aac").AddToMediaCatalog);
+                    recipe.Id == "legacy-aac");
+            Assert.Equal(
+                AudioTranscodeFormatIds.AacM4a,
+                savedAac.TranscodeFormatId);
+            Assert.Equal(
+                AudioTranscodeEncoderIds.Ffmpeg(
+                    "aac-advanced"),
+                savedAac.TranscodeEncoderId);
+            Assert.Null(savedAac.ExtraFfmpegOptions);
+            Assert.True(savedAac.AddToMediaCatalog);
             Assert.False(saved.ActiveProfile.AlbumIdentity.StripFormatSuffixes);
             Assert.False(saved.ActiveProfile.Metadata.PreserveReplayGain);
             Assert.False(saved.ActiveProfile.Health.Find(

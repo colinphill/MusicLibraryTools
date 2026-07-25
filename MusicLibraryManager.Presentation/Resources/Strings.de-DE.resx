@@ -3479,7 +3479,7 @@
     <value>Computer-Spezifisch Ordner Pfade stammen von “{0}”.</value>
   </data>
   <data name="Settings.PolicyDetails.ToolsParagraph" xml:space="preserve">
-    <value>Externe Werkzeuge verwenden FFmpeg bei “{0}” und WavPack bei “{1}”. {2}</value>
+    <value>Externe Werkzeuge verwenden FFmpeg bei “{0}”, WavPack bei “{1}”, und Monkey's Audio MAC bei “{2}”. {3}</value>
   </data>
   <data name="Settings.Choice.Theme.System" xml:space="preserve">
     <value>System</value>
@@ -6149,6 +6149,7 @@
   <data name="Transcode.Quality.Label" xml:space="preserve"><value>Qualität</value></data>
   <data name="Transcode.SampleRate.Label" xml:space="preserve"><value>Abtastrate</value></data>
   <data name="Transcode.BitDepth.Label" xml:space="preserve"><value>Bittiefe</value></data>
+  <data name="Transcode.CompressionEffort.Label" xml:space="preserve"><value>Komprimierung Aufwand (0–10)</value></data>
   <data name="Transcode.Metadata.Preserve" xml:space="preserve"><value>Metadaten beibehalten</value></data>
   <data name="Transcode.Artwork.Preserve" xml:space="preserve"><value>Cover beibehalten</value></data>
   <data name="Transcode.Correction.Create" xml:space="preserve"><value>Korrekturdatei erstellen, wenn unterstützt</value></data>
@@ -6238,4 +6239,9 @@
   <data name="Common.Delete" xml:space="preserve"><value>Löschen</value></data>
   <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} Volume · {1:N0} Bestätigt</value></data>
   <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} Volume · {1:N0} Bestätigt</value></data>
+  <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
+  <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC Programmdatei</value></data>
+  <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>auswählen Monkey's Audio MAC Programmdatei</value></data>
+  <data name="Transcode.Format.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio</value></data>
+  <data name="Transcode.Encoder.MonkeysAudioMac" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
 </root>

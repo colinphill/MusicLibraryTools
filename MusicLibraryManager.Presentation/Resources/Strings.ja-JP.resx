@@ -3479,7 +3479,7 @@
     <value>コンピューター-特定 フォルダー パス 来る から “{0}”.</value>
   </data>
   <data name="Settings.PolicyDetails.ToolsParagraph" xml:space="preserve">
-    <value>外部ツール 使用 FFmpeg で “{0}” および WavPack で “{1}”. {2}</value>
+    <value>外部ツール 使用 FFmpeg で “{0}”, WavPack で “{1}”, および Monkey's Audio MAC で “{2}”. {3}</value>
   </data>
   <data name="Settings.Choice.Theme.System" xml:space="preserve">
     <value>システム</value>
@@ -6149,6 +6149,7 @@
   <data name="Transcode.Quality.Label" xml:space="preserve"><value>品質</value></data>
   <data name="Transcode.SampleRate.Label" xml:space="preserve"><value>サンプルレート</value></data>
   <data name="Transcode.BitDepth.Label" xml:space="preserve"><value>ビット深度</value></data>
+  <data name="Transcode.CompressionEffort.Label" xml:space="preserve"><value>圧縮 強度 (0–10)</value></data>
   <data name="Transcode.Metadata.Preserve" xml:space="preserve"><value>メタデータを保持</value></data>
   <data name="Transcode.Artwork.Preserve" xml:space="preserve"><value>アートワークを保持</value></data>
   <data name="Transcode.Correction.Create" xml:space="preserve"><value>対応時に補正ファイルを作成</value></data>
@@ -6238,4 +6239,9 @@
   <data name="Common.Delete" xml:space="preserve"><value>削除</value></data>
   <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} ボリューム · {1:N0} 確定済み</value></data>
   <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} ボリューム · {1:N0} 確定済み</value></data>
+  <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
+  <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC 実行ファイル</value></data>
+  <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>選択 Monkey's Audio MAC 実行ファイル</value></data>
+  <data name="Transcode.Format.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio</value></data>
+  <data name="Transcode.Encoder.MonkeysAudioMac" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
 </root>

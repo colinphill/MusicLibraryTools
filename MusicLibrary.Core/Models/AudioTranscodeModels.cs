@@ -38,6 +38,7 @@ public enum AudioTranscodeToolKind
     Ffmpeg,
     WavPack,
     OptimFrog,
+    MonkeysAudio,
 }
 
 public enum AudioToolProbeState
@@ -65,6 +66,7 @@ public static class AudioTranscodeFormatIds
     public const string OptimFrog = "optimfrog.ofr";
     public const string OptimFrogDualStream = "optimfrog.ofs";
     public const string OptimFrogFloat = "optimfrog.off";
+    public const string MonkeysAudio = "monkeysaudio.ape";
 }
 
 public static class AudioTranscodeEncoderIds
@@ -78,6 +80,7 @@ public static class AudioTranscodeEncoderIds
     public const string OptimFrogOfr = "optimfrog:ofr";
     public const string OptimFrogOfs = "optimfrog:ofs";
     public const string OptimFrogOff = "optimfrog:off";
+    public const string MonkeysAudioMac = "monkeysaudio:mac";
 }
 
 public sealed record AudioRateControlDescriptor(

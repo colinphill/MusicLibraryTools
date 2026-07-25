@@ -3479,7 +3479,7 @@
     <value>컴퓨터-특정 폴더 경로 옴 에서 “{0}”.</value>
   </data>
   <data name="Settings.PolicyDetails.ToolsParagraph" xml:space="preserve">
-    <value>외부 도구 사용 FFmpeg 에서 “{0}” 및 WavPack 에서 “{1}”. {2}</value>
+    <value>외부 도구 사용 FFmpeg 에서 “{0}”, WavPack 에서 “{1}”, 및 Monkey's Audio MAC 에서 “{2}”. {3}</value>
   </data>
   <data name="Settings.Choice.Theme.System" xml:space="preserve">
     <value>시스템</value>
@@ -6149,6 +6149,7 @@
   <data name="Transcode.Quality.Label" xml:space="preserve"><value>품질</value></data>
   <data name="Transcode.SampleRate.Label" xml:space="preserve"><value>샘플 레이트</value></data>
   <data name="Transcode.BitDepth.Label" xml:space="preserve"><value>비트 심도</value></data>
+  <data name="Transcode.CompressionEffort.Label" xml:space="preserve"><value>압축 강도 (0–10)</value></data>
   <data name="Transcode.Metadata.Preserve" xml:space="preserve"><value>메타데이터 유지</value></data>
   <data name="Transcode.Artwork.Preserve" xml:space="preserve"><value>아트워크 유지</value></data>
   <data name="Transcode.Correction.Create" xml:space="preserve"><value>지원되는 경우 보정 파일 만들기</value></data>
@@ -6238,4 +6239,9 @@
   <data name="Common.Delete" xml:space="preserve"><value>삭제</value></data>
   <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} 볼륨 · {1:N0} 커밋됨</value></data>
   <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} 볼륨 · {1:N0} 커밋됨</value></data>
+  <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
+  <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC 실행 파일</value></data>
+  <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>선택 Monkey's Audio MAC 실행 파일</value></data>
+  <data name="Transcode.Format.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio</value></data>
+  <data name="Transcode.Encoder.MonkeysAudioMac" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
 </root>

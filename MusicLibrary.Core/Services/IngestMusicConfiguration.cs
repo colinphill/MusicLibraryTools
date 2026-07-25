@@ -18,6 +18,7 @@ public sealed record IngestMusicConfiguration
 
     public required string FfmpegPath { get; init; }
     public string WavpackPath { get; init; } = "wavpack";
+    public string MonkeysAudioPath { get; init; } = "MAC";
     public required string AacDestination { get; init; }
     public string? ItunesLibraryPath { get; init; }
     public required string CdDestination { get; init; }
@@ -149,6 +150,8 @@ public sealed record IngestMusicConfiguration
         {
             FfmpegPath = configuration.FfmpegPath,
             WavpackPath = configuration.WavpackPath,
+            MonkeysAudioPath =
+                configuration.MonkeysAudioPath,
             ItunesLibraryPath = configuration.ItunesLibraryPath,
             CdDestination = RecipeDestination("legacy-cd-flac"),
             PairedCdDestination = RecipeDestination("legacy-paired-cd-flac"),
@@ -309,6 +312,9 @@ public sealed record IngestMusicConfiguration
         {
             FfmpegPath = Required("FfmpegPath"),
             WavpackPath = ((string?)root.Element("WavpackPath") ?? "wavpack").Trim(),
+            MonkeysAudioPath =
+                ((string?)root.Element("MonkeysAudioPath") ??
+                 "MAC").Trim(),
             AacDestination = aacDestination,
             ItunesLibraryPath = itunesLibraryPath,
             CdDestination = cdDestination,
@@ -331,6 +337,7 @@ public sealed record IngestMusicConfiguration
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(FfmpegPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(WavpackPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(MonkeysAudioPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(AacDestination);
         ArgumentException.ThrowIfNullOrWhiteSpace(CdDestination);
         ArgumentException.ThrowIfNullOrWhiteSpace(PairedCdDestination);
@@ -343,6 +350,7 @@ public sealed record IngestMusicConfiguration
             new XElement("IngestMusicConfiguration",
                 new XElement("FfmpegPath", FfmpegPath),
                 new XElement("WavpackPath", WavpackPath),
+                new XElement("MonkeysAudioPath", MonkeysAudioPath),
                 new XElement("AacDestination", AacDestination),
                 string.IsNullOrWhiteSpace(ItunesLibraryPath) ? null : new XElement("ItunesLibrary", ItunesLibraryPath),
                 new XElement("CdDestination", CdDestination),

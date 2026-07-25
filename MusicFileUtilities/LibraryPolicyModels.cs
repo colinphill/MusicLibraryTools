@@ -249,6 +249,17 @@ namespace MusicLibraryTools
         public LibraryRepresentationRole OutputRepresentationRole { get; init; } =
             LibraryRepresentationRole.Ignore;
         public string? ExtraFfmpegOptions { get; init; }
+        /// <summary>
+        /// Stable shared-transcode format ID. When present, the ingest engine resolves
+        /// the container, codec, and executable from the common transcode capability catalog.
+        /// Legacy OutputExtension/Codec/Encoder values remain readable for compatibility.
+        /// </summary>
+        public string? TranscodeFormatId { get; init; }
+        public string? TranscodeEncoderId { get; init; }
+        public string? TranscodeRateMode { get; init; }
+        public double? TranscodeQuality { get; init; }
+        public int TranscodeCompressionEffort { get; init; } = 5;
+        public bool TranscodeCreateCorrectionFile { get; init; }
         public bool AddToMediaCatalog { get; init; }
         public LibraryIngestAlbumCondition AlbumCondition { get; init; } =
             LibraryIngestAlbumCondition.Any;
@@ -1334,6 +1345,14 @@ namespace MusicLibraryTools
                 RequireFallbackApproval = ParseBoolean(match,
                     "RequireFallbackApproval", false),
                 ExtraFfmpegOptions = Optional(output, "ExtraFfmpegOptions"),
+                TranscodeFormatId = Optional(output, "TranscodeFormatId"),
+                TranscodeEncoderId = Optional(output, "TranscodeEncoderId"),
+                TranscodeRateMode = Optional(output, "TranscodeRateMode"),
+                TranscodeQuality = ParseOptionalDouble(output, "TranscodeQuality"),
+                TranscodeCompressionEffort = ParseInteger(
+                    output, "TranscodeCompressionEffort", 5),
+                TranscodeCreateCorrectionFile = ParseBoolean(
+                    output, "TranscodeCreateCorrectionFile", false),
                 AddToMediaCatalog = ParseBoolean(output, "AddToMediaCatalog", false),
             };
         }
@@ -1362,6 +1381,16 @@ namespace MusicLibraryTools
             SetOptional(output, "Codec", recipe.Codec);
             SetOptional(output, "Encoder", recipe.Encoder);
             SetOptional(output, "ExtraFfmpegOptions", recipe.ExtraFfmpegOptions);
+            SetOptional(output, "TranscodeFormatId", recipe.TranscodeFormatId);
+            SetOptional(output, "TranscodeEncoderId", recipe.TranscodeEncoderId);
+            SetOptional(output, "TranscodeRateMode", recipe.TranscodeRateMode);
+            SetOptional(output, "TranscodeQuality", recipe.TranscodeQuality);
+            if (recipe.TranscodeCompressionEffort != 5)
+                output.SetAttributeValue(
+                    "TranscodeCompressionEffort",
+                    recipe.TranscodeCompressionEffort);
+            if (recipe.TranscodeCreateCorrectionFile)
+                output.SetAttributeValue("TranscodeCreateCorrectionFile", true);
             if (recipe.AddToMediaCatalog)
                 output.SetAttributeValue("AddToMediaCatalog", true);
             SetOptional(output, "BitrateKbps", recipe.BitrateKbps);
@@ -1414,6 +1443,18 @@ namespace MusicLibraryTools
             ValidateOptionalPositive(recipe.BitrateKbps, recipe.Id, "bitrate");
             ValidateOptionalPositive(recipe.SampleRateHz, recipe.Id, "output sample rate");
             ValidateOptionalPositive(recipe.BitsPerSample, recipe.Id, "output bit depth");
+            if (recipe.TranscodeQuality is < 0)
+                throw new InvalidDataException(
+                    $"Ingest recipe '{recipe.Id}' has a negative transcode quality.");
+            if (recipe.TranscodeCompressionEffort is < 0 or > 10)
+                throw new InvalidDataException(
+                    $"Ingest recipe '{recipe.Id}' has a transcode compression effort outside 0-10.");
+            if (!string.IsNullOrWhiteSpace(recipe.TranscodeRateMode) &&
+                !SharedTranscodeRateModes.Contains(
+                    recipe.TranscodeRateMode))
+                throw new InvalidDataException(
+                    $"Ingest recipe '{recipe.Id}' has an invalid transcode rate mode " +
+                    $"'{recipe.TranscodeRateMode}'.");
             _ = FfmpegOptionTokenizer.Parse(recipe.ExtraFfmpegOptions);
             if (recipe.InputChannels is { } inputChannels && !Enum.IsDefined(inputChannels))
                 throw new InvalidDataException(
@@ -1424,7 +1465,15 @@ namespace MusicLibraryTools
             if (!Enum.IsDefined(recipe.AlbumCondition) || !Enum.IsDefined(recipe.SourceSelection))
                 throw new InvalidDataException(
                     $"Ingest recipe '{recipe.Id}' has an invalid source-selection policy.");
-            string? outputExtension = NormalizeOptionalExtension(recipe.OutputExtension);
+            string? sharedExtension = SharedTranscodeExtension(
+                recipe.TranscodeFormatId);
+            if (!string.IsNullOrWhiteSpace(recipe.TranscodeFormatId) &&
+                sharedExtension is null)
+                throw new InvalidDataException(
+                    $"Ingest recipe '{recipe.Id}' references unknown transcode format " +
+                    $"'{recipe.TranscodeFormatId}'.");
+            string? outputExtension = sharedExtension ??
+                NormalizeOptionalExtension(recipe.OutputExtension);
             switch (recipe.Action)
             {
                 case LibraryIngestAction.Copy when outputExtension is not null &&
@@ -1462,24 +1511,37 @@ namespace MusicLibraryTools
                                 extension, MediaFormatCapabilities.TranscodeSource))
                             throw new InvalidDataException(
                                 $"Transcode recipe '{recipe.Id}' cannot decode '{extension}'.");
-                    if (!MediaFormatRegistry.Default.SupportsExtension(
+                    if (string.IsNullOrWhiteSpace(
+                            recipe.TranscodeFormatId) &&
+                        !MediaFormatRegistry.Default.SupportsExtension(
                             outputExtension, MediaFormatCapabilities.TranscodeDestination))
                         throw new InvalidDataException(
                             $"Transcode recipe '{recipe.Id}' cannot encode '{outputExtension}'.");
-                    string codec = (recipe.Codec ?? outputExtension.TrimStart('.'))
+                    string codec = (SharedTranscodeCodec(recipe.TranscodeFormatId) ??
+                        recipe.Codec ?? outputExtension.TrimStart('.'))
                         .Trim().ToLowerInvariant();
                     bool compatible = outputExtension switch
                     {
                         ".flac" => codec == "flac",
                         ".m4a" => codec is "aac" or "m4a" or "alac",
                         ".wv" => codec is "wv" or "wavpack",
-                        _ => false,
+                        ".aac" => codec == "aac",
+                        ".mp3" => codec == "mp3",
+                        ".ogg" => codec is "opus" or "vorbis",
+                        ".opus" => codec == "opus",
+                        ".wav" or ".rf64" or ".aiff" => codec == "pcm",
+                        ".tta" => codec == "tta",
+                        ".ofr" or ".ofs" => codec == "optimfrog",
+                        ".ape" => codec == "ape",
+                        _ => !string.IsNullOrWhiteSpace(
+                            recipe.TranscodeFormatId),
                     };
                     if (!compatible)
                         throw new InvalidDataException(
                             $"Transcode recipe '{recipe.Id}' codec '{codec}' is not compatible " +
                             $"with container '{outputExtension}'.");
-                    if (outputExtension == ".wv")
+                    if (outputExtension == ".wv" &&
+                        string.IsNullOrWhiteSpace(recipe.TranscodeFormatId))
                     {
                         if (inputExtensions.Any(extension => extension != ".dsf"))
                             throw new InvalidDataException(
@@ -1537,6 +1599,58 @@ namespace MusicLibraryTools
 
         private static string? NormalizeOptionalExtension(string? value) =>
             string.IsNullOrWhiteSpace(value) ? null : NormalizeExtension(value);
+
+        private static string? SharedTranscodeExtension(string? formatId) =>
+            formatId switch
+            {
+                "flac.flac" => ".flac",
+                "alac.m4a" or "aac.m4a" => ".m4a",
+                "aac.adts" => ".aac",
+                "mp3.mp3" => ".mp3",
+                "opus.ogg" or "vorbis.ogg" => ".ogg",
+                "wavpack.wv" => ".wv",
+                "pcm.wav" => ".wav",
+                "pcm.rf64" => ".rf64",
+                "pcm.aiff" => ".aiff",
+                "tta.tta" => ".tta",
+                "optimfrog.ofr" or "optimfrog.off" => ".ofr",
+                "optimfrog.ofs" => ".ofs",
+                "monkeysaudio.ape" => ".ape",
+                null or "" => null,
+                _ => null,
+            };
+
+        private static string? SharedTranscodeCodec(string? formatId) =>
+            formatId switch
+            {
+                "flac.flac" => "flac",
+                "alac.m4a" => "alac",
+                "aac.m4a" or "aac.adts" => "aac",
+                "mp3.mp3" => "mp3",
+                "opus.ogg" => "opus",
+                "vorbis.ogg" => "vorbis",
+                "wavpack.wv" => "wavpack",
+                "pcm.wav" or "pcm.rf64" or "pcm.aiff" => "pcm",
+                "tta.tta" => "tta",
+                "optimfrog.ofr" or "optimfrog.ofs" or "optimfrog.off" =>
+                    "optimfrog",
+                "monkeysaudio.ape" => "ape",
+                _ => null,
+            };
+
+        private static readonly HashSet<string>
+            SharedTranscodeRateModes =
+            new(
+                [
+                    "Lossless",
+                    "ConstantBitrate",
+                    "AverageBitrate",
+                    "VariableQuality",
+                    "ConstrainedVariableBitrate",
+                    "HybridBitrate",
+                    "HybridQuality",
+                ],
+                StringComparer.OrdinalIgnoreCase);
 
         private static void SetOptional(XElement element, string name, object? value)
         {
@@ -1618,6 +1732,35 @@ namespace MusicLibraryTools
             throw new InvalidDataException(
                 $"Attribute '{attributeName}' on <{element!.Name.LocalName}> must be a " +
                 "non-negative integer.");
+        }
+
+        private static int ParseInteger(
+            XElement? element,
+            string attributeName,
+            int fallback)
+        {
+            string? value = Optional(element, attributeName);
+            if (value is null)
+                return fallback;
+            if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture,
+                    out int parsed))
+                return parsed;
+            throw new InvalidDataException(
+                $"Attribute '{attributeName}' on <{element!.Name.LocalName}> must be an integer.");
+        }
+
+        private static double? ParseOptionalDouble(
+            XElement? element,
+            string attributeName)
+        {
+            string? value = Optional(element, attributeName);
+            if (value is null)
+                return null;
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture,
+                    out double parsed) && double.IsFinite(parsed))
+                return parsed;
+            throw new InvalidDataException(
+                $"Attribute '{attributeName}' on <{element!.Name.LocalName}> must be a number.");
         }
 
         private static int? ParseOptionalPositiveInteger(XElement? element, string attributeName)
@@ -1873,7 +2016,9 @@ namespace MusicLibraryTools
                 .Append(configuration.DatabaseFile).Append('|')
                 .Append(configuration.ItunesLibraryPath).Append('|')
                 .Append(configuration.FfmpegPath).Append('|')
-                .Append(configuration.WavpackPath).AppendLine()
+                .Append(configuration.WavpackPath).Append('|')
+                .Append(configuration.MonkeysAudioPath)
+                .AppendLine()
                 .Append("ingest-settings|")
                 .Append(ingestSettings.AacEncoder).Append('|')
                 .Append(ingestSettings.AacBitrateKbps).Append('|')
@@ -1976,6 +2121,12 @@ namespace MusicLibraryTools
                         .Append(recipe.DestinationLegacyRole).Append('|')
                         .Append(recipe.OutputExtension).Append('|').Append(recipe.Codec).Append('|')
                         .Append(recipe.Encoder).Append('|').Append(recipe.ExtraFfmpegOptions)
+                        .Append('|').Append(recipe.TranscodeFormatId)
+                        .Append('|').Append(recipe.TranscodeEncoderId)
+                        .Append('|').Append(recipe.TranscodeRateMode)
+                        .Append('|').Append(recipe.TranscodeQuality)
+                        .Append('|').Append(recipe.TranscodeCompressionEffort)
+                        .Append('|').Append(recipe.TranscodeCreateCorrectionFile)
                         .Append('|').Append(recipe.AddToMediaCatalog).Append('|')
                         .Append(recipe.BitrateKbps).Append('|')
                         .Append(recipe.SampleRateHz).Append('|').Append(recipe.BitsPerSample).Append('|')

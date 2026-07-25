@@ -44,6 +44,10 @@ public sealed class AudioTranscodeCapabilityService :
         string wavpack =
             configuration.Configuration?.WavpackPath ??
             "wavpack";
+        string monkeysAudio =
+            configuration.Configuration?
+                .MonkeysAudioPath ??
+            "MAC";
         string optimFrogDirectory =
             _settings.GetPreference(
                 OptimFrogFingerprintInputService
@@ -56,6 +60,7 @@ public sealed class AudioTranscodeCapabilityService :
             configuration.Version,
             ffmpeg,
             wavpack,
+            monkeysAudio,
             optimFrogDirectory);
         if (!forceRefresh &&
             _cached is not null &&
@@ -84,11 +89,16 @@ public sealed class AudioTranscodeCapabilityService :
                 ProbeOptimFrogAsync(
                     optimFrogDirectory,
                     ct);
+            Task<AudioToolProbeResult> monkeysAudioProbe =
+                ProbeMonkeysAudioAsync(
+                    monkeysAudio,
+                    ct);
             AudioToolProbeResult[] probes =
                 await Task.WhenAll(
                         ffmpegProbe,
                         wavpackProbe,
-                        optimFrogProbe)
+                        optimFrogProbe,
+                        monkeysAudioProbe)
                     .ConfigureAwait(false);
             BuildCatalog(
                 probes,
@@ -356,6 +366,77 @@ public sealed class AudioTranscodeCapabilityService :
         }
     }
 
+    private async Task<AudioToolProbeResult>
+        ProbeMonkeysAudioAsync(
+            string executable,
+            CancellationToken ct)
+    {
+        try
+        {
+            ManagedProcessResult help =
+                await _processes.RunAsync(
+                    executable,
+                    [],
+                    ct: ct).ConfigureAwait(false);
+            string combined =
+                (help.StandardOutput +
+                 help.StandardError)
+                .Replace(
+                    "\0",
+                    "",
+                    StringComparison.Ordinal);
+            if (!combined.Contains(
+                    "Monkey's Audio",
+                    StringComparison.OrdinalIgnoreCase) ||
+                !combined.Contains(
+                    "-c2000",
+                    StringComparison.Ordinal) ||
+                !combined.Contains(
+                    "Verify",
+                    StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException(
+                    "The configured executable did not " +
+                    "report the expected MAC command-line " +
+                    "interface.");
+            var capabilities =
+                ImmutableHashSet.CreateBuilder<string>(
+                    StringComparer.Ordinal);
+            capabilities.Add("mac");
+            capabilities.Add("verify");
+            if (combined.Contains(
+                    "-threads=#",
+                    StringComparison.OrdinalIgnoreCase))
+                capabilities.Add("threads");
+            return new(
+                AudioTranscodeToolKind.MonkeysAudio,
+                AudioToolProbeState.Ready,
+                executable,
+                ResolveExecutable(executable),
+                FirstNonblankLine(combined),
+                capabilities.ToImmutable(),
+                capabilities.ToImmutable(),
+                ImmutableHashSet.Create(
+                    StringComparer.Ordinal,
+                    "ape"),
+                ImmutableHashSet.Create(
+                    StringComparer.Ordinal,
+                    "wav"));
+        }
+        catch (OperationCanceledException)
+            when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception error)
+        {
+            return AudioToolProbeResult.Unavailable(
+                AudioTranscodeToolKind.MonkeysAudio,
+                executable,
+                "Transcode.Tool.MonkeysAudioUnavailable",
+                error.Message);
+        }
+    }
+
     private async Task<ManagedProcessResult> RunRequiredAsync(
         string executable,
         IReadOnlyList<string> arguments,
@@ -432,6 +513,12 @@ public sealed class AudioTranscodeCapabilityService :
                 item.Tool ==
                 AudioTranscodeToolKind.OptimFrog &&
                 item.State == AudioToolProbeState.Ready);
+        AudioToolProbeResult? monkeysAudio =
+            probes.FirstOrDefault(item =>
+                item.Tool ==
+                    AudioTranscodeToolKind.MonkeysAudio &&
+                item.State ==
+                    AudioToolProbeState.Ready);
         var encoderRows =
             new List<AudioEncoderDescriptor>();
         var formatRows =
@@ -663,6 +750,36 @@ public sealed class AudioTranscodeCapabilityService :
                 ".ofr",
                 true,
                 true);
+        }
+
+        if (monkeysAudio is not null)
+        {
+            string id =
+                AudioTranscodeEncoderIds
+                    .MonkeysAudioMac;
+            encoderRows.Add(new(
+                id,
+                AudioTranscodeToolKind.MonkeysAudio,
+                "MAC",
+                monkeysAudio.Encoders.Contains(
+                    "threads")
+                    ? AudioEncoderThreadingMode
+                        .ThreadCountControllable
+                    : AudioEncoderThreadingMode
+                        .SingleThreaded,
+                [Lossless()],
+                [],
+                [8, 16, 24, 32]));
+            AddOrMergeFormat(
+                formatRows,
+                new(
+                    AudioTranscodeFormatIds
+                        .MonkeysAudio,
+                    "ape",
+                    "ape",
+                    ".ape",
+                    true,
+                    [id]));
         }
 
         encoders =

@@ -35,6 +35,7 @@ internal static partial class CatalogGenerator
         "FFmpeg",
         "ffprobe",
         "WavPack",
+        "MAC",
         "OptimFROG",
         "Matroska",
         "WebM",
@@ -886,6 +887,7 @@ internal static partial class CatalogGenerator
     private static readonly string TranslationRows =
         """
         # English|de-DE|es-ES|fr-FR|it-IT|pt-BR|ja-JP|ko-KR|zh-CN|zh-TW
+        effort|Aufwand|esfuerzo|effort|intensità|esforço|強度|강도|强度|強度
         about|Über|Acerca de|À propos|Informazioni|Sobre|このアプリについて|정보|关于|關於
         pending changes|ausstehende Änderungen|cambios pendientes|modifications en attente|modifiche in sospeso|alterações pendentes|保留中の変更|보류 중인 변경 사항|待处理更改|待處理變更
         online metadata|Online-Metadaten|metadatos en línea|métadonnées en ligne|metadati online|metadados online|オンラインメタデータ|온라인 메타데이터|在线元数据|線上中繼資料

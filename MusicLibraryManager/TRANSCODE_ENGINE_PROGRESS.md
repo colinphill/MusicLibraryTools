@@ -36,6 +36,31 @@ Last updated: 2026-07-25
   matrix is complete.
 - [Complete] CFG-01: Existing WavPack executable machine-binding round trip now
   treats WavPack as a known configured tool.
+- [Complete] CAP-02: Monkey's Audio encoding is available through the official
+  MAC command-line tool. The executable has a portable/machine-binding setting,
+  capability probing validates the native encode/verify interface and thread
+  control, and the shared adapter uses PCM bridging only when conversion is
+  required. Native verification is mandatory before a staged output is
+  accepted. A real MAC 13.20 test encodes a FLAC source to `.ape`, verifies it
+  natively, decodes it through FFmpeg, and confirms PCM equality.
+- [Complete] CFG-02: Settings exposes a localized Monkey's Audio MAC executable
+  picker alongside FFmpeg and WavPack. Inline and separate machine-binding
+  configuration paths round-trip without changing the library/index schema.
+
+## Ingest integration
+
+- [Complete] ING-01: Ingest transcode recipes now persist stable shared format,
+  encoder, rate-mode, quality, sample-rate, bit-depth, compression-effort, and
+  correction-file settings. The Settings editor projects available
+  format/encoder combinations from the common capability catalog and no longer
+  exposes raw output-extension, codec, encoder, or extra-FFmpeg boxes.
+- [Complete] ING-02: Preview derives output extensions/codecs from the shared
+  format ID. Preflight resolves the selected format and encoder through the
+  common capability service, and Apply invokes the shared transcode adapter.
+  Existing recipes without shared IDs retain their legacy execution path and
+  XML parser compatibility. Tests cover legacy dispatch, version-compatible XML
+  round-trip, editor migration, and a complete ingest transaction through the
+  shared capability/adapter path.
 
 ## Adaptive parallel transcoding
 
@@ -206,6 +231,15 @@ Last updated: 2026-07-25
 
 ## Validation checkpoint
 
+- Monkey's Audio and ingest-extension checkpoint, 2026-07-25:
+  - Core Release suite passed: 1,087 tests.
+  - MusicLibraryManager presentation suite passed: 228 tests.
+  - MusicLibraryManager headless UI suite passed: 84 tests.
+  - MusicFileUtilities Release suite passed: 506 tests.
+  - Focused headless Settings shared-transcode interaction passed.
+  - Localization generation/check passed for 3,514 keys in each of nine
+    satellite catalogs.
+  - Opt-in real MAC encode/native-verify/decoded-equality integration passed.
 - `dotnet build MusicLibrary.Core/MusicLibrary.Core.csproj --configuration Release --no-restore`
   passed with 0 warnings and 0 errors on 2026-07-25.
 - Targeted `OperationJournalServiceTests` passed: 17 tests, including

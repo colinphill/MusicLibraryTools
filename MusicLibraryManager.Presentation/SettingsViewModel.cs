@@ -4,6 +4,7 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicFileUtilities;
+using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryTools;
 
@@ -19,6 +20,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private readonly ILocalizationService _localization;
     private readonly ISecretStore _secrets;
     private readonly IMetadataFieldMappingService _fieldMappings;
+    private readonly IAudioTranscodeCapabilityService? _transcodeCapabilities;
+    private AudioTranscodeCapabilitySnapshot? _transcodeCapabilitySnapshot;
     private EditableLibraryConfig _editing = EditableLibraryConfig.CreateNew();
     private bool _suppressDirty = true;
     private bool _refreshingSyncTargetChoices;
@@ -42,6 +45,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private string? _itunesLibraryPath;
     [ObservableProperty] private string _ffmpegPath = "ffmpeg";
     [ObservableProperty] private string _wavpackPath = "wavpack";
+    [ObservableProperty]
+    private string _monkeysAudioPath = "MAC";
     [ObservableProperty] private string _fpcalcPath = "fpcalc";
     [ObservableProperty] private string? _optimFrogToolsDirectory;
     [ObservableProperty] private string? _acoustIdClientKey;
@@ -95,7 +100,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         IThemeService theme,
         ISecretStore? secrets = null,
         IMetadataFieldMappingService? fieldMappings = null,
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        IAudioTranscodeCapabilityService? transcodeCapabilities = null)
     {
         _settings = settings;
         _files = files;
@@ -106,6 +112,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _secrets = secrets ?? new SessionSecretStore();
         _fieldMappings = fieldMappings ??
             new MetadataFieldMappingService(settings, MediaFormatRegistry.Default);
+        _transcodeCapabilities = transcodeCapabilities;
         _fpcalcPath =
             settings.GetPreference(AudioFingerprintService.ExecutablePreferenceKey) ??
             "fpcalc";
@@ -154,6 +161,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _suppressDirty = false;
         HasUnsavedChanges = false;
         _ = RefreshDiscogsCredentialStatusAsync();
+        _ = RefreshIngestTranscodeCapabilitiesAsync();
     }
 
     public ObservableCollection<string> RecentConfigurations { get; }
@@ -487,6 +495,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                     Environment.NewLine, roots),
                 _localization.Format("Settings.PolicyDetails.ToolsParagraph",
                     FfmpegPath, WavpackPath,
+                    MonkeysAudioPath,
                     string.IsNullOrWhiteSpace(MachineBindingsFile)
                         ? _localization.Get(
                             "Settings.PolicyDetails.Paths.StoredDirectly")
@@ -920,6 +929,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         nameof(ItunesLibraryPath),
         nameof(FfmpegPath),
         nameof(WavpackPath),
+        nameof(MonkeysAudioPath),
         nameof(OversizedArtworkByteThreshold),
         nameof(OversizedArtworkDimensionThreshold),
         nameof(ArtworkRepairTargetByteSize),
@@ -1276,6 +1286,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         ItunesLibraryPath = null;
         FfmpegPath = "ffmpeg";
         WavpackPath = "wavpack";
+        MonkeysAudioPath = "MAC";
         OversizedArtworkByteThreshold =
             LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
         OversizedArtworkDimensionThreshold =
@@ -1357,6 +1368,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         ItunesLibraryPath = null;
         FfmpegPath = "ffmpeg";
         WavpackPath = "wavpack";
+        MonkeysAudioPath = "MAC";
         OversizedArtworkByteThreshold =
             LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
         OversizedArtworkDimensionThreshold =
@@ -1710,8 +1722,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     }
 
     [RelayCommand]
-    private void AddIngestRecipe() =>
-        AdvancedIngestProfile?.Recipes.Add(IngestRecipeEditorRow.Create());
+    private void AddIngestRecipe()
+    {
+        IngestRecipeEditorRow row = IngestRecipeEditorRow.Create();
+        if (_transcodeCapabilitySnapshot is not null)
+            row.ApplyTranscodeCapabilities(
+                _transcodeCapabilitySnapshot,
+                _localization);
+        AdvancedIngestProfile?.Recipes.Add(row);
+    }
 
     [RelayCommand]
     private void RemoveIngestRecipe(IngestRecipeEditorRow? row)
@@ -1821,6 +1840,16 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     }
 
     [RelayCommand]
+    private async Task BrowseMonkeysAudioAsync()
+    {
+        string? path = await _files.PickFileAsync(
+            _localization.Get(
+                "Settings.FilePicker.MonkeysAudio"));
+        if (path is not null)
+            MonkeysAudioPath = path;
+    }
+
+    [RelayCommand]
     private async Task BrowseFpcalcAsync()
     {
         string? path = await _files.PickFileAsync(
@@ -1887,6 +1916,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             ItunesLibraryPath = _editing.ItunesLibraryPath;
             FfmpegPath = _editing.FfmpegPath;
             WavpackPath = _editing.WavpackPath;
+            MonkeysAudioPath =
+                _editing.MonkeysAudioPath;
             OversizedArtworkByteThreshold = _editing.OversizedArtworkByteThreshold;
             OversizedArtworkDimensionThreshold = _editing.OversizedArtworkDimensionThreshold;
             ArtworkRepairTargetByteSize = _editing.ArtworkRepairTargetByteSize;
@@ -1985,6 +2016,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             _editing.ItunesLibraryPath = string.IsNullOrWhiteSpace(ItunesLibraryPath) ? null : ItunesLibraryPath.Trim();
             _editing.FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim();
             _editing.WavpackPath = string.IsNullOrWhiteSpace(WavpackPath) ? "wavpack" : WavpackPath.Trim();
+            _editing.MonkeysAudioPath =
+                string.IsNullOrWhiteSpace(
+                    MonkeysAudioPath)
+                    ? "MAC"
+                    : MonkeysAudioPath.Trim();
             _editing.OversizedArtworkByteThreshold = OversizedArtworkByteThreshold;
             _editing.OversizedArtworkDimensionThreshold = OversizedArtworkDimensionThreshold;
             _editing.ArtworkRepairTargetByteSize = ArtworkRepairTargetByteSize;
@@ -2142,6 +2178,37 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (AdvancedIngestProfile is not null)
             TrackRow(AdvancedIngestProfile);
         RefreshDestinationRootChoices();
+        ApplyIngestTranscodeCapabilities();
+    }
+
+    private async Task RefreshIngestTranscodeCapabilitiesAsync()
+    {
+        if (_transcodeCapabilities is null)
+            return;
+        try
+        {
+            _transcodeCapabilitySnapshot =
+                await _transcodeCapabilities.GetAsync(
+                    forceRefresh: false);
+            ApplyIngestTranscodeCapabilities();
+        }
+        catch
+        {
+            // Unavailable tools remain visible as unavailable selections in
+            // existing recipes; Settings itself must remain usable.
+        }
+    }
+
+    private void ApplyIngestTranscodeCapabilities()
+    {
+        if (_transcodeCapabilitySnapshot is null ||
+            AdvancedIngestProfile is null)
+            return;
+        foreach (IngestRecipeEditorRow recipe in
+                 AdvancedIngestProfile.Recipes)
+            recipe.ApplyTranscodeCapabilities(
+                _transcodeCapabilitySnapshot,
+                _localization);
     }
 
     private void RefreshDestinationRootChoices()
@@ -2224,11 +2291,21 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _editing.DiscNumLengthLimit = profile.Naming.DiscAlbumLengthLimit ?? 255;
         LibraryIngestRecipe? aac = ingestProfile.Ingest.Recipes.FirstOrDefault(recipe =>
             recipe.Action == LibraryIngestAction.Transcode &&
-            (string.Equals(recipe.Codec, "aac", StringComparison.OrdinalIgnoreCase) ||
+            (recipe.TranscodeFormatId is
+                 AudioTranscodeFormatIds.AacM4a or
+                 AudioTranscodeFormatIds.AacAdts ||
+             string.Equals(recipe.Codec, "aac", StringComparison.OrdinalIgnoreCase) ||
              string.Equals(recipe.OutputExtension, ".m4a",
                  StringComparison.OrdinalIgnoreCase)));
-        if (!string.IsNullOrWhiteSpace(aac?.Encoder))
-            _editing.AacEncoder = aac.Encoder.Trim();
+        string? encoder = aac?.TranscodeEncoderId;
+        if (!string.IsNullOrWhiteSpace(encoder) &&
+            encoder.StartsWith("ffmpeg:", StringComparison.Ordinal))
+            encoder = encoder["ffmpeg:".Length..];
+        if (string.IsNullOrWhiteSpace(encoder) ||
+            encoder == AudioTranscodeEncoderIds.Automatic)
+            encoder = aac?.Encoder;
+        if (!string.IsNullOrWhiteSpace(encoder))
+            _editing.AacEncoder = encoder.Trim();
         if (aac?.BitrateKbps is { } bitrate)
             _editing.AacBitrateKbps = bitrate;
     }

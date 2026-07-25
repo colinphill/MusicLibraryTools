@@ -917,6 +917,93 @@ public sealed class TranscodeRealToolIntegrationTests
         Assert.Empty(report.Findings);
     }
 
+    [Fact]
+    public async Task ConfiguredMonkeysAudioMacEncodesAndVerifiesLosslessOutput()
+    {
+        string? mac =
+            Environment.GetEnvironmentVariable(
+                "MUSICLIBRARY_MAC");
+        string? ffmpeg =
+            Environment.GetEnvironmentVariable(
+                "MUSICLIBRARY_FFMPEG");
+        if (string.IsNullOrWhiteSpace(mac) ||
+            string.IsNullOrWhiteSpace(ffmpeg) ||
+            !File.Exists(mac) ||
+            !File.Exists(ffmpeg))
+            return;
+        using var temp = new TempDirectory();
+        AppSettings settings = CreateSettings(
+            temp,
+            ffmpeg,
+            monkeysAudio: mac);
+        var processes = new ManagedProcessRunner();
+        using var capabilities =
+            new AudioTranscodeCapabilityService(
+                settings,
+                processes);
+        AudioTranscodeCapabilitySnapshot snapshot =
+            await capabilities.GetAsync(
+                forceRefresh: true,
+                TestContext.Current.CancellationToken);
+        AudioTranscodeFormatDescriptor format =
+            snapshot.FindFormat(
+                AudioTranscodeFormatIds
+                    .MonkeysAudio)!;
+        AudioEncoderDescriptor encoder =
+            snapshot.FindEncoder(
+                AudioTranscodeEncoderIds
+                    .MonkeysAudioMac)!;
+        Assert.Contains(
+            encoder.Id,
+            format.EncoderIds);
+        Assert.Equal(
+            AudioEncoderThreadingMode
+                .ThreadCountControllable,
+            encoder.ThreadingMode);
+        string source =
+            MediaFixtures.Path_("sample.flac");
+        string destination =
+            Path.Combine(temp.Path, "encoded.ape");
+        await new AudioTranscodeAdapter(
+                settings,
+                processes)
+            .EncodeAsync(
+                source,
+                destination,
+                new(
+                    AudioTranscodeFormatIds
+                        .MonkeysAudio,
+                    encoder.Id,
+                    AudioTranscodeRateMode.Lossless,
+                    CompressionEffort: 7),
+                encoder,
+                threadCount: 2,
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        Assert.True(
+            new FileInfo(destination).Length > 0);
+        Assert.NotEmpty(
+            MediaFile.GetFile(
+                    destination,
+                    readOnly: true)
+                .Codecs);
+        AnalysisReport report =
+            await new DecodedAudioVerificationService(
+                    new FfmpegRunner())
+                .VerifyAsync(
+                    ffmpeg,
+                    [
+                        new(
+                            source,
+                            destination,
+                            "Monkey's Audio lossless"),
+                    ],
+                    ct: TestContext.Current
+                        .CancellationToken);
+        Assert.Empty(report.Findings);
+    }
+
     private static AudioTranscodeSettings SettingsFor(
         AudioTranscodeFormatDescriptor format,
         AudioEncoderDescriptor encoder)
@@ -958,7 +1045,9 @@ public sealed class TranscodeRealToolIntegrationTests
         TempDirectory temp,
         string ffmpeg,
         string wavpack =
-            "__missing_wavpack_for_transcode_test__")
+            "__missing_wavpack_for_transcode_test__",
+        string monkeysAudio =
+            "__missing_mac_for_transcode_test__")
     {
         string configPath = Path.Combine(
             temp.Path,
@@ -967,6 +1056,7 @@ public sealed class TranscodeRealToolIntegrationTests
         {
             FfmpegPath = ffmpeg,
             WavpackPath = wavpack,
+            MonkeysAudioPath = monkeysAudio,
         }.Save(configPath);
         var settings = new AppSettings(
             Path.Combine(

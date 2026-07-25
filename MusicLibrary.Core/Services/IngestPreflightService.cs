@@ -11,7 +11,9 @@ public interface IIngestPreflightService
 public sealed class IngestPreflightService(
     IFfmpegRunner ffmpeg,
     IAppSettings? settings = null,
-    IWavpackRunner? wavpack = null) : IIngestPreflightService
+    IWavpackRunner? wavpack = null,
+    IAudioTranscodeCapabilityService? transcodeCapabilities = null) :
+    IIngestPreflightService
 {
     public Task<IngestPreflightResult> CheckAsync(IngestRequest request, CancellationToken ct = default)
     {
@@ -123,6 +125,62 @@ public sealed class IngestPreflightService(
                 ? Pass("iTunes library", configuration.ItunesLibraryPath)
                 : Error("iTunes library", $"Configured library is unavailable: {configuration.ItunesLibraryPath}"));
 
+        MusicLibraryTools.LibraryIngestRecipe[] sharedRecipes =
+            configuration.Profile.Ingest.Recipes
+                .Where(recipe =>
+                    recipe.Enabled &&
+                    IngestTranscodeSettingsResolver.UsesSharedEngine(recipe))
+                .ToArray();
+        if (sharedRecipes.Length == 0)
+            checks.Add(Pass(
+                "Transcode engine",
+                "Not required by the active ingest recipes."));
+        else if (transcodeCapabilities is null)
+            checks.Add(Warning(
+                "Transcode engine",
+                "Shared transcode capabilities are unavailable."));
+        else
+        {
+            try
+            {
+                AudioTranscodeCapabilitySnapshot snapshot =
+                    await transcodeCapabilities.GetAsync(
+                        forceRefresh: false,
+                        ct);
+                var unavailableSetups = new List<string>();
+                foreach (MusicLibraryTools.LibraryIngestRecipe recipe in sharedRecipes)
+                {
+                    AudioTranscodeSettings settings =
+                        IngestTranscodeSettingsResolver.Resolve(recipe)!;
+                    if (!IngestTranscodeSettingsResolver.TryResolveCapability(
+                            snapshot,
+                            settings,
+                            out _,
+                            out _,
+                            out _))
+                        unavailableSetups.Add(recipe.Name);
+                }
+                checks.Add(unavailableSetups.Count == 0
+                    ? Pass(
+                        "Transcode engine",
+                        $"{sharedRecipes.Length:N0} ingest transcode setup(s) are ready.")
+                    : Warning(
+                        "Transcode engine",
+                        "Unavailable ingest transcode setup(s): " +
+                        string.Join(", ", unavailableSetups)));
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                checks.Add(Warning(
+                    "Transcode engine",
+                    $"Transcoding is not ready: {ex.Message}"));
+            }
+        }
+
         try
         {
             string[] encoders = RequiredEncoders(configuration);
@@ -190,12 +248,15 @@ public sealed class IngestPreflightService(
 
     internal static bool RequiresFfmpeg(IngestMusicConfiguration configuration) =>
         configuration.Profile.Ingest.Recipes.Any(recipe => recipe.Enabled &&
+            !IngestTranscodeSettingsResolver.UsesSharedEngine(recipe) &&
             recipe.Action != MusicLibraryTools.LibraryIngestAction.Copy &&
             !RequiresWavpack(recipe));
 
     internal static bool RequiresWavpack(IngestMusicConfiguration configuration) =>
         configuration.Profile.Ingest.Recipes.Any(recipe =>
-            recipe.Enabled && RequiresWavpack(recipe));
+            recipe.Enabled &&
+            !IngestTranscodeSettingsResolver.UsesSharedEngine(recipe) &&
+            RequiresWavpack(recipe));
 
     private static bool RequiresWavpack(MusicLibraryTools.LibraryIngestRecipe recipe) =>
         recipe.Action == MusicLibraryTools.LibraryIngestAction.Transcode &&
@@ -210,6 +271,7 @@ public sealed class IngestPreflightService(
         return configuration.Profile.Ingest.Recipes
             .Where(recipe => recipe.Enabled &&
                 recipe.Action == MusicLibraryTools.LibraryIngestAction.Transcode &&
+                !IngestTranscodeSettingsResolver.UsesSharedEngine(recipe) &&
                 !RequiresWavpack(recipe))
             .Select(recipe =>
             {

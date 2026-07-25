@@ -114,6 +114,7 @@ public sealed record IngestOutputPlan
     public int? BitrateKbps { get; init; }
     public int? SampleRateHz { get; init; }
     public int? BitsPerSample { get; init; }
+    public AudioTranscodeSettings? TranscodeSettings { get; init; }
     public int? OutputChannels { get; init; }
     public bool PreserveMetadata { get; init; } = true;
     public bool PreserveArtwork { get; init; } = true;

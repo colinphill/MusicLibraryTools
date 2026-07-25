@@ -33,6 +33,7 @@ namespace MusicLibraryTools
             string? databaseFile,
             string? ffmpegPath,
             string? wavpackPath,
+            string? monkeysAudioPath,
             string? itunesLibraryPath,
             Dictionary<string, LibraryExportTransportBinding> exportTransports)
         {
@@ -42,6 +43,7 @@ namespace MusicLibraryTools
             DatabaseFile = databaseFile;
             FfmpegPath = ffmpegPath;
             WavpackPath = wavpackPath;
+            MonkeysAudioPath = monkeysAudioPath;
             ItunesLibraryPath = itunesLibraryPath;
             exportTransports_ = exportTransports;
         }
@@ -52,6 +54,7 @@ namespace MusicLibraryTools
         public string? DatabaseFile { get; }
         public string? FfmpegPath { get; }
         public string? WavpackPath { get; }
+        public string? MonkeysAudioPath { get; }
         public string? ItunesLibraryPath { get; }
         public IReadOnlyDictionary<string, LibraryExportTransportBinding> ExportTransports =>
             new ReadOnlyDictionary<string, LibraryExportTransportBinding>(exportTransports_);
@@ -125,6 +128,8 @@ namespace MusicLibraryTools
             string? database = SinglePath(root, "DatabaseBinding", "Path");
             string? ffmpeg = SingleToolPath(root, "Ffmpeg");
             string? wavpack = SingleToolPath(root, "Wavpack");
+            string? monkeysAudio =
+                SingleToolPath(root, "MonkeysAudio");
             string? itunes = SingleToolPath(root, "ItunesLibrary");
             var exportTransports = new Dictionary<string, LibraryExportTransportBinding>(
                 StringComparer.OrdinalIgnoreCase);
@@ -159,6 +164,9 @@ namespace MusicLibraryTools
                 database is null ? null : ResolveDatabase(database, directory),
                 ffmpeg is null ? null : ResolveExecutable(ffmpeg, directory),
                 wavpack is null ? null : ResolveExecutable(wavpack, directory),
+                monkeysAudio is null
+                    ? null
+                    : ResolveExecutable(monkeysAudio, directory),
                 itunes is null ? null : ResolveFileSystemPath(itunes, directory),
                 exportTransports);
         }

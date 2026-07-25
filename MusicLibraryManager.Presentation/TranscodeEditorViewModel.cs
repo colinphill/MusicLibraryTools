@@ -740,6 +740,8 @@ public sealed partial class TranscodeEditorViewModel :
             AudioTranscodeFormatIds.OptimFrog => L("Transcode.Format.OptimFrog"),
             AudioTranscodeFormatIds.OptimFrogDualStream => L("Transcode.Format.OptimFrogDualStream"),
             AudioTranscodeFormatIds.OptimFrogFloat => L("Transcode.Format.OptimFrogFloat"),
+            AudioTranscodeFormatIds.MonkeysAudio =>
+                L("Transcode.Format.MonkeysAudio"),
             _ => $"{format.Codec} ({format.Container})",
         };
 
@@ -756,6 +758,9 @@ public sealed partial class TranscodeEditorViewModel :
                     L("Transcode.Encoder.OptimFrogOfs"),
                 AudioTranscodeEncoderIds.OptimFrogOff =>
                     L("Transcode.Encoder.OptimFrogOff"),
+                AudioTranscodeEncoderIds
+                    .MonkeysAudioMac =>
+                    L("Transcode.Encoder.MonkeysAudioMac"),
                 _ => id,
             };
 
