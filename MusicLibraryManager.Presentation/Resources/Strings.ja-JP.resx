@@ -217,6 +217,7 @@
   <data name="Column.AlbumArtist" xml:space="preserve">
     <value>アルバムアーティスト</value>
   </data>
+  <data name="Column.AppliesTo" xml:space="preserve"><value>適用対象</value></data>
   <data name="Column.Approved" xml:space="preserve">
     <value>承認済み</value>
   </data>
@@ -227,11 +228,12 @@
     <value>アーティスト</value>
   </data>
   <data name="Column.ArtistCredit" xml:space="preserve">
-    <value>アーティスト クレジット</value>
+    <value>アーティストクレジット</value>
   </data>
   <data name="Column.Artwork" xml:space="preserve">
     <value>アートワーク</value>
   </data>
+  <data name="Column.ArtworkRoles" xml:space="preserve"><value>アートワークの役割</value></data>
   <data name="Column.Back" xml:space="preserve">
     <value>背面</value>
   </data>
@@ -242,13 +244,13 @@
     <value>ビットレート</value>
   </data>
   <data name="Column.Bits" xml:space="preserve">
-    <value>ビット</value>
+    <value>ビット深度</value>
   </data>
   <data name="Column.Bytes" xml:space="preserve">
     <value>バイト</value>
   </data>
   <data name="Column.CanonicalValue" xml:space="preserve">
-    <value>正規 値</value>
+    <value>正規値</value>
   </data>
   <data name="Column.CatalogNumber" xml:space="preserve">
     <value>カタログ番号</value>
@@ -274,6 +276,7 @@
   <data name="Column.Country" xml:space="preserve">
     <value>国</value>
   </data>
+  <data name="Column.CoverArtArchiveId" xml:space="preserve"><value>Cover Art Archive ID</value></data>
   <data name="Column.CurrentLocation" xml:space="preserve">
     <value>現在の場所</value>
   </data>
@@ -349,6 +352,7 @@
   <data name="Column.Job" xml:space="preserve">
     <value>ジョブ</value>
   </data>
+  <data name="Column.Kind" xml:space="preserve"><value>種類</value></data>
   <data name="Column.Label" xml:space="preserve">
     <value>ラベル</value>
   </data>
@@ -356,7 +360,7 @@
     <value>ラベル</value>
   </data>
   <data name="Column.MatchedPosition" xml:space="preserve">
-    <value>一致 位置</value>
+    <value>一致した位置</value>
   </data>
   <data name="Column.Modified" xml:space="preserve">
     <value>更新日時</value>
@@ -373,6 +377,7 @@
   <data name="Column.NumberSign" xml:space="preserve">
     <value>#</value>
   </data>
+  <data name="Column.Operation" xml:space="preserve"><value>操作</value></data>
   <data name="Column.Output" xml:space="preserve">
     <value>出力</value>
   </data>
@@ -398,7 +403,7 @@
     <value>リリース</value>
   </data>
   <data name="Column.ReleaseTrack" xml:space="preserve">
-    <value>リリース トラック</value>
+    <value>リリーストラック</value>
   </data>
   <data name="Column.Result" xml:space="preserve">
     <value>結果</value>
@@ -409,6 +414,7 @@
   <data name="Column.SampleRate" xml:space="preserve">
     <value>サンプルレート</value>
   </data>
+  <data name="Column.SelectedFiles" xml:space="preserve"><value>選択したファイル</value></data>
   <data name="Column.Source" xml:space="preserve">
     <value>ソース</value>
   </data>
@@ -421,6 +427,7 @@
   <data name="Column.Styles" xml:space="preserve">
     <value>スタイル</value>
   </data>
+  <data name="Column.TagLayers" xml:space="preserve"><value>タグレイヤー</value></data>
   <data name="Column.TagType" xml:space="preserve">
     <value>タグの種類</value>
   </data>
@@ -448,8 +455,9 @@
   <data name="Column.Use" xml:space="preserve">
     <value>使用</value>
   </data>
+  <data name="Column.Values" xml:space="preserve"><value>値</value></data>
   <data name="Column.When" xml:space="preserve">
-    <value>場合</value>
+    <value>日時</value>
   </data>
   <data name="Column.WorkingDirectory" xml:space="preserve">
     <value>作業ディレクトリ</value>
@@ -1900,10 +1908,10 @@
     <value>ファイル競合ポリシー</value>
   </data>
   <data name="ReviewedFileOperation.DestinationAutomation" xml:space="preserve">
-    <value>ファイル操作の出力先</value>
+    <value>ファイル操作の宛先</value>
   </data>
   <data name="ReviewedFileOperation.DestinationPlaceholder" xml:space="preserve">
-    <value>出力先または隔離フォルダー</value>
+    <value>宛先または隔離フォルダー</value>
   </data>
   <data name="ReviewedFileOperation.KindAutomation" xml:space="preserve">
     <value>ファイル操作</value>
@@ -4122,8 +4130,8 @@
   <data name="Inspector.Activity.UpdatingTracks.Other" xml:space="preserve"><value>{0:N0} トラックを更新中</value></data>
   <data name="Inspector.Artwork.DefaultFileName" xml:space="preserve"><value>アートワーク</value></data>
   <data name="Inspector.Artwork.Details" xml:space="preserve"><value>{0} · {1:N0} × {2:N0} · {3}</value></data>
-  <data name="Inspector.Artwork.Embedded.One" xml:space="preserve"><value>埋め込みアートワーク {0:N0} 件</value></data>
-  <data name="Inspector.Artwork.Embedded.Other" xml:space="preserve"><value>埋め込みアートワーク {0:N0} 件</value></data>
+  <data name="Inspector.Artwork.Embedded.One" xml:space="preserve"><value>埋め込み画像 {0:N0} 件</value></data>
+  <data name="Inspector.Artwork.Embedded.Other" xml:space="preserve"><value>埋め込み画像 {0:N0} 件</value></data>
   <data name="Inspector.Artwork.Image" xml:space="preserve"><value>画像</value></data>
   <data name="Inspector.Artwork.Mixed" xml:space="preserve"><value>値が混在しています — 選択したファイルには異なる埋め込みアートワークがあります。</value></data>
   <data name="Inspector.Artwork.NoneEmbedded" xml:space="preserve"><value>埋め込みアートワークはありません。</value></data>
@@ -4176,11 +4184,11 @@
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.One" xml:space="preserve"><value>選択した {0:N0} トラックのフロントカバーを置き換えますか？</value></data>
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.Other" xml:space="preserve"><value>選択した {0:N0} トラックのフロントカバーを置き換えますか？</value></data>
   <data name="Inspector.Dialog.Revert.Confirm" xml:space="preserve"><value>変更を元に戻す</value></data>
-  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>{1} の {0}。ファイルに現在保存されている値へ戻しますか？</value></data>
+  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>{1} の {0}。ファイルに現在保存されている値に戻しますか？</value></data>
   <data name="Inspector.Dialog.Revert.Title" xml:space="preserve"><value>未保存のメタデータ変更を元に戻しますか？</value></data>
-  <data name="Inspector.Dialog.SaveConfirmation.ArtworkOnly" xml:space="preserve"><value>選択した {0:N0} トラックの埋め込みアートワーク一式を、これら {1:N0} 枚の画像で置き換えますか？</value></data>
-  <data name="Inspector.Dialog.SaveConfirmation.TagsAndArtwork" xml:space="preserve"><value>選択した {2:N0} トラックにタグ変更 {0:N0} 件を適用し、埋め込みアートワーク一式を {1:N0} 枚の画像で置き換えますか？</value></data>
-  <data name="Inspector.Dialog.SaveConfirmation.TagsOnly" xml:space="preserve"><value>選択した {1:N0} トラックにタグ変更 {0:N0} 件を適用しますか？</value></data>
+  <data name="Inspector.Dialog.SaveConfirmation.ArtworkOnly" xml:space="preserve"><value>選択した {0:N0} トラックの埋め込みアートワーク一式を、これら {1:N0} 枚の画像に置き換えますか？</value></data>
+  <data name="Inspector.Dialog.SaveConfirmation.TagsAndArtwork" xml:space="preserve"><value>{0:N0} 件のタグ変更を適用し、選択した {2:N0} トラックの埋め込みアートワーク一式を {1:N0} 枚の画像に置き換えますか？</value></data>
+  <data name="Inspector.Dialog.SaveConfirmation.TagsOnly" xml:space="preserve"><value>選択した {1:N0} トラックに {0:N0} 件のタグ変更を適用しますか？</value></data>
   <data name="Inspector.Error.MetadataServiceUnavailable" xml:space="preserve"><value>共有メタデータ操作サービスを利用できません。</value></data>
   <data name="Inspector.Field.Album" xml:space="preserve"><value>アルバム</value></data>
   <data name="Inspector.Field.AlbumArtist" xml:space="preserve"><value>アルバムアーティスト</value></data>
@@ -4190,25 +4198,25 @@
   <data name="Inspector.Field.Disc" xml:space="preserve"><value>ディスク</value></data>
   <data name="Inspector.Field.DiscTotal" xml:space="preserve"><value>総ディスク数</value></data>
   <data name="Inspector.Field.Genre" xml:space="preserve"><value>ジャンル</value></data>
-  <data name="Inspector.Field.MixedPlaceholder" xml:space="preserve"><value>値が混在 — 入力して置換</value></data>
+  <data name="Inspector.Field.MixedPlaceholder" xml:space="preserve"><value>値が混在しています — 入力して置き換え</value></data>
   <data name="Inspector.Field.MixedValues" xml:space="preserve"><value>（複数の値）</value></data>
   <data name="Inspector.Field.NoValuePlaceholder" xml:space="preserve"><value>値なし</value></data>
   <data name="Inspector.Field.ReleaseDate" xml:space="preserve"><value>リリース日</value></data>
   <data name="Inspector.Field.Title" xml:space="preserve"><value>タイトル</value></data>
   <data name="Inspector.Field.Track" xml:space="preserve"><value>トラック番号</value></data>
   <data name="Inspector.Field.TrackTotal" xml:space="preserve"><value>総トラック数</value></data>
-  <data name="Inspector.Field.UnverifiedHelp" xml:space="preserve"><value>選択したすべてのトラックについて、このフィールドがキャッシュに含まれているわけではありません。現在の値は表示されません。値を入力すると、選択全体のフィールドが意図的に置き換えられます。</value></data>
-  <data name="Inspector.Field.UnverifiedPlaceholder" xml:space="preserve"><value>選択範囲全体では未検証 — 入力して置換</value></data>
-  <data name="Inspector.Operation.EditArtwork" xml:space="preserve"><value>インスペクターでアートワークを編集</value></data>
-  <data name="Inspector.Operation.EditFields" xml:space="preserve"><value>インスペクターでフィールドを編集</value></data>
+  <data name="Inspector.Field.UnverifiedHelp" xml:space="preserve"><value>選択したすべてのトラックについて、このフィールドがキャッシュに含まれているわけではありません。現在の値は表示されません。値を入力すると、選択範囲全体で意図的に置き換えられます。</value></data>
+  <data name="Inspector.Field.UnverifiedPlaceholder" xml:space="preserve"><value>選択範囲全体で未確認 — 入力して置き換え</value></data>
+  <data name="Inspector.Operation.EditArtwork" xml:space="preserve"><value>インスペクターのアートワークを編集</value></data>
+  <data name="Inspector.Operation.EditFields" xml:space="preserve"><value>インスペクターのフィールドを編集</value></data>
   <data name="Inspector.Operation.EditLibraryArtworkSet" xml:space="preserve"><value>ライブラリのアートワーク一式を編集</value></data>
-  <data name="Inspector.Operation.EditTagsAndArtwork" xml:space="preserve"><value>インスペクターでタグとアートワークを編集</value></data>
+  <data name="Inspector.Operation.EditTagsAndArtwork" xml:space="preserve"><value>インスペクターのタグとアートワークを編集</value></data>
   <data name="Inspector.Operation.OptimizeLibraryArtwork" xml:space="preserve"><value>ライブラリのアートワークを最適化</value></data>
   <data name="Inspector.Operation.RemoveLibraryArtwork" xml:space="preserve"><value>ライブラリのアートワークを削除</value></data>
-  <data name="Inspector.Operation.ReplaceFrontCover" xml:space="preserve"><value>ライブラリのフロントカバーを置換</value></data>
+  <data name="Inspector.Operation.ReplaceFrontCover" xml:space="preserve"><value>ライブラリのフロントカバーを置き換え</value></data>
   <data name="Inspector.Overview.EmptyDistribution" xml:space="preserve"><value>{0}：0</value></data>
   <data name="Inspector.Overview.FileFormats" xml:space="preserve"><value>ファイル形式</value></data>
-  <data name="Inspector.Overview.LargeSelectionNote" xml:space="preserve"><value>キャッシュにあるフィールドの共通値は、選択範囲全体で確認済みです。キャッシュに保存されていないフィールドは未検証と表示され、明示的に置き換えるまで空欄のままです。</value></data>
+  <data name="Inspector.Overview.LargeSelectionNote" xml:space="preserve"><value>キャッシュされたフィールドの共通値は、選択範囲全体で確認済みです。キャッシュに保存されていないフィールドは未確認と表示され、意図的に置き換えるまで空白のままです。</value></data>
   <data name="Inspector.Overview.SelectTrack" xml:space="preserve"><value>メタデータを確認するトラックを選択してください。</value></data>
   <data name="Inspector.Overview.TagFormats" xml:space="preserve"><value>タグ形式</value></data>
   <data name="Inspector.Pending.Artwork" xml:space="preserve"><value>アートワーク</value></data>
@@ -4216,13 +4224,13 @@
   <data name="Inspector.Pending.Images.One" xml:space="preserve"><value>画像 {0:N0} 枚</value></data>
   <data name="Inspector.Pending.Images.Other" xml:space="preserve"><value>画像 {0:N0} 枚</value></data>
   <data name="Inspector.Picker.ChooseArtwork" xml:space="preserve"><value>アートワークを選択</value></data>
-  <data name="Inspector.Picker.ChooseCoverArtwork" xml:space="preserve"><value>カバーアートワークを選択</value></data>
+  <data name="Inspector.Picker.ChooseCoverArtwork" xml:space="preserve"><value>カバーアートを選択</value></data>
   <data name="Inspector.Picker.ChooseReplacementArtwork" xml:space="preserve"><value>置換用アートワークを選択</value></data>
   <data name="Inspector.Picker.Images" xml:space="preserve"><value>画像</value></data>
   <data name="Inspector.Picker.SaveArtwork" xml:space="preserve"><value>{0} アートワークを保存</value></data>
   <data name="Inspector.Progress.PreviewedCombined.One" xml:space="preserve"><value>{0:N0} ファイルの変更をまとめてプレビューしました</value></data>
   <data name="Inspector.Progress.PreviewedCombined.Other" xml:space="preserve"><value>{0:N0} ファイルの変更をまとめてプレビューしました</value></data>
-  <data name="Inspector.Progress.UpdatedOfTotal" xml:space="preserve"><value>{0:N0}/{1:N0} を更新</value></data>
+  <data name="Inspector.Progress.UpdatedOfTotal" xml:space="preserve"><value>{1:N0} 件中 {0:N0} 件を更新</value></data>
   <data name="Inspector.Selection.NothingSelected" xml:space="preserve"><value>何も選択されていません</value></data>
   <data name="Inspector.Selection.TracksSelected.One" xml:space="preserve"><value>{0:N0} トラックを選択</value></data>
   <data name="Inspector.Selection.TracksSelected.Other" xml:space="preserve"><value>{0:N0} トラックを選択</value></data>
@@ -4231,31 +4239,31 @@
   <data name="Inspector.Size.Kilobytes" xml:space="preserve"><value>{0:N0} KB</value></data>
   <data name="Inspector.Size.Megabytes" xml:space="preserve"><value>{0:N1} MB</value></data>
   <data name="Inspector.Status.ArtworkPartialFailure" xml:space="preserve"><value>{1:N0} トラック中 {0:N0} トラックを更新しました。</value></data>
-  <data name="Inspector.Status.ArtworkPartialFailureRetry" xml:space="preserve"><value>{1:N0} トラック中 {0:N0} トラックを更新しました。アートワークの変更案は再試行できる状態で残っています。</value></data>
-  <data name="Inspector.Status.ArtworkPreviewUnavailable" xml:space="preserve"><value>画像データがないか無効なため、アートワークを原寸でプレビューできません。</value></data>
-  <data name="Inspector.Status.ArtworkReplacementReady" xml:space="preserve"><value>アートワークの置換を保存できます。</value></data>
+  <data name="Inspector.Status.ArtworkPartialFailureRetry" xml:space="preserve"><value>{1:N0} トラック中 {0:N0} トラックを更新しました。提案されたアートワーク変更は再試行できる状態のままです。</value></data>
+  <data name="Inspector.Status.ArtworkPreviewUnavailable" xml:space="preserve"><value>画像データがないか無効なため、フルサイズのアートワークプレビューを利用できません。</value></data>
+  <data name="Inspector.Status.ArtworkReplacementReady" xml:space="preserve"><value>置換用アートワークを保存できます。</value></data>
   <data name="Inspector.Status.ArtworkSaved" xml:space="preserve"><value>アートワークを {0} に保存しました。</value></data>
   <data name="Inspector.Status.ArtworkSaveFailed" xml:space="preserve"><value>アートワークを保存できませんでした。</value></data>
-  <data name="Inspector.Status.ArtworkSaveFailedRetry" xml:space="preserve"><value>アートワークを保存できませんでした。変更案は再試行できる状態で残っています。</value></data>
+  <data name="Inspector.Status.ArtworkSaveFailedRetry" xml:space="preserve"><value>アートワークを保存できませんでした。提案されたアートワーク変更は再試行できる状態のままです。</value></data>
   <data name="Inspector.Status.ImagePreparationFailed" xml:space="preserve"><value>選択した画像を埋め込み用に準備できませんでした。</value></data>
-  <data name="Inspector.Status.InvalidArtwork.One" xml:space="preserve"><value>埋め込みアートワーク {0:N0} 枚をデコードできませんでした。無効な項目は削除または置換できます。</value></data>
-  <data name="Inspector.Status.InvalidArtwork.Other" xml:space="preserve"><value>埋め込みアートワーク {0:N0} 枚をデコードできませんでした。無効な項目は削除または置換できます。</value></data>
+  <data name="Inspector.Status.InvalidArtwork.One" xml:space="preserve"><value>{0:N0} 件の埋め込みアートワーク画像をデコードできませんでした。無効な項目は引き続き削除または置換できます。</value></data>
+  <data name="Inspector.Status.InvalidArtwork.Other" xml:space="preserve"><value>{0:N0} 件の埋め込みアートワーク画像をデコードできませんでした。無効な項目は引き続き削除または置換できます。</value></data>
   <data name="Inspector.Status.LoadFailed" xml:space="preserve"><value>選択したメタデータを読み込めませんでした。</value></data>
   <data name="Inspector.Status.MetadataFieldsUpdated" xml:space="preserve"><value>メタデータフィールドを更新しました。</value></data>
-  <data name="Inspector.Status.NoArtworkData" xml:space="preserve"><value>このアートワークには保存できる画像データがありません。</value></data>
+  <data name="Inspector.Status.NoArtworkData" xml:space="preserve"><value>このアートワークには保存する画像データがありません。</value></data>
   <data name="Inspector.Status.NoChanges" xml:space="preserve"><value>保存するタグまたはアートワークの変更はありません。</value></data>
-  <data name="Inspector.Status.OperationCancelled" xml:space="preserve"><value>操作をキャンセルしました。変更案は再試行できる状態で残っています。</value></data>
-  <data name="Inspector.Status.OperationFailed" xml:space="preserve"><value>操作に失敗しました。変更案は再試行できる状態で残っています。</value></data>
+  <data name="Inspector.Status.OperationCancelled" xml:space="preserve"><value>操作がキャンセルされました。提案された変更は再試行できる状態のままです。</value></data>
+  <data name="Inspector.Status.OperationFailed" xml:space="preserve"><value>操作に失敗しました。提案された変更は再試行できる状態のままです。</value></data>
   <data name="Inspector.Status.PreviewBlockers.One" xml:space="preserve"><value>プレビューで阻害要因が {0:N0} 件見つかりました。ファイルは変更されていません。</value></data>
   <data name="Inspector.Status.PreviewBlockers.Other" xml:space="preserve"><value>プレビューで阻害要因が {0:N0} 件見つかりました。ファイルは変更されていません。</value></data>
   <data name="Inspector.Status.PreviewNoChanges" xml:space="preserve"><value>プレビューで適用可能な変更は見つかりませんでした。ファイルは変更されていません。</value></data>
   <data name="Inspector.Status.ReadArtworkFailed" xml:space="preserve"><value>選択した 1 つ以上のファイルからアートワークを読み取れませんでした。</value></data>
   <data name="Inspector.Status.ReadFailed" xml:space="preserve"><value>選択した 1 つ以上のファイルを読み取れませんでした。</value></data>
   <data name="Inspector.Status.ReviewedNotApplied" xml:space="preserve"><value>確認済みの変更は適用されませんでした。</value></data>
-  <data name="Inspector.Status.ReviewedUpdated.One" xml:space="preserve"><value>{0:N0} トラックを更新しました。元のデータは元に戻すため保持されています。</value></data>
-  <data name="Inspector.Status.ReviewedUpdated.Other" xml:space="preserve"><value>{0:N0} トラックを更新しました。元のデータは元に戻すため保持されています。</value></data>
-  <data name="Inspector.Status.SaveFailed" xml:space="preserve"><value>インスペクターの変更を保存できませんでした。タグの変更案は再試行できる状態で残っています。</value></data>
-  <data name="Inspector.Status.SavePartialFailure" xml:space="preserve"><value>インスペクターの一部の変更を保存できませんでした。変更案は再試行できる状態で残っています。</value></data>
+  <data name="Inspector.Status.ReviewedUpdated.One" xml:space="preserve"><value>{0:N0} トラックを更新しました。元に戻せるようにオリジナルが保持されます。</value></data>
+  <data name="Inspector.Status.ReviewedUpdated.Other" xml:space="preserve"><value>{0:N0} トラックを更新しました。元に戻せるようにオリジナルが保持されます。</value></data>
+  <data name="Inspector.Status.SaveFailed" xml:space="preserve"><value>インスペクターの変更を保存できませんでした。提案されたタグ変更は再試行できる状態のままです。</value></data>
+  <data name="Inspector.Status.SavePartialFailure" xml:space="preserve"><value>インスペクターの一部の変更を保存できませんでした。提案された変更は再試行できる状態のままです。</value></data>
   <data name="Inspector.Status.UpdatedArtwork.One" xml:space="preserve"><value>{0:N0} トラックのアートワークを更新しました。</value></data>
   <data name="Inspector.Status.UpdatedArtwork.Other" xml:space="preserve"><value>{0:N0} トラックのアートワークを更新しました。</value></data>
   <data name="Inspector.Status.UpdatedTagsAndArtwork.One" xml:space="preserve"><value>{0:N0} トラックのタグとアートワークを更新しました。</value></data>
@@ -4494,6 +4502,7 @@
   <data name="Library.VisualFilter.Status.Cleared" xml:space="preserve"><value>ビジュアルフィルターをクリアしました。</value></data>
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>ビジュアルフィルターが無効です。</value></data>
   <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>有効なビジュアルフィルターはありません。</value></data>
+  <data name="Column.TargetDetails" xml:space="preserve"><value>対象の詳細</value></data>
   <data name="Column.TechnicalDetails" xml:space="preserve"><value>技術的な詳細</value></data>
   <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>ライブラリでフィルター</value></data>
   <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>混在</value></data>
@@ -4969,12 +4978,12 @@
   <data name="Inspector.View.AddArtworkAutomation" xml:space="preserve"><value>アートワークを追加</value></data>
   <data name="Inspector.View.Artwork" xml:space="preserve"><value>アートワーク</value></data>
   <data name="Inspector.View.ArtworkActions" xml:space="preserve"><value>アートワークの操作</value></data>
-  <data name="Inspector.View.ArtworkDescription" xml:space="preserve"><value>アートワーク 説明</value></data>
+  <data name="Inspector.View.ArtworkDescription" xml:space="preserve"><value>アートワークの説明</value></data>
   <data name="Inspector.View.ArtworkPreview" xml:space="preserve"><value>アートワークのプレビュー</value></data>
   <data name="Inspector.View.ArtworkPreviewHelp" xml:space="preserve"><value>ダブルクリックするか Enter を押して、フルサイズのアートワークを開きます。</value></data>
   <data name="Inspector.View.ArtworkType" xml:space="preserve"><value>アートワークの種類</value></data>
   <data name="Inspector.View.Close" xml:space="preserve"><value>インスペクターを閉じる</value></data>
-  <data name="Inspector.View.DescriptionPlaceholder" xml:space="preserve"><value>任意 説明</value></data>
+  <data name="Inspector.View.DescriptionPlaceholder" xml:space="preserve"><value>任意の説明</value></data>
   <data name="Inspector.View.EmptyDescription" xml:space="preserve"><value>1 つ以上のトラックを選択して、メタデータとアートワークを確認します。</value></data>
   <data name="Inspector.View.EmptyTitle" xml:space="preserve"><value>選択なし</value></data>
   <data name="Inspector.View.MaximumDimension" xml:space="preserve"><value>最大寸法</value></data>
@@ -4983,7 +4992,7 @@
   <data name="Inspector.View.Optimize" xml:space="preserve"><value>最適化</value></data>
   <data name="Inspector.View.OptimizeAutomation" xml:space="preserve"><value>アートワークを最適化</value></data>
   <data name="Inspector.View.RemoveAll" xml:space="preserve"><value>すべて削除</value></data>
-  <data name="Inspector.View.RemoveAllAutomation" xml:space="preserve"><value>すべてのアートワークを削除する</value></data>
+  <data name="Inspector.View.RemoveAllAutomation" xml:space="preserve"><value>すべてのアートワークを削除</value></data>
   <data name="Inspector.View.RemoveArtwork" xml:space="preserve"><value>アートワークを削除</value></data>
   <data name="Inspector.View.RemoveArtworkAutomation" xml:space="preserve"><value>アートワークを削除</value></data>
   <data name="Inspector.View.ReplaceArtwork" xml:space="preserve"><value>アートワークを置換…</value></data>
@@ -4992,7 +5001,7 @@
   <data name="Inspector.View.SaveArtworkToFile" xml:space="preserve"><value>ファイルに保存…</value></data>
   <data name="Inspector.View.SaveArtworkToFileAutomation" xml:space="preserve"><value>アートワークをファイルに保存</value></data>
   <data name="Inspector.View.Selection" xml:space="preserve"><value>選択</value></data>
-  <data name="Inspector.View.UnverifiedValue" xml:space="preserve"><value>現在の値は、選択されたすべてのトラックにわたって検証されていません。</value></data>
+  <data name="Inspector.View.UnverifiedValue" xml:space="preserve"><value>現在の値は、選択したすべてのトラックについて確認されていません。</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Contains" xml:space="preserve"><value>次を含む</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Equals" xml:space="preserve"><value>次と等しい</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.GreaterThan" xml:space="preserve"><value>次より大きい</value></data>
@@ -5015,7 +5024,7 @@
   <data name="Library.VisualFilter.Field.Custom" xml:space="preserve"><value>カスタム</value></data>
   <data name="Library.VisualFilter.Field.Known" xml:space="preserve"><value>既知</value></data>
   <data name="Library.VisualFilter.Field.Technical" xml:space="preserve"><value>技術</value></data>
-  <data name="ReviewedFileOperation.Activity.Applying" xml:space="preserve"><value>レビューされたファイル操作を適用する</value></data>
+  <data name="ReviewedFileOperation.Activity.Applying" xml:space="preserve"><value>確認済みのファイル操作を適用しています</value></data>
   <data name="ReviewedFileOperation.Activity.Planning" xml:space="preserve"><value>{0}を計画しています</value></data>
   <data name="ReviewedFileOperation.Choice.CollisionPolicy.Stop" xml:space="preserve"><value>停止</value></data>
   <data name="ReviewedFileOperation.Choice.CollisionPolicy.Suffix" xml:space="preserve"><value>接尾辞を追加</value></data>
@@ -5023,27 +5032,27 @@
   <data name="ReviewedFileOperation.Choice.Kind.Move" xml:space="preserve"><value>移動</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Quarantine" xml:space="preserve"><value>隔離</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Rename" xml:space="preserve"><value>名前を変更</value></data>
-  <data name="ReviewedFileOperation.Dialog.Apply.Message.One" xml:space="preserve"><value>{0:N0} でレビューされたファイルの変更を適用しますか?永続的なジャーナルは、履歴および適格な復元のために保持されます。</value></data>
-  <data name="ReviewedFileOperation.Dialog.Apply.Message.Other" xml:space="preserve"><value>{0:N0} でレビューされたファイルの変更を適用しますか?永続的なジャーナルは、履歴および適格な復元のために保持されます。</value></data>
-  <data name="ReviewedFileOperation.Dialog.Apply.Title" xml:space="preserve"><value>{0} を適用しますか?</value></data>
-  <data name="ReviewedFileOperation.Error.PreviewFirst" xml:space="preserve"><value>最初にファイル操作をプレビューします。</value></data>
-  <data name="ReviewedFileOperation.Picker.Destination" xml:space="preserve"><value>ファイル操作先の選択</value></data>
-  <data name="ReviewedFileOperation.Picker.Quarantine" xml:space="preserve"><value>レビュー済みの隔離フォルダーを選択してください</value></data>
+  <data name="ReviewedFileOperation.Dialog.Apply.Message.One" xml:space="preserve"><value>確認済みのファイル変更 {0:N0} 件を適用しますか？履歴と可能な復元のために永続的なジャーナルが保持されます。</value></data>
+  <data name="ReviewedFileOperation.Dialog.Apply.Message.Other" xml:space="preserve"><value>確認済みのファイル変更 {0:N0} 件を適用しますか？履歴と可能な復元のために永続的なジャーナルが保持されます。</value></data>
+  <data name="ReviewedFileOperation.Dialog.Apply.Title" xml:space="preserve"><value>{0} を適用しますか？</value></data>
+  <data name="ReviewedFileOperation.Error.PreviewFirst" xml:space="preserve"><value>先にファイル操作をプレビューしてください。</value></data>
+  <data name="ReviewedFileOperation.Picker.Destination" xml:space="preserve"><value>ファイル操作の宛先を選択</value></data>
+  <data name="ReviewedFileOperation.Picker.Quarantine" xml:space="preserve"><value>確認済みの隔離フォルダーを選択</value></data>
   <data name="ReviewedFileOperation.Status.ApplyCancelled" xml:space="preserve"><value>ファイル操作がキャンセルされました。完了したアクションはロールバックされました。</value></data>
   <data name="ReviewedFileOperation.Status.ApplyFailed" xml:space="preserve"><value>ファイル操作を適用できませんでした。</value></data>
-  <data name="ReviewedFileOperation.Status.Completed" xml:space="preserve"><value>完了: {0:N0} がコピーされ、{1:N0} が移動され、{2:N0} が隔離されました。</value></data>
-  <data name="ReviewedFileOperation.Status.Invalidated" xml:space="preserve"><value>操作設定または範囲が変更されました。もう一度プレビューします。</value></data>
-  <data name="ReviewedFileOperation.Status.NoChanges" xml:space="preserve"><value>レビューされた操作にはファイルシステムの変更はありません。</value></data>
-  <data name="ReviewedFileOperation.Status.PreviewBlocked.One" xml:space="preserve"><value>{0:N0} 問題によりプレビューがブロックされました。</value></data>
-  <data name="ReviewedFileOperation.Status.PreviewBlocked.Other" xml:space="preserve"><value>{0:N0} の問題によりプレビューがブロックされました。</value></data>
+  <data name="ReviewedFileOperation.Status.Completed" xml:space="preserve"><value>完了: {0:N0} 件をコピー、{1:N0} 件を移動、{2:N0} 件を隔離しました。</value></data>
+  <data name="ReviewedFileOperation.Status.Invalidated" xml:space="preserve"><value>操作設定または範囲が変更されました。もう一度プレビューしてください。</value></data>
+  <data name="ReviewedFileOperation.Status.NoChanges" xml:space="preserve"><value>確認済みの操作にはファイルシステムの変更がありません。</value></data>
+  <data name="ReviewedFileOperation.Status.PreviewBlocked.One" xml:space="preserve"><value>{0:N0} 件の問題によりプレビューがブロックされました。</value></data>
+  <data name="ReviewedFileOperation.Status.PreviewBlocked.Other" xml:space="preserve"><value>{0:N0} 件の問題によりプレビューがブロックされました。</value></data>
   <data name="ReviewedFileOperation.Status.PreviewCancelled" xml:space="preserve"><value>ファイル操作のプレビューがキャンセルされました。</value></data>
   <data name="ReviewedFileOperation.Status.PreviewFailed" xml:space="preserve"><value>ファイル操作をプレビューできませんでした。</value></data>
-  <data name="ReviewedFileOperation.Status.PreviewReady.One" xml:space="preserve"><value>{0:N0} は、ファイルの変更を適用する準備ができていることを確認しました。</value></data>
-  <data name="ReviewedFileOperation.Status.PreviewReady.Other" xml:space="preserve"><value>{0:N0} は、適用する準備ができているファイルの変更をレビューしました。</value></data>
-  <data name="ReviewedFileOperation.Status.Ready" xml:space="preserve"><value>操作を選択し、現在のスコープをプレビューします。</value></data>
-  <data name="ReviewedFileOperation.Target.Files.One" xml:space="preserve"><value>現在のスコープ内の {0:N0} ファイル。</value></data>
-  <data name="ReviewedFileOperation.Target.Files.Other" xml:space="preserve"><value>現在のスコープ内の {0:N0} ファイル。</value></data>
-  <data name="ReviewedFileOperation.Target.None" xml:space="preserve"><value>現在のスコープにファイルがありません。</value></data>
+  <data name="ReviewedFileOperation.Status.PreviewReady.One" xml:space="preserve"><value>確認済みのファイル変更 {0:N0} 件を適用できます。</value></data>
+  <data name="ReviewedFileOperation.Status.PreviewReady.Other" xml:space="preserve"><value>確認済みのファイル変更 {0:N0} 件を適用できます。</value></data>
+  <data name="ReviewedFileOperation.Status.Ready" xml:space="preserve"><value>操作を選択し、現在の範囲をプレビューしてください。</value></data>
+  <data name="ReviewedFileOperation.Target.Files.One" xml:space="preserve"><value>現在の範囲に {0:N0} ファイルあります。</value></data>
+  <data name="ReviewedFileOperation.Target.Files.Other" xml:space="preserve"><value>現在の範囲に {0:N0} ファイルあります。</value></data>
+  <data name="ReviewedFileOperation.Target.None" xml:space="preserve"><value>現在の範囲にファイルはありません。</value></data>
   <data name="Workbench.Action.Add" xml:space="preserve"><value>追加</value></data>
   <data name="Workbench.Action.AddFiles" xml:space="preserve"><value>ファイルを追加</value></data>
   <data name="Workbench.Action.HideInspector" xml:space="preserve"><value>インスペクターを非表示</value></data>
@@ -5103,6 +5112,7 @@
   <data name="Workbench.Bulk.CaptureGroup" xml:space="preserve"><value>キャプチャグループ</value></data>
   <data name="Workbench.Bulk.Case" xml:space="preserve"><value>文字の大文字/小文字</value></data>
   <data name="Workbench.Bulk.Condition" xml:space="preserve"><value>条件</value></data>
+  <data name="Workbench.Bulk.ConditionField" xml:space="preserve"><value>条件フィールド</value></data>
   <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>条件値</value></data>
   <data name="Workbench.Bulk.Description" xml:space="preserve"><value>再利用できるメタデータレシピを作成し、その結果をプレビューして、確認済みの変更だけを適用します。</value></data>
   <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>対象フィールド</value></data>
@@ -5119,7 +5129,9 @@
   <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>プレビュー結果</value></data>
   <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>プレビュー結果</value></data>
   <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>保存済みのレシピ</value></data>
+  <data name="Workbench.Bulk.RecipeName" xml:space="preserve"><value>レシピ名</value></data>
   <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>レシピ名</value></data>
+  <data name="Workbench.Bulk.SourceField" xml:space="preserve"><value>ソースフィールド</value></data>
   <data name="Workbench.Bulk.StepName" xml:space="preserve"><value>ステップ名</value></data>
   <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>置換後</value></data>
   <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>現在の操作を編集すると、簡易ドラフトプレビューが更新されます。</value></data>
@@ -5170,6 +5182,7 @@
   <data name="Workbench.Columns.Close" xml:space="preserve"><value>閉じる</value></data>
   <data name="Workbench.Columns.Description" xml:space="preserve"><value>保存済みのメタデータを変更せずに、表示する列を選択したりメタデータ列を作成したりできます。</value></data>
   <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>インライン編集は、対応している既知のフィールドでのみ使用できます。</value></data>
+  <data name="Workbench.Columns.InlineEditingLabel" xml:space="preserve"><value>インライン編集</value></data>
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>既知のフィールド</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>ラベル</value></data>
   <data name="Workbench.Columns.Metadata" xml:space="preserve"><value>メタデータ</value></data>
@@ -5334,6 +5347,8 @@
   <data name="Workbench.Online.FindReleaseArtwork" xml:space="preserve"><value>リリースのアートワークを検索</value></data>
   <data name="Workbench.Online.FindReleaseEditions" xml:space="preserve"><value>リリースの版を検索</value></data>
   <data name="Workbench.Online.LoadDetails" xml:space="preserve"><value>詳細を読み込む</value></data>
+  <data name="Workbench.Online.Mapping.IncludeAutomation" xml:space="preserve"><value>このマッピングを含める</value></data>
+  <data name="Workbench.Online.Mapping.IncludeHeader" xml:space="preserve"><value>含める</value></data>
   <data name="Workbench.Online.MappingReviewDescription" xml:space="preserve"><value>選択したフィールドを通常のプレビューに追加する前に、提案されたファイルとトラックの対応をすべて確認します。</value></data>
   <data name="Workbench.Online.MaximumDimension" xml:space="preserve"><value>プレビュー/適用時の最大幅または高さ（0 でサイズを維持）</value></data>
   <data name="Workbench.Online.MoveArtworkDown" xml:space="preserve"><value>アートワークを下へ移動</value></data>
@@ -5366,6 +5381,7 @@
   <data name="Workbench.Online.Thumbnail.Cached" xml:space="preserve"><value>キャッシュ済み</value></data>
   <data name="Workbench.Online.TrackMapping" xml:space="preserve"><value>トラックの対応付け</value></data>
   <data name="Workbench.Online.TrackMappingDescription" xml:space="preserve"><value>リリースを選択し、提案されたファイルとトラックの対応をすべて確認して、プレビューするフィールドグループを選びます。</value></data>
+  <data name="Workbench.Operation.AddTagLayer" xml:space="preserve"><value>{0} タグレイヤーを追加</value></data>
   <data name="Workbench.Operation.ConvertId3Version" xml:space="preserve"><value>ID3v2.{0} に変換</value></data>
   <data name="Workbench.Operation.ConvertTagLayer" xml:space="preserve"><value>{0} を {1} に変換</value></data>
   <data name="Workbench.Operation.CoverArtArchive" xml:space="preserve"><value>Cover Art Archive: {0}</value></data>
@@ -5384,6 +5400,7 @@
   <data name="Workbench.Operation.ReencodeId3" xml:space="preserve"><value>ID3 テキストを {0} で再エンコード</value></data>
   <data name="Workbench.Operation.RemoveAllArtwork" xml:space="preserve"><value>すべてのアートワークを削除</value></data>
   <data name="Workbench.Operation.RemoveFrontCover" xml:space="preserve"><value>フロントカバーを削除</value></data>
+  <data name="Workbench.Operation.RemoveTagLayer" xml:space="preserve"><value>{0} タグレイヤーを削除</value></data>
   <data name="Workbench.Operation.ReplaceFrontCover" xml:space="preserve"><value>フロントカバーを置換</value></data>
   <data name="Workbench.Operation.TagLayer" xml:space="preserve"><value>{1} タグレイヤーを{0}</value></data>
   <data name="Workbench.PendingChanges.ApplyTooltip" xml:space="preserve"><value>適用</value></data>
@@ -5589,7 +5606,7 @@
   <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs でリリースの版が {0:N0} 件見つかりました。いずれかを選択するとトラックと版の完全な詳細が読み込まれます。</value></data>
   <data name="Workbench.Status.DiscogsMappingCancelled" xml:space="preserve"><value>Discogs トラックのマッピングをキャンセルしました。</value></data>
   <data name="Workbench.Status.DiscogsMappingFailed" xml:space="preserve"><value>Discogs トラックのマッピングに失敗しました。</value></data>
-  <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>Discogs のファイルとトラックの対応を {1:N0} 件中 {0:N0} 件提案しました。{2:N0} 件は確認が必要です。</value></data>
+  <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>Discogs の提案: {0}、対象 {1}、{2}。</value></data>
   <data name="Workbench.Status.DiscogsMetadataPreviewed" xml:space="preserve"><value>マッピングした Discogs フィールドを通常のメタデータプレビューに追加しました。適用前にすべての変更を確認してください。</value></data>
   <data name="Workbench.Status.DiscogsSearchCancelled" xml:space="preserve"><value>Discogs リリースの検索をキャンセルしました。</value></data>
   <data name="Workbench.Status.DiscogsSearchFailed" xml:space="preserve"><value>Discogs リリースの検索に失敗しました。</value></data>
@@ -5601,16 +5618,34 @@
   <data name="Workbench.Status.ExternalToolPreviewReady.One" xml:space="preserve"><value>プロセス呼び出しを {0:N0} 件プレビューしました。外部ツールは MusicLibraryManager の復元対象外です。</value></data>
   <data name="Workbench.Status.ExternalToolPreviewReady.Other" xml:space="preserve"><value>プロセス呼び出しを {0:N0} 件プレビューしました。外部ツールは MusicLibraryManager の復元対象外です。</value></data>
   <data name="Workbench.Status.FingerprintCancelled" xml:space="preserve"><value>音声フィンガープリントの検出をキャンセルしました。</value></data>
-  <data name="Workbench.Status.FingerprintDiscovery" xml:space="preserve"><value>フィンガープリント検出: ファイル {0:N0} 件、候補 {1:N0} 件、警告 {2:N0} 件。</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery" xml:space="preserve"><value>フィンガープリント検索: {0}、{1}、{2}。</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.CandidateCount.One" xml:space="preserve"><value>{0:N0} 件の候補</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.CandidateCount.Other" xml:space="preserve"><value>{0:N0} 件の候補</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.FileCount.One" xml:space="preserve"><value>{0:N0} ファイル</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.FileCount.Other" xml:space="preserve"><value>{0:N0} ファイル</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.WarningCount.One" xml:space="preserve"><value>{0:N0} 件の警告</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.WarningCount.Other" xml:space="preserve"><value>{0:N0} 件の警告</value></data>
   <data name="Workbench.Status.FingerprintFailed" xml:space="preserve"><value>音声フィンガープリントの検出に失敗しました。</value></data>
-  <data name="Workbench.Status.ImportMapped" xml:space="preserve"><value>{1:N0} 行中 {0:N0} 行をマッピングしました。</value></data>
-  <data name="Workbench.Status.ImportMappedWithWarnings" xml:space="preserve"><value>{1:N0} 行中 {0:N0} 行をマッピングしました（警告 {2:N0} 件）。</value></data>
+  <data name="Workbench.Status.ImportMapped" xml:space="preserve"><value>マッピング: {1} のうち {0}。</value></data>
+  <data name="Workbench.Status.ImportMappedWithWarnings" xml:space="preserve"><value>マッピング: {1} のうち {0}。{2}。</value></data>
+  <data name="Workbench.Status.ImportMapping.MatchedRowCount.One" xml:space="preserve"><value>一致した行 {0:N0} 件</value></data>
+  <data name="Workbench.Status.ImportMapping.MatchedRowCount.Other" xml:space="preserve"><value>一致した行 {0:N0} 件</value></data>
+  <data name="Workbench.Status.ImportMapping.TotalRowCount.One" xml:space="preserve"><value>合計 {0:N0} 行</value></data>
+  <data name="Workbench.Status.ImportMapping.TotalRowCount.Other" xml:space="preserve"><value>合計 {0:N0} 行</value></data>
+  <data name="Workbench.Status.ImportMapping.WarningCount.One" xml:space="preserve"><value>{0:N0} 件の警告</value></data>
+  <data name="Workbench.Status.ImportMapping.WarningCount.Other" xml:space="preserve"><value>{0:N0} 件の警告</value></data>
   <data name="Workbench.Status.InspectorChangesReloaded.One" xml:space="preserve"><value>インスペクターの変更後に {0:N0} ファイルを再読み込みしました。</value></data>
   <data name="Workbench.Status.InspectorChangesReloaded.Other" xml:space="preserve"><value>インスペクターの変更後に {0:N0} ファイルを再読み込みしました。</value></data>
   <data name="Workbench.Status.InspectorReloadCancelled" xml:space="preserve"><value>インスペクターの変更後の再読み込みをキャンセルしました。</value></data>
   <data name="Workbench.Status.InspectorReloadFailed" xml:space="preserve"><value>インスペクターの変更を再読み込みできませんでした。</value></data>
   <data name="Workbench.Status.LoadingCancelled" xml:space="preserve"><value>読み込みをキャンセルしました。</value></data>
   <data name="Workbench.Status.LoadingFailed" xml:space="preserve"><value>選択したソースを読み込めませんでした。</value></data>
+  <data name="Workbench.Status.MappingReady.FileCount.One" xml:space="preserve"><value>{0:N0} ファイル</value></data>
+  <data name="Workbench.Status.MappingReady.FileCount.Other" xml:space="preserve"><value>{0:N0} ファイル</value></data>
+  <data name="Workbench.Status.MappingReady.ReviewCount.One" xml:space="preserve"><value>{0:N0} 件のマッピングを確認する必要があります</value></data>
+  <data name="Workbench.Status.MappingReady.ReviewCount.Other" xml:space="preserve"><value>{0:N0} 件のマッピングを確認する必要があります</value></data>
+  <data name="Workbench.Status.MappingReady.SuggestedCount.One" xml:space="preserve"><value>{0:N0} 件のマッピング</value></data>
+  <data name="Workbench.Status.MappingReady.SuggestedCount.Other" xml:space="preserve"><value>{0:N0} 件のマッピング</value></data>
   <data name="Workbench.Status.MusicBrainzFound.One" xml:space="preserve"><value>MusicBrainz でリリースの版が {0:N0} 件見つかりました。選択してファイルとトラックの対応を作成してください。</value></data>
   <data name="Workbench.Status.MusicBrainzFound.Other" xml:space="preserve"><value>MusicBrainz でリリースの版が {0:N0} 件見つかりました。いずれかを選択してファイルとトラックの対応を作成してください。</value></data>
   <data name="Workbench.Status.MusicBrainzLookupCancelled" xml:space="preserve"><value>MusicBrainz リリースの検索をキャンセルしました。</value></data>
@@ -5634,12 +5669,22 @@
   <data name="Workbench.Status.PlaylistPreviewFailed" xml:space="preserve"><value>プレイリストのプレビューに失敗しました。</value></data>
   <data name="Workbench.Status.PlaylistPreviewReady.One" xml:space="preserve"><value>プレイリストファイルを {0:N0} 件プレビューしました。適用前に出力先を確認してください。</value></data>
   <data name="Workbench.Status.PlaylistPreviewReady.Other" xml:space="preserve"><value>プレイリストファイルを {0:N0} 件プレビューしました。適用前に出力先を確認してください。</value></data>
+  <data name="Workbench.Status.PlaylistWritten" xml:space="preserve"><value>{0}（{1}）を書き込みました。</value></data>
+  <data name="Workbench.Status.PlaylistWritten.FileCount.One" xml:space="preserve"><value>{0:N0} 件のプレイリストファイル</value></data>
+  <data name="Workbench.Status.PlaylistWritten.FileCount.Other" xml:space="preserve"><value>{0:N0} 件のプレイリストファイル</value></data>
   <data name="Workbench.Status.PlaylistWritten.One" xml:space="preserve"><value>{1:N0} 件のトラック参照を含むプレイリストファイルを {0:N0} 件書き込みました。</value></data>
   <data name="Workbench.Status.PlaylistWritten.Other" xml:space="preserve"><value>{1:N0} 件のトラック参照を含むプレイリストファイルを {0:N0} 件書き込みました。</value></data>
+  <data name="Workbench.Status.PlaylistWritten.TrackReferenceCount.One" xml:space="preserve"><value>{0:N0} 件のトラック参照</value></data>
+  <data name="Workbench.Status.PlaylistWritten.TrackReferenceCount.Other" xml:space="preserve"><value>{0:N0} 件のトラック参照</value></data>
   <data name="Workbench.Status.PreviewBlocked.One" xml:space="preserve"><value>プレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
   <data name="Workbench.Status.PreviewBlocked.Other" xml:space="preserve"><value>プレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
   <data name="Workbench.Status.PreviewCancelled" xml:space="preserve"><value>プレビューをキャンセルしました。ファイルは変更されていません。</value></data>
   <data name="Workbench.Status.PreviewFailed" xml:space="preserve"><value>プレビューに失敗しました。</value></data>
+  <data name="Workbench.Status.PreviewReady" xml:space="preserve"><value>プレビュー: {0}。対象ファイル: {1}。ファイルは変更されていません。</value></data>
+  <data name="Workbench.Status.PreviewReady.ChangeCount.One" xml:space="preserve"><value>{0:N0} 件のメタデータ変更</value></data>
+  <data name="Workbench.Status.PreviewReady.ChangeCount.Other" xml:space="preserve"><value>{0:N0} 件のメタデータ変更</value></data>
+  <data name="Workbench.Status.PreviewReady.FileCount.One" xml:space="preserve"><value>{0:N0} ファイル</value></data>
+  <data name="Workbench.Status.PreviewReady.FileCount.Other" xml:space="preserve"><value>{0:N0} ファイル</value></data>
   <data name="Workbench.Status.PreviewReady.One" xml:space="preserve"><value>プレビュー: {1:N0} ファイルにメタデータ変更が {0:N0} 件あります。ファイルは変更されていません。</value></data>
   <data name="Workbench.Status.PreviewReady.Other" xml:space="preserve"><value>プレビュー: {1:N0} ファイルにメタデータ変更が {0:N0} 件あります。ファイルは変更されていません。</value></data>
   <data name="Workbench.Status.Ready" xml:space="preserve"><value>ファイル、フォルダー、プレイリスト、または CUE シートを追加してください。ライブラリの設定は不要です。</value></data>
@@ -5648,7 +5693,7 @@
   <data name="Workbench.Status.ReleaseArtworkPreviewed" xml:space="preserve"><value>選択したフロントカバーを通常のメタデータプレビューに追加しました。適用前にすべてのアートワーク変更を確認してください。</value></data>
   <data name="Workbench.Status.ReleaseMappingCancelled" xml:space="preserve"><value>リリーストラックのマッピングをキャンセルしました。</value></data>
   <data name="Workbench.Status.ReleaseMappingFailed" xml:space="preserve"><value>リリーストラックのマッピングに失敗しました。</value></data>
-  <data name="Workbench.Status.ReleaseMappingReady" xml:space="preserve"><value>ファイルとトラックの対応を {1:N0} 件中 {0:N0} 件提案しました。{2:N0} 件は確認が必要です。</value></data>
+  <data name="Workbench.Status.ReleaseMappingReady" xml:space="preserve"><value>提案: {0}、対象 {1}、{2}。</value></data>
   <data name="Workbench.Status.ReportOutputCancelled" xml:space="preserve"><value>レポートの出力をキャンセルしました。</value></data>
   <data name="Workbench.Status.ReportOutputFailed" xml:space="preserve"><value>レポートの出力に失敗しました。</value></data>
   <data name="Workbench.Status.ReportPreviewBlocked.One" xml:space="preserve"><value>レポートのプレビューにブロッカーが {0:N0} 件あります。出力は書き込まれていません。</value></data>
@@ -5657,8 +5702,13 @@
   <data name="Workbench.Status.ReportPreviewFailed" xml:space="preserve"><value>レポートのプレビューに失敗しました。</value></data>
   <data name="Workbench.Status.ReportPreviewReady.One" xml:space="preserve"><value>レポートファイルを {0:N0} 件プレビューしました。適用前に出力先を確認してください。</value></data>
   <data name="Workbench.Status.ReportPreviewReady.Other" xml:space="preserve"><value>レポートファイルを {0:N0} 件プレビューしました。適用前に出力先を確認してください。</value></data>
+  <data name="Workbench.Status.ReportWritten" xml:space="preserve"><value>{0}（{1}）を書き込みました。</value></data>
+  <data name="Workbench.Status.ReportWritten.FileCount.One" xml:space="preserve"><value>{0:N0} 件のレポートファイル</value></data>
+  <data name="Workbench.Status.ReportWritten.FileCount.Other" xml:space="preserve"><value>{0:N0} 件のレポートファイル</value></data>
   <data name="Workbench.Status.ReportWritten.One" xml:space="preserve"><value>{1:N0} 行を含むレポートファイルを {0:N0} 件書き込みました。</value></data>
   <data name="Workbench.Status.ReportWritten.Other" xml:space="preserve"><value>{1:N0} 行を含むレポートファイルを {0:N0} 件書き込みました。</value></data>
+  <data name="Workbench.Status.ReportWritten.RowCount.One" xml:space="preserve"><value>{0:N0} 行</value></data>
+  <data name="Workbench.Status.ReportWritten.RowCount.Other" xml:space="preserve"><value>{0:N0} 行</value></data>
   <data name="Workbench.Status.RestoreCancelled" xml:space="preserve"><value>復元をキャンセルしました。完了した復元は引き続き回復できます。</value></data>
   <data name="Workbench.Status.Restored.One" xml:space="preserve"><value>最新のワークベンチ操作から {0:N0} ファイルを復元しました。</value></data>
   <data name="Workbench.Status.Restored.Other" xml:space="preserve"><value>最新のワークベンチ操作から {0:N0} ファイルを復元しました。</value></data>
@@ -5673,8 +5723,15 @@
   <data name="Workbench.Status.ShortcutRecipeRegenerated" xml:space="preserve"><value>現在のワークベンチファイルに対してショートカット「{0}」を再生成しました。適用前に確認してください。</value></data>
   <data name="Workbench.Status.SourcesAdded.One" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチセッションには {1:N0} ファイルあります。</value></data>
   <data name="Workbench.Status.SourcesAdded.Other" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチセッションには {1:N0} ファイルあります。</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings" xml:space="preserve"><value>{0}を追加しました。{1}、{2}。</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.AddedFileCount.One" xml:space="preserve"><value>{0:N0} ファイル</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.AddedFileCount.Other" xml:space="preserve"><value>{0:N0} ファイル</value></data>
   <data name="Workbench.Status.SourcesAddedWithWarnings.One" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチセッションには {1:N0} ファイルあり、警告は {2:N0} 件です。</value></data>
   <data name="Workbench.Status.SourcesAddedWithWarnings.Other" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチセッションには {1:N0} ファイルあり、警告は {2:N0} 件です。</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.SessionFileCount.One" xml:space="preserve"><value>このワークベンチ セッションのファイル {0:N0} 件</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.SessionFileCount.Other" xml:space="preserve"><value>このワークベンチ セッションのファイル {0:N0} 件</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.WarningCount.One" xml:space="preserve"><value>{0:N0} 件の警告</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.WarningCount.Other" xml:space="preserve"><value>{0:N0} 件の警告</value></data>
   <data name="Workbench.Subtitle" xml:space="preserve"><value>ライブラリの設定を変更せずに、一時的な編集セッションを作成します。</value></data>
   <data name="Workbench.Title" xml:space="preserve"><value>ワークベンチ</value></data>
   <data name="Workbench.Tools.ApplicationDefault" xml:space="preserve"><value>(アプリの既定値)</value></data>
@@ -5917,43 +5974,43 @@
   <data name="Fields.Action.UndoRemoval" xml:space="preserve"><value>元に戻す</value></data>
   <data name="Fields.Activity.Preview.Completed.One" xml:space="preserve"><value>{0:N0} ファイルをプレビューしました</value></data>
   <data name="Fields.Activity.Preview.Completed.Other" xml:space="preserve"><value>{0:N0} ファイルをプレビューしました</value></data>
-  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>フィールドの変更: {0:N0};ファイル: {1:N0}。検証中…</value></data>
-  <data name="Fields.Activity.Preview.Title" xml:space="preserve"><value>メタデータフィールドのプレビュー</value></data>
+  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>フィールド変更: {0:N0}、ファイル: {1:N0}。検証中…</value></data>
+  <data name="Fields.Activity.Preview.Title" xml:space="preserve"><value>メタデータフィールドをプレビュー</value></data>
   <data name="Fields.Activity.Save.Starting.One" xml:space="preserve"><value>確認済みのフィールドプランを {0:N0} ファイルに適用しています</value></data>
   <data name="Fields.Activity.Save.Starting.Other" xml:space="preserve"><value>確認済みのフィールドプランを {0:N0} ファイルに適用しています</value></data>
-  <data name="Fields.Activity.Save.Title" xml:space="preserve"><value>メタデータフィールドの保存</value></data>
-  <data name="Fields.Operation.Name" xml:space="preserve"><value>ライブラリメタデータフィールドを編集する</value></data>
-  <data name="Fields.Progress.Phase.Applying" xml:space="preserve"><value>メタデータの変更を適用する</value></data>
+  <data name="Fields.Activity.Save.Title" xml:space="preserve"><value>メタデータフィールドを保存</value></data>
+  <data name="Fields.Operation.Name" xml:space="preserve"><value>ライブラリのメタデータフィールドを編集</value></data>
+  <data name="Fields.Progress.Phase.Applying" xml:space="preserve"><value>メタデータの変更を適用しています</value></data>
   <data name="Fields.Progress.Phase.Completed" xml:space="preserve"><value>メタデータの更新が完了しました</value></data>
-  <data name="Fields.Progress.Phase.IndexingSources" xml:space="preserve"><value>ソースメタデータの読み取り</value></data>
-  <data name="Fields.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>宛先メタデータの読み取り</value></data>
+  <data name="Fields.Progress.Phase.IndexingSources" xml:space="preserve"><value>ソースメタデータを読み取っています</value></data>
+  <data name="Fields.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>宛先メタデータを読み取っています</value></data>
   <data name="Fields.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>構成を読み込んでいます</value></data>
-  <data name="Fields.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>ライブラリのロード</value></data>
-  <data name="Fields.Progress.Phase.Planning" xml:space="preserve"><value>メタデータ変更のプレビュー</value></data>
-  <data name="Fields.Progress.Phase.RollingBack" xml:space="preserve"><value>メタデータの変更をロールバックする</value></data>
-  <data name="Fields.Progress.Phase.Validating" xml:space="preserve"><value>メタデータの変更を検証する</value></data>
+  <data name="Fields.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>ライブラリを読み込んでいます</value></data>
+  <data name="Fields.Progress.Phase.Planning" xml:space="preserve"><value>メタデータ変更をプレビューしています</value></data>
+  <data name="Fields.Progress.Phase.RollingBack" xml:space="preserve"><value>メタデータの変更をロールバックしています</value></data>
+  <data name="Fields.Progress.Phase.Validating" xml:space="preserve"><value>メタデータの変更を検証しています</value></data>
   <data name="Fields.Progress.WithPath" xml:space="preserve"><value>{0} — {1}</value></data>
   <data name="Fields.Row.Kind.KnownField" xml:space="preserve"><value>既知のフィールド</value></data>
   <data name="Fields.Row.Kind.UserString" xml:space="preserve"><value>ユーザー文字列</value></data>
-  <data name="Fields.Status.ConfirmDiscard" xml:space="preserve"><value>保存されていないフィールドの変更を破棄しますか? [変更を破棄]を選択して確認します。</value></data>
-  <data name="Fields.Status.LoadFailures.One" xml:space="preserve"><value>{0:N0} 選択されたファイルを読み取れませんでした。読み取り可能なファイルのフィールドは引き続き使用できます。</value></data>
-  <data name="Fields.Status.LoadFailures.Other" xml:space="preserve"><value>{0:N0} 選択されたファイルを読み取れませんでした。読み取り可能なファイルのフィールドは引き続き使用できます。</value></data>
-  <data name="Fields.Status.PreviewBlockers.One" xml:space="preserve"><value>プレビューで {0:N0} のブロック問題が見つかりました。ファイルは変更されませんでした。</value></data>
-  <data name="Fields.Status.PreviewBlockers.Other" xml:space="preserve"><value>プレビューでは {0:N0} のブロック問題が見つかりました。ファイルは変更されませんでした。</value></data>
-  <data name="Fields.Status.PreviewCancelled" xml:space="preserve"><value>プレビューがキャンセルされました。提案されたフィールドの変更は、再試行できる状態のままです。</value></data>
-  <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>プレビューの有効期限が切れました。フィールドの変更を再度プレビューします。</value></data>
-  <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>フィールド変更のプレビューが失敗しました。提案された変更は再試行できる状態のままです。</value></data>
-  <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>プレビューでは該当する変更が見つかりませんでした。ファイルは変更されませんでした。</value></data>
-  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>プレビューの準備ができました。変更のあるファイル: {0:N0}、フィールドの変更: {1:N0}。まだ書き込みは行われていません。[変更を確認] を選択すると、このプレビューが共有の保留中の変更に追加されます。</value></data>
-  <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>保存がキャンセルされました。提案されたフィールドの変更は、再試行できる状態のままです。</value></data>
-  <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>{0:N0} ファイルを更新しました。元に戻すためにオリジナルが保持されます。</value></data>
-  <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>{0:N0} ファイルを更新しました。元に戻すためにオリジナルが保持されます。</value></data>
-  <data name="Fields.Status.SaveFailed" xml:space="preserve"><value>フィールドの変更を保存できませんでした。提案された変更は再試行できる状態のままです。</value></data>
+  <data name="Fields.Status.ConfirmDiscard" xml:space="preserve"><value>保存されていないフィールド変更を破棄しますか？確認するには、［変更を破棄］を選択してください。</value></data>
+  <data name="Fields.Status.LoadFailures.One" xml:space="preserve"><value>選択した {0:N0} ファイルを読み取れませんでした。読み取り可能なファイルのフィールドは引き続き使用できます。</value></data>
+  <data name="Fields.Status.LoadFailures.Other" xml:space="preserve"><value>選択した {0:N0} ファイルを読み取れませんでした。読み取り可能なファイルのフィールドは引き続き使用できます。</value></data>
+  <data name="Fields.Status.PreviewBlockers.One" xml:space="preserve"><value>プレビューで {0:N0} 件のブロック問題が見つかりました。ファイルは変更されていません。</value></data>
+  <data name="Fields.Status.PreviewBlockers.Other" xml:space="preserve"><value>プレビューで {0:N0} 件のブロック問題が見つかりました。ファイルは変更されていません。</value></data>
+  <data name="Fields.Status.PreviewCancelled" xml:space="preserve"><value>プレビューがキャンセルされました。提案されたフィールド変更は再試行できる状態のままです。</value></data>
+  <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>プレビューの有効期限が切れました。フィールド変更をもう一度プレビューしてください。</value></data>
+  <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>フィールド変更のプレビューに失敗しました。提案された変更は再試行できる状態のままです。</value></data>
+  <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>プレビューで適用可能な変更は見つかりませんでした。ファイルは変更されていません。</value></data>
+  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>プレビューの準備ができました。変更のあるファイル: {0:N0}、フィールド変更: {1:N0}。まだ書き込まれていません。［変更を確認］を選択して、このプレビューを共有の保留中の変更ドロワーに追加してください。</value></data>
+  <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>保存がキャンセルされました。提案されたフィールド変更は再試行できる状態のままです。</value></data>
+  <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>{0:N0} ファイルを更新しました。元に戻せるようにオリジナルが保持されます。</value></data>
+  <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>{0:N0} ファイルを更新しました。元に戻せるようにオリジナルが保持されます。</value></data>
+  <data name="Fields.Status.SaveFailed" xml:space="preserve"><value>フィールド変更を保存できませんでした。提案された変更は再試行できる状態のままです。</value></data>
   <data name="Fields.Status.UserStringExists" xml:space="preserve"><value>ユーザー文字列「{0}」はすでにリストにあります。</value></data>
   <data name="Fields.Status.UserStringNameRequired" xml:space="preserve"><value>ユーザー文字列の名前を入力してください。</value></data>
-  <data name="Fields.Title.Files.One" xml:space="preserve"><value>フィールドの編集 — {0:N0} ファイル</value></data>
+  <data name="Fields.Title.Files.One" xml:space="preserve"><value>フィールドを編集 — {0:N0} ファイル</value></data>
   <data name="Fields.Title.Files.Other" xml:space="preserve"><value>フィールドを編集 — {0:N0} ファイル</value></data>
-  <data name="Fields.Title.Single" xml:space="preserve"><value>フィールドの編集 — {0}</value></data>
+  <data name="Fields.Title.Single" xml:space="preserve"><value>フィールドを編集 — {0}</value></data>
   <data name="Health.TextDifference.CategoryCodePoint" xml:space="preserve"><value>{0} ({1})</value></data>
   <data name="Health.TextDifference.Empty" xml:space="preserve"><value>(空)</value></data>
   <data name="Health.TextDifference.KnownCodePoint" xml:space="preserve"><value>{0} {1}</value></data>
@@ -6296,12 +6353,20 @@
   <data name="Workbench.Inspector.ApeV2Actions" xml:space="preserve"><value>APEv2 操作</value></data>
   <data name="Workbench.Inspector.Id3v1Actions" xml:space="preserve"><value>ID3v1 操作</value></data>
   <data name="Transcode.Concurrency.ParallelJobs" xml:space="preserve"><value>並列ジョブ</value></data>
-  <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>{0:N0} 件のファイル操作を変更の確認に追加しました。</value></data>
-  <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>{0:N0} 件のファイル操作を変更の確認に追加しました。</value></data>
+  <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>{0:N0} 件のファイル操作を［変更を確認］に追加しました。</value></data>
+  <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>{0:N0} 件のファイル操作を［変更を確認］に追加しました。</value></data>
+  <data name="Workbench.Dialog.PendingConflict.MetadataPlan" xml:space="preserve"><value>新しいメタデータプレビューは、同じフィールドとファイルで保留中のメタデータ変更と競合します。別のプレビューを作成する前に、既存の変更を破棄するか適用してください。</value></data>
+  <data name="Workbench.Dialog.PendingConflict.PendingMutationRejected" xml:space="preserve"><value>新しくプレビューした変更を保留中の変更と結合できませんでした。既存の変更を確認または破棄してから、もう一度プレビューしてください。</value></data>
+  <data name="Workbench.Dialog.PendingConflict.ReplaceOriginalConflict" xml:space="preserve"><value>同じソースのファイル操作が保留中の場合、そのソースをトランスコードで置き換えることはできません。いずれかの変更を破棄してください。</value></data>
   <data name="Workbench.Dialog.PendingConflict.Title" xml:space="preserve"><value>保留中の変更が競合しています</value></data>
+  <data name="Workbench.Dialog.PendingConflict.FileOperationCannotApply" xml:space="preserve"><value>保留中のファイル操作に有効なアクションがないか、操作を適用できなくなりました。ファイル操作をもう一度プレビューしてください。</value></data>
+  <data name="Workbench.Dialog.PendingConflict.FileOperationRefreshFailed" xml:space="preserve"><value>保留中のファイル操作を有効なプランに更新できませんでした。ファイル操作をもう一度プレビューしてください。</value></data>
+  <data name="Workbench.Dialog.PendingConflict.FileOperationServiceUnavailable" xml:space="preserve"><value>このセッションでは確認済みのファイル操作を使用できません。変更を適用する前に、保留中のファイル操作を破棄するか、アプリケーションを再起動してください。</value></data>
   <data name="Workbench.Dialog.PendingConflict.Message" xml:space="preserve"><value>選択したソースには、互換性のない保留中のトランスコードまたはファイル操作があります。別の変更を追加する前に破棄してください。</value></data>
   <data name="Workbench.Dialog.ReplacePendingFileOperation.Title" xml:space="preserve"><value>保留中のファイル操作を置換しますか？</value></data>
   <data name="Workbench.Dialog.ReplacePendingFileOperation.Message" xml:space="preserve"><value>選択したソースには保留中のファイル操作があります。新しくプレビューした操作で置換しますか？</value></data>
+  <data name="Workbench.Dialog.PendingConflict.TranscodeCannotApply" xml:space="preserve"><value>保留中のトランスコードを適用できなくなりました。トランスコードをもう一度プレビューしてください。</value></data>
+  <data name="Workbench.Dialog.PendingConflict.TranscodeServiceUnavailable" xml:space="preserve"><value>このセッションではトランスコードを使用できません。変更を適用する前に、保留中のトランスコードを破棄するか、アプリケーションを再起動してください。</value></data>
   <data name="Workbench.Dialog.ReplacePendingFileOperation.Confirm" xml:space="preserve"><value>置換</value></data>
   <data name="Workbench.PendingChanges.FileOperation" xml:space="preserve"><value>ファイル操作</value></data>
   <data name="Workbench.PendingChanges.NoDestination" xml:space="preserve"><value>出力先なし</value></data>

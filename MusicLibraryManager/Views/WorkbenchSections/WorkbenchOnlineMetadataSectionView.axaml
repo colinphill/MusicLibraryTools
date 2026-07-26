@@ -356,7 +356,7 @@
             <CheckBox Margin="0,0,12,0"
                       Content="{DynamicResource Loc.Workbench.Online.Field.GenresStyles}"
                       IsChecked="{Binding DiscogsImport.GenresAndStyles, Mode=TwoWay}" />
-            <CheckBox Content="{DynamicResource Loc.Workbench.Online.Field.DiscogsReleaseId}"
+            <CheckBox Content="{DynamicResource Loc.Column.DiscogsReleaseId}"
                       IsChecked="{Binding DiscogsImport.DiscogsIdentifier, Mode=TwoWay}" />
           </WrapPanel>
         </Grid>

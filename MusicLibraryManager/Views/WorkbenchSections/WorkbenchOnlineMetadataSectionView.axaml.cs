@@ -37,19 +37,19 @@ public partial class WorkbenchOnlineMetadataSectionView :
                 nameof(AudioDiscoveryRow.DiagnosticDetail));
         AudioDiscoveryGrid.ConfigureColumns(
         [
-            new("File", L("Workbench.Grid.Header.File"), "File", 220, 130),
-            new("Duration", L("Workbench.Grid.Header.Duration"), "Duration", 90, 70),
-            new("Confidence", L("Workbench.Grid.Header.Confidence"), "Confidence", 105, 85),
-            new("AcoustID", "AcoustID", "AcoustId", 285, 180),
+            new("File", L("Column.File"), "File", 220, 130),
+            new("Duration", L("Column.Duration"), "Duration", 90, 70),
+            new("Confidence", L("Column.Confidence"), "Confidence", 105, 85),
+            new("AcoustID", L("Column.AcoustId"), "AcoustId", 285, 180),
             new(
                 "MusicBrainz",
-                L("Workbench.Grid.Header.MusicBrainzRecordingIds"),
+                L("Column.MusicBrainzRecordingIds"),
                 "MusicBrainzRecordingIds",
                 390,
                 220),
             new(
                 "Status",
-                L("Workbench.Grid.Header.Status"),
+                L("Column.Status"),
                 "Status",
                 280,
                 160,
@@ -57,24 +57,24 @@ public partial class WorkbenchOnlineMetadataSectionView :
         ]);
         ReleaseDiscoveryGrid.ConfigureColumns(
         [
-            new("Title", L("Workbench.Grid.Header.Release"), "Title", 240, 140),
-            new("Artist", L("Workbench.Grid.Header.ArtistCredit"), "Artist", 190, 110),
-            new("Date", L("Workbench.Grid.Header.Date"), "Date", 100, 75),
-            new("Country", L("Workbench.Grid.Header.Country"), "Country", 80, 65),
-            new("Status", L("Workbench.Grid.Header.Status"), "Status", 90, 70),
-            new("Label", L("Workbench.Grid.Header.Label"), "Label", 170, 100),
-            new("Catalog", L("Workbench.Grid.Header.CatalogNumber"), "CatalogNumber", 120, 85),
-            new("Formats", L("Workbench.Grid.Header.Formats"), "Formats", 140, 90),
+            new("Title", L("Column.Release"), "Title", 240, 140),
+            new("Artist", L("Column.ArtistCredit"), "Artist", 190, 110),
+            new("Date", L("Column.Date"), "Date", 100, 75),
+            new("Country", L("Column.Country"), "Country", 80, 65),
+            new("Status", L("Column.Status"), "Status", 90, 70),
+            new("Label", L("Column.Label"), "Label", 170, 100),
+            new("Catalog", L("Column.CatalogNumber"), "CatalogNumber", 120, 85),
+            new("Formats", L("Column.Formats"), "Formats", 140, 90),
             new(
                 "Position",
-                L("Workbench.Grid.Header.MatchedPosition"),
+                L("Column.MatchedPosition"),
                 "MatchedTrackPositions",
                 140,
                 95),
-            new("Tracks", L("Workbench.Grid.Header.Tracks"), "TrackCount", 75, 60),
+            new("Tracks", L("Column.Tracks"), "TrackCount", 75, 60),
             new(
                 "ReleaseID",
-                L("Workbench.Grid.Header.MusicBrainzReleaseId"),
+                L("Column.MusicBrainzReleaseId"),
                 "ReleaseId",
                 280,
                 180),
@@ -203,20 +203,20 @@ public partial class WorkbenchOnlineMetadataSectionView :
     private void ConfigureDiscogsGrid() =>
         DiscogsDiscoveryGrid.ConfigureColumns(
         [
-            new("Title", L("Workbench.Grid.Header.Release"), "Title", 220, 130),
-            new("Artist", L("Workbench.Grid.Header.ArtistCredit"), "Artist", 180, 105),
-            new("Year", L("Workbench.Grid.Header.Year"), "Year", 75, 60),
-            new("Country", L("Workbench.Grid.Header.Country"), "Country", 75, 62),
-            new("Labels", L("Workbench.Grid.Header.Labels"), "Labels", 160, 95),
-            new("Catalog", L("Workbench.Grid.Header.CatalogNumber"), "CatalogNumbers", 130, 85),
-            new("Formats", L("Workbench.Grid.Header.Formats"), "Formats", 150, 90),
-            new("Genres", L("Workbench.Grid.Header.Genres"), "Genres", 130, 85),
-            new("Styles", L("Workbench.Grid.Header.Styles"), "Styles", 140, 90),
-            new("Tracks", L("Workbench.Grid.Header.Tracks"), "TrackCount", 70, 55),
-            new("Source", L("Workbench.Grid.Header.Source"), "Source", 100, 75),
+            new("Title", L("Column.Release"), "Title", 220, 130),
+            new("Artist", L("Column.ArtistCredit"), "Artist", 180, 105),
+            new("Year", L("Column.Year"), "Year", 75, 60),
+            new("Country", L("Column.Country"), "Country", 75, 62),
+            new("Labels", L("Column.Labels"), "Labels", 160, 95),
+            new("Catalog", L("Column.CatalogNumber"), "CatalogNumbers", 130, 85),
+            new("Formats", L("Column.Formats"), "Formats", 150, 90),
+            new("Genres", L("Column.Genres"), "Genres", 130, 85),
+            new("Styles", L("Column.Styles"), "Styles", 140, 90),
+            new("Tracks", L("Column.Tracks"), "TrackCount", 70, 55),
+            new("Source", L("Column.Source"), "Source", 100, 75),
             new(
                 "ReleaseID",
-                L("Workbench.Grid.Header.DiscogsReleaseId"),
+                L("Column.DiscogsReleaseId"),
                 "ReleaseId",
                 150,
                 100),
@@ -277,31 +277,31 @@ public partial class WorkbenchOnlineMetadataSectionView :
         [
             new(
                 "Include",
-                L("Workbench.Grid.Header.Use"),
+                L("Workbench.Online.Mapping.IncludeHeader"),
                 null,
                 58,
                 48,
                 CellTemplate: includeTemplate,
                 Sortable: false),
-            new("File", L("Workbench.Grid.Header.File"), "File", 180, 110),
+            new("File", L("Column.File"), "File", 180, 110),
             new(
                 "Track",
-                L("Workbench.Grid.Header.DiscogsTrack"),
+                L("Column.DiscogsTrack"),
                 null,
                 330,
                 190,
                 CellTemplate: trackTemplate,
                 Sortable: false),
-            new("Position", L("Workbench.Grid.Header.Position"), "Position", 80, 62),
+            new("Position", L("Column.Position"), "Position", 80, 62),
             new(
                 "Confidence",
-                L("Workbench.Grid.Header.Confidence"),
+                L("Column.Confidence"),
                 "Confidence",
                 100,
                 76),
             new(
                 "Status",
-                L("Workbench.Grid.Header.Reason"),
+                L("Column.Reason"),
                 "Status",
                 260,
                 150,
@@ -366,16 +366,16 @@ public partial class WorkbenchOnlineMetadataSectionView :
         [
             new(
                 "Include",
-                L("Workbench.Grid.Header.Use"),
+                L("Workbench.Online.Mapping.IncludeHeader"),
                 null,
                 60,
                 50,
                 CellTemplate: includeTemplate,
                 Sortable: false),
-            new("File", L("Workbench.Grid.Header.File"), "File", 210, 120),
+            new("File", L("Column.File"), "File", 210, 120),
             new(
                 "Track",
-                L("Workbench.Grid.Header.ReleaseTrack"),
+                L("Column.ReleaseTrack"),
                 null,
                 390,
                 220,
@@ -383,13 +383,13 @@ public partial class WorkbenchOnlineMetadataSectionView :
                 Sortable: false),
             new(
                 "Confidence",
-                L("Workbench.Grid.Header.Confidence"),
+                L("Column.Confidence"),
                 "Confidence",
                 110,
                 80),
             new(
                 "Status",
-                L("Workbench.Grid.Header.Reason"),
+                L("Column.Reason"),
                 "Status",
                 310,
                 170,
@@ -430,25 +430,25 @@ public partial class WorkbenchOnlineMetadataSectionView :
         [
             new(
                 "Thumbnail",
-                L("Workbench.Grid.Header.Preview"),
+                L("Column.Preview"),
                 null,
                 90,
                 80,
                 CellTemplate: thumbnailTemplate,
                 Sortable: false),
-            new("Roles", L("Workbench.Grid.Header.Types"), "Roles", 170, 100),
-            new("Front", L("Workbench.Grid.Header.Front"), "Front", 70, 55),
-            new("Back", L("Workbench.Grid.Header.Back"), "Back", 70, 55),
-            new("Approved", L("Workbench.Grid.Header.Approved"), "Approved", 85, 65),
-            new("Comment", L("Workbench.Grid.Header.Comment"), "Comment", 240, 130),
+            new("Roles", L("Column.ArtworkRoles"), "Roles", 170, 100),
+            new("Front", L("Column.Front"), "Front", 70, 55),
+            new("Back", L("Column.Back"), "Back", 70, 55),
+            new("Approved", L("Column.Approved"), "Approved", 85, 65),
+            new("Comment", L("Column.Comment"), "Comment", 240, 130),
             new(
                 "Status",
-                L("Workbench.Grid.Header.Thumbnail"),
+                L("Column.Thumbnail"),
                 "ThumbnailStatus",
                 150,
                 90,
                 CellTemplate: statusTemplate),
-            new("Id", L("Workbench.Grid.Header.ArchiveId"), "Id", 150, 100),
+            new("Id", L("Column.CoverArtArchiveId"), "Id", 150, 100),
         ]);
     }
 
@@ -462,7 +462,7 @@ public partial class WorkbenchOnlineMetadataSectionView :
         AutomationProperties.SetName(
             toggle,
             _localization.Get(
-                "Workbench.Grid.Header.Use"));
+                "Workbench.Online.Mapping.IncludeAutomation"));
         return toggle;
     }
 
@@ -484,7 +484,7 @@ public partial class WorkbenchOnlineMetadataSectionView :
     {
         string includeName =
             _localization.Get(
-                "Workbench.Grid.Header.Use");
+                "Workbench.Online.Mapping.IncludeAutomation");
         string trackName =
             _localization.Get(
                 "Workbench.Online.TrackMapping");

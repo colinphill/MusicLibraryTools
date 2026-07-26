@@ -63,7 +63,7 @@
                          VerticalAlignment="Center" />
               <TextBlock Grid.Row="1"
                          Classes="field-label"
-                         Text="{DynamicResource Loc.Workbench.Columns.AllowInlineEditing}" />
+                         Text="{DynamicResource Loc.Workbench.Columns.InlineEditingLabel}" />
               <TextBlock x:Name="BuiltInColumnEditable"
                          Grid.Row="1"
                          Grid.Column="1"
@@ -107,13 +107,13 @@
           <StackPanel Grid.Column="1"
                       Classes="field">
             <TextBlock Classes="field-label"
-                       Text="{DynamicResource Loc.Workbench.Grid.Header.Kind}" />
+                       Text="{DynamicResource Loc.Column.Kind}" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding ColumnEditor.FieldKindChoices}"
                       DisplayMemberBinding="{Binding Label}"
                       SelectedValueBinding="{Binding Value}"
                       SelectedValue="{Binding ColumnEditor.FieldKind, Mode=TwoWay}"
-                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Grid.Header.Kind}" />
+                      AutomationProperties.Name="{DynamicResource Loc.Column.Kind}" />
           </StackPanel>
         </Grid>
         <StackPanel Classes="field">

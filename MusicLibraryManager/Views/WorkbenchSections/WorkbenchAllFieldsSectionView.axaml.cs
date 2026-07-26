@@ -39,18 +39,18 @@ public partial class WorkbenchAllFieldsSectionView : UserControl
     private void ConfigureColumns() =>
         MetadataFieldsGrid.ConfigureColumns(
         [
-            new("Name", L("Workbench.Grid.Header.Field"), "Name", 210, 120),
-            new("Kind", L("Workbench.Grid.Header.Kind"), "Kind", 90, 70),
-            new("Layers", L("Workbench.Grid.Header.TagLayers"), "Layers", 150, 100),
+            new("Name", L("Column.Field"), "Name", 210, 120),
+            new("Kind", L("Column.Kind"), "Kind", 90, 70),
+            new("Layers", L("Column.TagLayers"), "Layers", 150, 100),
             new(
                 "Coverage",
-                L("Workbench.Grid.Header.SelectedFiles"),
+                L("Column.SelectedFiles"),
                 "Coverage",
                 105,
                 80),
             new(
                 "Value",
-                L("Workbench.Grid.Header.Values"),
+                L("Column.Values"),
                 "DisplayValue",
                 340,
                 180),

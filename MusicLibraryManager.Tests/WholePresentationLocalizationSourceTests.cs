@@ -40,23 +40,7 @@ public sealed partial class WholePresentationLocalizationSourceTests
 
     private static readonly HashSet<ApprovedGridHeader>
         ApprovedGridHeaders =
-    [
-        new(
-            "MusicLibraryManager/Views/WorkbenchSections/WorkbenchToolsSectionView.axaml.cs",
-            "Number",
-            "#",
-            "Language-neutral ordinal symbol."),
-        new(
-            "MusicLibraryManager/Views/WorkbenchSections/WorkbenchBulkOperationSectionView.axaml.cs",
-            "Number",
-            "#",
-            "Language-neutral ordinal symbol."),
-        new(
-            "MusicLibraryManager/Views/WorkbenchSections/WorkbenchOnlineMetadataSectionView.axaml.cs",
-            "AcoustID",
-            "AcoustID",
-            "Provider product name."),
-    ];
+        [];
 
     private static readonly HashSet<string>
         CountLocalizationMethods =

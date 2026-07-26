@@ -36,16 +36,16 @@ public partial class WorkbenchToolsSectionView : UserControl
     private void ConfigureColumns() =>
         ExternalToolInvocationGrid.ConfigureColumns(
         [
-            new("Number", "#", "Number", 55, 45),
-            new("Executable", L("Workbench.Grid.Header.Executable"), "Executable", 190, 120),
-            new("Arguments", L("Workbench.Grid.Header.Arguments"), "Arguments", 360, 190),
+            new("Number", L("Column.NumberSign"), "Number", 55, 45),
+            new("Executable", L("Column.Executable"), "Executable", 190, 120),
+            new("Arguments", L("Column.Arguments"), "Arguments", 360, 190),
             new(
                 "WorkingDirectory",
-                L("Workbench.Grid.Header.WorkingDirectory"),
+                L("Column.WorkingDirectory"),
                 "WorkingDirectory",
                 220,
                 130),
-            new("Files", L("Workbench.Grid.Header.Files"), "Files", 65, 52),
+            new("Files", L("Column.Files"), "Files", 65, 52),
         ]);
 
     private LocalizedGridHeader L(string key) =>

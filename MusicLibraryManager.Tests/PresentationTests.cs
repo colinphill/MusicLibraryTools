@@ -1096,7 +1096,7 @@ public sealed class PresentationTests
                 Assert.Equal("Back cover", back.Label);
                 Assert.Contains("Rear scan", back.Summary);
             });
-        Assert.Equal("2 embedded artworks", inspector.ArtworkSummary);
+        Assert.Equal("2 embedded images", inspector.ArtworkSummary);
     }
 
     [Fact]
@@ -2374,7 +2374,10 @@ public sealed class PresentationTests
         Assert.False(viewModel.HasApplicableOperationPreview);
         Assert.Empty(viewModel.OperationPreviewChanges);
         Assert.False(viewModel.HasUnsavedChanges);
-        Assert.Contains("reverted", viewModel.OperationStatus);
+        Assert.Contains(
+            "discarded",
+            viewModel.OperationStatus,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -2555,7 +2558,10 @@ public sealed class PresentationTests
                 Assert.Equal(["Warmup", "Peak"], edit.Values);
             });
         Assert.True(viewModel.HasApplicableOperationPreview);
-        Assert.Contains("Previewed", viewModel.OperationStatus);
+        Assert.Contains(
+            "Clipboard preview complete",
+            viewModel.OperationStatus,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3589,8 +3595,9 @@ public sealed class PresentationTests
             delimited.CandidatePaths.Select(Path.GetFullPath),
             metadataOperations.PreviewedValueEdits.Keys);
         Assert.Contains(
-            "Mapped 2 of 2 row(s)",
-            viewModel.OperationStatus);
+            "matched rows: 2 of 2",
+            viewModel.OperationStatus,
+            StringComparison.OrdinalIgnoreCase);
         viewModel.SelectedOperationScope =
             LibraryOperationScope.SelectedTracks;
         viewModel.SelectedOperationScope =
@@ -3620,7 +3627,10 @@ public sealed class PresentationTests
 
         Assert.True(reports.Applied);
         Assert.False(viewModel.HasUnsavedChanges);
-        Assert.Contains("2 row(s)", viewModel.OperationStatus);
+        Assert.Contains(
+            "rows: 2",
+            viewModel.OperationStatus,
+            StringComparison.OrdinalIgnoreCase);
 
         viewModel.PlaylistEditor.OutputPath =
             @"C:\playlists\selected-album.m3u8";
@@ -3636,8 +3646,10 @@ public sealed class PresentationTests
 
         Assert.True(playlists.Applied);
         Assert.False(viewModel.HasUnsavedChanges);
-        Assert.Contains("2 track reference(s)",
-            viewModel.OperationStatus);
+        Assert.Contains(
+            "track references: 2",
+            viewModel.OperationStatus,
+            StringComparison.OrdinalIgnoreCase);
 
         viewModel.ExternalToolEditor.Executable = "selection-tool";
         viewModel.ExternalToolEditor.ArgumentsText = "{Files}";

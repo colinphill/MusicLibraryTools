@@ -11,4 +11,8 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <ProjectReference Include="..\MusicLibrary.Core\MusicLibrary.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MusicLibraryManager.Tests" />
+  </ItemGroup>
 </Project>

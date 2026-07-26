@@ -36,10 +36,10 @@ public partial class WorkbenchReportsSectionView : UserControl
     private void ConfigureColumns() =>
         ReportOutputGrid.ConfigureColumns(
         [
-            new("Group", L("Workbench.Grid.Header.Group"), "Group", 150, 90),
-            new("File", L("Workbench.Grid.Header.Destination"), "File", 420, 220),
-            new("Rows", L("Workbench.Grid.Header.Rows"), "Rows", 80, 60),
-            new("Bytes", L("Workbench.Grid.Header.Bytes"), "Bytes", 100, 70),
+            new("Group", L("Column.Group"), "Group", 150, 90),
+            new("File", L("Column.Destination"), "File", 420, 220),
+            new("Rows", L("Column.Rows"), "Rows", 80, 60),
+            new("Bytes", L("Column.Bytes"), "Bytes", 100, 70),
         ]);
 
     private LocalizedGridHeader L(string key) =>

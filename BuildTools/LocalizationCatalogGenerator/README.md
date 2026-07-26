@@ -84,17 +84,18 @@ Twelve of those resources have stronger focused-editorial evidence, so status
 precedence leaves 115 manifest entries as `InvariantApproved`:
 
 ```text
-Pending=224
+Pending=0
 InvariantApproved=115
-GlossaryReviewed=216
-EditorialReviewed=2,994
+GlossaryReviewed=248
+EditorialReviewed=3,251
 ```
 
 `FocusedEditorialReviewEvidence.v1.xml` independently records the exact 847
 ordered keys and catalog digests, the two source commits, review metadata, and
-an aggregate identity. Later digest-bound packet batches record another 1,768
-editorial overrides and 182 reviewed glossary or exact-resource translations
-directly in the manifest. Ordinary manifest refresh preserves those current
+an aggregate identity. Later digest-bound packet batches record additional
+editorial overrides and reviewed glossary or exact-resource translations
+directly in the manifest. The current complete manifest covers 3,614 resources
+with no pending review. Ordinary manifest refresh preserves those current
 packet approvals while loading the checked-in evidence, so CI does not require
 historical Git objects and works in shallow clones:
 
@@ -173,7 +174,7 @@ dotnet run --project BuildTools\LocalizationCatalogGenerator `
   --configuration Release -- --check --strict-editorial-review
 ```
 
-That strict command intentionally fails until no `Pending` records remain.
+That strict command succeeds only when no `Pending` records remain.
 Unknown options, duplicate options, and positional arguments are rejected so
 a misspelled strict-gate switch cannot silently weaken validation. Catalogs,
 the manifest, audits, packets, and evidence are fully generated and validated

@@ -32,7 +32,7 @@
                       Classes="field"
                       Spacing="4">
             <TextBlock Classes="field-label"
-                       Text="{DynamicResource Loc.Workbench.Bulk.Field}"
+                       Text="{DynamicResource Loc.Workbench.Bulk.SourceField}"
                        FontSize="{DynamicResource AppFontSizeCaption}"
                        FontWeight="SemiBold" />
             <ComboBox x:Name="WorkbenchOperationFieldPicker"
@@ -40,7 +40,7 @@
                       ItemsSource="{Binding OperationEditor.Fields}"
                       DisplayMemberBinding="{Binding Label}"
                       SelectedItem="{Binding OperationEditor.SelectedField, Mode=TwoWay}"
-                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Field}" />
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.SourceField}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationDestinationPanel"
                       Width="210"
@@ -279,12 +279,12 @@
                           Classes="field"
                           Spacing="4">
                 <TextBlock Classes="field-label"
-                           Text="{DynamicResource Loc.Workbench.Bulk.Field}" />
+                           Text="{DynamicResource Loc.Workbench.Bulk.ConditionField}" />
                 <ComboBox Classes="app"
                           ItemsSource="{Binding OperationEditor.Fields}"
                           DisplayMemberBinding="{Binding Label}"
                           SelectedItem="{Binding OperationEditor.SelectedConditionField, Mode=TwoWay}"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.Condition}" />
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.ConditionField}" />
               </StackPanel>
               <StackPanel Width="145"
                           Margin="0,0,8,8"
@@ -348,7 +348,7 @@
                     <TextBlock Classes="field-label"
                                VerticalAlignment="Center"
                                FontSize="{DynamicResource AppFontSizeCaption}"
-                               Text="{DynamicResource Loc.Workbench.Bulk.RecipeNamePlaceholder}" />
+                               Text="{DynamicResource Loc.Workbench.Bulk.StepName}" />
                     <TextBox Grid.Column="1"
                              Classes="app"
                              BorderThickness="0"
@@ -406,11 +406,11 @@
           </StackPanel>
           <StackPanel Classes="field">
             <TextBlock Classes="field-label"
-                       Text="{DynamicResource Loc.Workbench.Bulk.RecipeNamePlaceholder}" />
+                       Text="{DynamicResource Loc.Workbench.Bulk.RecipeName}" />
             <TextBox Classes="app"
                      Text="{Binding OperationEditor.RecipeName, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Workbench.Bulk.RecipeNamePlaceholder}"
-                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.RecipeNamePlaceholder}" />
+                     PlaceholderText="{DynamicResource Loc.Workbench.Bulk.RecipeName}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.RecipeName}" />
           </StackPanel>
           <WrapPanel>
             <Button x:Name="SaveWorkbenchRecipeButton"

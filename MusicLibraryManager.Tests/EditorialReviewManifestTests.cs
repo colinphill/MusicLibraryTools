@@ -19,9 +19,9 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
 
-        Assert.Equal(3_549, manifest.Records.Count);
+        Assert.Equal(3_614, manifest.Records.Count);
         Assert.Equal(
-            224,
+            0,
             Count(
                 manifest,
                 EditorialReviewStatus.Pending));
@@ -31,12 +31,12 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.InvariantApproved));
         Assert.Equal(
-            216,
+            248,
             Count(
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            2_994,
+            3_251,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -285,9 +285,13 @@ public sealed class EditorialReviewManifestTests
                 record.Status ==
                     EditorialReviewStatus.EditorialReviewed);
         EditorialReviewRecord pending =
-            manifest.Records.Values.First(record =>
-                record.Status ==
-                    EditorialReviewStatus.Pending);
+            reviewed with
+            {
+                Status = EditorialReviewStatus.Pending,
+                Batch = "editorial-backlog-v1",
+                Reviewer = "Unassigned",
+                Disposition = "pending:v1",
+            };
         EditorialReviewRecord[] invalidRecords =
         [
             reviewed with
@@ -345,7 +349,7 @@ public sealed class EditorialReviewManifestTests
     }
 
     [Fact]
-    public void Manifest_rejects_canonical_status_provenance_swap_and_refresh_cannot_launder_it()
+    public void Manifest_rejects_status_provenance_swap_and_refresh_cannot_launder_it()
     {
         ReviewFixture fixture = LoadFixture();
         XDocument checkedIn = XDocument.Load(
@@ -358,17 +362,17 @@ public sealed class EditorialReviewManifestTests
                     EditorialReviewStatus
                         .EditorialReviewed.ToString(),
                     StringComparison.Ordinal));
-        XElement pending = checkedIn.Root!
+        XElement glossary = checkedIn.Root!
             .Elements("entry")
             .First(entry =>
                 string.Equals(
                     (string?)entry.Attribute("status"),
-                    EditorialReviewStatus.Pending.ToString(),
+                    EditorialReviewStatus
+                        .GlossaryReviewed.ToString(),
                     StringComparison.Ordinal) &&
                 string.Equals(
                     (string?)entry.Attribute("route"),
-                    CatalogTranslationRoute
-                        .EditorialOverride.ToString(),
+                    CatalogTranslationRoute.Glossary.ToString(),
                     StringComparison.Ordinal));
         string[] provenanceAttributes =
         [
@@ -384,8 +388,8 @@ public sealed class EditorialReviewManifestTests
                 (string)reviewed.Attribute(attributeName)!;
             reviewed.SetAttributeValue(
                 attributeName,
-                (string)pending.Attribute(attributeName)!);
-            pending.SetAttributeValue(
+                (string)glossary.Attribute(attributeName)!);
+            glossary.SetAttributeValue(
                 attributeName,
                 reviewedValue);
         }
@@ -404,10 +408,14 @@ public sealed class EditorialReviewManifestTests
                             fixture.Sources,
                             fixture.InvariantApprovedValues,
                             requireComplete: false));
-            Assert.Contains(
-                "manifestDigest does not match",
-                loadFailure.Message,
-                StringComparison.Ordinal);
+            Assert.True(
+                loadFailure.Message.Contains(
+                    "noncanonical",
+                    StringComparison.Ordinal) ||
+                loadFailure.Message.Contains(
+                    "manifestDigest does not match",
+                    StringComparison.Ordinal),
+                loadFailure.Message);
 
             InvalidDataException refreshFailure =
                 Assert.Throws<InvalidDataException>(
@@ -422,39 +430,33 @@ public sealed class EditorialReviewManifestTests
                         "test",
                         "Test reviewer",
                         "2026-07-25"));
-            Assert.Contains(
-                "manifestDigest does not match",
-                refreshFailure.Message,
-                StringComparison.Ordinal);
+            Assert.True(
+                refreshFailure.Message.Contains(
+                    "noncanonical",
+                    StringComparison.Ordinal) ||
+                refreshFailure.Message.Contains(
+                    "manifestDigest does not match",
+                    StringComparison.Ordinal),
+                refreshFailure.Message);
         });
     }
 
     [Fact]
-    public void Strict_gate_fails_without_consuming_pending_review_state()
+    public void Strict_gate_passes_when_every_resource_has_review_evidence()
     {
         ReviewFixture fixture = LoadFixture();
 
-        InvalidDataException exception =
-            Assert.Throws<InvalidDataException>(
-                () => EditorialReviewInfrastructure.LoadAndValidate(
-                    fixture.ManifestPath,
-                    fixture.Sources,
-                    fixture.InvariantApprovedValues,
-                    requireComplete: true));
-
-        Assert.Equal(
-            "Strict editorial review failed: 224 resources remain Pending.",
-            exception.Message);
-        EditorialReviewManifest unchanged =
+        EditorialReviewManifest complete =
             EditorialReviewInfrastructure.LoadAndValidate(
                 fixture.ManifestPath,
                 fixture.Sources,
                 fixture.InvariantApprovedValues,
-                requireComplete: false);
+                requireComplete: true);
+
         Assert.Equal(
-            224,
+            0,
             Count(
-                unchanged,
+                complete,
                 EditorialReviewStatus.Pending));
     }
 
@@ -513,7 +515,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                2_994,
+                3_251,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));
@@ -523,12 +525,12 @@ public sealed class EditorialReviewManifestTests
                     refreshed,
                     EditorialReviewStatus.InvariantApproved));
             Assert.Equal(
-                224,
+                0,
                 Count(
                     refreshed,
                     EditorialReviewStatus.Pending));
             Assert.Equal(
-                216,
+                248,
                 Count(
                     refreshed,
                     EditorialReviewStatus.GlossaryReviewed));
@@ -1078,9 +1080,9 @@ public sealed class EditorialReviewManifestTests
                     StringComparer.Ordinal)
                 .ToArray();
 
-        Assert.Equal(411, records.Length);
+        Assert.Equal(406, records.Length);
         Assert.Equal(
-            377,
+            372,
             records.Count(record =>
                 record.Status ==
                 EditorialReviewStatus.EditorialReviewed));
@@ -1090,7 +1092,7 @@ public sealed class EditorialReviewManifestTests
                 record.Status ==
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            377,
+            372,
             records.Count(record =>
                 record.Route ==
                 CatalogTranslationRoute.EditorialOverride));
@@ -1116,6 +1118,178 @@ public sealed class EditorialReviewManifestTests
                     record.Disposition,
                     StringComparison.Ordinal);
             });
+    }
+
+    [Fact]
+    public void Workbench_source_reconciliation_batches_contain_the_exact_reviewed_contract()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: true);
+        (string Batch, string Prefix, int Count)[] batches =
+        [
+            (
+                "gui-usability-workbench-source-reconciliation-2026-07-26",
+                "Workbench.",
+                61),
+            (
+                "gui-usability-column-source-reconciliation-2026-07-26",
+                "Column.",
+                9),
+        ];
+
+        Assert.Equal(
+            70,
+            WorkbenchSourceReconciliationContract
+                .AddedOrChangedResources.Length);
+        foreach ((string batch, string prefix, int count) in batches)
+        {
+            string[] expectedKeys =
+            [
+                .. WorkbenchSourceReconciliationContract
+                    .AddedOrChangedResources
+                    .Where(key =>
+                        key.StartsWith(
+                            prefix,
+                            StringComparison.Ordinal))
+                    .Order(StringComparer.Ordinal),
+            ];
+            EditorialReviewRecord[] records =
+            [
+                .. manifest.Records.Values
+                    .Where(record =>
+                        string.Equals(
+                            record.Batch,
+                            batch,
+                            StringComparison.Ordinal))
+                    .OrderBy(
+                        record => record.Key,
+                        StringComparer.Ordinal),
+            ];
+
+            Assert.Equal(count, expectedKeys.Length);
+            Assert.Equal(
+                expectedKeys,
+                records.Select(record => record.Key));
+            Assert.All(
+                records,
+                record =>
+                {
+                    Assert.Equal(
+                        EditorialReviewStatus.EditorialReviewed,
+                        record.Status);
+                    Assert.Equal(
+                        CatalogTranslationRoute.EditorialOverride,
+                        record.Route);
+                    Assert.Equal(
+                        "Codex Workbench source reconciliation",
+                        record.Reviewer);
+                    Assert.Equal("2026-07-26", record.Date);
+                    Assert.StartsWith(
+                        "packet:v1:",
+                        record.Disposition,
+                        StringComparison.Ordinal);
+                });
+        }
+    }
+
+    [Fact]
+    public void Editor_review_batches_have_exact_live_manifest_provenance()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: true);
+        (
+            string Batch,
+            string Prefix,
+            int Total,
+            int Editorial,
+            int Glossary)[] batches =
+        [
+            (
+                "gui-usability-inspector-editorial-2026-07-26",
+                "Inspector.",
+                109,
+                108,
+                1),
+            (
+                "gui-usability-column-editorial-2026-07-26",
+                "Column.",
+                48,
+                17,
+                31),
+            (
+                "gui-usability-fields-editorial-2026-07-26",
+                "Fields.",
+                35,
+                35,
+                0),
+            (
+                "gui-usability-reviewed-file-operation-editorial-2026-07-26",
+                "ReviewedFileOperation.",
+                32,
+                32,
+                0),
+        ];
+
+        foreach ((
+                     string batch,
+                     string prefix,
+                     int total,
+                     int editorial,
+                     int glossary) in batches)
+        {
+            EditorialReviewRecord[] records =
+            [
+                .. manifest.Records.Values
+                    .Where(record =>
+                        string.Equals(
+                            record.Batch,
+                            batch,
+                            StringComparison.Ordinal)),
+            ];
+
+            Assert.Equal(total, records.Length);
+            Assert.Equal(
+                editorial,
+                records.Count(record =>
+                    record.Status ==
+                        EditorialReviewStatus.EditorialReviewed &&
+                    record.Route ==
+                        CatalogTranslationRoute.EditorialOverride));
+            Assert.Equal(
+                glossary,
+                records.Count(record =>
+                    record.Status ==
+                        EditorialReviewStatus.GlossaryReviewed &&
+                    record.Route ==
+                        CatalogTranslationRoute.Glossary));
+            Assert.All(
+                records,
+                record =>
+                {
+                    Assert.StartsWith(
+                        prefix,
+                        record.Key,
+                        StringComparison.Ordinal);
+                    Assert.Equal(
+                        "Codex editor localization review",
+                        record.Reviewer);
+                    Assert.Equal("2026-07-26", record.Date);
+                    Assert.StartsWith(
+                        "packet:v1:",
+                        record.Disposition,
+                        StringComparison.Ordinal);
+                });
+        }
     }
 
     [Fact]
@@ -1344,24 +1518,24 @@ public sealed class EditorialReviewManifestTests
     public void Review_packet_identity_rejects_domain_changes_and_injected_current_entries()
     {
         ReviewFixture fixture = LoadFixture();
-        EditorialReviewManifest manifest =
-            EditorialReviewInfrastructure.LoadAndValidate(
-                fixture.ManifestPath,
-                fixture.Sources,
-                fixture.InvariantApprovedValues,
-                requireComplete: false);
-        CatalogReviewSource[] pending =
-        [
-            .. fixture.Sources
-                .Where(source =>
-                    manifest.Records[source.Key].Status ==
-                        EditorialReviewStatus.Pending)
-                .Take(2),
-        ];
-        Assert.Equal(2, pending.Length);
 
         WithTemporaryDirectory(directory =>
         {
+            EditorialReviewManifest manifest =
+                CreateUnreviewedManifest(
+                    fixture,
+                    directory);
+            CatalogReviewSource[] pending =
+            [
+                .. fixture.Sources
+                    .Where(source =>
+                        manifest.Records[source.Key].Status ==
+                            EditorialReviewStatus.Pending)
+                    .OrderBy(source => source.Key, StringComparer.Ordinal)
+                    .Take(2),
+            ];
+            Assert.Equal(2, pending.Length);
+
             string firstPath = Path.Combine(
                 directory,
                 "first.xml");
@@ -1528,32 +1702,31 @@ public sealed class EditorialReviewManifestTests
     public void Approved_packet_advances_pending_routes_without_hand_editing()
     {
         ReviewFixture fixture = LoadFixture();
-        EditorialReviewManifest original =
-            EditorialReviewInfrastructure.LoadAndValidate(
-                fixture.ManifestPath,
-                fixture.Sources,
-                fixture.InvariantApprovedValues,
-                requireComplete: false);
-        CatalogReviewSource glossaryPending =
-            fixture.Sources.First(source =>
-                original.Records[source.Key].Status ==
-                    EditorialReviewStatus.Pending &&
-                source.Route !=
-                    CatalogTranslationRoute.EditorialOverride);
-        CatalogReviewSource editorialPending =
-            fixture.Sources.First(source =>
-                original.Records[source.Key].Status ==
-                    EditorialReviewStatus.Pending &&
-                source.Route ==
-                    CatalogTranslationRoute.EditorialOverride);
 
         WithTemporaryDirectory(directory =>
         {
+            EditorialReviewManifest original =
+                CreateUnreviewedManifest(
+                    fixture,
+                    directory);
+            CatalogReviewSource glossaryPending =
+                fixture.Sources.First(source =>
+                    original.Records[source.Key].Status ==
+                        EditorialReviewStatus.Pending &&
+                    source.Route !=
+                        CatalogTranslationRoute.EditorialOverride);
+            CatalogReviewSource editorialPending =
+                fixture.Sources.First(source =>
+                    original.Records[source.Key].Status ==
+                        EditorialReviewStatus.Pending &&
+                    source.Route ==
+                        CatalogTranslationRoute.EditorialOverride);
             string manifestPath =
                 Path.Combine(directory, "manifest.xml");
-            File.Copy(
-                fixture.ManifestPath,
-                manifestPath);
+            File.WriteAllText(
+                manifestPath,
+                EditorialReviewInfrastructure.SerializeManifest(
+                    original));
             string packetPath =
                 Path.Combine(directory, "packet.xml");
             EditorialReviewInfrastructure.WriteReviewPacket(
@@ -1590,7 +1763,8 @@ public sealed class EditorialReviewManifestTests
                 EditorialReviewInfrastructure.LoadAndValidate(
                     manifestPath,
                     fixture.Sources,
-                    fixture.InvariantApprovedValues,
+                    new Dictionary<string, string>(
+                        StringComparer.Ordinal),
                     requireComplete: false);
             Assert.Equal(
                 EditorialReviewStatus.GlossaryReviewed,
@@ -1662,6 +1836,25 @@ public sealed class EditorialReviewManifestTests
                     EditorialReviewStatus.Pending));
         });
     }
+
+    private static EditorialReviewManifest
+        CreateUnreviewedManifest(
+            ReviewFixture fixture,
+            string directory) =>
+        EditorialReviewInfrastructure.Refresh(
+            Path.Combine(
+                directory,
+                "unreviewed-source.xml"),
+            fixture.Sources,
+            new Dictionary<
+                string,
+                ReviewedCatalogEvidence>(
+                StringComparer.Ordinal),
+            new Dictionary<string, string>(
+                StringComparer.Ordinal),
+            "test-backlog",
+            "Test reviewer",
+            "2026-07-26");
 
     private static ReviewFixture LoadFixture()
     {

@@ -203,7 +203,7 @@ public partial class WorkbenchSessionSectionView : UserControl
             new("Channels", L("Column.Channels"), "Channels", 85, 65, false, HeaderResourceKey: "Column.Channels"),
             new("Duration", L("Column.Duration"), "Duration", 90, 75, HeaderResourceKey: "Column.Duration"),
             new("Bitrate", L("Column.Bitrate"), "Bitrate", 100, 75, HeaderResourceKey: "Column.Bitrate"),
-            new("TagLayers", L("Workbench.Grid.Header.TagLayers"), "LayerSummary", 170, 105, false, HeaderResourceKey: "Workbench.Grid.Header.TagLayers"),
+            new("TagLayers", L("Column.TagLayers"), "LayerSummary", 170, 105, false, HeaderResourceKey: "Column.TagLayers"),
             new("Artwork", L("Column.Artwork"), "ArtworkCount", 85, 65, false, HeaderResourceKey: "Column.Artwork"),
             new("FileSize", L("Column.FileSize"), "FileSize", 105, 75, false, HeaderResourceKey: "Column.FileSize"),
             new("Modified", L("Column.Modified"), "Modified", 155, 110, false, HeaderResourceKey: "Column.Modified"),

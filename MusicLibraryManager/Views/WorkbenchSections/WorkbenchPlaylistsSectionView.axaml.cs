@@ -36,10 +36,10 @@ public partial class WorkbenchPlaylistsSectionView : UserControl
     private void ConfigureColumns() =>
         PlaylistOutputGrid.ConfigureColumns(
         [
-            new("Group", L("Workbench.Grid.Header.Group"), "Group", 150, 90),
-            new("File", L("Workbench.Grid.Header.Destination"), "File", 420, 220),
-            new("Tracks", L("Workbench.Grid.Header.Tracks"), "Tracks", 80, 60),
-            new("Bytes", L("Workbench.Grid.Header.Bytes"), "Bytes", 100, 70),
+            new("Group", L("Column.Group"), "Group", 150, 90),
+            new("File", L("Column.Destination"), "File", 420, 220),
+            new("Tracks", L("Column.Tracks"), "Tracks", 80, 60),
+            new("Bytes", L("Column.Bytes"), "Bytes", 100, 70),
         ]);
 
     private LocalizedGridHeader L(string key) =>

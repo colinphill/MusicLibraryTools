@@ -25,24 +25,24 @@ public partial class WorkbenchBulkOperationSectionView : UserControl
     {
         PreviewGrid.ConfigureColumns(
         [
-            new("File", L("Workbench.Grid.Header.File"), "File", 220, 140),
-            new("Field", L("Workbench.Grid.Header.Field"), "Field", 150, 100),
-            new("Before", L("Workbench.Grid.Header.Before"), "Before", 320, 180),
-            new("After", L("Workbench.Grid.Header.After"), "After", 320, 180),
+            new("File", L("Column.File"), "File", 220, 140),
+            new("Field", L("Column.Field"), "Field", 150, 100),
+            new("Before", L("Column.Before"), "Before", 320, 180),
+            new("After", L("Column.After"), "After", 320, 180),
         ]);
         PendingOperationsGrid.ConfigureColumns(
         [
-            new("Number", "#", "Number", 55, 45),
-            new("Operation", L("Workbench.Grid.Header.Operation"), "Operation", 220, 130),
+            new("Number", L("Column.NumberSign"), "Number", 55, 45),
+            new("Operation", L("Column.Operation"), "Operation", 220, 130),
             new(
                 "Target",
-                L("Workbench.Grid.Header.TargetDetails"),
+                L("Column.TargetDetails"),
                 "Target",
                 360,
                 180),
             new(
                 "AppliesTo",
-                L("Workbench.Grid.Header.AppliesTo"),
+                L("Column.AppliesTo"),
                 "AppliesTo",
                 120,
                 90),

@@ -65,7 +65,7 @@ public sealed class LocalizationCatalogGeneratorCommandLineTests
     }
 
     [Fact]
-    public async Task Strict_editorial_gate_truthfully_fails_while_reviews_are_pending()
+    public async Task Strict_editorial_gate_passes_when_reviews_are_complete()
     {
         string repositoryRoot = FindRepositoryRoot();
         string assemblyPath =
@@ -77,11 +77,11 @@ public sealed class LocalizationCatalogGeneratorCommandLineTests
             "--check",
             "--strict-editorial-review");
 
-        Assert.NotEqual(0, result.ExitCode);
-        Assert.Contains(
-            "Strict editorial review failed: 224 resources remain Pending.",
-            result.StandardError,
-            StringComparison.Ordinal);
+        Assert.True(
+            result.ExitCode == 0,
+            DescribeFailure(
+                "The strict editorial review gate rejected the complete manifest.",
+                result));
     }
 
     [Fact]

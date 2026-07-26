@@ -157,7 +157,7 @@
                                  MaxLeftWidth="1800"
                                  MinRightWidth="320"
                                  PersistenceKey="workbench"
-                                 Label="{DynamicResource Loc.Workbench.Split.Resize}">
+                                 Label="{DynamicResource Loc.Workbench.Split.ResizeAutomation}">
       <controls:PersistedSplitView.Left>
           <Grid x:Name="WorkbenchBody"
                 ColumnDefinitions="212,10,*">

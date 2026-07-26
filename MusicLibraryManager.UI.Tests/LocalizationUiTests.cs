@@ -256,7 +256,7 @@ public sealed class LocalizationUiTests
                 executable.Header);
             Assert.Equal(
                 localization.Get(
-                    "Workbench.Grid.Header.Arguments"),
+                    "Column.Arguments"),
                 arguments.Header);
             Assert.Equal(
                 localization.Get(
@@ -305,11 +305,11 @@ public sealed class LocalizationUiTests
                 number.Header);
             Assert.Equal(
                 localization.Get(
-                    "Workbench.Grid.Header.Executable"),
+                    "Column.Executable"),
                 executable.Header);
             Assert.Equal(
                 localization.Get(
-                    "Workbench.Grid.Header.Arguments"),
+                    "Column.Arguments"),
                 arguments.Header);
             Assert.Equal(
                 argumentsDisplayIndex,
@@ -361,7 +361,7 @@ public sealed class LocalizationUiTests
                     "Executable"));
             Assert.Equal(
                 localization.Get(
-                    "Workbench.Grid.Header.Executable"),
+                    "Column.Executable"),
                 executable.Header);
             Assert.Equal(
                 argumentsDisplayIndex,

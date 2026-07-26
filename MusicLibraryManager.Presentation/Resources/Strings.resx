@@ -217,6 +217,7 @@
   <data name="Column.AlbumArtist" xml:space="preserve">
     <value>Album artist</value>
   </data>
+  <data name="Column.AppliesTo" xml:space="preserve"><value>Applies to</value></data>
   <data name="Column.Approved" xml:space="preserve">
     <value>Approved</value>
   </data>
@@ -232,6 +233,7 @@
   <data name="Column.Artwork" xml:space="preserve">
     <value>Artwork</value>
   </data>
+  <data name="Column.ArtworkRoles" xml:space="preserve"><value>Artwork roles</value></data>
   <data name="Column.Back" xml:space="preserve">
     <value>Back</value>
   </data>
@@ -242,7 +244,7 @@
     <value>Bitrate</value>
   </data>
   <data name="Column.Bits" xml:space="preserve">
-    <value>Bits</value>
+    <value>Bit depth</value>
   </data>
   <data name="Column.Bytes" xml:space="preserve">
     <value>Bytes</value>
@@ -251,7 +253,7 @@
     <value>Canonical value</value>
   </data>
   <data name="Column.CatalogNumber" xml:space="preserve">
-    <value>Catalog no.</value>
+    <value>Catalog number</value>
   </data>
   <data name="Column.Channels" xml:space="preserve">
     <value>Channels</value>
@@ -274,6 +276,7 @@
   <data name="Column.Country" xml:space="preserve">
     <value>Country</value>
   </data>
+  <data name="Column.CoverArtArchiveId" xml:space="preserve"><value>Cover Art Archive ID</value></data>
   <data name="Column.CurrentLocation" xml:space="preserve">
     <value>Current location</value>
   </data>
@@ -349,6 +352,7 @@
   <data name="Column.Job" xml:space="preserve">
     <value>Job</value>
   </data>
+  <data name="Column.Kind" xml:space="preserve"><value>Kind</value></data>
   <data name="Column.Label" xml:space="preserve">
     <value>Label</value>
   </data>
@@ -373,6 +377,7 @@
   <data name="Column.NumberSign" xml:space="preserve">
     <value>#</value>
   </data>
+  <data name="Column.Operation" xml:space="preserve"><value>Operation</value></data>
   <data name="Column.Output" xml:space="preserve">
     <value>Output</value>
   </data>
@@ -409,6 +414,7 @@
   <data name="Column.SampleRate" xml:space="preserve">
     <value>Sample rate</value>
   </data>
+  <data name="Column.SelectedFiles" xml:space="preserve"><value>Selected files</value></data>
   <data name="Column.Source" xml:space="preserve">
     <value>Source</value>
   </data>
@@ -421,6 +427,7 @@
   <data name="Column.Styles" xml:space="preserve">
     <value>Styles</value>
   </data>
+  <data name="Column.TagLayers" xml:space="preserve"><value>Tag layers</value></data>
   <data name="Column.TagType" xml:space="preserve">
     <value>Tag type</value>
   </data>
@@ -448,8 +455,9 @@
   <data name="Column.Use" xml:space="preserve">
     <value>Use</value>
   </data>
+  <data name="Column.Values" xml:space="preserve"><value>Values</value></data>
   <data name="Column.When" xml:space="preserve">
-    <value>When</value>
+    <value>Date and time</value>
   </data>
   <data name="Column.WorkingDirectory" xml:space="preserve">
     <value>Working directory</value>
@@ -4122,8 +4130,8 @@
   <data name="Inspector.Activity.UpdatingTracks.Other" xml:space="preserve"><value>Updating {0:N0} tracks</value></data>
   <data name="Inspector.Artwork.DefaultFileName" xml:space="preserve"><value>artwork</value></data>
   <data name="Inspector.Artwork.Details" xml:space="preserve"><value>{0} · {1:N0} × {2:N0} · {3}</value></data>
-  <data name="Inspector.Artwork.Embedded.One" xml:space="preserve"><value>{0:N0} embedded artwork</value></data>
-  <data name="Inspector.Artwork.Embedded.Other" xml:space="preserve"><value>{0:N0} embedded artworks</value></data>
+  <data name="Inspector.Artwork.Embedded.One" xml:space="preserve"><value>{0:N0} embedded image</value></data>
+  <data name="Inspector.Artwork.Embedded.Other" xml:space="preserve"><value>{0:N0} embedded images</value></data>
   <data name="Inspector.Artwork.Image" xml:space="preserve"><value>image</value></data>
   <data name="Inspector.Artwork.Mixed" xml:space="preserve"><value>Mixed values — selected files have different embedded artwork.</value></data>
   <data name="Inspector.Artwork.NoneEmbedded" xml:space="preserve"><value>No embedded artwork.</value></data>
@@ -4201,11 +4209,11 @@
   <data name="Inspector.Field.UnverifiedPlaceholder" xml:space="preserve"><value>Not verified across the full selection — type to replace</value></data>
   <data name="Inspector.Operation.EditArtwork" xml:space="preserve"><value>Edit inspector artwork</value></data>
   <data name="Inspector.Operation.EditFields" xml:space="preserve"><value>Edit inspector fields</value></data>
-  <data name="Inspector.Operation.EditLibraryArtworkSet" xml:space="preserve"><value>Edit Library artwork set</value></data>
+  <data name="Inspector.Operation.EditLibraryArtworkSet" xml:space="preserve"><value>Edit library artwork set</value></data>
   <data name="Inspector.Operation.EditTagsAndArtwork" xml:space="preserve"><value>Edit inspector tags and artwork</value></data>
-  <data name="Inspector.Operation.OptimizeLibraryArtwork" xml:space="preserve"><value>Optimize Library artwork</value></data>
-  <data name="Inspector.Operation.RemoveLibraryArtwork" xml:space="preserve"><value>Remove Library artwork</value></data>
-  <data name="Inspector.Operation.ReplaceFrontCover" xml:space="preserve"><value>Replace Library front cover</value></data>
+  <data name="Inspector.Operation.OptimizeLibraryArtwork" xml:space="preserve"><value>Optimize library artwork</value></data>
+  <data name="Inspector.Operation.RemoveLibraryArtwork" xml:space="preserve"><value>Remove library artwork</value></data>
+  <data name="Inspector.Operation.ReplaceFrontCover" xml:space="preserve"><value>Replace library front cover</value></data>
   <data name="Inspector.Overview.EmptyDistribution" xml:space="preserve"><value>{0}: 0</value></data>
   <data name="Inspector.Overview.FileFormats" xml:space="preserve"><value>File formats</value></data>
   <data name="Inspector.Overview.LargeSelectionNote" xml:space="preserve"><value>Common values in cache-backed fields were checked across the full selection. Fields not stored in the cache are marked unverified and remain blank until you intentionally replace them.</value></data>
@@ -4244,7 +4252,7 @@
   <data name="Inspector.Status.MetadataFieldsUpdated" xml:space="preserve"><value>Metadata fields updated.</value></data>
   <data name="Inspector.Status.NoArtworkData" xml:space="preserve"><value>This artwork has no image data to save.</value></data>
   <data name="Inspector.Status.NoChanges" xml:space="preserve"><value>No tag or artwork changes to save.</value></data>
-  <data name="Inspector.Status.OperationCancelled" xml:space="preserve"><value>Operation cancelled. Proposed changes remain ready to retry.</value></data>
+  <data name="Inspector.Status.OperationCancelled" xml:space="preserve"><value>Operation canceled. Proposed changes remain ready to retry.</value></data>
   <data name="Inspector.Status.OperationFailed" xml:space="preserve"><value>The operation failed. Proposed changes remain ready to retry.</value></data>
   <data name="Inspector.Status.PreviewBlockers.One" xml:space="preserve"><value>Preview found {0:N0} blocker. No files were changed.</value></data>
   <data name="Inspector.Status.PreviewBlockers.Other" xml:space="preserve"><value>Preview found {0:N0} blockers. No files were changed.</value></data>
@@ -4494,6 +4502,7 @@
   <data name="Library.VisualFilter.Status.Cleared" xml:space="preserve"><value>Visual filter cleared.</value></data>
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>The visual filter is invalid.</value></data>
   <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>No visual filter is active.</value></data>
+  <data name="Column.TargetDetails" xml:space="preserve"><value>Target details</value></data>
   <data name="Column.TechnicalDetails" xml:space="preserve"><value>Technical details</value></data>
   <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>Filter in Library</value></data>
   <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>Mixed</value></data>
@@ -5023,23 +5032,23 @@
   <data name="ReviewedFileOperation.Choice.Kind.Move" xml:space="preserve"><value>Move</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Quarantine" xml:space="preserve"><value>Quarantine</value></data>
   <data name="ReviewedFileOperation.Choice.Kind.Rename" xml:space="preserve"><value>Rename</value></data>
-  <data name="ReviewedFileOperation.Dialog.Apply.Message.One" xml:space="preserve"><value>Apply the {0:N0} reviewed file mutation? A durable journal will be retained for history and eligible restores.</value></data>
-  <data name="ReviewedFileOperation.Dialog.Apply.Message.Other" xml:space="preserve"><value>Apply the {0:N0} reviewed file mutations? A durable journal will be retained for history and eligible restores.</value></data>
+  <data name="ReviewedFileOperation.Dialog.Apply.Message.One" xml:space="preserve"><value>Apply the {0:N0} reviewed file change? A durable journal will be retained for history and eligible restores.</value></data>
+  <data name="ReviewedFileOperation.Dialog.Apply.Message.Other" xml:space="preserve"><value>Apply the {0:N0} reviewed file changes? A durable journal will be retained for history and eligible restores.</value></data>
   <data name="ReviewedFileOperation.Dialog.Apply.Title" xml:space="preserve"><value>Apply {0}?</value></data>
   <data name="ReviewedFileOperation.Error.PreviewFirst" xml:space="preserve"><value>Preview the file operation first.</value></data>
   <data name="ReviewedFileOperation.Picker.Destination" xml:space="preserve"><value>Choose file-operation destination</value></data>
   <data name="ReviewedFileOperation.Picker.Quarantine" xml:space="preserve"><value>Choose reviewed quarantine folder</value></data>
-  <data name="ReviewedFileOperation.Status.ApplyCancelled" xml:space="preserve"><value>File operation cancelled; completed actions were rolled back.</value></data>
+  <data name="ReviewedFileOperation.Status.ApplyCancelled" xml:space="preserve"><value>File operation canceled; completed actions were rolled back.</value></data>
   <data name="ReviewedFileOperation.Status.ApplyFailed" xml:space="preserve"><value>Could not apply file operation.</value></data>
   <data name="ReviewedFileOperation.Status.Completed" xml:space="preserve"><value>Completed: {0:N0} copied, {1:N0} moved, {2:N0} quarantined.</value></data>
   <data name="ReviewedFileOperation.Status.Invalidated" xml:space="preserve"><value>Operation settings or scope changed. Preview again.</value></data>
   <data name="ReviewedFileOperation.Status.NoChanges" xml:space="preserve"><value>The reviewed operation has no filesystem changes.</value></data>
   <data name="ReviewedFileOperation.Status.PreviewBlocked.One" xml:space="preserve"><value>Preview blocked by {0:N0} issue.</value></data>
   <data name="ReviewedFileOperation.Status.PreviewBlocked.Other" xml:space="preserve"><value>Preview blocked by {0:N0} issues.</value></data>
-  <data name="ReviewedFileOperation.Status.PreviewCancelled" xml:space="preserve"><value>File-operation preview cancelled.</value></data>
+  <data name="ReviewedFileOperation.Status.PreviewCancelled" xml:space="preserve"><value>File-operation preview canceled.</value></data>
   <data name="ReviewedFileOperation.Status.PreviewFailed" xml:space="preserve"><value>Could not preview file operations.</value></data>
-  <data name="ReviewedFileOperation.Status.PreviewReady.One" xml:space="preserve"><value>{0:N0} reviewed file mutation ready to apply.</value></data>
-  <data name="ReviewedFileOperation.Status.PreviewReady.Other" xml:space="preserve"><value>{0:N0} reviewed file mutations ready to apply.</value></data>
+  <data name="ReviewedFileOperation.Status.PreviewReady.One" xml:space="preserve"><value>{0:N0} reviewed file change ready to apply.</value></data>
+  <data name="ReviewedFileOperation.Status.PreviewReady.Other" xml:space="preserve"><value>{0:N0} reviewed file changes ready to apply.</value></data>
   <data name="ReviewedFileOperation.Status.Ready" xml:space="preserve"><value>Choose an operation and preview the current scope.</value></data>
   <data name="ReviewedFileOperation.Target.Files.One" xml:space="preserve"><value>{0:N0} file in the current scope.</value></data>
   <data name="ReviewedFileOperation.Target.Files.Other" xml:space="preserve"><value>{0:N0} files in the current scope.</value></data>
@@ -5103,6 +5112,7 @@
   <data name="Workbench.Bulk.CaptureGroup" xml:space="preserve"><value>Capture Group</value></data>
   <data name="Workbench.Bulk.Case" xml:space="preserve"><value>Text case</value></data>
   <data name="Workbench.Bulk.Condition" xml:space="preserve"><value>Condition</value></data>
+  <data name="Workbench.Bulk.ConditionField" xml:space="preserve"><value>Condition field</value></data>
   <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>Condition Value</value></data>
   <data name="Workbench.Bulk.Description" xml:space="preserve"><value>Build a reusable metadata recipe, preview its effects, and apply only reviewed changes.</value></data>
   <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>Destination Field</value></data>
@@ -5119,7 +5129,9 @@
   <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>Preview results</value></data>
   <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>Preview results</value></data>
   <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>Saved recipes</value></data>
+  <data name="Workbench.Bulk.RecipeName" xml:space="preserve"><value>Recipe name</value></data>
   <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>Recipe name</value></data>
+  <data name="Workbench.Bulk.SourceField" xml:space="preserve"><value>Source field</value></data>
   <data name="Workbench.Bulk.StepName" xml:space="preserve"><value>Step name</value></data>
   <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>Replace With</value></data>
   <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>A compact draft preview updates as you edit the current operation.</value></data>
@@ -5170,6 +5182,7 @@
   <data name="Workbench.Columns.Close" xml:space="preserve"><value>Close</value></data>
   <data name="Workbench.Columns.Description" xml:space="preserve"><value>Choose visible columns and create metadata columns without changing stored metadata.</value></data>
   <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>Inline editing is available only for supported known fields.</value></data>
+  <data name="Workbench.Columns.InlineEditingLabel" xml:space="preserve"><value>Inline editing</value></data>
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>Known Field</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>Label</value></data>
   <data name="Workbench.Columns.Metadata" xml:space="preserve"><value>Metadata</value></data>
@@ -5334,6 +5347,8 @@
   <data name="Workbench.Online.FindReleaseArtwork" xml:space="preserve"><value>Find release artwork</value></data>
   <data name="Workbench.Online.FindReleaseEditions" xml:space="preserve"><value>Find release editions</value></data>
   <data name="Workbench.Online.LoadDetails" xml:space="preserve"><value>Load details</value></data>
+  <data name="Workbench.Online.Mapping.IncludeAutomation" xml:space="preserve"><value>Include this mapping</value></data>
+  <data name="Workbench.Online.Mapping.IncludeHeader" xml:space="preserve"><value>Include</value></data>
   <data name="Workbench.Online.MappingReviewDescription" xml:space="preserve"><value>Review every file-to-track suggestion before adding selected fields to the normal preview.</value></data>
   <data name="Workbench.Online.MaximumDimension" xml:space="preserve"><value>Maximum width or height for preview and apply (0 preserves size)</value></data>
   <data name="Workbench.Online.MoveArtworkDown" xml:space="preserve"><value>Move artwork down</value></data>
@@ -5366,6 +5381,7 @@
   <data name="Workbench.Online.Thumbnail.Cached" xml:space="preserve"><value>Cached</value></data>
   <data name="Workbench.Online.TrackMapping" xml:space="preserve"><value>Track Mapping</value></data>
   <data name="Workbench.Online.TrackMappingDescription" xml:space="preserve"><value>Choose a release, review every suggested file-to-track mapping, then select which field groups to preview.</value></data>
+  <data name="Workbench.Operation.AddTagLayer" xml:space="preserve"><value>Add {0} tag layer</value></data>
   <data name="Workbench.Operation.ConvertId3Version" xml:space="preserve"><value>Convert to ID3v2.{0}</value></data>
   <data name="Workbench.Operation.ConvertTagLayer" xml:space="preserve"><value>Convert {0} to {1}</value></data>
   <data name="Workbench.Operation.CoverArtArchive" xml:space="preserve"><value>Cover Art Archive: {0}</value></data>
@@ -5384,6 +5400,7 @@
   <data name="Workbench.Operation.ReencodeId3" xml:space="preserve"><value>Re-encode ID3 text as {0}</value></data>
   <data name="Workbench.Operation.RemoveAllArtwork" xml:space="preserve"><value>Remove all artwork</value></data>
   <data name="Workbench.Operation.RemoveFrontCover" xml:space="preserve"><value>Remove front cover</value></data>
+  <data name="Workbench.Operation.RemoveTagLayer" xml:space="preserve"><value>Remove {0} tag layer</value></data>
   <data name="Workbench.Operation.ReplaceFrontCover" xml:space="preserve"><value>Replace front cover</value></data>
   <data name="Workbench.Operation.TagLayer" xml:space="preserve"><value>{0} {1} tag layer</value></data>
   <data name="Workbench.PendingChanges.ApplyTooltip" xml:space="preserve"><value>Apply</value></data>
@@ -5589,7 +5606,7 @@
   <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs found {0:N0} release editions. Select one to load complete track and edition details.</value></data>
   <data name="Workbench.Status.DiscogsMappingCancelled" xml:space="preserve"><value>Discogs track mapping cancelled.</value></data>
   <data name="Workbench.Status.DiscogsMappingFailed" xml:space="preserve"><value>Discogs track mapping failed.</value></data>
-  <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>Suggested {0:N0} of {1:N0} Discogs file-to-track mappings; {2:N0} need review.</value></data>
+  <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>Discogs suggested {0} across {1}; {2}.</value></data>
   <data name="Workbench.Status.DiscogsMetadataPreviewed" xml:space="preserve"><value>Mapped Discogs fields were added to the normal metadata preview. Review every change before applying.</value></data>
   <data name="Workbench.Status.DiscogsSearchCancelled" xml:space="preserve"><value>Discogs release search cancelled.</value></data>
   <data name="Workbench.Status.DiscogsSearchFailed" xml:space="preserve"><value>Discogs release search failed.</value></data>
@@ -5601,16 +5618,34 @@
   <data name="Workbench.Status.ExternalToolPreviewReady.One" xml:space="preserve"><value>Previewed {0:N0} process invocation. External tools run outside MusicLibraryManager recovery.</value></data>
   <data name="Workbench.Status.ExternalToolPreviewReady.Other" xml:space="preserve"><value>Previewed {0:N0} process invocations. External tools run outside MusicLibraryManager recovery.</value></data>
   <data name="Workbench.Status.FingerprintCancelled" xml:space="preserve"><value>Audio fingerprint discovery cancelled.</value></data>
-  <data name="Workbench.Status.FingerprintDiscovery" xml:space="preserve"><value>Fingerprint discovery: {0:N0} files, {1:N0} candidates, {2:N0} warnings.</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery" xml:space="preserve"><value>Fingerprint discovery: {0}, {1}, {2}.</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.CandidateCount.One" xml:space="preserve"><value>{0:N0} candidate</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.CandidateCount.Other" xml:space="preserve"><value>{0:N0} candidates</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.FileCount.One" xml:space="preserve"><value>{0:N0} file</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.FileCount.Other" xml:space="preserve"><value>{0:N0} files</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.WarningCount.One" xml:space="preserve"><value>{0:N0} warning</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery.WarningCount.Other" xml:space="preserve"><value>{0:N0} warnings</value></data>
   <data name="Workbench.Status.FingerprintFailed" xml:space="preserve"><value>Audio fingerprint discovery failed.</value></data>
-  <data name="Workbench.Status.ImportMapped" xml:space="preserve"><value>Mapped {0:N0} of {1:N0} rows.</value></data>
-  <data name="Workbench.Status.ImportMappedWithWarnings" xml:space="preserve"><value>Mapped {0:N0} of {1:N0} rows with {2:N0} warnings.</value></data>
+  <data name="Workbench.Status.ImportMapped" xml:space="preserve"><value>Mapped {0} of {1}.</value></data>
+  <data name="Workbench.Status.ImportMappedWithWarnings" xml:space="preserve"><value>Mapped {0} of {1}; {2}.</value></data>
+  <data name="Workbench.Status.ImportMapping.MatchedRowCount.One" xml:space="preserve"><value>{0:N0} matched row</value></data>
+  <data name="Workbench.Status.ImportMapping.MatchedRowCount.Other" xml:space="preserve"><value>{0:N0} matched rows</value></data>
+  <data name="Workbench.Status.ImportMapping.TotalRowCount.One" xml:space="preserve"><value>{0:N0} total row</value></data>
+  <data name="Workbench.Status.ImportMapping.TotalRowCount.Other" xml:space="preserve"><value>{0:N0} total rows</value></data>
+  <data name="Workbench.Status.ImportMapping.WarningCount.One" xml:space="preserve"><value>{0:N0} warning</value></data>
+  <data name="Workbench.Status.ImportMapping.WarningCount.Other" xml:space="preserve"><value>{0:N0} warnings</value></data>
   <data name="Workbench.Status.InspectorChangesReloaded.One" xml:space="preserve"><value>Reloaded {0:N0} file after inspector changes.</value></data>
   <data name="Workbench.Status.InspectorChangesReloaded.Other" xml:space="preserve"><value>Reloaded {0:N0} files after inspector changes.</value></data>
   <data name="Workbench.Status.InspectorReloadCancelled" xml:space="preserve"><value>Reload after inspector changes was cancelled.</value></data>
   <data name="Workbench.Status.InspectorReloadFailed" xml:space="preserve"><value>Could not reload inspector changes.</value></data>
   <data name="Workbench.Status.LoadingCancelled" xml:space="preserve"><value>Loading cancelled.</value></data>
   <data name="Workbench.Status.LoadingFailed" xml:space="preserve"><value>Could not load the selected sources.</value></data>
+  <data name="Workbench.Status.MappingReady.FileCount.One" xml:space="preserve"><value>{0:N0} file</value></data>
+  <data name="Workbench.Status.MappingReady.FileCount.Other" xml:space="preserve"><value>{0:N0} files</value></data>
+  <data name="Workbench.Status.MappingReady.ReviewCount.One" xml:space="preserve"><value>{0:N0} mapping needs review</value></data>
+  <data name="Workbench.Status.MappingReady.ReviewCount.Other" xml:space="preserve"><value>{0:N0} mappings need review</value></data>
+  <data name="Workbench.Status.MappingReady.SuggestedCount.One" xml:space="preserve"><value>{0:N0} mapping</value></data>
+  <data name="Workbench.Status.MappingReady.SuggestedCount.Other" xml:space="preserve"><value>{0:N0} mappings</value></data>
   <data name="Workbench.Status.MusicBrainzFound.One" xml:space="preserve"><value>MusicBrainz found {0:N0} release edition. Choose it and build a file-to-track mapping.</value></data>
   <data name="Workbench.Status.MusicBrainzFound.Other" xml:space="preserve"><value>MusicBrainz found {0:N0} release editions. Choose one and build a file-to-track mapping.</value></data>
   <data name="Workbench.Status.MusicBrainzLookupCancelled" xml:space="preserve"><value>MusicBrainz release lookup cancelled.</value></data>
@@ -5634,12 +5669,22 @@
   <data name="Workbench.Status.PlaylistPreviewFailed" xml:space="preserve"><value>Playlist preview failed.</value></data>
   <data name="Workbench.Status.PlaylistPreviewReady.One" xml:space="preserve"><value>Previewed {0:N0} playlist file. Review the destination before applying.</value></data>
   <data name="Workbench.Status.PlaylistPreviewReady.Other" xml:space="preserve"><value>Previewed {0:N0} playlist files. Review the destinations before applying.</value></data>
+  <data name="Workbench.Status.PlaylistWritten" xml:space="preserve"><value>Wrote {0} with {1}.</value></data>
+  <data name="Workbench.Status.PlaylistWritten.FileCount.One" xml:space="preserve"><value>{0:N0} playlist file</value></data>
+  <data name="Workbench.Status.PlaylistWritten.FileCount.Other" xml:space="preserve"><value>{0:N0} playlist files</value></data>
   <data name="Workbench.Status.PlaylistWritten.One" xml:space="preserve"><value>Wrote {0:N0} playlist file with {1:N0} track references.</value></data>
   <data name="Workbench.Status.PlaylistWritten.Other" xml:space="preserve"><value>Wrote {0:N0} playlist files with {1:N0} track references.</value></data>
+  <data name="Workbench.Status.PlaylistWritten.TrackReferenceCount.One" xml:space="preserve"><value>{0:N0} track reference</value></data>
+  <data name="Workbench.Status.PlaylistWritten.TrackReferenceCount.Other" xml:space="preserve"><value>{0:N0} track references</value></data>
   <data name="Workbench.Status.PreviewBlocked.One" xml:space="preserve"><value>Preview has {0:N0} blocker. No files have been changed.</value></data>
   <data name="Workbench.Status.PreviewBlocked.Other" xml:space="preserve"><value>Preview has {0:N0} blockers. No files have been changed.</value></data>
   <data name="Workbench.Status.PreviewCancelled" xml:space="preserve"><value>Preview cancelled. No files were changed.</value></data>
   <data name="Workbench.Status.PreviewFailed" xml:space="preserve"><value>Preview failed.</value></data>
+  <data name="Workbench.Status.PreviewReady" xml:space="preserve"><value>Preview: {0}. Affected files: {1}. No files have been changed.</value></data>
+  <data name="Workbench.Status.PreviewReady.ChangeCount.One" xml:space="preserve"><value>{0:N0} metadata change</value></data>
+  <data name="Workbench.Status.PreviewReady.ChangeCount.Other" xml:space="preserve"><value>{0:N0} metadata changes</value></data>
+  <data name="Workbench.Status.PreviewReady.FileCount.One" xml:space="preserve"><value>{0:N0} file</value></data>
+  <data name="Workbench.Status.PreviewReady.FileCount.Other" xml:space="preserve"><value>{0:N0} files</value></data>
   <data name="Workbench.Status.PreviewReady.One" xml:space="preserve"><value>Preview: {0:N0} metadata change in {1:N0} files. No files have been changed.</value></data>
   <data name="Workbench.Status.PreviewReady.Other" xml:space="preserve"><value>Preview: {0:N0} metadata changes in {1:N0} files. No files have been changed.</value></data>
   <data name="Workbench.Status.Ready" xml:space="preserve"><value>Add files, folders, playlists, or CUE sheets. No library configuration is required.</value></data>
@@ -5648,7 +5693,7 @@
   <data name="Workbench.Status.ReleaseArtworkPreviewed" xml:space="preserve"><value>The selected front cover was added to the normal metadata preview. Review every artwork change before applying.</value></data>
   <data name="Workbench.Status.ReleaseMappingCancelled" xml:space="preserve"><value>Release track mapping cancelled.</value></data>
   <data name="Workbench.Status.ReleaseMappingFailed" xml:space="preserve"><value>Release track mapping failed.</value></data>
-  <data name="Workbench.Status.ReleaseMappingReady" xml:space="preserve"><value>Suggested {0:N0} of {1:N0} file-to-track mappings; {2:N0} need review.</value></data>
+  <data name="Workbench.Status.ReleaseMappingReady" xml:space="preserve"><value>Suggested {0} across {1}; {2}.</value></data>
   <data name="Workbench.Status.ReportOutputCancelled" xml:space="preserve"><value>Report output cancelled.</value></data>
   <data name="Workbench.Status.ReportOutputFailed" xml:space="preserve"><value>Report output failed.</value></data>
   <data name="Workbench.Status.ReportPreviewBlocked.One" xml:space="preserve"><value>Report preview has {0:N0} blocker. No output was written.</value></data>
@@ -5657,8 +5702,13 @@
   <data name="Workbench.Status.ReportPreviewFailed" xml:space="preserve"><value>Report preview failed.</value></data>
   <data name="Workbench.Status.ReportPreviewReady.One" xml:space="preserve"><value>Previewed {0:N0} report file. Review the destination before applying.</value></data>
   <data name="Workbench.Status.ReportPreviewReady.Other" xml:space="preserve"><value>Previewed {0:N0} report files. Review the destinations before applying.</value></data>
+  <data name="Workbench.Status.ReportWritten" xml:space="preserve"><value>Wrote {0} with {1}.</value></data>
+  <data name="Workbench.Status.ReportWritten.FileCount.One" xml:space="preserve"><value>{0:N0} report file</value></data>
+  <data name="Workbench.Status.ReportWritten.FileCount.Other" xml:space="preserve"><value>{0:N0} report files</value></data>
   <data name="Workbench.Status.ReportWritten.One" xml:space="preserve"><value>Wrote {0:N0} report file with {1:N0} rows.</value></data>
   <data name="Workbench.Status.ReportWritten.Other" xml:space="preserve"><value>Wrote {0:N0} report files with {1:N0} rows.</value></data>
+  <data name="Workbench.Status.ReportWritten.RowCount.One" xml:space="preserve"><value>{0:N0} row</value></data>
+  <data name="Workbench.Status.ReportWritten.RowCount.Other" xml:space="preserve"><value>{0:N0} rows</value></data>
   <data name="Workbench.Status.RestoreCancelled" xml:space="preserve"><value>Restore cancelled. Any completed restores remain recoverable.</value></data>
   <data name="Workbench.Status.Restored.One" xml:space="preserve"><value>Restored {0:N0} file from the latest Workbench operation.</value></data>
   <data name="Workbench.Status.Restored.Other" xml:space="preserve"><value>Restored {0:N0} files from the latest Workbench operation.</value></data>
@@ -5673,8 +5723,15 @@
   <data name="Workbench.Status.ShortcutRecipeRegenerated" xml:space="preserve"><value>Regenerated shortcut '{0}' for the current Workbench files. Review before applying.</value></data>
   <data name="Workbench.Status.SourcesAdded.One" xml:space="preserve"><value>Added {0:N0} file; {1:N0} in this Workbench session.</value></data>
   <data name="Workbench.Status.SourcesAdded.Other" xml:space="preserve"><value>Added {0:N0} files; {1:N0} in this Workbench session.</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings" xml:space="preserve"><value>Added {0}; {1}, with {2}.</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.AddedFileCount.One" xml:space="preserve"><value>{0:N0} file</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.AddedFileCount.Other" xml:space="preserve"><value>{0:N0} files</value></data>
   <data name="Workbench.Status.SourcesAddedWithWarnings.One" xml:space="preserve"><value>Added {0:N0} file; {1:N0} in this Workbench session, with {2:N0} warnings.</value></data>
   <data name="Workbench.Status.SourcesAddedWithWarnings.Other" xml:space="preserve"><value>Added {0:N0} files; {1:N0} in this Workbench session, with {2:N0} warnings.</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.SessionFileCount.One" xml:space="preserve"><value>{0:N0} file in this Workbench session</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.SessionFileCount.Other" xml:space="preserve"><value>{0:N0} files in this Workbench session</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.WarningCount.One" xml:space="preserve"><value>{0:N0} warning</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.WarningCount.Other" xml:space="preserve"><value>{0:N0} warnings</value></data>
   <data name="Workbench.Subtitle" xml:space="preserve"><value>Build a temporary editing session without changing library configuration.</value></data>
   <data name="Workbench.Title" xml:space="preserve"><value>Workbench</value></data>
   <data name="Workbench.Tools.ApplicationDefault" xml:space="preserve"><value>(application default)</value></data>
@@ -5940,12 +5997,12 @@
   <data name="Fields.Status.LoadFailures.Other" xml:space="preserve"><value>{0:N0} selected files could not be read. Fields from readable files remain available.</value></data>
   <data name="Fields.Status.PreviewBlockers.One" xml:space="preserve"><value>The preview found {0:N0} blocking issue. No files were changed.</value></data>
   <data name="Fields.Status.PreviewBlockers.Other" xml:space="preserve"><value>The preview found {0:N0} blocking issues. No files were changed.</value></data>
-  <data name="Fields.Status.PreviewCancelled" xml:space="preserve"><value>Preview cancelled. Proposed field changes remain ready to retry.</value></data>
+  <data name="Fields.Status.PreviewCancelled" xml:space="preserve"><value>Preview canceled. Proposed field changes remain ready to retry.</value></data>
   <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>The preview expired. Preview the field changes again.</value></data>
   <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>The field-change preview failed. Proposed changes remain ready to retry.</value></data>
   <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>The preview found no applicable changes. No files were changed.</value></data>
   <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>Preview ready. Files with changes: {0:N0}; field changes: {1:N0}. Nothing has been written. Choose Review changes to add this preview to the shared pending-changes drawer.</value></data>
-  <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>Save cancelled. Proposed field changes remain ready to retry.</value></data>
+  <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>Save canceled. Proposed field changes remain ready to retry.</value></data>
   <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>Updated {0:N0} file. The original is retained for undo.</value></data>
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>Updated {0:N0} files. Originals are retained for undo.</value></data>
   <data name="Fields.Status.SaveFailed" xml:space="preserve"><value>The field changes could not be saved. Proposed changes remain ready to retry.</value></data>
@@ -6298,10 +6355,18 @@
   <data name="Transcode.Concurrency.ParallelJobs" xml:space="preserve"><value>Parallel jobs</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>Added {0:N0} file operation to Review Changes.</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>Added {0:N0} file operations to Review Changes.</value></data>
+  <data name="Workbench.Dialog.PendingConflict.MetadataPlan" xml:space="preserve"><value>The new metadata preview conflicts with metadata changes already pending for the same field and file. Discard or apply the existing change before previewing another.</value></data>
+  <data name="Workbench.Dialog.PendingConflict.PendingMutationRejected" xml:space="preserve"><value>The newly previewed change could not be combined with the pending changes. Review or discard the existing changes, then preview it again.</value></data>
+  <data name="Workbench.Dialog.PendingConflict.ReplaceOriginalConflict" xml:space="preserve"><value>A source cannot be replaced by a transcode while a file operation for the same source is pending. Discard one of those changes.</value></data>
   <data name="Workbench.Dialog.PendingConflict.Title" xml:space="preserve"><value>Conflicting pending change</value></data>
+  <data name="Workbench.Dialog.PendingConflict.FileOperationCannotApply" xml:space="preserve"><value>A pending file operation has no valid actions or can no longer be applied. Preview the file operation again.</value></data>
+  <data name="Workbench.Dialog.PendingConflict.FileOperationRefreshFailed" xml:space="preserve"><value>A pending file operation could not be refreshed into a valid plan. Preview the file operation again.</value></data>
+  <data name="Workbench.Dialog.PendingConflict.FileOperationServiceUnavailable" xml:space="preserve"><value>Reviewed file operations are unavailable in this session. Discard the pending file operation or restart the application before applying.</value></data>
   <data name="Workbench.Dialog.PendingConflict.Message" xml:space="preserve"><value>A selected source already has an incompatible pending transcode or file operation. Discard that pending change before adding another.</value></data>
   <data name="Workbench.Dialog.ReplacePendingFileOperation.Title" xml:space="preserve"><value>Replace pending file operation?</value></data>
   <data name="Workbench.Dialog.ReplacePendingFileOperation.Message" xml:space="preserve"><value>The selected source already has a pending file operation. Replace it with the newly previewed operation?</value></data>
+  <data name="Workbench.Dialog.PendingConflict.TranscodeCannotApply" xml:space="preserve"><value>A pending transcode can no longer be applied. Preview the transcode again.</value></data>
+  <data name="Workbench.Dialog.PendingConflict.TranscodeServiceUnavailable" xml:space="preserve"><value>Transcoding is unavailable in this session. Discard the pending transcode or restart the application before applying.</value></data>
   <data name="Workbench.Dialog.ReplacePendingFileOperation.Confirm" xml:space="preserve"><value>Replace</value></data>
   <data name="Workbench.PendingChanges.FileOperation" xml:space="preserve"><value>File operation</value></data>
   <data name="Workbench.PendingChanges.NoDestination" xml:space="preserve"><value>No destination</value></data>

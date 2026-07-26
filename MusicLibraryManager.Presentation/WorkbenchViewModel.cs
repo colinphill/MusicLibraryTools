@@ -136,9 +136,8 @@ public partial class WorkbenchViewModel :
         _fileOperationPlans = [];
     private readonly List<ReviewedMetadataMutationIntent>
         _metadataIntents = [];
-    private string? _statusTextKey;
-    private object?[] _statusTextArguments = [];
-    private long? _statusTextCount;
+    private readonly WorkbenchLocalizedStatusState
+        _statusState;
     private MetadataOperationPlan? _plan;
     private ReportExportPlan? _reportPlan;
     private PlaylistWorkspacePlan? _playlistPlan;
@@ -421,6 +420,9 @@ public partial class WorkbenchViewModel :
         _ingestHandoff = ingestHandoff;
         _navigation = navigation;
         _localization = localization;
+        _statusState = new(localization);
+        _statusState.TextChanged +=
+            (_, _) => StatusText = _statusState.Text;
         _transcodes = transcodes;
         _fileOperations = fileOperations;
         _reviewedHistory = reviewedHistory;
@@ -858,7 +860,7 @@ public partial class WorkbenchViewModel :
         {
             await _dialogs.ShowMessageAsync(
                 L("Workbench.Dialog.PendingConflict.Title"),
-                L("Workbench.Dialog.PendingConflict.Message"));
+                L("Workbench.Dialog.PendingConflict.MetadataPlan"));
             return false;
         }
         if (_plan is not null &&
@@ -1129,11 +1131,12 @@ public partial class WorkbenchViewModel :
                     Files.Count);
             else
             {
-                SetCountStatus(
-                    "Workbench.Status.SourcesAddedWithWarnings",
-                    added,
-                    Files.Count,
-                    loaded.Issues.Length);
+                SetStatus(
+                    WorkbenchStatusTexts
+                        .SourcesAddedWithWarnings(
+                            added,
+                            Files.Count,
+                            loaded.Issues.Length));
                 StatusDiagnosticDetail =
                     loaded.Issues[0].Message;
             }
@@ -1380,11 +1383,14 @@ public partial class WorkbenchViewModel :
                     DelimitedMetadataImportIssueSeverity.Warning);
             SetStatus(
                 warnings == 0
-                    ? "Workbench.Status.ImportMapped"
-                    : "Workbench.Status.ImportMappedWithWarnings",
-                imported.MatchedRows,
-                imported.DataRows,
-                warnings);
+                    ? WorkbenchStatusTexts.ImportMapped(
+                        imported.MatchedRows,
+                        imported.DataRows)
+                    : WorkbenchStatusTexts
+                        .ImportMappedWithWarnings(
+                            imported.MatchedRows,
+                            imported.DataRows,
+                            warnings));
         }
     }
 
@@ -1547,9 +1553,6 @@ public partial class WorkbenchViewModel :
                         : TagLayerCopyMode.Empty),
             ],
         };
-        string action = mode == TagLayerEditMode.Add
-            ? L("Workbench.Action.Add")
-            : L("Common.Remove");
         string layerName = kind switch
         {
             TagLayerKind.Id3v2 => "ID3v2",
@@ -1561,8 +1564,9 @@ public partial class WorkbenchViewModel :
             _operations.PreviewTagLayerEditsAsync(
                 edits,
                 LF(
-                    "Workbench.Operation.TagLayer",
-                    action,
+                    mode == TagLayerEditMode.Add
+                        ? "Workbench.Operation.AddTagLayer"
+                        : "Workbench.Operation.RemoveTagLayer",
                     layerName),
                 progress,
                 ct),
@@ -1722,7 +1726,8 @@ public partial class WorkbenchViewModel :
             {
                 SetFailure(
                     "Workbench.Status.PendingChangesBlocked",
-                    L("Workbench.Dialog.PendingConflict.Message"));
+                    L(
+                        "Workbench.Dialog.PendingConflict.PendingMutationRejected"));
                 return;
             }
             int blockers = plan.Files.SelectMany(file => file.Issues)
@@ -1732,10 +1737,10 @@ public partial class WorkbenchViewModel :
                     "Workbench.Status.PreviewBlocked",
                     blockers);
             else
-                SetCountStatus(
-                    "Workbench.Status.PreviewReady",
-                    plan.ChangeCount,
-                    plan.ChangedFileCount);
+                SetStatus(
+                    WorkbenchStatusTexts.PreviewReady(
+                        plan.ChangeCount,
+                        plan.ChangedFileCount));
         }
         catch (OperationCanceledException)
         {
@@ -1812,7 +1817,7 @@ public partial class WorkbenchViewModel :
                             SetFailure(
                                 "Workbench.Status.PendingChangesBlocked",
                                 L(
-                                    "Workbench.Dialog.PendingConflict.Message"));
+                                    "Workbench.Dialog.PendingConflict.PendingMutationRejected"));
                             return;
                         }
                     }
@@ -1996,14 +2001,16 @@ public partial class WorkbenchViewModel :
             _fileOperations is null)
         {
             failure =
-                L("Workbench.Dialog.PendingConflict.Message");
+                L(
+                    "Workbench.Dialog.PendingConflict.FileOperationServiceUnavailable");
             return false;
         }
         if (_transcodePlans.Count > 0 &&
             _transcodes is null)
         {
             failure =
-                L("Workbench.Dialog.PendingConflict.Message");
+                L(
+                    "Workbench.Dialog.PendingConflict.TranscodeServiceUnavailable");
             return false;
         }
         OperationIssue? metadataBlocker = _plan?.Files
@@ -2029,7 +2036,8 @@ public partial class WorkbenchViewModel :
                 plan.MutationPlan.Actions.Count == 0)
             {
                 failure = blocker?.Message ??
-                    L("Workbench.Dialog.PendingConflict.Message");
+                    L(
+                        "Workbench.Dialog.PendingConflict.FileOperationCannotApply");
                 return false;
             }
             foreach (FileMutationAction action in
@@ -2070,7 +2078,8 @@ public partial class WorkbenchViewModel :
                     !item.CanApply))
             {
                 failure = blocker?.Message ??
-                    L("Workbench.Dialog.PendingConflict.Message");
+                    L(
+                        "Workbench.Dialog.PendingConflict.TranscodeCannotApply");
                 return false;
             }
             foreach (AudioTranscodePlanItem item in
@@ -2114,7 +2123,8 @@ public partial class WorkbenchViewModel :
                     .ReplaceOriginal)
             {
                 failure =
-                    L("Workbench.Dialog.PendingConflict.Message");
+                    L(
+                        "Workbench.Dialog.PendingConflict.ReplaceOriginalConflict");
                 return false;
             }
         }
@@ -2377,7 +2387,7 @@ public partial class WorkbenchViewModel :
                 throw new InvalidOperationException(
                     blocker?.Message ??
                     L(
-                        "Workbench.Dialog.PendingConflict.Message"));
+                        "Workbench.Dialog.PendingConflict.FileOperationRefreshFailed"));
             refreshed.Add(current);
         }
 
@@ -3277,10 +3287,10 @@ public partial class WorkbenchViewModel :
             SelectedOnlineMetadataResultStep =
                 WorkbenchOnlineMetadataResultStep.TrackMapping;
             SetStatus(
-                "Workbench.Status.DiscogsMappingReady",
-                mapping.SuggestedCount,
-                mapping.Files.Length,
-                mapping.AmbiguousCount);
+                WorkbenchStatusTexts.DiscogsMappingReady(
+                    mapping.SuggestedCount,
+                    mapping.Files.Length,
+                    mapping.AmbiguousCount));
         }
         catch (OperationCanceledException)
         {
@@ -3456,10 +3466,10 @@ public partial class WorkbenchViewModel :
                 CreateProgress(),
                 _cancellation!.Token);
             _reportPlan = null;
-            SetCountStatus(
-                "Workbench.Status.ReportWritten",
-                result.FileCount,
-                result.RowCount);
+            SetStatus(
+                WorkbenchStatusTexts.ReportWritten(
+                    result.FileCount,
+                    result.RowCount));
             ApplyReportCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -3568,10 +3578,10 @@ public partial class WorkbenchViewModel :
                     CreateProgress(),
                     _cancellation!.Token);
             _playlistPlan = null;
-            SetCountStatus(
-                "Workbench.Status.PlaylistWritten",
-                result.PlaylistCount,
-                result.TrackReferenceCount);
+            SetStatus(
+                WorkbenchStatusTexts.PlaylistWritten(
+                    result.PlaylistCount,
+                    result.TrackReferenceCount));
             ApplyPlaylistCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -4098,10 +4108,10 @@ public partial class WorkbenchViewModel :
             SelectedOnlineMetadataResultStep =
                 WorkbenchOnlineMetadataResultStep.TrackMapping;
             SetStatus(
-                "Workbench.Status.ReleaseMappingReady",
-                mapping.SuggestedCount,
-                mapping.Files.Length,
-                mapping.AmbiguousCount);
+                WorkbenchStatusTexts.ReleaseMappingReady(
+                    mapping.SuggestedCount,
+                    mapping.Files.Length,
+                    mapping.AmbiguousCount));
         }
         catch (OperationCanceledException)
         {
@@ -4168,10 +4178,10 @@ public partial class WorkbenchViewModel :
             SelectedAudioMatch = AudioMatches.FirstOrDefault();
             int issues = result.Files.Sum(file => file.Issues.Length);
             SetStatus(
-                "Workbench.Status.FingerprintDiscovery",
-                result.FingerprintedFileCount,
-                result.CandidateCount,
-                issues);
+                WorkbenchStatusTexts.FingerprintDiscovery(
+                    result.FingerprintedFileCount,
+                    result.CandidateCount,
+                    issues));
         }
         catch (OperationCanceledException)
         {
@@ -5745,10 +5755,10 @@ public partial class WorkbenchViewModel :
         string key,
         params object?[] arguments)
     {
-        _statusTextKey = key;
-        _statusTextArguments = arguments;
-        _statusTextCount = null;
-        StatusText = LF(key, arguments);
+        _statusState.Set(
+            WorkbenchStatusText.Format(
+                key,
+                arguments));
         StatusDiagnosticDetail = null;
     }
 
@@ -5757,10 +5767,18 @@ public partial class WorkbenchViewModel :
         long count,
         params object?[] arguments)
     {
-        _statusTextKey = key;
-        _statusTextArguments = arguments;
-        _statusTextCount = count;
-        StatusText = LC(key, count, arguments);
+        _statusState.Set(
+            WorkbenchStatusText.FormatCount(
+                key,
+                count,
+                arguments));
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetStatus(
+        WorkbenchStatusText status)
+    {
+        _statusState.Set(status);
         StatusDiagnosticDetail = null;
     }
 
@@ -5892,15 +5910,6 @@ public partial class WorkbenchViewModel :
         EventArgs e)
     {
         RefreshLocalizedChoices();
-        if (_statusTextKey is not null)
-            StatusText = _statusTextCount is { } count
-                ? LC(
-                    _statusTextKey,
-                    count,
-                    _statusTextArguments)
-                : LF(
-                    _statusTextKey,
-                    _statusTextArguments);
         RebuildMetadataFields();
         foreach (WorkbenchTrackViewModel file in Files)
             file.RefreshLocalizedText();
