@@ -1,3 +1,4 @@
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
@@ -21,6 +22,128 @@ namespace MusicLibraryManager.UI.Tests;
 
 public sealed class LibraryDrawerInteractionTests
 {
+    [AvaloniaFact]
+    public void
+        Localized_pending_actions_wrap_inside_the_narrow_library_flyout()
+    {
+        CultureInfo previousUICulture =
+            CultureInfo.CurrentUICulture;
+        var settings = new MemorySettings();
+        settings.SetPreference(
+            LocalizationPreferences.DisplayLanguage,
+            "de-DE");
+        settings.SetPreference(
+            AppearancePreferences.ShellRailExpandedPreference,
+            bool.FalseString);
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+                collection.AddSingleton<IAppSettings>(
+                    settings));
+        App.UseServicesForTests(services);
+        var view = new LibraryView();
+        var constrainedHost = new Border
+        {
+            Width = 344,
+            HorizontalAlignment =
+                global::Avalonia.Layout.HorizontalAlignment.Left,
+            Child = view,
+        };
+        var window = new Window
+        {
+            Width = 900,
+            Height = 600,
+            FontSize = 18,
+            Content = constrainedHost,
+        };
+        try
+        {
+            window.WindowState = WindowState.Normal;
+            window.Show();
+            Render();
+
+            LibraryViewModel model =
+                services.GetRequiredService<LibraryViewModel>();
+            model.PendingChanges.Add(
+                new MetadataPreviewRow(
+                    @"C:\Music\Fixture.flac",
+                    "Titel",
+                    "Vorher",
+                    "Nachher"));
+            view.FindControl<Button>(
+                    "LibraryPendingChangesButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            Render();
+
+            Border surface =
+                view.FindControl<Border>(
+                    "LibraryPendingChangesSurface")!;
+            Button discard =
+                view.FindControl<Button>(
+                    "LibraryRevertPendingChangesButton")!;
+            Button apply =
+                view.FindControl<Button>(
+                    "LibraryApplyPendingChangesButton")!;
+            Assert.True(
+                view.FindControl<Popup>(
+                    "LibraryPendingChangesPopover")!.IsOpen);
+            Assert.InRange(
+                surface.Bounds.Width,
+                319.5,
+                320.5);
+            WrapPanel actionPanel =
+                Assert.IsType<WrapPanel>(
+                discard.Parent);
+            Assert.Same(
+                actionPanel,
+                apply.Parent);
+            AssertFullyVisible(
+                surface,
+                discard);
+            AssertFullyVisible(
+                surface,
+                apply);
+            Point? discardOrigin =
+                discard.TranslatePoint(
+                    default,
+                    actionPanel);
+            Point? applyOrigin =
+                apply.TranslatePoint(
+                    default,
+                    actionPanel);
+            Assert.NotNull(
+                discardOrigin);
+            Assert.NotNull(
+                applyOrigin);
+            Assert.True(
+                applyOrigin.Value.Y >=
+                discardOrigin.Value.Y +
+                discard.Bounds.Height - 1,
+                "The long German Discard action and Apply action did not wrap onto separate rows in the 320 px flyout.");
+        }
+        finally
+        {
+            window.Hide();
+            CultureInfo.CurrentUICulture =
+                previousUICulture;
+        }
+
+        static void AssertFullyVisible(
+            Control surface,
+            Control action)
+        {
+            Assert.True(
+                UiViewportReachability
+                    .TryGetFullyVisibleBounds(
+                        surface,
+                        action,
+                        out Rect bounds,
+                        out string detail),
+                $"{action.Name} was clipped in the 320 px German pending-changes flyout: {bounds}. {detail}");
+        }
+    }
+
     [AvaloniaFact]
     public void Grid_context_menu_invocation_is_scoped_to_the_focused_library_grid()
     {

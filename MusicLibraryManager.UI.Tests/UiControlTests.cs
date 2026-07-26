@@ -59,8 +59,11 @@ public sealed class UiControlTests
                 "LibraryPendingChangesGrid"));
             Assert.Equal(
                 "Discard all pending changes",
-                library.FindControl<Button>(
-                    "LibraryRevertPendingChangesButton")!.Content);
+                Assert.IsType<TextBlock>(
+                    library.FindControl<Button>(
+                        "LibraryRevertPendingChangesButton")!
+                        .Content)
+                    .Text);
             Assert.Equal(
                 "Apply",
                 library.FindControl<Button>(
@@ -94,8 +97,11 @@ public sealed class UiControlTests
                 "WorkbenchPendingChangesGrid"));
             Assert.Equal(
                 "Discard all pending changes",
-                workbench.FindControl<Button>(
-                    "WorkbenchRevertPendingChangesButton")!.Content);
+                Assert.IsType<TextBlock>(
+                    workbench.FindControl<Button>(
+                        "WorkbenchRevertPendingChangesButton")!
+                        .Content)
+                    .Text);
             Assert.Equal(
                 "Apply",
                 workbench.FindControl<Button>(
@@ -2016,6 +2022,133 @@ public sealed class UiControlTests
         finally
         {
             window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void
+        Responsive_split_minimum_clamps_only_rendered_width_and_round_trips_the_user_preference()
+    {
+        var settings = new FakeSettings();
+        var state =
+            new SplitStateService(
+                settings);
+        state.Save(
+            "responsive-minimum",
+            360);
+        var split =
+            new PersistedSplitView(state)
+            {
+                PersistenceKey =
+                    "responsive-minimum",
+                InitialLeftWidth = 300,
+                MinLeftWidth = 200,
+                MaxLeftWidth = 900,
+                MinRightWidth = 160,
+                Left = new Border(),
+                Right = new Border(),
+            };
+        var window = new Window
+        {
+            Width = 1_200,
+            Height = 600,
+            Content = split,
+        };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                360,
+                split.CurrentLeftWidth);
+            Assert.Equal(
+                360,
+                split.PreferredLeftWidth);
+
+            split.SetResponsiveMinimumLeftWidth(
+                520);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                200,
+                split.MinLeftWidth);
+            Assert.Equal(
+                520,
+                split
+                    .EffectiveMinimumLeftWidth);
+            Assert.Equal(
+                520,
+                split.CurrentLeftWidth);
+            Assert.Equal(
+                360,
+                split.PreferredLeftWidth);
+            Assert.Equal(
+                360,
+                state.Load(
+                    "responsive-minimum"));
+
+            split.SetResponsiveMinimumLeftWidth(
+                0);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                360,
+                split.CurrentLeftWidth);
+            Assert.Equal(
+                360,
+                split.PreferredLeftWidth);
+
+            split.SetResponsiveMinimumLeftWidth(
+                520);
+            split.CommitLeftWidth(
+                440);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                520,
+                split.CurrentLeftWidth);
+            Assert.Equal(
+                440,
+                split.PreferredLeftWidth);
+            Assert.Equal(
+                440,
+                state.Load(
+                    "responsive-minimum"));
+        }
+        finally
+        {
+            window.Hide();
+        }
+
+        var restored =
+            new PersistedSplitView(state)
+            {
+                PersistenceKey =
+                    "responsive-minimum",
+                InitialLeftWidth = 300,
+                MinLeftWidth = 200,
+                MaxLeftWidth = 900,
+                MinRightWidth = 160,
+                Left = new Border(),
+                Right = new Border(),
+            };
+        var restoredWindow = new Window
+        {
+            Width = 1_200,
+            Height = 600,
+            Content = restored,
+        };
+        try
+        {
+            restoredWindow.Show();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                440,
+                restored.CurrentLeftWidth);
+            Assert.Equal(
+                440,
+                restored.PreferredLeftWidth);
+        }
+        finally
+        {
+            restoredWindow.Hide();
         }
     }
 

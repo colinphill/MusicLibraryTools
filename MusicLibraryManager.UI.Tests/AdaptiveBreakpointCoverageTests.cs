@@ -573,6 +573,22 @@ public sealed class AdaptiveBreakpointCoverageTests
                 Assert.Equal(
                     rows,
                     layout.RowDefinitions.Count);
+                if (columns == 3)
+                {
+                    Assert.Equal(
+                        new[]
+                        {
+                            0,
+                            2,
+                        },
+                        layout.Children
+                            .OfType<Control>()
+                            .Select(
+                                Grid.GetColumn)
+                            .Distinct()
+                            .Order()
+                            .ToArray());
+                }
             }
         }
     }
@@ -1160,6 +1176,87 @@ public sealed class AdaptiveBreakpointCoverageTests
     }
 
     [AvaloniaFact]
+    public void
+        Workbench_central_task_never_shrinks_across_the_shared_gutter_threshold()
+    {
+        using ServiceProvider services =
+            BuildServices();
+        App.UseServicesForTests(services);
+        var workbench =
+            new WorkbenchView();
+        (Window window, Border host) =
+            ShowInFixedHost(
+                workbench,
+                999,
+                760);
+        try
+        {
+            double previousWidth = 0;
+            foreach (double width in
+                     new[]
+                     {
+                         999d,
+                         1000d,
+                         1001d,
+                     })
+            {
+                ResizeHost(
+                    host,
+                    workbench,
+                    width,
+                    760);
+                Assert.Equal(
+                    new Thickness(
+                        AdaptivePage
+                            .NarrowGutter),
+                    workbench.FindControl<Grid>(
+                        "WorkbenchRoot")!
+                        .Margin);
+                Assert.False(
+                    workbench.FindControl<
+                            Border>(
+                            "WorkbenchSectionRail")!
+                        .IsVisible);
+                double currentWidth =
+                    workbench.FindControl<
+                            Carousel>(
+                            "WorkbenchTabs")!
+                        .Bounds.Width;
+                Assert.True(
+                    currentWidth >=
+                    previousWidth,
+                    $"Growing the Workbench to {width:0}px reduced its central task from {previousWidth:0}px to {currentWidth:0}px.");
+                previousWidth =
+                    currentWidth;
+            }
+
+            ResizeHost(
+                host,
+                workbench,
+                WorkbenchView
+                    .SectionRailActivationWidth(
+                        compactHeight: false),
+                760);
+            Assert.Equal(
+                new Thickness(
+                    AdaptivePage.WideGutter),
+                workbench.FindControl<Grid>(
+                    "WorkbenchRoot")!
+                    .Margin);
+            Assert.True(
+                workbench.FindControl<Carousel>(
+                        "WorkbenchTabs")!
+                    .Bounds.Width >=
+                WorkbenchView
+                    .MinimumSectionTaskWidth);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Workbench_shell_and_section_breakpoints_switch_at_minus_one_exact_and_plus_one()
     {
         using ServiceProvider services = BuildServices();
@@ -1173,20 +1270,50 @@ public sealed class AdaptiveBreakpointCoverageTests
                 760);
         try
         {
+            double standardRailBreakpoint =
+                WorkbenchView
+                    .SectionRailActivationWidth(
+                        compactHeight: false);
+            double compactRailBreakpoint =
+                WorkbenchView
+                    .SectionRailActivationWidth(
+                        compactHeight: true);
+            double standardDockingBreakpoint =
+                WorkbenchView
+                    .DockedDrawerActivationWidth(
+                        compactHeight: false);
+            double compactDockingBreakpoint =
+                WorkbenchView
+                    .DockedDrawerActivationWidth(
+                        compactHeight: true);
+
             AssertWorkbenchRail(
-                973,
+                standardRailBreakpoint - 1,
                 visible: false);
             AssertWorkbenchRail(
-                974,
+                standardRailBreakpoint,
                 visible: true);
             AssertWorkbenchRail(
-                975,
+                standardRailBreakpoint + 1,
                 visible: true);
+            AssertWorkbenchRail(
+                compactRailBreakpoint - 1,
+                visible: false,
+                height: 700);
+            AssertWorkbenchRail(
+                compactRailBreakpoint,
+                visible: true,
+                height: 700);
+            AssertWorkbenchRail(
+                compactRailBreakpoint + 1,
+                visible: true,
+                height: 700);
 
             ResizeHost(
                 host,
                 workbench,
-                1379,
+                standardDockingBreakpoint -
+                1,
                 760);
             Button inspector =
                 workbench.FindControl<Button>(
@@ -1202,14 +1329,46 @@ public sealed class AdaptiveBreakpointCoverageTests
                 Render();
             }
             AssertWorkbenchDocking(
-                1379,
+                standardDockingBreakpoint -
+                1,
                 docked: false);
             AssertWorkbenchDocking(
-                1380,
+                standardDockingBreakpoint,
                 docked: true);
             AssertWorkbenchDocking(
-                1381,
+                standardDockingBreakpoint +
+                1,
                 docked: true);
+            ResizeHost(
+                host,
+                workbench,
+                compactDockingBreakpoint -
+                1,
+                700);
+            if (!workbench.FindControl<Control>(
+                    "WorkbenchInspectorDrawer")!
+                .IsVisible)
+            {
+                inspector.RaiseEvent(
+                    new Avalonia.Interactivity
+                        .RoutedEventArgs(
+                            Button.ClickEvent));
+                Render();
+            }
+            AssertWorkbenchDocking(
+                compactDockingBreakpoint -
+                1,
+                docked: false,
+                height: 700);
+            AssertWorkbenchDocking(
+                compactDockingBreakpoint,
+                docked: true,
+                height: 700);
+            AssertWorkbenchDocking(
+                compactDockingBreakpoint +
+                1,
+                docked: true,
+                height: 700);
 
             AssertWorkbenchHeight(
                 699,
@@ -1278,13 +1437,14 @@ public sealed class AdaptiveBreakpointCoverageTests
 
         void AssertWorkbenchRail(
             double width,
-            bool visible)
+            bool visible,
+            double height = 760)
         {
             ResizeHost(
                 host,
                 workbench,
                 width,
-                760);
+                height);
             Assert.Equal(
                 visible,
                 workbench.FindControl<Border>(
@@ -1295,17 +1455,28 @@ public sealed class AdaptiveBreakpointCoverageTests
                 workbench.FindControl<ComboBox>(
                     "WorkbenchSectionPicker")!
                     .IsVisible);
+            if (visible)
+            {
+                Assert.True(
+                    workbench.FindControl<
+                            Carousel>(
+                            "WorkbenchTabs")!
+                        .Bounds.Width >=
+                    WorkbenchView
+                        .MinimumSectionTaskWidth);
+            }
         }
 
         void AssertWorkbenchDocking(
             double width,
-            bool docked)
+            bool docked,
+            double height = 760)
         {
             ResizeHost(
                 host,
                 workbench,
                 width,
-                760);
+                height);
             Assert.Equal(
                 docked,
                 workbench.FindControl<
@@ -1319,9 +1490,12 @@ public sealed class AdaptiveBreakpointCoverageTests
             if (docked)
             {
                 Assert.True(
-                    workbench.FindControl<Border>(
-                            "WorkbenchSectionContentCard")!
-                        .Bounds.Width >= 760);
+                    workbench.FindControl<
+                            Carousel>(
+                            "WorkbenchTabs")!
+                        .Bounds.Width >=
+                    WorkbenchView
+                        .MinimumDockedTaskWidth);
             }
         }
 

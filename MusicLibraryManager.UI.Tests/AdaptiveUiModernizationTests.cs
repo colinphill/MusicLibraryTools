@@ -191,12 +191,27 @@ public sealed class AdaptiveUiModernizationTests
         try
         {
             window.Show();
+            double railBreakpoint =
+                WorkbenchView
+                    .SectionRailActivationWidth(
+                        compactHeight: false);
+            double dockingBreakpoint =
+                WorkbenchView
+                    .DockedDrawerActivationWidth(
+                        compactHeight: false);
 
-            AssertRailMode(973, railVisible: false);
-            AssertRailMode(974, railVisible: true);
-            AssertRailMode(975, railVisible: true);
+            AssertRailMode(
+                railBreakpoint - 1,
+                railVisible: false);
+            AssertRailMode(
+                railBreakpoint,
+                railVisible: true);
+            AssertRailMode(
+                railBreakpoint + 1,
+                railVisible: true);
 
-            Resize(1369);
+            Resize(
+                dockingBreakpoint - 1);
             Button inspector =
                 view.FindControl<Button>(
                     "WorkbenchInspectorToggle")!;
@@ -225,24 +240,46 @@ public sealed class AdaptiveUiModernizationTests
                     "WorkbenchHeaderScrim")!
                     .IsVisible);
 
-            Resize(1380);
-            Assert.True(
-                view.FindControl<GridSplitter>(
-                    "Splitter")!
-                    .IsVisible);
-            Assert.False(
-                view.FindControl<Border>(
-                    "WorkbenchHeaderScrim")!
-                    .IsVisible);
-            Assert.True(
-                view.FindControl<Border>(
-                    "WorkbenchSectionContentCard")!
-                    .Bounds.Width >= 760,
-                "A docked drawer must leave at least 760 px for the central Workbench task.");
+            AssertDockingMode(
+                dockingBreakpoint - 1,
+                docked: false);
+            AssertDockingMode(
+                dockingBreakpoint,
+                docked: true);
+            AssertDockingMode(
+                dockingBreakpoint + 1,
+                docked: true);
         }
         finally
         {
             window.Hide();
+        }
+
+        void AssertDockingMode(
+            double width,
+            bool docked)
+        {
+            Resize(width);
+            Assert.Equal(
+                docked,
+                view.FindControl<GridSplitter>(
+                    "Splitter")!
+                    .IsVisible);
+            Assert.Equal(
+                !docked,
+                view.FindControl<Border>(
+                    "WorkbenchHeaderScrim")!
+                    .IsVisible);
+            if (docked)
+            {
+                Assert.True(
+                    view.FindControl<Carousel>(
+                            "WorkbenchTabs")!
+                        .Bounds.Width >=
+                    WorkbenchView
+                        .MinimumDockedTaskWidth,
+                    "A docked drawer must leave at least 760 px inside the central Workbench task frame.");
+            }
         }
 
         void AssertRailMode(
@@ -260,6 +297,15 @@ public sealed class AdaptiveUiModernizationTests
                 view.FindControl<ComboBox>(
                     "WorkbenchSectionPicker")!
                     .IsVisible);
+            if (railVisible)
+            {
+                Assert.True(
+                    view.FindControl<Carousel>(
+                            "WorkbenchTabs")!
+                        .Bounds.Width >=
+                    WorkbenchView
+                        .MinimumSectionTaskWidth);
+            }
         }
 
         void Resize(double width)

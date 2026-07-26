@@ -17,6 +17,29 @@ namespace MusicLibraryManager.Views;
 
 public partial class WorkbenchView : UserControl
 {
+    internal const double
+        SectionRailWidth = 212;
+    internal const double
+        SectionDividerAllocation = 10;
+    internal const double
+        SectionNavigationAllocation =
+            SectionRailWidth +
+            SectionDividerAllocation;
+    internal const double
+        PreferredDrawerWidth = 340;
+    internal const double
+        SplitDividerAllocation = 10;
+    internal const double
+        MinimumSectionTaskWidth = 720;
+    internal const double
+        MinimumDockedTaskWidth = 760;
+    internal const double
+        CompactSectionFramePadding = 8;
+    internal const double
+        StandardSectionFramePadding = 12;
+    internal const double
+        SectionFrameBorderThickness = 1;
+
     private enum WorkbenchDrawerSurface
     {
         None,
@@ -36,6 +59,45 @@ public partial class WorkbenchView : UserControl
     private bool _inspectorPreference;
     private bool _resumeInspectorAfterTransientDrawer;
     private Control? _drawerFocusOwner;
+
+    internal static double
+        SectionRailActivationWidth(
+            bool compactHeight) =>
+        ResponsiveConstraintGutter(
+            compactHeight) * 2 +
+        SectionNavigationAllocation +
+        SectionFrameHorizontalChrome(
+            compactHeight) +
+        MinimumSectionTaskWidth;
+
+    internal static double
+        DockedDrawerActivationWidth(
+            bool compactHeight) =>
+        ResponsiveConstraintGutter(
+            compactHeight) * 2 +
+        SectionNavigationAllocation +
+        SectionFrameHorizontalChrome(
+            compactHeight) +
+        SplitDividerAllocation +
+        PreferredDrawerWidth +
+        MinimumDockedTaskWidth;
+
+    private static double
+        ResponsiveConstraintGutter(
+            bool compactHeight) =>
+        compactHeight
+            ? AdaptivePage
+                .CompactHeightGutter
+            : AdaptivePage.WideGutter;
+
+    private static double
+        SectionFrameHorizontalChrome(
+            bool compactHeight) =>
+        (compactHeight
+            ? CompactSectionFramePadding
+            : StandardSectionFramePadding) *
+        2 +
+        SectionFrameBorderThickness * 2;
 
     public WorkbenchView()
     {
@@ -518,34 +580,43 @@ public partial class WorkbenchView : UserControl
         _compactHeight =
             height <= 700;
 
+        // Keep the narrow gutter through the conservative rail activation
+        // point. Switching 16 -> 24 at 1000 px would otherwise make the
+        // central task 15 px narrower when its viewport grows by one pixel.
         double gutter = _compactHeight
             ? AdaptivePage.CompactHeightGutter
-            : width > 0 &&
-              width <
-              AdaptivePage.NarrowContentThreshold
+            : width <
+              SectionRailActivationWidth(
+                  compactHeight: false)
                 ? AdaptivePage.NarrowGutter
                 : AdaptivePage.WideGutter;
         double contentWidth =
             Math.Max(0, width - gutter * 2);
-        const double railAndDividerWidth = 222;
-        const double preferredDrawerWidth = 340;
-        const double splitDividerWidth = 10;
-        const double minimumSectionWidth = 720;
-        const double minimumDockedEditorWidth = 760;
+        double sectionFramePadding =
+            _compactHeight
+                ? CompactSectionFramePadding
+                : StandardSectionFramePadding;
+        double sectionFrameChrome =
+            SectionFrameHorizontalChrome(
+                _compactHeight);
 
         _compactSectionPicker =
-            contentWidth - railAndDividerWidth <
-            minimumSectionWidth;
+            width <
+            SectionRailActivationWidth(
+                _compactHeight);
         double visibleRailWidth =
             _compactSectionPicker
                 ? 0
-                : railAndDividerWidth;
+                : SectionNavigationAllocation;
         _responsiveCompact =
-            contentWidth -
-            visibleRailWidth -
-            splitDividerWidth -
-            preferredDrawerWidth <
-            minimumDockedEditorWidth;
+            width <
+            DockedDrawerActivationWidth(
+                _compactHeight);
+        WorkbenchSplit
+            .SetResponsiveMinimumLeftWidth(
+                visibleRailWidth +
+                sectionFrameChrome +
+                MinimumDockedTaskWidth);
 
         WorkbenchSectionPicker.IsVisible =
             _compactSectionPicker;
@@ -556,11 +627,13 @@ public partial class WorkbenchView : UserControl
         WorkbenchBody.ColumnDefinitions[0].Width =
             _compactSectionPicker
                 ? new GridLength(0)
-                : new GridLength(212);
+                : new GridLength(
+                    SectionRailWidth);
         WorkbenchBody.ColumnDefinitions[1].Width =
             _compactSectionPicker
                 ? new GridLength(0)
-                : new GridLength(10);
+                : new GridLength(
+                    SectionDividerAllocation);
         WorkbenchRoot.Margin =
             new Thickness(gutter);
         WorkbenchRoot.RowSpacing =
@@ -576,9 +649,8 @@ public partial class WorkbenchView : UserControl
                 ? string.Empty
                 : L("Workbench.Subtitle");
         WorkbenchSectionContentCard.Padding =
-            _compactHeight
-                ? new Thickness(8)
-                : new Thickness(12);
+            new Thickness(
+                sectionFramePadding);
 
         if (_responsiveCompact &&
             !wasResponsiveCompact &&

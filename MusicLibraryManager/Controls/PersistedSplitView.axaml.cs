@@ -45,6 +45,8 @@ public partial class PersistedSplitView : UserControl
     private bool _usesDefaultLabel;
     private double? _lastPersistedWidth;
     private double _expandedLeftWidth;
+    private double
+        _responsiveMinimumLeftWidth;
 
     public PersistedSplitView()
     {
@@ -68,6 +70,13 @@ public partial class PersistedSplitView : UserControl
     internal PersistedSplitView(SplitStateService state) : this() => _state = state;
 
     internal double CurrentLeftWidth => SplitGrid.ColumnDefinitions[0].Width.Value;
+    internal double PreferredLeftWidth =>
+        _expandedLeftWidth;
+    internal double
+        EffectiveMinimumLeftWidth =>
+        Math.Max(
+            MinLeftWidth,
+            _responsiveMinimumLeftWidth);
 
     private void OnAttachedToVisualTree(
         object? sender,
@@ -126,7 +135,8 @@ public partial class PersistedSplitView : UserControl
     private void InitializeWidth()
     {
         _state ??= App.GetService<SplitStateService>();
-        SplitGrid.ColumnDefinitions[0].MinWidth = MinLeftWidth;
+        SplitGrid.ColumnDefinitions[0].MinWidth =
+            EffectiveMinimumLeftWidth;
         SplitGrid.ColumnDefinitions[0].MaxWidth = MaxLeftWidth;
         SplitGrid.ColumnDefinitions[2].MinWidth = MinRightWidth;
         double width = PersistenceKey is null ? InitialLeftWidth : _state.Load(PersistenceKey) ?? InitialLeftWidth;
@@ -141,14 +151,25 @@ public partial class PersistedSplitView : UserControl
 
     private void SetLeftWidth(double width)
     {
+        double minimum =
+            EffectiveMinimumLeftWidth;
         double maximum = MaxLeftWidth;
         if (!_compact && SplitGrid.Bounds.Width > 0)
         {
             double splitterWidth = SplitGrid.ColumnDefinitions[1].ActualWidth;
             maximum = Math.Min(maximum,
-                Math.Max(MinLeftWidth, SplitGrid.Bounds.Width - splitterWidth - MinRightWidth));
+                Math.Max(
+                    minimum,
+                    SplitGrid.Bounds.Width -
+                    splitterWidth -
+                    MinRightWidth));
         }
-        SplitGrid.ColumnDefinitions[0].Width = new GridLength(Math.Clamp(width, MinLeftWidth, maximum));
+        SplitGrid.ColumnDefinitions[0].Width =
+            new GridLength(
+                Math.Clamp(
+                    width,
+                    minimum,
+                    maximum));
     }
 
     private void EnsurePanesFit()
@@ -172,6 +193,32 @@ public partial class PersistedSplitView : UserControl
             return;
         (_state ??= App.GetService<SplitStateService>()).Save(PersistenceKey, width);
         _lastPersistedWidth = width;
+    }
+
+    internal void
+        SetResponsiveMinimumLeftWidth(
+            double minimum)
+    {
+        if (!double.IsFinite(minimum) ||
+            minimum < 0 ||
+            minimum > MaxLeftWidth)
+            throw new
+                ArgumentOutOfRangeException(
+                    nameof(minimum));
+
+        _responsiveMinimumLeftWidth =
+            minimum;
+        if (!_initialized ||
+            _compact)
+            return;
+
+        SplitGrid.ColumnDefinitions[0]
+            .MinWidth =
+            EffectiveMinimumLeftWidth;
+        SetLeftWidth(
+            _expandedLeftWidth > 0
+                ? _expandedLeftWidth
+                : InitialLeftWidth);
     }
 
     public void SetCompact(bool compact)
@@ -218,7 +265,8 @@ public partial class PersistedSplitView : UserControl
         ColumnDefinition left = SplitGrid.ColumnDefinitions[0];
         ColumnDefinition divider = SplitGrid.ColumnDefinitions[1];
         ColumnDefinition right = SplitGrid.ColumnDefinitions[2];
-        left.MinWidth = MinLeftWidth;
+        left.MinWidth =
+            EffectiveMinimumLeftWidth;
         left.MaxWidth = MaxLeftWidth;
         divider.Width = new GridLength(10);
         right.MinWidth = MinRightWidth;

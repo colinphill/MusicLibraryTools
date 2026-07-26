@@ -355,7 +355,13 @@ public sealed class WorkbenchResponsiveMatrixTests
             addSources.Background);
 
         bool compact =
-            windowWidth == Viewports[0].Width;
+            view.Bounds.Width <
+            WorkbenchView
+                .SectionRailActivationWidth(
+                    compactHeight:
+                        view.Bounds.Height <=
+                        AdaptivePage
+                            .CompactHeightThreshold);
         Assert.Equal(
             compact,
             view.FindControl<ComboBox>(
@@ -366,6 +372,16 @@ public sealed class WorkbenchResponsiveMatrixTests
             view.FindControl<Border>(
                     "WorkbenchSectionRail")!
                 .IsVisible);
+        if (!compact)
+        {
+            Assert.True(
+                view.FindControl<Carousel>(
+                        "WorkbenchTabs")!
+                    .Bounds.Width >=
+                WorkbenchView
+                    .MinimumSectionTaskWidth,
+                $"The section rail left less than {WorkbenchView.MinimumSectionTaskWidth:0}px for the Workbench task at window width {windowWidth}.");
+        }
     }
 
     private static void AssertSectionFits(
