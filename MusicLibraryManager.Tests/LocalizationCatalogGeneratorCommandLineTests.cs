@@ -65,6 +65,352 @@ public sealed class LocalizationCatalogGeneratorCommandLineTests
     }
 
     [Fact]
+    public async Task Strict_editorial_gate_truthfully_fails_while_reviews_are_pending()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string assemblyPath =
+            await EnsureGeneratorBuiltAsync(repositoryRoot);
+
+        ProcessResult result = await RunDotnetAsync(
+            repositoryRoot,
+            assemblyPath,
+            "--check",
+            "--strict-editorial-review");
+
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains(
+            "Strict editorial review failed: 2,582 resources remain Pending.",
+            result.StandardError,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Generator_rejects_unknown_duplicate_and_positional_arguments()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string assemblyPath =
+            await EnsureGeneratorBuiltAsync(repositoryRoot);
+        (string[] Arguments, string Expected)[] cases =
+        [
+            (
+                ["--strict-editorial-reveiw"],
+                "Unknown option '--strict-editorial-reveiw'."),
+            (
+                ["--check", "--check"],
+                "Option '--check' is duplicated."),
+            (
+                ["--check", "unexpected"],
+                "Unexpected positional argument 'unexpected'."),
+        ];
+
+        foreach ((string[] arguments, string expected) in cases)
+        {
+            ProcessResult result = await RunDotnetAsync(
+                repositoryRoot,
+                [assemblyPath, .. arguments]);
+            Assert.NotEqual(0, result.ExitCode);
+            Assert.Contains(
+                expected,
+                result.StandardError,
+                StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task Conflicting_duplicate_glossary_rows_are_rejected_before_generation()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string assemblyPath =
+            await EnsureGeneratorBuiltAsync(repositoryRoot);
+        string glossaryPath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-conflicting-glossary-" +
+            Guid.NewGuid().ToString(
+                "N",
+                CultureInfo.InvariantCulture) +
+            ".txt");
+        try
+        {
+            File.WriteAllText(
+                glossaryPath,
+                """
+                test|Test|Prueba|Test|Test|Teste|テスト|테스트|测试|測試
+                test|Prüfung|Prueba|Test|Test|Teste|テスト|테스트|测试|測試
+                """);
+
+            ProcessResult result = await RunDotnetAsync(
+                repositoryRoot,
+                assemblyPath,
+                "--check",
+                "--glossary",
+                glossaryPath);
+
+            Assert.NotEqual(0, result.ExitCode);
+            Assert.Contains(
+                "Translation glossary source 'test' has conflicting duplicate translations for: de-DE.",
+                result.StandardError,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (File.Exists(glossaryPath))
+                File.Delete(glossaryPath);
+        }
+    }
+
+    [Fact]
+    public async Task Editorial_override_precedes_Common_Beta_builtin_fallback()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string assemblyPath =
+            await EnsureGeneratorBuiltAsync(repositoryRoot);
+        string temporaryRoot = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-common-beta-override-" +
+            Guid.NewGuid().ToString(
+                "N",
+                CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(temporaryRoot);
+        try
+        {
+            string sourceOverrides = Path.Combine(
+                repositoryRoot,
+                "BuildTools",
+                "LocalizationCatalogGenerator",
+                "EditorialOverrides.xml");
+            string customOverrides = Path.Combine(
+                temporaryRoot,
+                "EditorialOverrides.xml");
+            File.Copy(
+                sourceOverrides,
+                customOverrides);
+            XDocument overrides = XDocument.Load(customOverrides);
+            XElement commonBeta = overrides.Root!
+                .Elements("entry")
+                .Single(entry =>
+                    string.Equals(
+                        (string?)entry.Attribute("key"),
+                        "Common.Beta",
+                        StringComparison.Ordinal));
+            commonBeta.Elements("translation")
+                .Single(translation =>
+                    string.Equals(
+                        (string?)translation.Attribute("culture"),
+                        "de-DE",
+                        StringComparison.Ordinal))
+                .Value = "Testkennzeichnung";
+            overrides.Save(customOverrides);
+
+            string outputDirectory = Path.Combine(
+                temporaryRoot,
+                "catalogs");
+            string manifestPath = Path.Combine(
+                temporaryRoot,
+                "manifest.xml");
+            string invariantAllowlist = Path.Combine(
+                repositoryRoot,
+                "BuildTools",
+                "LocalizationCatalogGenerator",
+                "InvariantApprovedValues.v1.tsv");
+            ProcessResult result = await RunDotnetAsync(
+                repositoryRoot,
+                assemblyPath,
+                "--output-directory",
+                outputDirectory,
+                "--editorial-overrides",
+                customOverrides,
+                "--editorial-review-manifest",
+                manifestPath,
+                "--invariant-allowlist",
+                invariantAllowlist,
+                "--refresh-editorial-review-manifest",
+                "--without-reviewed-evidence",
+                "--review-batch",
+                "precedence-test",
+                "--reviewer",
+                "Automated test",
+                "--review-date",
+                "2026-07-25");
+            Assert.True(
+                result.ExitCode == 0,
+                DescribeFailure(
+                    "The custom Common.Beta generation failed.",
+                    result));
+
+            XDocument german = XDocument.Load(
+                Path.Combine(
+                    outputDirectory,
+                    "Strings.de-DE.resx"));
+            string value = german.Root!
+                .Elements("data")
+                .Single(entry =>
+                    string.Equals(
+                        (string?)entry.Attribute("name"),
+                        "Common.Beta",
+                        StringComparison.Ordinal))
+                .Element("value")!
+                .Value;
+            Assert.Equal("Testkennzeichnung", value);
+        }
+        finally
+        {
+            if (Directory.Exists(temporaryRoot))
+                Directory.Delete(
+                    temporaryRoot,
+                    recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Validation_and_git_provenance_failures_leave_all_outputs_byte_unchanged()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string assemblyPath =
+            await EnsureGeneratorBuiltAsync(repositoryRoot);
+        string temporaryRoot = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-atomic-localization-" +
+            Guid.NewGuid().ToString(
+                "N",
+                CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(temporaryRoot);
+        try
+        {
+            string generatorDirectory = Path.Combine(
+                repositoryRoot,
+                "BuildTools",
+                "LocalizationCatalogGenerator");
+            string resourcesDirectory = Path.Combine(
+                repositoryRoot,
+                "MusicLibraryManager.Presentation",
+                "Resources");
+            string outputDirectory = Path.Combine(
+                temporaryRoot,
+                "catalogs");
+            Directory.CreateDirectory(outputDirectory);
+            foreach (string culture in
+                     EditorialReviewInfrastructure.ShippingCultures)
+            {
+                File.Copy(
+                    Path.Combine(
+                        resourcesDirectory,
+                        $"Strings.{culture}.resx"),
+                    Path.Combine(
+                        outputDirectory,
+                        $"Strings.{culture}.resx"));
+            }
+            string manifestPath = Path.Combine(
+                temporaryRoot,
+                "EditorialReviewManifest.xml");
+            File.Copy(
+                Path.Combine(
+                    generatorDirectory,
+                    EditorialReviewInfrastructure
+                        .DefaultManifestFileName),
+                manifestPath);
+            string sourceOverrides = Path.Combine(
+                generatorDirectory,
+                "EditorialOverrides.xml");
+            string staleOverrides = Path.Combine(
+                temporaryRoot,
+                "StaleEditorialOverrides.xml");
+            File.Copy(sourceOverrides, staleOverrides);
+            XDocument changed = XDocument.Load(staleOverrides);
+            changed.Root!
+                .Elements("entry")
+                .Single(entry =>
+                    string.Equals(
+                        (string?)entry.Attribute("key"),
+                        "Common.Beta",
+                        StringComparison.Ordinal))
+                .Elements("translation")
+                .Single(translation =>
+                    string.Equals(
+                        (string?)translation.Attribute("culture"),
+                        "de-DE",
+                        StringComparison.Ordinal))
+                .Value = "GeÃ¤nderte Beta";
+            changed.Save(staleOverrides);
+
+            string invariantAllowlist = Path.Combine(
+                generatorDirectory,
+                "InvariantApprovedValues.v1.tsv");
+            string[] protectedPaths =
+            [
+                manifestPath,
+                .. Directory.EnumerateFiles(
+                    outputDirectory,
+                    "Strings.*.resx",
+                    SearchOption.TopDirectoryOnly),
+            ];
+            IReadOnlyDictionary<string, byte[]> originalBytes =
+                protectedPaths.ToDictionary(
+                    path => path,
+                    File.ReadAllBytes,
+                    StringComparer.Ordinal);
+
+            ProcessResult staleManifest = await RunDotnetAsync(
+                repositoryRoot,
+                assemblyPath,
+                "--output-directory",
+                outputDirectory,
+                "--editorial-overrides",
+                staleOverrides,
+                "--editorial-review-manifest",
+                manifestPath,
+                "--invariant-allowlist",
+                invariantAllowlist);
+            Assert.NotEqual(0, staleManifest.ExitCode);
+            Assert.Contains(
+                "digest is stale for 'Common.Beta'",
+                staleManifest.StandardError,
+                StringComparison.Ordinal);
+            AssertByteUnchanged(originalBytes);
+
+            ProcessResult badGitReference = await RunDotnetAsync(
+                repositoryRoot,
+                assemblyPath,
+                "--output-directory",
+                outputDirectory,
+                "--editorial-overrides",
+                sourceOverrides,
+                "--editorial-review-manifest",
+                manifestPath,
+                "--invariant-allowlist",
+                invariantAllowlist,
+                "--refresh-editorial-review-manifest",
+                "--review-baseline-ref",
+                "refs/heads/localization-review-missing",
+                "--reviewed-ref",
+                "HEAD",
+                "--review-batch",
+                "bad-git-test",
+                "--reviewer",
+                "Automated test",
+                "--review-date",
+                "2026-07-25");
+            Assert.NotEqual(0, badGitReference.ExitCode);
+            Assert.Contains(
+                "Could not read",
+                badGitReference.StandardError,
+                StringComparison.Ordinal);
+            AssertByteUnchanged(originalBytes);
+            Assert.Empty(
+                Directory.EnumerateFiles(
+                    temporaryRoot,
+                    "*.stage",
+                    SearchOption.AllDirectories));
+        }
+        finally
+        {
+            if (Directory.Exists(temporaryRoot))
+                Directory.Delete(
+                    temporaryRoot,
+                    recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Capture_rejects_changed_protected_terms_without_writing_output()
     {
         string repositoryRoot = FindRepositoryRoot();
@@ -350,6 +696,13 @@ public sealed class LocalizationCatalogGeneratorCommandLineTests
         builder.AppendLine("Standard error:");
         builder.Append(result.StandardError);
         return builder.ToString();
+    }
+
+    private static void AssertByteUnchanged(
+        IReadOnlyDictionary<string, byte[]> originalBytes)
+    {
+        foreach ((string path, byte[] expected) in originalBytes)
+            Assert.Equal(expected, File.ReadAllBytes(path));
     }
 
     private static string FindRepositoryRoot()

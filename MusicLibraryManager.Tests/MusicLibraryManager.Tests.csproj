@@ -14,6 +14,10 @@
              Link="BuildTools\CatalogGeneratorCommandLine.cs" />
     <Compile Include="..\BuildTools\LocalizationCatalogGenerator\LocalizationProtectedTerms.cs"
              Link="BuildTools\LocalizationProtectedTerms.cs" />
+    <Compile Include="..\BuildTools\LocalizationCatalogGenerator\EditorialReviewInfrastructure.cs"
+             Link="BuildTools\EditorialReviewInfrastructure.cs" />
+    <Compile Include="..\BuildTools\LocalizationCatalogGenerator\AtomicOutputBatch.cs"
+             Link="BuildTools\AtomicOutputBatch.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>

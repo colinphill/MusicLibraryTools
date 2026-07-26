@@ -41,6 +41,7 @@ internal static partial class CatalogGenerator
 
     public static int Run(string[] args)
     {
+        ValidateArguments(args);
         string repositoryRoot = FindRepositoryRoot();
         string resourcesDirectory = Path.Combine(
             repositoryRoot,
@@ -68,12 +69,155 @@ internal static partial class CatalogGenerator
             GetOptionValue(
                 args,
                 "--capture-editorial-overrides");
+        string editorialReviewManifestPath =
+            GetOptionValue(
+                args,
+                "--editorial-review-manifest") is
+                { Length: > 0 } reviewManifestPath
+                ? Path.GetFullPath(reviewManifestPath)
+                : Path.Combine(
+                    repositoryRoot,
+                    "BuildTools",
+                    "LocalizationCatalogGenerator",
+                    EditorialReviewInfrastructure
+                        .DefaultManifestFileName);
+        string? reviewAuditPath =
+            GetOptionValue(
+                args,
+                "--export-review-audit");
+        string? reviewPacketPath =
+            GetOptionValue(
+                args,
+                "--export-review-packet");
+        string? approveReviewPacketPath =
+            GetOptionValue(
+                args,
+                "--approve-review-packet");
+        string? reviewDomain =
+            GetOptionValue(
+                args,
+                "--review-domain");
+        string? glossaryPath =
+            GetOptionValue(
+                args,
+                "--glossary");
+        string invariantAllowlistPath =
+            GetOptionValue(
+                args,
+                "--invariant-allowlist") is
+                { Length: > 0 } configuredInvariantAllowlist
+                ? Path.GetFullPath(configuredInvariantAllowlist)
+                : Path.Combine(
+                    repositoryRoot,
+                    "BuildTools",
+                    "LocalizationCatalogGenerator",
+                    "InvariantApprovedValues.v1.tsv");
+        bool refreshReviewManifest = args.Contains(
+            "--refresh-editorial-review-manifest",
+            StringComparer.Ordinal);
+        bool strictEditorialReview = args.Contains(
+            "--strict-editorial-review",
+            StringComparer.Ordinal);
+        string? reviewBaselineReference =
+            GetOptionValue(
+                args,
+                "--review-baseline-ref");
+        string? reviewedReference =
+            GetOptionValue(
+                args,
+                "--reviewed-ref");
+        string defaultReviewEvidencePath = Path.Combine(
+            repositoryRoot,
+            "BuildTools",
+            "LocalizationCatalogGenerator",
+            "FocusedEditorialReviewEvidence.v1.xml");
+        string? configuredReviewEvidencePath =
+            GetOptionValue(
+                args,
+                "--review-evidence");
+        string? exportReviewedEvidencePath =
+            GetOptionValue(
+                args,
+                "--export-reviewed-evidence");
+        bool withoutReviewedEvidence = args.Contains(
+            "--without-reviewed-evidence",
+            StringComparer.Ordinal);
         string neutralPath = Path.Combine(resourcesDirectory, "Strings.resx");
         bool checkOnly = args.Contains("--check", StringComparer.Ordinal);
         if (checkOnly &&
             capturedOverridesPath is not null)
             throw new ArgumentException(
                 "--check and --capture-editorial-overrides cannot be combined.");
+        if (refreshReviewManifest &&
+            checkOnly)
+            throw new ArgumentException(
+                "--check and --refresh-editorial-review-manifest cannot be combined.");
+        if (refreshReviewManifest &&
+            capturedOverridesPath is not null)
+            throw new ArgumentException(
+                "--capture-editorial-overrides and " +
+                "--refresh-editorial-review-manifest cannot be combined.");
+        if (refreshReviewManifest &&
+            strictEditorialReview)
+            throw new ArgumentException(
+                "--strict-editorial-review cannot be combined with a manifest refresh.");
+        if (approveReviewPacketPath is not null &&
+            (refreshReviewManifest ||
+             capturedOverridesPath is not null ||
+             strictEditorialReview))
+            throw new ArgumentException(
+                "--approve-review-packet cannot be combined with capture, " +
+                "refresh, or strict review modes.");
+        if (approveReviewPacketPath is not null &&
+            (reviewPacketPath is not null ||
+             checkOnly))
+            throw new ArgumentException(
+                "--approve-review-packet cannot be combined with --check " +
+                "or --export-review-packet.");
+        if ((reviewBaselineReference is null) !=
+            (reviewedReference is null))
+            throw new ArgumentException(
+                "--review-baseline-ref and --reviewed-ref must be supplied together.");
+        if (!refreshReviewManifest &&
+            exportReviewedEvidencePath is null &&
+            (reviewBaselineReference is not null ||
+             reviewedReference is not null))
+            throw new ArgumentException(
+                "Review Git references require a manifest refresh or " +
+                "--export-reviewed-evidence.");
+        int reviewSeedModes =
+            (reviewBaselineReference is null ? 0 : 1) +
+            (configuredReviewEvidencePath is null ? 0 : 1) +
+            (withoutReviewedEvidence ? 1 : 0);
+        if (refreshReviewManifest &&
+            reviewSeedModes > 1)
+            throw new ArgumentException(
+                "Choose only one reviewed-evidence source: Git references, " +
+                "--review-evidence, or --without-reviewed-evidence.");
+        if (!refreshReviewManifest &&
+            (configuredReviewEvidencePath is not null ||
+             withoutReviewedEvidence))
+            throw new ArgumentException(
+                "--review-evidence and --without-reviewed-evidence are " +
+                "only valid with --refresh-editorial-review-manifest.");
+        if (exportReviewedEvidencePath is not null &&
+            reviewBaselineReference is null)
+            throw new ArgumentException(
+                "--export-reviewed-evidence requires both review Git references.");
+        if (exportReviewedEvidencePath is not null &&
+            (!checkOnly ||
+             refreshReviewManifest ||
+             approveReviewPacketPath is not null ||
+             reviewAuditPath is not null ||
+             reviewPacketPath is not null ||
+             strictEditorialReview))
+            throw new ArgumentException(
+                "--export-reviewed-evidence is an exclusive --check " +
+                "operation.");
+        if (reviewDomain is not null &&
+            reviewPacketPath is null)
+            throw new ArgumentException(
+                "--review-domain requires --export-review-packet.");
 
         XDocument neutral = XDocument.Load(
             neutralPath,
@@ -81,7 +225,11 @@ internal static partial class CatalogGenerator
         IReadOnlyList<XElement> neutralEntries = neutral.Root!
             .Elements("data")
             .ToArray();
-        IReadOnlyList<Term> terms = ParseTerms();
+        IReadOnlyList<Term> terms = ParseTerms(
+            glossaryPath is null
+                ? TranslationRows
+                : File.ReadAllText(
+                    Path.GetFullPath(glossaryPath)));
         IReadOnlyDictionary<
             string,
             IReadOnlyDictionary<string, string>>
@@ -108,6 +256,8 @@ internal static partial class CatalogGenerator
         var generatedCatalogs = new Dictionary<
             string,
             XDocument>(
+            StringComparer.Ordinal);
+        var pendingOutputs = new Dictionary<string, string>(
             StringComparer.Ordinal);
         foreach (XElement entry in neutralEntries)
         {
@@ -170,7 +320,8 @@ internal static partial class CatalogGenerator
                 destinationDirectory,
                 $"Strings.{locale.Name}.resx");
             string generated = Serialize(satellite);
-            if (checkOnly)
+            if (checkOnly ||
+                approveReviewPacketPath is not null)
             {
                 if (!File.Exists(destination) ||
                     !string.Equals(
@@ -181,14 +332,9 @@ internal static partial class CatalogGenerator
                         $"{locale.Name}: catalog is not generated from the current neutral catalog");
             }
             else if (capturedOverridesPath is null)
-            {
-                Directory.CreateDirectory(
-                    destinationDirectory);
-                File.WriteAllText(
+                pendingOutputs.Add(
                     destination,
-                    generated,
-                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            }
+                    generated);
         }
 
         XDocument? capturedOverrides =
@@ -225,19 +371,207 @@ internal static partial class CatalogGenerator
             string capturedPath =
                 Path.GetFullPath(
                     capturedOverridesPath!);
-            string? parent =
-                Path.GetDirectoryName(
-                    capturedPath);
-            if (!string.IsNullOrWhiteSpace(parent))
-                Directory.CreateDirectory(parent);
-            capturedOverrides.Save(
+            pendingOutputs.Add(
                 capturedPath,
-                SaveOptions.None);
+                Serialize(capturedOverrides));
+            AtomicOutputBatch.Commit(pendingOutputs);
             Console.WriteLine(
                 $"Captured {capturedOverrides.Root!.Elements("entry").Count():N0} editorial override entries in {capturedPath}.");
             return 0;
         }
 
+        IReadOnlyList<CatalogReviewSource> reviewSources =
+            BuildCatalogReviewSources(
+                neutralEntries,
+                generatedCatalogs,
+                editorialOverrides);
+        IReadOnlyDictionary<string, string>
+            invariantApprovedValues =
+            EditorialReviewInfrastructure.LoadInvariantAllowlist(
+                invariantAllowlistPath);
+        IReadOnlyDictionary<string, ReviewedCatalogEvidence>?
+            gitReviewedCatalogs = null;
+        string? reviewBatchOption =
+            GetOptionValue(
+                args,
+                "--review-batch");
+        string? reviewerOption =
+            GetOptionValue(
+                args,
+                "--reviewer");
+        string? reviewDateOption =
+            GetOptionValue(
+                args,
+                "--review-date");
+        if (reviewBaselineReference is not null)
+        {
+            string reviewBatch =
+                reviewBatchOption ??
+                throw new ArgumentException(
+                    "Review Git references require --review-batch.");
+            string reviewer =
+                reviewerOption ??
+                throw new ArgumentException(
+                    "Review Git references require --reviewer.");
+            string reviewDate =
+                reviewDateOption ??
+                throw new ArgumentException(
+                    "Review Git references require --review-date.");
+            gitReviewedCatalogs =
+                EditorialReviewInfrastructure
+                    .FindReviewedOverrideChanges(
+                        repositoryRoot,
+                        reviewBaselineReference,
+                        reviewedReference!);
+            if (exportReviewedEvidencePath is not null)
+            {
+                pendingOutputs.Add(
+                    Path.GetFullPath(
+                        exportReviewedEvidencePath),
+                    EditorialReviewInfrastructure
+                        .SerializeReviewEvidence(
+                            reviewSources,
+                            gitReviewedCatalogs,
+                            reviewBaselineReference,
+                            reviewedReference!,
+                            reviewBatch,
+                            reviewer,
+                            reviewDate));
+            }
+        }
+        if (exportReviewedEvidencePath is not null)
+        {
+            AtomicOutputBatch.Commit(pendingOutputs);
+            Console.WriteLine(
+                $"Exported {gitReviewedCatalogs!.Count:N0} focused " +
+                "editorial review evidence entries.");
+            return 0;
+        }
+
+        EditorialReviewManifest reviewManifest;
+        if (refreshReviewManifest)
+        {
+            EditorialReviewSeed reviewSeed;
+            if (gitReviewedCatalogs is not null)
+            {
+                reviewSeed = new EditorialReviewSeed(
+                    gitReviewedCatalogs,
+                    reviewBatchOption!,
+                    reviewerOption!,
+                    reviewDateOption!,
+                    $"git-diff:v1:{reviewBaselineReference}:" +
+                    reviewedReference);
+            }
+            else if (withoutReviewedEvidence)
+            {
+                reviewSeed = new EditorialReviewSeed(
+                    new Dictionary<
+                        string,
+                        ReviewedCatalogEvidence>(
+                        StringComparer.Ordinal),
+                    "manifest-refresh-v1",
+                    "Automated manifest refresh",
+                    reviewDateOption ??
+                    throw new ArgumentException(
+                        "--without-reviewed-evidence requires --review-date."),
+                    "none:v1");
+            }
+            else
+            {
+                reviewSeed =
+                    EditorialReviewInfrastructure.LoadReviewEvidence(
+                        Path.GetFullPath(
+                            configuredReviewEvidencePath ??
+                            defaultReviewEvidencePath),
+                        reviewSources);
+            }
+            reviewManifest =
+                EditorialReviewInfrastructure.Refresh(
+                    editorialReviewManifestPath,
+                    reviewSources,
+                    reviewSeed.Catalogs,
+                    invariantApprovedValues,
+                    reviewSeed.Batch,
+                    reviewSeed.Reviewer,
+                    reviewSeed.Date);
+            EditorialReviewInfrastructure.ValidateManifest(
+                reviewManifest,
+                reviewSources,
+                invariantApprovedValues,
+                requireComplete: false);
+            pendingOutputs[editorialReviewManifestPath] =
+                EditorialReviewInfrastructure.SerializeManifest(
+                    reviewManifest);
+            Console.WriteLine(
+                "Refreshed editorial review manifest with " +
+                $"{reviewManifest.Records.Count:N0} resources: " +
+                DescribeReviewStatusCounts(reviewManifest) +
+                ".");
+        }
+        else
+        {
+            reviewManifest =
+                EditorialReviewInfrastructure.LoadAndValidate(
+                    editorialReviewManifestPath,
+                    reviewSources,
+                    invariantApprovedValues,
+                    strictEditorialReview);
+        }
+
+        if (approveReviewPacketPath is not null)
+        {
+            string reviewBatch =
+                GetOptionValue(
+                    args,
+                    "--review-batch") ??
+                throw new ArgumentException(
+                    "--approve-review-packet requires --review-batch.");
+            string reviewer =
+                GetOptionValue(
+                    args,
+                    "--reviewer") ??
+                throw new ArgumentException(
+                    "--approve-review-packet requires --reviewer.");
+            string reviewDate =
+                GetOptionValue(
+                    args,
+                    "--review-date") ??
+                throw new ArgumentException(
+                    "--approve-review-packet requires --review-date.");
+            reviewManifest =
+                EditorialReviewInfrastructure.ApproveReviewPacket(
+                    Path.GetFullPath(approveReviewPacketPath),
+                    reviewSources,
+                    reviewManifest,
+                    reviewBatch,
+                    reviewer,
+                    reviewDate);
+            EditorialReviewInfrastructure.ValidateManifest(
+                reviewManifest,
+                reviewSources,
+                invariantApprovedValues,
+                requireComplete: false);
+            pendingOutputs[editorialReviewManifestPath] =
+                EditorialReviewInfrastructure.SerializeManifest(
+                    reviewManifest);
+            Console.WriteLine(
+                "Approved review packet entries: " +
+                DescribeReviewStatusCounts(reviewManifest) +
+                ".");
+        }
+
+        if (reviewAuditPath is not null)
+            pendingOutputs[Path.GetFullPath(reviewAuditPath)] =
+                EditorialReviewInfrastructure.SerializeAudit(
+                    reviewManifest);
+        if (reviewPacketPath is not null)
+            pendingOutputs[Path.GetFullPath(reviewPacketPath)] =
+                EditorialReviewInfrastructure.SerializeReviewPacket(
+                    reviewDomain,
+                    reviewSources,
+                    reviewManifest);
+
+        AtomicOutputBatch.Commit(pendingOutputs);
         Console.WriteLine(
             $"{(checkOnly ? "Validated" : "Generated")} " +
             $"{Locales.Length} satellite catalogs with " +
@@ -255,6 +589,15 @@ internal static partial class CatalogGenerator
             IReadOnlyDictionary<string, string>>
             editorialOverrides)
     {
+        if (editorialOverrides.TryGetValue(
+                key,
+                out IReadOnlyDictionary<string, string>?
+                    editorialTranslations))
+            return ValidateProtectedTerms(
+                key,
+                source,
+                editorialTranslations[locale.Name],
+                locale.Name);
         if (NativeAutonyms.TryGetValue(key, out string? autonym))
             return autonym;
         if (key == "Common.Beta")
@@ -271,15 +614,6 @@ internal static partial class CatalogGenerator
                 "zh-TW" => "測試版",
                 _ => "Beta",
             };
-        if (editorialOverrides.TryGetValue(
-                key,
-                out IReadOnlyDictionary<string, string>?
-                    editorialTranslations))
-            return ValidateProtectedTerms(
-                key,
-                source,
-                editorialTranslations[locale.Name],
-                locale.Name);
         if (ExactResourceTranslations.TryGetValue(
                 key,
                 out IReadOnlyDictionary<string, string>?
@@ -519,13 +853,18 @@ internal static partial class CatalogGenerator
             yield return word[..^2];
     }
 
-    private static IReadOnlyList<Term> ParseTerms()
+    private static IReadOnlyList<Term> ParseTerms(
+        string translationRows)
     {
         string[] localeNames = Locales
             .Select(locale => locale.Name)
             .ToArray();
         var terms = new List<Term>();
-        foreach (string rawLine in TranslationRows.Split('\n'))
+        var translationsBySource = new Dictionary<
+            string,
+            IReadOnlyDictionary<string, string>>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (string rawLine in translationRows.Split('\n'))
         {
             string line = rawLine.Trim();
             if (line.Length == 0 || line.StartsWith('#'))
@@ -540,6 +879,28 @@ internal static partial class CatalogGenerator
             for (int index = 0; index < localeNames.Length; index++)
                 translations[localeNames[index]] = columns[index + 1].Trim();
             string source = columns[0].Trim();
+            if (translationsBySource.TryGetValue(
+                    source,
+                    out IReadOnlyDictionary<string, string>?
+                        existingTranslations))
+            {
+                string[] conflicts =
+                [
+                    .. localeNames.Where(locale =>
+                        !string.Equals(
+                            existingTranslations[locale],
+                            translations[locale],
+                            StringComparison.Ordinal)),
+                ];
+                if (conflicts.Length > 0)
+                    throw new InvalidDataException(
+                        $"Translation glossary source '{source}' has " +
+                        "conflicting duplicate translations for: " +
+                        string.Join(", ", conflicts) +
+                        ".");
+                continue;
+            }
+            translationsBySource.Add(source, translations);
             terms.Add(new Term(
                 source,
                 translations,
@@ -551,6 +912,87 @@ internal static partial class CatalogGenerator
             .ThenBy(term => term.Source, StringComparer.Ordinal)
             .ToArray();
     }
+
+    private static IReadOnlyList<CatalogReviewSource>
+        BuildCatalogReviewSources(
+            IReadOnlyList<XElement> neutralEntries,
+            IReadOnlyDictionary<string, XDocument> generatedCatalogs,
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyDictionary<string, string>>
+                editorialOverrides)
+    {
+        var valuesByCulture = generatedCatalogs.ToDictionary(
+            item => item.Key,
+            item =>
+                (IReadOnlyDictionary<string, string>)
+                item.Value.Root!
+                    .Elements("data")
+                    .ToDictionary(
+                        entry =>
+                            (string?)entry.Attribute("name") ?? "",
+                        entry =>
+                            entry.Element("value")?.Value ?? "",
+                        StringComparer.Ordinal),
+            StringComparer.Ordinal);
+        var results = new List<CatalogReviewSource>(
+            neutralEntries.Count);
+        foreach (XElement entry in neutralEntries)
+        {
+            string key =
+                (string?)entry.Attribute("name") ?? "";
+            var translations = new Dictionary<string, string>(
+                StringComparer.Ordinal);
+            foreach (string culture in
+                     EditorialReviewInfrastructure.ShippingCultures)
+                translations[culture] =
+                    valuesByCulture[culture][key];
+            results.Add(
+                new CatalogReviewSource(
+                    key,
+                    entry.Element("value")?.Value ?? "",
+                    translations,
+                    DetermineTranslationRoute(
+                        key,
+                        editorialOverrides)));
+        }
+        return results;
+    }
+
+    private static CatalogTranslationRoute
+        DetermineTranslationRoute(
+            string key,
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyDictionary<string, string>>
+                editorialOverrides)
+    {
+        if (editorialOverrides.ContainsKey(key))
+            return CatalogTranslationRoute.EditorialOverride;
+        if (NativeAutonyms.ContainsKey(key))
+            return CatalogTranslationRoute.NativeAutonym;
+        if (string.Equals(
+                key,
+                "Common.Beta",
+                StringComparison.Ordinal))
+            return CatalogTranslationRoute.BuiltInSpecialCase;
+        if (ExactResourceTranslations.ContainsKey(key))
+            return CatalogTranslationRoute.ExactResource;
+        return CatalogTranslationRoute.Glossary;
+    }
+
+    private static string DescribeReviewStatusCounts(
+        EditorialReviewManifest manifest) =>
+        string.Join(
+            ", ",
+            Enum.GetValues<EditorialReviewStatus>()
+                .Select(status =>
+                    $"{status}=" +
+                    manifest.Records.Values.Count(record =>
+                        record.Status == status).ToString(
+                            "N0",
+                            System.Globalization.CultureInfo
+                                .InvariantCulture)));
 
     private static string? GetOptionValue(
         IReadOnlyList<string> args,
@@ -580,6 +1022,65 @@ internal static partial class CatalogGenerator
             throw new ArgumentException(
                 $"{option} requires a path.");
         return args[index + 1];
+    }
+
+    private static void ValidateArguments(
+        IReadOnlyList<string> args)
+    {
+        var valueOptions = new HashSet<string>(
+            StringComparer.Ordinal)
+        {
+            "--output-directory",
+            "--editorial-overrides",
+            "--capture-editorial-overrides",
+            "--editorial-review-manifest",
+            "--export-review-audit",
+            "--export-review-packet",
+            "--approve-review-packet",
+            "--review-domain",
+            "--glossary",
+            "--invariant-allowlist",
+            "--review-baseline-ref",
+            "--reviewed-ref",
+            "--review-batch",
+            "--reviewer",
+            "--review-date",
+            "--review-evidence",
+            "--export-reviewed-evidence",
+        };
+        var flagOptions = new HashSet<string>(
+            StringComparer.Ordinal)
+        {
+            "--check",
+            "--refresh-editorial-review-manifest",
+            "--strict-editorial-review",
+            "--without-reviewed-evidence",
+        };
+        var seen = new HashSet<string>(
+            StringComparer.Ordinal);
+        for (int index = 0; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (!valueOptions.Contains(argument) &&
+                !flagOptions.Contains(argument))
+                throw new ArgumentException(
+                    argument.StartsWith(
+                        "--",
+                        StringComparison.Ordinal)
+                        ? $"Unknown option '{argument}'."
+                        : $"Unexpected positional argument '{argument}'.");
+            if (!seen.Add(argument))
+                throw new ArgumentException(
+                    $"Option '{argument}' is duplicated.");
+            if (!valueOptions.Contains(argument))
+                continue;
+            if (++index >= args.Count ||
+                args[index].StartsWith(
+                    "--",
+                    StringComparison.Ordinal))
+                throw new ArgumentException(
+                    $"{argument} requires a value.");
+        }
     }
 
     private static IReadOnlyDictionary<
@@ -1427,7 +1928,6 @@ internal static partial class CatalogGenerator
         advanced|Erweitert|avanzado|avancé|avanzate|avançado|詳細設定|고급|高级|進階
         more|Mehr|más|plus|altro|mais|その他|더 보기|更多|更多
         less|Weniger|menos|moins|meno|menos|少なく|간단히|更少|較少
-        information|Information|información|informations|informazioni|informações|情報|정보|信息|資訊
         summary|Zusammenfassung|resumen|résumé|riepilogo|resumo|概要|요약|摘要|摘要
         message|Meldung|mensaje|message|messaggio|mensagem|メッセージ|메시지|消息|訊息
         reason|Grund|motivo|raison|motivo|motivo|理由|이유|原因|原因
@@ -1554,8 +2054,6 @@ internal static partial class CatalogGenerator
         under|unter|bajo|sous|sotto|sob|下|아래|下|下
         over|über|sobre|sur|sopra|sobre|上|위|上|上
         between|zwischen|entre|entre|tra|entre|間|사이|之间|之間
-        before|vor|antes de|avant|prima di|antes de|前|전에|之前|之前
-        after|nach|después de|après|dopo|depois de|後|후에|之后|之後
         when|wenn|cuando|lorsque|quando|quando|場合|때|当|當
         while|während|mientras|pendant|mentre|enquanto|間|동안|期间|期間
         if|wenn|si|si|se|se|場合|경우|如果|如果
@@ -1603,7 +2101,6 @@ internal static partial class CatalogGenerator
         send|senden|enviar|envoyer|invia|enviar|送信|보내기|发送|傳送
         allow|zulassen|permitir|autoriser|consenti|permitir|許可|허용|允许|允許
         require|erfordern|requerir|exiger|richiedi|exigir|必須|필요|需要|需要
-        required|erforderlich|requerido|requis|richiesto|obrigatório|必須|필수|必需|必要
         press|drücken|pulsar|appuyer|premi|pressionar|押す|누르기|按|按下
         click|klicken|hacer clic|cliquer|fai clic|clicar|クリック|클릭|单击|按一下
         drag|ziehen|arrastrar|faire glisser|trascina|arrastar|ドラッグ|끌기|拖动|拖曳
@@ -1636,7 +2133,6 @@ internal static partial class CatalogGenerator
         reset|zurücksetzen|restablecer|réinitialiser|reimposta|redefinir|リセット|재설정|重置|重設
         browse|durchsuchen|examinar|parcourir|sfoglia|procurar|参照|찾아보기|浏览|瀏覽
         unknown|unbekannt|desconocido|inconnu|sconosciuto|desconhecido|不明|알 수 없음|未知|未知
-        missing|fehlend|falta|manquant|mancante|ausente|不足|누락|缺失|遺失
         runs|Läufe|ejecuciones|exécutions|esecuzioni|execuções|実行|실행|运行|執行
         other|Sonstige|otro|autre|altro|outro|その他|기타|其他|其他
         recording|Aufnahme|grabación|enregistrement|registrazione|gravação|録音|녹음|录音|錄音
@@ -1903,7 +2399,6 @@ internal static partial class CatalogGenerator
         checking|Prüfung|comprobando|vérification|controllo|verificando|確認中|확인 중|正在检查|正在檢查
         comparing|Vergleich|comparando|comparaison|confronto|comparando|比較中|비교 중|正在比较|正在比較
         compilation|Kompilation|recopilación|compilation|compilation|compilação|コンピレーション|컴필레이션|合辑|合輯
-        token|Token|token|jeton|token|token|トークン|토큰|令牌|權杖
         decoded|Dekodiert|decodificado|décodé|decodificato|decodificado|デコード済み|디코딩됨|已解码|已解碼
         verification|Überprüfung|verificación|vérification|verifica|verificação|検証|확인|验证|驗證
         decoding|Dekodierung|decodificando|décodage|decodifica|decodificando|デコード中|디코딩 중|正在解码|正在解碼
