@@ -821,15 +821,16 @@ public partial class LibraryView : UserControl
         const double minimumCentralTaskWidth = 760;
         const double minimumInspectorWidth = 320;
         const double splitDividerWidth = 10;
-        double splitHostWidth =
-            WorkspaceSplit.Bounds.Width;
-        bool compact = splitHostWidth > 0
-            ? splitHostWidth <
-              minimumCentralTaskWidth +
-              splitDividerWidth +
-              minimumInspectorWidth
-            : _shellRequestedCompact ||
-              Bounds.Width < 1138;
+        double requiredWorkspaceWidth =
+            minimumCentralTaskWidth +
+            splitDividerWidth +
+            minimumInspectorWidth;
+        double workspaceWidth =
+            ResolveWorkspaceWidth();
+        bool compact = workspaceWidth > 0
+            ? workspaceWidth <
+              requiredWorkspaceWidth
+            : _shellRequestedCompact;
         if (_responsiveCompact == compact)
         {
             ApplyInspectorVisibility();
@@ -842,6 +843,32 @@ public partial class LibraryView : UserControl
             _inspectorFocusReturn = null;
         }
         ApplyInspectorVisibility();
+    }
+
+    private double ResolveWorkspaceWidth()
+    {
+        // WorkspaceSplit can still report its previous width while the parent
+        // SizeChanged event is being delivered. Derive the pending workspace
+        // allocation from the current content-host bounds so growing through a
+        // breakpoint never selects the narrower presentation transiently.
+        if (Bounds.Width > 0)
+        {
+            bool compactHeight =
+                Bounds.Height > 0 &&
+                Bounds.Height <=
+                AdaptivePage.CompactHeightThreshold;
+            double gutter = compactHeight
+                ? AdaptivePage.CompactHeightGutter
+                : Bounds.Width <
+                  AdaptivePage.NarrowContentThreshold
+                    ? AdaptivePage.NarrowGutter
+                    : AdaptivePage.WideGutter;
+            return Math.Max(
+                0,
+                Bounds.Width - gutter * 2);
+        }
+
+        return WorkspaceSplit.Bounds.Width;
     }
 
     private void OnSavedViewChanged(object? sender, SelectionChangedEventArgs e)

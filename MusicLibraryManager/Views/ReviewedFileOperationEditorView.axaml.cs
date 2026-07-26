@@ -37,9 +37,6 @@ public partial class ReviewedFileOperationEditorView :
             SourceOptionsLayout.RowDefinitions.Add(
                 new RowDefinition(
                     GridLength.Auto));
-            SourceOptionsLayout.RowDefinitions.Add(
-                new RowDefinition(
-                    GridLength.Auto));
             Grid.SetColumn(
                 ReviewedFileOperationKindField,
                 0);
@@ -52,12 +49,6 @@ public partial class ReviewedFileOperationEditorView :
             Grid.SetRow(
                 DestinationLayout,
                 1);
-            Grid.SetColumn(
-                TargetSummaryText,
-                0);
-            Grid.SetRow(
-                TargetSummaryText,
-                2);
 
             TemplateOptionsLayout
                 .ColumnDefinitions.Add(
@@ -109,9 +100,6 @@ public partial class ReviewedFileOperationEditorView :
             SourceOptionsLayout.ColumnDefinitions.Add(
                 new ColumnDefinition(
                     GridLength.Star));
-            SourceOptionsLayout.ColumnDefinitions.Add(
-                new ColumnDefinition(
-                    GridLength.Auto));
             SourceOptionsLayout.RowDefinitions.Add(
                 new RowDefinition(
                     GridLength.Auto));
@@ -126,12 +114,6 @@ public partial class ReviewedFileOperationEditorView :
                 1);
             Grid.SetRow(
                 DestinationLayout,
-                0);
-            Grid.SetColumn(
-                TargetSummaryText,
-                2);
-            Grid.SetRow(
-                TargetSummaryText,
                 0);
 
             TemplateOptionsLayout

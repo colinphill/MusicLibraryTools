@@ -312,52 +312,35 @@ public sealed class UiStateScreenshotFixtureTests
                 $"{state}: page-level horizontal overflow was {scroll.Extent.Width:0.0}/{scroll.Viewport.Width:0.0}.");
         }
 
-        foreach (Control action in
-                 view.GetVisualDescendants()
-                     .OfType<Control>()
-                     .Where(control =>
-                         control
-                             .IsEffectivelyVisible &&
-                         (control.Classes.Contains(
-                              "primary") ||
-                          control.Classes.Contains(
-                              "danger")) &&
-                         control.Bounds.Width > 0 &&
-                         control.Bounds.Height > 0))
+        Control[] actions =
+        [
+            .. view.GetVisualDescendants()
+                .OfType<Control>()
+                .Where(control =>
+                    control
+                        .IsEffectivelyVisible &&
+                    (control.Classes.Contains(
+                         "primary") ||
+                     control.Classes.Contains(
+                         "danger")) &&
+                    control.Bounds.Width > 0 &&
+                    control.Bounds.Height > 0),
+        ];
+        foreach (Control action in actions)
         {
-            Point? topLeft =
-                action.TranslatePoint(
-                    new Point(),
-                    view);
-            Point? bottomRight =
-                action.TranslatePoint(
-                    new(
-                        action.Bounds.Width,
-                        action.Bounds.Height),
-                    view);
-            Assert.NotNull(topLeft);
-            Assert.NotNull(bottomRight);
-            bool intersectsViewport =
-                bottomRight.Value.X >= 0 &&
-                bottomRight.Value.Y >= 0 &&
-                topLeft.Value.X <=
-                view.Bounds.Width &&
-                topLeft.Value.Y <=
-                view.Bounds.Height;
-            if (!intersectsViewport)
-                continue;
-
             string actionName =
                 action.Name ??
                 action.GetType().Name;
+            UiActionReachabilityResult
+                result =
+                UiViewportReachability
+                    .VerifyAction(
+                        view,
+                        action,
+                        Render);
             Assert.True(
-                topLeft.Value.X >= -1 &&
-                topLeft.Value.Y >= -1 &&
-                bottomRight.Value.X <=
-                view.Bounds.Width + 1 &&
-                bottomRight.Value.Y <=
-                view.Bounds.Height + 1,
-                $"{state}: {actionName} was clipped ({topLeft.Value.X:0.0},{topLeft.Value.Y:0.0})-({bottomRight.Value.X:0.0},{bottomRight.Value.Y:0.0}) inside {view.Bounds.Width:0.0}x{view.Bounds.Height:0.0}.");
+                result.IsReachable,
+                $"{state}: {actionName} was not fully visible or vertically reachable. {result.Detail}");
         }
     }
 

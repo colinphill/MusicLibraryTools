@@ -502,12 +502,20 @@ public partial class WorkbenchView : UserControl
     public void ApplyResponsiveLayout(
         bool compact)
     {
-        double width = Bounds.Width;
-        double height = Bounds.Height;
+        // Before the control is measured, honor the shell's requested
+        // presentation instead of briefly selecting an unrelated intermediate
+        // mode. The measured bounds become authoritative as soon as they exist.
+        double width = Bounds.Width > 0
+            ? Bounds.Width
+            : compact
+                ? 900
+                : 1380;
+        double height = Bounds.Height > 0
+            ? Bounds.Height
+            : AdaptivePage.CompactHeightThreshold + 1;
         bool wasResponsiveCompact =
             _responsiveCompact;
         _compactHeight =
-            height > 0 &&
             height <= 700;
 
         double gutter = _compactHeight
@@ -518,11 +526,7 @@ public partial class WorkbenchView : UserControl
                 ? AdaptivePage.NarrowGutter
                 : AdaptivePage.WideGutter;
         double contentWidth =
-            width > 0
-                ? Math.Max(0, width - gutter * 2)
-                : compact
-                    ? 700
-                    : 1200;
+            Math.Max(0, width - gutter * 2);
         const double railAndDividerWidth = 222;
         const double preferredDrawerWidth = 340;
         const double splitDividerWidth = 10;

@@ -897,6 +897,10 @@ public sealed class WorkbenchInteractionTests
     private static ServiceProvider BuildServices()
     {
         var settings = new TestSettings();
+        settings.SetPreference(
+            AppearancePreferences
+                .ShellRailExpandedPreference,
+            bool.FalseString);
         return Composition.BuildServices(collection =>
         {
             collection.AddSingleton<IAppSettings>(

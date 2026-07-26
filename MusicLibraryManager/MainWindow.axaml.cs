@@ -418,11 +418,16 @@ public partial class MainWindow : Window
     {
         double shellWidth = Math.Max(
             MinWidth,
-            BodyGrid.Bounds.Width > 0
-                ? BodyGrid.Bounds.Width
-                : Bounds.Width > 0
-                    ? Bounds.Width
+            Bounds.Width > 0
+                ? Bounds.Width
+                : BodyGrid.Bounds.Width > 0
+                    ? BodyGrid.Bounds.Width
                     : Width);
+        double shellHeight = Math.Max(
+            MinHeight,
+            Bounds.Height > 0
+                ? Bounds.Height
+                : Height);
         _canDockExpandedRail =
             shellWidth >= MinimumDestinationWidth +
             ExpandedRailWidth;
@@ -473,7 +478,7 @@ public partial class MainWindow : Window
         bool compactToolbar = contentWidth <= 900;
         ConfigurationChipText.IsVisible = !compactToolbar;
         SearchShortcut.IsVisible = !compactToolbar;
-        bool compactHeight = Bounds.Height <= 700;
+        bool compactHeight = shellHeight <= 700;
         double gutter = compactHeight
             ? 12
             : contentWidth < 1000

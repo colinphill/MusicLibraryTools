@@ -34,10 +34,32 @@ public sealed class WorkbenchResponsiveMatrixTests
             ("dark", ThemeVariant.Dark),
         ];
 
+    private static readonly (
+        string Name,
+        string Culture,
+        bool Expanded)[] Presentations =
+        [
+            ("en-US", "en-US", false),
+            ("de-DE", "de-DE", false),
+            ("ja-JP", "ja-JP", false),
+            ("zh-CN", "zh-CN", false),
+            ("pseudo-expanded", "en-US", true),
+        ];
+
+    private static readonly UiDensity[] Densities =
+    [
+        UiDensity.Standard,
+        UiDensity.Compact,
+    ];
+
     [AvaloniaFact]
     public void Every_workbench_destination_fits_the_required_responsive_matrix()
     {
         var settings = new MatrixSettings();
+        settings.SetPreference(
+            AppearancePreferences
+                .ShellRailExpandedPreference,
+            bool.FalseString);
         var neutral = new ResourceLocalizationService(
             settings);
         var localization =
@@ -57,6 +79,8 @@ public sealed class WorkbenchResponsiveMatrixTests
 
         ThemeVariant? previousTheme =
             Application.Current!.RequestedThemeVariant;
+        CultureInfo previousUICulture =
+            CultureInfo.CurrentUICulture;
         MainWindow window =
             services.GetRequiredService<MainWindow>();
         string? captureDirectory =
@@ -72,95 +96,136 @@ public sealed class WorkbenchResponsiveMatrixTests
                 .Navigate(
                     ShellDestination.Workbench);
 
-            foreach (bool expanded in
-                     new[] { false, true })
+            foreach ((string presentationName,
+                         string culture,
+                         bool expanded) in
+                     Presentations)
             {
+                localization.SetCulture(
+                    culture);
                 localization.SetExpanded(expanded);
-                foreach (double fontSize in
-                         new[] { 14d, 18d })
+                foreach (UiDensity density in
+                         Densities)
                 {
-                    window.FontSize = fontSize;
-                    foreach ((string themeName,
-                                 ThemeVariant theme) in
-                             Themes)
+                    AppearancePreferences.SetDensity(
+                        settings,
+                        density);
+                    string densityName =
+                        density.ToString()
+                            .ToLowerInvariant();
+                    foreach (double fontSize in
+                             new[] { 14d, 18d })
                     {
-                        Application.Current
-                            .RequestedThemeVariant =
-                            theme;
-                        foreach ((int width,
-                                     int height) in
-                                 Viewports)
+                        window.FontSize = fontSize;
+                        foreach ((string themeName,
+                                     ThemeVariant theme) in
+                                 Themes)
                         {
-                            window.Width = width;
-                            window.Height = height;
-                            Render();
-
-                            WorkbenchView view =
-                                Assert.IsType<
-                                    WorkbenchView>(
-                                    window.FindControl<
-                                        ContentControl>(
-                                        "ContentHost")!
-                                        .Content);
-                            WorkbenchViewModel model =
-                                services
-                                    .GetRequiredService<
-                                        WorkbenchViewModel>();
-                            Carousel sections =
-                                view.FindControl<
-                                    Carousel>(
-                                    "WorkbenchTabs")!;
-
-                            AssertNavigationMode(
-                                view,
-                                width);
-                            foreach (
-                                WorkbenchSection section
-                                in Enum.GetValues<
-                                    WorkbenchSection>())
+                            Application.Current
+                                .RequestedThemeVariant =
+                                theme;
+                            foreach ((int width,
+                                         int height) in
+                                     Viewports)
                             {
-                                model.SelectedSection =
-                                    section;
+                                window.Width = width;
+                                window.Height = height;
                                 Render();
 
-                                Assert.Equal(
-                                    (int)section,
-                                    sections
-                                        .SelectedIndex);
-                                AssertSectionFits(
-                                    view,
-                                    sections,
-                                    section,
-                                    width,
-                                    height);
-                                AssertAtMostOnePrimaryPerToolbar(
-                                    view,
-                                    section);
+                                Assert.Contains(
+                                    $"density-{densityName}",
+                                    window.Classes);
+                                Assert.False(
+                                    window.FindControl<
+                                            Border>(
+                                            "NavigationScrim")!
+                                        .IsVisible,
+                                    "The shell navigation overlay obscured the Workbench matrix.");
+                                WorkbenchView view =
+                                    Assert.IsType<
+                                        WorkbenchView>(
+                                        window.FindControl<
+                                            ContentControl>(
+                                            "ContentHost")!
+                                            .Content);
+                                WorkbenchViewModel model =
+                                    services
+                                        .GetRequiredService<
+                                            WorkbenchViewModel>();
+                                Carousel sections =
+                                    view.FindControl<
+                                        Carousel>(
+                                        "WorkbenchTabs")!;
 
-                                if (section ==
-                                        WorkbenchSection
-                                            .Session &&
-                                    width == 900 &&
-                                    height == 600)
+                                AssertNavigationMode(
+                                    view,
+                                    width);
+                                foreach (
+                                    WorkbenchSection section
+                                    in Enum.GetValues<
+                                        WorkbenchSection>())
                                 {
-                                    Assert.True(
-                                        view.FindControl<
-                                                AppDataGrid>(
-                                                "WorkbenchGrid")!
-                                            .Bounds.Height >=
-                                        220,
-                                        "The compact Session grid must retain at least 220 px of usable height.");
-                                }
+                                    model.SelectedSection =
+                                        section;
+                                    Render();
 
-                                CaptureRepresentativeFrame(
-                                    window,
-                                    captureDirectory,
-                                    expanded,
-                                    fontSize,
-                                    themeName,
-                                    width,
-                                    height,
-                                    section);
+                                    Assert.Equal(
+                                        (int)section,
+                                        sections
+                                            .SelectedIndex);
+                                    AssertSectionFits(
+                                        view,
+                                        sections,
+                                        section,
+                                        width,
+                                        height);
+                                    AssertAtMostOnePrimaryPerToolbar(
+                                        view,
+                                        section);
+                                    if (!expanded)
+                                    {
+                                        Assert.DoesNotContain(
+                                            view
+                                                .GetVisualDescendants()
+                                                .OfType<
+                                                    TextBlock>()
+                                                .Where(text =>
+                                                    text
+                                                        .IsEffectivelyVisible)
+                                                .Select(text =>
+                                                    text.Text ??
+                                                    ""),
+                                            text =>
+                                                text.Contains(
+                                                    '\u27E6'));
+                                    }
+
+                                    if (section ==
+                                            WorkbenchSection
+                                                .Session &&
+                                        width == 900 &&
+                                        height == 600)
+                                    {
+                                        Assert.True(
+                                            view.FindControl<
+                                                    AppDataGrid>(
+                                                    "WorkbenchGrid")!
+                                                .Bounds.Height >=
+                                            220,
+                                            "The compact Session grid must retain at least 220 px of usable height.");
+                                    }
+
+                                    CaptureMatrixFrame(
+                                        window,
+                                        captureDirectory,
+                                        presentationName,
+                                        densityName,
+                                        fontSize,
+                                        themeName,
+                                        width,
+                                        height,
+                                        section);
+                                }
                             }
                         }
                     }
@@ -173,6 +238,8 @@ public sealed class WorkbenchResponsiveMatrixTests
             Application.Current
                 .RequestedThemeVariant =
                 previousTheme;
+            CultureInfo.CurrentUICulture =
+                previousUICulture;
         }
     }
 
@@ -180,6 +247,10 @@ public sealed class WorkbenchResponsiveMatrixTests
     public void GermanAndCjkLocalesFitEveryWorkbenchDestinationAtMinimumSize()
     {
         var settings = new MatrixSettings();
+        settings.SetPreference(
+            AppearancePreferences
+                .ShellRailExpandedPreference,
+            bool.FalseString);
         var localization = new ResourceLocalizationService(settings);
         using ServiceProvider services =
             Composition.BuildServices(collection =>
@@ -215,6 +286,11 @@ public sealed class WorkbenchResponsiveMatrixTests
                 {
                     Application.Current.RequestedThemeVariant = theme;
                     Render();
+                    Assert.False(
+                        window.FindControl<Border>(
+                                "NavigationScrim")!
+                            .IsVisible,
+                        "The shell navigation overlay obscured the localized Workbench matrix.");
                     WorkbenchView view = Assert.IsType<WorkbenchView>(
                         window.FindControl<ContentControl>("ContentHost")!.Content);
                     WorkbenchViewModel model =
@@ -512,10 +588,11 @@ public sealed class WorkbenchResponsiveMatrixTests
         }
     }
 
-    private static void CaptureRepresentativeFrame(
+    private static void CaptureMatrixFrame(
         MainWindow window,
         string? captureDirectory,
-        bool expanded,
+        string presentation,
+        string density,
         double fontSize,
         string themeName,
         int width,
@@ -533,10 +610,7 @@ public sealed class WorkbenchResponsiveMatrixTests
             frame.PixelSize.Height);
 
         if (string.IsNullOrWhiteSpace(
-                captureDirectory) ||
-            !expanded ||
-            fontSize != 18 ||
-            themeName != "dark")
+                captureDirectory))
             return;
 
         Directory.CreateDirectory(
@@ -544,7 +618,7 @@ public sealed class WorkbenchResponsiveMatrixTests
         frame.Save(
             Path.Combine(
                 captureDirectory,
-                $"workbench-pseudo-18-dark-{width}x{height}-{section}.png"),
+                $"workbench-matrix-{presentation}-{density}-{fontSize:0}-{themeName}-{width}x{height}-{section}.png"),
             PngBitmapEncoderOptions.Default);
     }
 

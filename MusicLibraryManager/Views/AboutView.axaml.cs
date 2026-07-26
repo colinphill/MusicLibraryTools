@@ -100,8 +100,8 @@ public partial class AboutView : UserControl
             AboutPageScaffold.ContentWidth > 0 &&
             AboutPageScaffold.ContentWidth < 960;
         bool compactHero =
-            (AboutPageScaffold.Bounds.Height > 0 &&
-             AboutPageScaffold.Bounds.Height <= 700) ||
+            (Bounds.Height > 0 &&
+             Bounds.Height <= 700) ||
             (AboutPageScaffold.ContentWidth > 0 &&
              AboutPageScaffold.ContentWidth < 720);
         double markSize =

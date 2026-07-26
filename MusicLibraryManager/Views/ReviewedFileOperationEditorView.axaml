@@ -4,14 +4,24 @@
              xmlns:controls="using:MusicLibraryManager.Controls">
   <Grid x:Name="EditorLayout"
         Margin="0,12,0,0"
-        RowDefinitions="*,*,Auto"
+        RowDefinitions="Auto,*,*,Auto"
         RowSpacing="12">
+    <Border x:Name="TargetSummaryText"
+            Grid.Row="0"
+            Classes="status-banner info"
+            Padding="12,8">
+      <TextBlock Text="{Binding TargetSummary}"
+                 TextWrapping="Wrap"
+                 AutomationProperties.LiveSetting="Polite" />
+    </Border>
+
     <ScrollViewer x:Name="ReviewedFileOperationFormScroll"
+                  Grid.Row="1"
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
       <StackPanel Classes="content-stack">
         <Grid x:Name="SourceOptionsLayout"
-              ColumnDefinitions="170,*,Auto"
+              ColumnDefinitions="170,*"
               ColumnSpacing="8">
       <StackPanel x:Name="ReviewedFileOperationKindField"
                   Classes="field">
@@ -44,15 +54,6 @@
                   Command="{Binding BrowseDestinationCommand}" />
         </Grid>
       </StackPanel>
-      <Border x:Name="TargetSummaryText"
-              Grid.Column="2"
-              Classes="status-banner info"
-              Padding="12,8"
-              VerticalAlignment="Bottom">
-        <TextBlock Text="{Binding TargetSummary}"
-                   TextWrapping="Wrap"
-                   AutomationProperties.LiveSetting="Polite" />
-      </Border>
         </Grid>
 
         <Grid x:Name="TemplateOptionsLayout"
@@ -93,12 +94,12 @@
     </ScrollViewer>
 
     <controls:AppDataGrid x:Name="ReviewedFileOperationPreviewGrid"
-                          Grid.Row="1"
+                          Grid.Row="2"
                           MinHeight="72"
                           ItemsSource="{Binding PreviewItems}"
         AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.PreviewAutomation}" />
 
-    <Border Grid.Row="2"
+    <Border Grid.Row="3"
             Classes="sticky-footer">
       <Grid ColumnDefinitions="*,160,Auto,Auto"
             ColumnSpacing="8">

@@ -5406,6 +5406,11 @@ public sealed class UiControlTests
                 Application.Current.RequestedThemeVariant = theme;
                 using ServiceProvider services = BuildIsolatedServices();
                 App.UseServicesForTests(services);
+                services.GetRequiredService<IAppSettings>()
+                    .SetPreference(
+                        AppearancePreferences
+                            .ShellRailExpandedPreference,
+                        bool.FalseString);
                 MainWindow window = services.GetRequiredService<MainWindow>();
                 INavigationService navigation = services.GetRequiredService<INavigationService>();
                 try
@@ -5417,6 +5422,11 @@ public sealed class UiControlTests
                     window.Activate();
                     Dispatcher.UIThread.RunJobs();
 
+                    Assert.False(
+                        window.FindControl<Border>(
+                                "NavigationScrim")!
+                            .IsVisible,
+                        "The shell navigation overlay obscured the minimum-size destination capture.");
                     Assert.Equal(64, window.FindControl<Grid>("BodyGrid")!.ColumnDefinitions[0].ActualWidth);
                     Assert.False(window.FindControl<TextBlock>("ConfigurationChipText")!.IsVisible);
                     Assert.False(window.FindControl<Border>("SearchShortcut")!.IsVisible);
@@ -5996,6 +6006,15 @@ public sealed class UiControlTests
                 using ServiceProvider services = BuildIsolatedServices(
                     fixture.Select(row => row.Record).ToArray());
                 App.UseServicesForTests(services);
+                if (width == 900)
+                {
+                    services.GetRequiredService<
+                            IAppSettings>()
+                        .SetPreference(
+                            AppearancePreferences
+                                .ShellRailExpandedPreference,
+                            bool.FalseString);
+                }
                 MainWindow window = services.GetRequiredService<MainWindow>();
                 INavigationService navigation = services.GetRequiredService<INavigationService>();
                 IActivityService activities = services.GetRequiredService<IActivityService>();
@@ -6009,6 +6028,11 @@ public sealed class UiControlTests
                     window.Activate();
                     navigation.Navigate(ShellDestination.Library);
                     Dispatcher.UIThread.RunJobs();
+                    Assert.False(
+                        window.FindControl<Border>(
+                                "NavigationScrim")!
+                            .IsVisible,
+                        "The shell navigation overlay obscured the representative state capture.");
 
                     LibraryView view = Assert.IsType<LibraryView>(
                         window.FindControl<ContentControl>("ContentHost")!.Content);

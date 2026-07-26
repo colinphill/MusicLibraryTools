@@ -25,6 +25,479 @@ namespace MusicLibraryManager.UI.Tests;
 public sealed class AdaptiveBreakpointCoverageTests
 {
     [AvaloniaFact]
+    public void Shell_toolbar_gutters_and_activity_switch_at_exact_content_boundaries()
+    {
+        var settings = new TestSettings();
+        settings.SetPreference(
+            AppearancePreferences
+                .ShellRailExpandedPreference,
+            bool.FalseString);
+        using ServiceProvider services =
+            BuildServices(settings);
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<
+                MainWindow>();
+        try
+        {
+            window.WindowState =
+                WindowState.Normal;
+            window.Height = 701;
+            window.Show();
+            Render();
+
+            AssertToolbar(
+                899,
+                compact: true);
+            AssertToolbar(
+                900,
+                compact: true);
+            AssertToolbar(
+                901,
+                compact: false);
+
+            AssertGutter(
+                999,
+                16);
+            AssertGutter(
+                1000,
+                24);
+            AssertGutter(
+                1001,
+                24);
+
+            AssertActivityHeight(
+                699,
+                compact: true);
+            AssertActivityHeight(
+                700,
+                compact: true);
+            AssertActivityHeight(
+                701,
+                compact: false);
+        }
+        finally
+        {
+            window.Hide();
+        }
+
+        void ResizeToContent(
+            double contentWidth,
+            double height)
+        {
+            window.Width = contentWidth + 64;
+            window.Height = height;
+            Render();
+            Grid body =
+                window.FindControl<Grid>(
+                    "BodyGrid")!;
+            Assert.Equal(
+                64,
+                body.ColumnDefinitions[0]
+                    .ActualWidth,
+                precision: 2);
+            Assert.Equal(
+                contentWidth,
+                body.Bounds.Width -
+                body.ColumnDefinitions[0]
+                    .ActualWidth,
+                precision: 2);
+        }
+
+        void AssertToolbar(
+            double contentWidth,
+            bool compact)
+        {
+            ResizeToContent(
+                contentWidth,
+                701);
+            Assert.Equal(
+                !compact,
+                window.FindControl<TextBlock>(
+                    "ConfigurationChipText")!
+                    .IsVisible);
+            Assert.Equal(
+                !compact,
+                window.FindControl<Border>(
+                    "SearchShortcut")!
+                    .IsVisible);
+        }
+
+        void AssertGutter(
+            double contentWidth,
+            double expected)
+        {
+            ResizeToContent(
+                contentWidth,
+                701);
+            Assert.Equal(
+                new Thickness(
+                    expected,
+                    8),
+                window.FindControl<Grid>(
+                    "TopBarContent")!
+                    .Margin);
+        }
+
+        void AssertActivityHeight(
+            double height,
+            bool compact)
+        {
+            ResizeToContent(
+                1001,
+                height);
+            Border activity =
+                window.FindControl<Border>(
+                    "ActivityBanner")!;
+            Assert.Equal(
+                !compact,
+                window.FindControl<TextBlock>(
+                    "ActivityMessageText")!
+                    .IsVisible);
+            Assert.Equal(
+                !compact,
+                window.FindControl<TextBlock>(
+                    "ActivityStateLabel")!
+                    .IsVisible);
+            Assert.Equal(
+                new Thickness(
+                    12,
+                    compact ? 8 : 12),
+                activity.Padding);
+            Assert.Equal(
+                new Thickness(
+                    compact ? 12 : 24,
+                    compact ? 4 : 8,
+                    compact ? 12 : 24,
+                    0),
+                activity.Margin);
+        }
+    }
+
+    [AvaloniaFact]
+    public void About_fields_and_reviewed_file_operations_switch_at_exact_boundaries()
+    {
+        using ServiceProvider services =
+            BuildServices();
+        App.UseServicesForTests(services);
+
+        var about = new AboutView();
+        (Window aboutWindow,
+            Border aboutHost) =
+            ShowInFixedHost(
+                about,
+                1000,
+                800);
+        try
+        {
+            AssertPackageLayout(
+                959,
+                stacked: true);
+            AssertPackageLayout(
+                960,
+                stacked: false);
+            AssertPackageLayout(
+                961,
+                stacked: false);
+
+            AssertHeroWidth(
+                719,
+                compact: true);
+            AssertHeroWidth(
+                720,
+                compact: false);
+            AssertHeroWidth(
+                721,
+                compact: false);
+
+            AssertHeroHeight(
+                699,
+                compact: true);
+            AssertHeroHeight(
+                700,
+                compact: true);
+            AssertHeroHeight(
+                701,
+                compact: false);
+        }
+        finally
+        {
+            aboutWindow.Hide();
+        }
+
+        var fields = new FieldsEditorView();
+        (Window fieldsWindow,
+            Border fieldsHost) =
+            ShowInFixedHost(
+                fields,
+                800,
+                700);
+        try
+        {
+            AssertFieldsLayout(
+                759,
+                stacked: true);
+            AssertFieldsLayout(
+                760,
+                stacked: false);
+            AssertFieldsLayout(
+                761,
+                stacked: false);
+        }
+        finally
+        {
+            fieldsWindow.Hide();
+        }
+
+        var reviewed =
+            new ReviewedFileOperationEditorView();
+        (Window reviewedWindow,
+            Border reviewedHost) =
+            ShowInFixedHost(
+                reviewed,
+                900,
+                701);
+        try
+        {
+            AssertReviewedWidth(
+                879,
+                narrow: true);
+            AssertReviewedWidth(
+                880,
+                narrow: false);
+            AssertReviewedWidth(
+                881,
+                narrow: false);
+
+            AssertReviewedHeight(
+                699,
+                compact: true);
+            AssertReviewedHeight(
+                700,
+                compact: true);
+            AssertReviewedHeight(
+                701,
+                compact: false);
+        }
+        finally
+        {
+            reviewedWindow.Hide();
+        }
+
+        void AssertPackageLayout(
+            double width,
+            bool stacked)
+        {
+            ResizeHost(
+                aboutHost,
+                about,
+                width,
+                800);
+            Grid packages =
+                about.FindControl<Grid>(
+                    "PackageGrid")!;
+            Border avalonia =
+                about.FindControl<Border>(
+                    "AvaloniaPackageCard")!;
+            Border skia =
+                about.FindControl<Border>(
+                    "SkiaSharpPackageCard")!;
+            Assert.Equal(
+                stacked ? 1 : 3,
+                packages.ColumnDefinitions
+                    .Count);
+            Assert.Equal(
+                stacked ? 3 : 1,
+                packages.RowDefinitions
+                    .Count);
+            Assert.Equal(
+                stacked ? 0 : 2,
+                Grid.GetColumn(skia));
+            Assert.Equal(
+                stacked ? 2 : 0,
+                Grid.GetRow(skia));
+            Assert.Equal(
+                0,
+                Grid.GetColumn(avalonia));
+            Assert.Equal(
+                0,
+                Grid.GetRow(avalonia));
+        }
+
+        void AssertHeroWidth(
+            double width,
+            bool compact)
+        {
+            ResizeHost(
+                aboutHost,
+                about,
+                width,
+                800);
+            AssertHero(compact);
+        }
+
+        void AssertHeroHeight(
+            double height,
+            bool compact)
+        {
+            ResizeHost(
+                aboutHost,
+                about,
+                960,
+                height);
+            AssertHero(compact);
+        }
+
+        void AssertHero(bool compact)
+        {
+            Border hero =
+                about.FindControl<Border>(
+                    "AboutHero")!;
+            Control mark =
+                about.FindControl<Control>(
+                    "AboutBrandMark")!;
+            TextBlock product =
+                about.FindControl<TextBlock>(
+                    "AboutProductName")!;
+            Grid layout =
+                about.FindControl<Grid>(
+                    "HeroLayout")!;
+            double markSize =
+                compact ? 80 : 116;
+            Assert.Equal(
+                new Thickness(
+                    compact ? 16 : 24),
+                hero.Padding);
+            Assert.Equal(
+                markSize,
+                mark.Width);
+            Assert.Equal(
+                markSize,
+                mark.Height);
+            Assert.Equal(
+                compact ? 28 : 34,
+                product.FontSize);
+            Assert.Equal(
+                markSize,
+                layout.ColumnDefinitions[0]
+                    .Width.Value);
+            Assert.Equal(
+                compact ? 16 : 24,
+                layout.ColumnDefinitions[1]
+                    .Width.Value);
+        }
+
+        void AssertFieldsLayout(
+            double width,
+            bool stacked)
+        {
+            ResizeHost(
+                fieldsHost,
+                fields,
+                width,
+                700);
+            UniformGrid choices =
+                fields.FindControl<UniformGrid>(
+                    "FieldAdditionChoices")!;
+            Assert.Equal(
+                stacked ? 1 : 2,
+                choices.Columns);
+            Assert.Equal(
+                stacked
+                    ? new Thickness(0, 0, 0, 4)
+                    : new Thickness(0, 0, 4, 0),
+                Assert.IsAssignableFrom<Control>(
+                    choices.Children[0])
+                    .Margin);
+            Assert.Equal(
+                stacked
+                    ? new Thickness(0, 4, 0, 0)
+                    : new Thickness(4, 0, 0, 0),
+                Assert.IsAssignableFrom<Control>(
+                    choices.Children[1])
+                    .Margin);
+        }
+
+        void AssertReviewedWidth(
+            double width,
+            bool narrow)
+        {
+            ResizeHost(
+                reviewedHost,
+                reviewed,
+                width,
+                701);
+            Grid source =
+                reviewed.FindControl<Grid>(
+                    "SourceOptionsLayout")!;
+            Grid template =
+                reviewed.FindControl<Grid>(
+                    "TemplateOptionsLayout")!;
+            Control kind =
+                reviewed.FindControl<Control>(
+                    "ReviewedFileOperationKindField")!;
+            Control destination =
+                reviewed.FindControl<Control>(
+                    "DestinationLayout")!;
+            Control summary =
+                reviewed.FindControl<Control>(
+                    "TargetSummaryText")!;
+            Assert.Equal(
+                narrow ? 1 : 2,
+                source.ColumnDefinitions.Count);
+            Assert.Equal(
+                narrow ? 2 : 1,
+                source.RowDefinitions.Count);
+            Assert.Equal(
+                narrow ? 3 : 1,
+                template.RowDefinitions.Count);
+            Assert.Equal(
+                0,
+                Grid.GetRow(kind));
+            Assert.Equal(
+                narrow ? 1 : 0,
+                Grid.GetRow(destination));
+            Assert.Equal(
+                0,
+                Grid.GetRow(summary));
+            Assert.Same(
+                reviewed.FindControl<Grid>(
+                    "EditorLayout"),
+                summary.Parent);
+            Assert.DoesNotContain(
+                reviewed.FindControl<ScrollViewer>(
+                        "ReviewedFileOperationFormScroll")!
+                    .GetVisualDescendants(),
+                descendant =>
+                    ReferenceEquals(
+                        descendant,
+                        summary));
+            Assert.Equal(
+                narrow ? 8 : 0,
+                source.RowSpacing);
+            Assert.Equal(
+                narrow ? 8 : 0,
+                template.RowSpacing);
+        }
+
+        void AssertReviewedHeight(
+            double height,
+            bool compact)
+        {
+            ResizeHost(
+                reviewedHost,
+                reviewed,
+                880,
+                height);
+            Assert.Equal(
+                compact ? 7 : 10,
+                reviewed.FindControl<Grid>(
+                    "EditorLayout")!
+                    .RowSpacing);
+        }
+    }
+
+    [AvaloniaFact]
     public void Home_content_breakpoints_switch_at_minus_one_exact_and_plus_one()
     {
         using ServiceProvider services = BuildServices();
@@ -489,8 +962,6 @@ public sealed class AdaptiveBreakpointCoverageTests
                 library.FindControl<
                     PersistedSplitView>(
                     "WorkspaceSplit")!;
-            split.HorizontalAlignment =
-                HorizontalAlignment.Left;
             GridSplitter splitter =
                 split.FindControl<GridSplitter>(
                     "Splitter")!;
@@ -500,24 +971,28 @@ public sealed class AdaptiveBreakpointCoverageTests
                     "RightPresenter")!;
 
             AssertLibraryDocking(
-                1089,
+                1137,
                 docked: false);
             AssertLibraryDocking(
-                1090,
+                1138,
                 docked: true);
             AssertLibraryDocking(
-                1091,
+                1139,
                 docked: true);
 
             void AssertLibraryDocking(
-                double width,
+                double viewWidth,
                 bool docked)
             {
-                split.Width = width;
-                Render();
+                ResizeHost(
+                    libraryHost,
+                    library,
+                    viewWidth,
+                    760);
                 Assert.Equal(
-                    width,
-                    split.Bounds.Width);
+                    viewWidth - 48,
+                    split.Bounds.Width,
+                    precision: 2);
                 Assert.Equal(
                     docked,
                     splitter.IsVisible);
@@ -745,6 +1220,16 @@ public sealed class AdaptiveBreakpointCoverageTests
             AssertWorkbenchHeight(
                 701,
                 compact: false);
+
+            AssertWorkbenchPickerWidth(
+                699,
+                190);
+            AssertWorkbenchPickerWidth(
+                700,
+                240);
+            AssertWorkbenchPickerWidth(
+                701,
+                240);
         }
         finally
         {
@@ -861,6 +1346,37 @@ public sealed class AdaptiveBreakpointCoverageTests
                     compact ? 12 : 24),
                 workbench.FindControl<Grid>(
                     "WorkbenchRoot")!.Margin);
+        }
+
+        void AssertWorkbenchPickerWidth(
+            double contentWidth,
+            double expectedPickerWidth)
+        {
+            double viewWidth =
+                contentWidth +
+                AdaptivePage.NarrowGutter * 2;
+            ResizeHost(
+                host,
+                workbench,
+                viewWidth,
+                760);
+            Grid root =
+                workbench.FindControl<Grid>(
+                    "WorkbenchRoot")!;
+            Assert.Equal(
+                contentWidth,
+                workbench.Bounds.Width -
+                root.Margin.Left -
+                root.Margin.Right,
+                precision: 2);
+            ComboBox picker =
+                workbench.FindControl<ComboBox>(
+                    "WorkbenchSectionPicker")!;
+            Assert.True(
+                picker.IsVisible);
+            Assert.Equal(
+                expectedPickerWidth,
+                picker.Width);
         }
 
         void AssertSectionBreakpoint(
@@ -1584,18 +2100,14 @@ public sealed class AdaptiveBreakpointCoverageTests
                 scopeText.Text!,
                 character =>
                     char.IsDigit(character));
-            Rect scopeBounds =
-                BoundsRelativeTo(
-                    scope,
-                    files);
             Assert.True(
-                scopeBounds.Left >= -1 &&
-                scopeBounds.Right <=
-                files.Bounds.Width + 1 &&
-                scopeBounds.Top >= -1 &&
-                scopeBounds.Bottom <=
-                files.Bounds.Height + 1,
-                $"Workbench/File operations destructive scope was clipped: {scopeBounds} within {files.Bounds.Size}.");
+                UiViewportReachability
+                    .TryGetFullyVisibleBounds(
+                        files,
+                        scope,
+                        out Rect scopeBounds,
+                        out string scopeDetail),
+                $"Workbench/File operations destructive scope was clipped: {scopeBounds} within {files.Bounds.Size}. {scopeDetail}");
             AssertVisibleGridChildrenDoNotOverlap(
                 Assert.Single(
                     files.GetVisualDescendants()
@@ -2165,9 +2677,10 @@ public sealed class AdaptiveBreakpointCoverageTests
             control.Bounds.Size);
     }
 
-    private static ServiceProvider BuildServices()
+    private static ServiceProvider BuildServices(
+        TestSettings? settings = null)
     {
-        var settings = new TestSettings();
+        settings ??= new TestSettings();
         return Composition.BuildServices(
             services =>
             {

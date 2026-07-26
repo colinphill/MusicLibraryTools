@@ -28,6 +28,10 @@ public sealed class LocalizedAndDensityScreenshotFixtureTests
         settings.SetPreference(
             LocalizationPreferences.DisplayLanguage,
             "en-US");
+        settings.SetPreference(
+            AppearancePreferences
+                .ShellRailExpandedPreference,
+            bool.FalseString);
         var localization =
             new ResourceLocalizationService(
                 settings);
@@ -90,6 +94,11 @@ public sealed class LocalizedAndDensityScreenshotFixtureTests
                         .RequestedThemeVariant =
                         theme;
                     Render();
+                    Assert.False(
+                        window.FindControl<Border>(
+                                "NavigationScrim")!
+                            .IsVisible,
+                        "The shell navigation overlay obscured the localized Workbench capture.");
                     WorkbenchView view =
                         Assert.IsType<WorkbenchView>(
                             window.FindControl<
@@ -154,6 +163,10 @@ public sealed class LocalizedAndDensityScreenshotFixtureTests
         settings.SetPreference(
             LocalizationPreferences.DisplayLanguage,
             "en-US");
+        settings.SetPreference(
+            AppearancePreferences
+                .ShellRailExpandedPreference,
+            bool.FalseString);
         using ServiceProvider services =
             Composition.BuildServices(collection =>
             {
@@ -235,6 +248,11 @@ public sealed class LocalizedAndDensityScreenshotFixtureTests
                     settings,
                     density);
                 Render();
+                Assert.False(
+                    window.FindControl<Border>(
+                            "NavigationScrim")!
+                        .IsVisible,
+                    "The shell navigation overlay obscured the density capture.");
                 string densityName =
                     density.ToString()
                         .ToLowerInvariant();
