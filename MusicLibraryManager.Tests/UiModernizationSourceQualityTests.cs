@@ -850,6 +850,329 @@ public sealed partial class UiModernizationSourceQualityTests
     }
 
     [Fact]
+    public void
+        Destructive_workflows_keep_scope_or_count_visible_before_the_action_is_enabled()
+    {
+        string repositoryRoot =
+            FindRepositoryRoot();
+        string viewRoot =
+            Path.Combine(
+                repositoryRoot,
+                "MusicLibraryManager",
+                "Views");
+        XNamespace x =
+            "http://schemas.microsoft.com/winfx/2006/xaml";
+
+        XDocument health =
+            XDocument.Load(
+                Path.Combine(
+                    viewRoot,
+                    "HealthView.axaml"));
+        (
+            string ActionResource,
+            string CountResource)[] healthRepairs =
+        [
+            (
+                "Loc.Health.Action.ApplyMetadataRepairs",
+                "Health.Repairs.MetadataCount"),
+            (
+                "Loc.Health.Action.ApplyFileRepairs",
+                "Health.Repairs.FileCount"),
+            (
+                "Loc.Health.Action.ApplyItunesRepairs",
+                "Health.Repairs.ItunesCount"),
+            (
+                "Loc.Health.Action.ApplyArtworkRepairs",
+                "Health.Artwork.SelectedCount"),
+        ];
+        foreach ((
+                     string actionResource,
+                     string countResource)
+                 in healthRepairs)
+        {
+            XElement action =
+                Assert.Single(
+                    health.Descendants(),
+                    element =>
+                        element.Name.LocalName ==
+                        "Button" &&
+                        ((string?)element.Attribute(
+                             "Content") ?? "")
+                        .Contains(
+                            actionResource,
+                            StringComparison.Ordinal));
+            XElement banner =
+                Assert.Single(
+                    action.Ancestors(),
+                    element =>
+                        element.Name.LocalName ==
+                        "Border" &&
+                        HasClass(
+                            element,
+                            "status-banner"));
+            Assert.Contains(
+                banner.Descendants(),
+                element =>
+                    element.Name.LocalName ==
+                    "LocalizedFormatTextBlock" &&
+                    (string?)element.Attribute(
+                        "ResourceKey") ==
+                    countResource);
+        }
+
+        XDocument devices =
+            XDocument.Load(
+                Path.Combine(
+                    viewRoot,
+                    "DevicesView.axaml"));
+        Assert.Single(
+            devices.Descendants(),
+            element =>
+                (string?)element.Attribute(
+                    x + "Name") ==
+                "ApplyButton");
+        XElement plannedCount =
+            Assert.Single(
+                devices.Descendants(),
+                element =>
+                    element.Name.LocalName ==
+                    "LocalizedFormatTextBlock" &&
+                    (string?)element.Attribute(
+                        "ResourceKey") ==
+                    "Devices.PlannedCount");
+        Assert.Contains(
+            plannedCount.Ancestors(),
+            element =>
+                element.Name.LocalName ==
+                "Border" &&
+                HasClass(
+                    element,
+                    "status-banner"));
+
+        XDocument ingest =
+            XDocument.Load(
+                Path.Combine(
+                    viewRoot,
+                    "IngestView.axaml"));
+        Assert.Single(
+            ingest.Descendants(),
+            element =>
+                element.Name.LocalName ==
+                "Button" &&
+                ((string?)element.Attribute(
+                     "Command") ?? "")
+                .Contains(
+                    "ApplyCommand",
+                    StringComparison.Ordinal));
+        string[] ingestScopeCounts =
+        [
+            "Ingest.Summary.OutputCount",
+            "Ingest.Summary.ConflictCount",
+            "Ingest.Summary.CleanupCount",
+        ];
+        Assert.All(
+            ingestScopeCounts,
+            resourceKey =>
+                Assert.Contains(
+                    ingest.Descendants(),
+                    element =>
+                        element.Name.LocalName ==
+                        "LocalizedFormatTextBlock" &&
+                        (string?)element.Attribute(
+                            "ResourceKey") ==
+                        resourceKey));
+        string ingestViewModel =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "MusicLibraryManager.Presentation",
+                    "Workflows",
+                    "IngestViewModel.cs"));
+        Assert.Contains(
+            "private bool CanApply() => !IsBusy && HasApplicablePreview && _plan is not null;",
+            ingestViewModel,
+            StringComparison.Ordinal);
+
+        XDocument organize =
+            XDocument.Load(
+                Path.Combine(
+                    viewRoot,
+                    "OrganizeView.axaml"));
+        Assert.Single(
+            organize.Descendants(),
+            element =>
+                element.Name.LocalName ==
+                "Button" &&
+                ((string?)element.Attribute(
+                     "Command") ?? "")
+                .Contains(
+                    "ApplyCommand",
+                    StringComparison.Ordinal));
+        Assert.Single(
+            organize.Descendants(),
+            element =>
+                element.Name.LocalName ==
+                "LocalizedFormatTextBlock" &&
+                (string?)element.Attribute(
+                    "ResourceKey") ==
+                "Organize.PlannedCount");
+
+        XDocument operations =
+            XDocument.Load(
+                Path.Combine(
+                    viewRoot,
+                    "OperationsView.axaml"));
+        Assert.Single(
+            operations.Descendants(),
+            element =>
+                element.Name.LocalName ==
+                "Button" &&
+                ((string?)element.Attribute(
+                     "Command") ?? "")
+                .Contains(
+                    "ApplyRestoreCommand",
+                    StringComparison.Ordinal));
+        Assert.Single(
+            operations.Descendants(),
+            element =>
+                element.Name.LocalName ==
+                "Border" &&
+                (string?)element.Attribute(
+                    "IsVisible") ==
+                "{Binding ShowRestorePreview}" &&
+                element.Descendants()
+                    .Any(descendant =>
+                        (string?)descendant
+                            .Attribute(
+                                "Text") ==
+                        "{Binding RestorePreviewText}"));
+        XElement purgeAction =
+            Assert.Single(
+                operations.Descendants(),
+                element =>
+                    element.Name.LocalName ==
+                    "MenuItem" &&
+                    ((string?)element.Attribute(
+                         "Command") ?? "")
+                    .Contains(
+                        "ApplyPurgeCommand",
+                        StringComparison.Ordinal));
+        Assert.True(
+            HasClass(
+                purgeAction,
+                "danger"));
+
+        string operationsViewModel =
+            File.ReadAllText(
+                Path.Combine(
+                    repositoryRoot,
+                    "MusicLibraryManager.Presentation",
+                    "Workflows",
+                    "OperationsViewModel.cs"));
+        Assert.Contains(
+            "private bool CanApplyRestore() => !IsBusy && _restorePlan?.CanApply == true;",
+            operationsViewModel,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ShowRestorePreview = _restorePlan.CanApply;",
+            operationsViewModel,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "\"Operations.RestorePreview.Ready\"",
+            operationsViewModel,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "_restorePlan.Actions.Count",
+            operationsViewModel,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "private bool CanApplyPurge() => !IsBusy && _purgePlan?.CanApply == true;",
+            operationsViewModel,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "StatusText = PurgePreviewText!;",
+            operationsViewModel,
+            StringComparison.Ordinal);
+
+        XDocument settings =
+            XDocument.Load(
+                Path.Combine(
+                    viewRoot,
+                    "SettingsView.axaml"));
+        AssertRowActionHasIdentity(
+            settings,
+            "RemoveIndexTargetCommand",
+            element =>
+                element.Name.LocalName ==
+                "TextBox" &&
+                ((string?)element.Attribute(
+                     "Text") ?? "")
+                .Contains(
+                    "{Binding Path",
+                    StringComparison.Ordinal));
+        AssertRowActionHasIdentity(
+            settings,
+            "DeleteLibraryProfileCommand",
+            element =>
+                (string?)element.Attribute(
+                    x + "Name") ==
+                "ProfilePresetPicker");
+        AssertRowActionHasIdentity(
+            settings,
+            "DeleteIngestProfileCommand",
+            element =>
+                (string?)element.Attribute(
+                    x + "Name") ==
+                "IngestProfilePicker");
+
+        static void AssertRowActionHasIdentity(
+            XDocument document,
+            string commandName,
+            Func<XElement, bool>
+                identifiesScope)
+        {
+            XElement action =
+                Assert.Single(
+                    document.Descendants(),
+                    element =>
+                        ((string?)element.Attribute(
+                             "Command") ?? "")
+                        .Contains(
+                            commandName,
+                            StringComparison.Ordinal));
+            XElement? actionRegion =
+                action.Ancestors()
+                    .FirstOrDefault(
+                        element =>
+                            element.Name.LocalName ==
+                            "Grid" &&
+                            element.Descendants()
+                                .Any(
+                                    identifiesScope));
+            Assert.NotNull(
+                actionRegion);
+            Assert.Contains(
+                actionRegion.Descendants(),
+                element =>
+                    identifiesScope(
+                        element));
+        }
+
+        static bool HasClass(
+            XElement element,
+            string className) =>
+            ((string?)element.Attribute(
+                 "Classes") ?? "")
+            .Split(
+                ' ',
+                StringSplitOptions
+                    .RemoveEmptyEntries)
+            .Contains(
+                className,
+                StringComparer.Ordinal);
+    }
+
+    [Fact]
     public void Shipping_layout_spacing_uses_the_approved_scale()
     {
         string applicationRoot =
