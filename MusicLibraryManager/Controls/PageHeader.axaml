@@ -39,10 +39,18 @@
                         Grid.Column="1"
                         Content="{Binding SecondaryActions, ElementName=Root}"
                         VerticalAlignment="Top" />
-      <ContentPresenter x:Name="MoreActionPresenter"
-                        Grid.Column="2"
-                        Content="{Binding MoreAction, ElementName=Root}"
-                        VerticalAlignment="Top" />
+      <StackPanel Grid.Column="2"
+                  Orientation="Horizontal"
+                  Spacing="{DynamicResource AppSpaceSmall}">
+        <Button x:Name="SecondaryOverflowButton"
+                Classes="app quiet overflow"
+                Content="{Binding SecondaryOverflowLabel, ElementName=Root}"
+                AutomationProperties.Name="{Binding SecondaryOverflowAutomationName, ElementName=Root}"
+                IsVisible="False" />
+        <ContentPresenter x:Name="MoreActionPresenter"
+                          Content="{Binding MoreAction, ElementName=Root}"
+                          VerticalAlignment="Top" />
+      </StackPanel>
     </Grid>
   </Grid>
 </UserControl>

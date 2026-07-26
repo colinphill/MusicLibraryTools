@@ -865,6 +865,9 @@
   <data name="Health.Artwork.SelectedCount.Other" xml:space="preserve">
     <value>Actions de réparation sélectionnées : {0}</value>
   </data>
+  <data name="Health.Artwork.AffectedFiles" xml:space="preserve">
+    <value>Fichiers concernés</value>
+  </data>
   <data name="Health.Artwork.AffectedFiles.One" xml:space="preserve">
     <value>Fichiers concernés ({0})</value>
   </data>
@@ -6281,6 +6284,7 @@
   <data name="Transcode.Metadata.Preserve" xml:space="preserve"><value>Conserver les métadonnées</value></data>
   <data name="Transcode.Artwork.Preserve" xml:space="preserve"><value>Conserver les illustrations</value></data>
   <data name="Transcode.Correction.Create" xml:space="preserve"><value>Créer un fichier de correction si possible</value></data>
+  <data name="Transcode.Correction.Help" xml:space="preserve"><value>Crée un fichier associé permettant de reconstruire l’audio sans perte d’origine à partir de la sortie hybride.</value></data>
   <data name="Transcode.Destination.Title" xml:space="preserve"><value>Destination et nommage</value></data>
   <data name="Transcode.Destination.Alongside" xml:space="preserve"><value>À côté des fichiers sources</value></data>
   <data name="Transcode.Destination.ReplaceOriginal" xml:space="preserve"><value>Remplacer les originaux</value></data>

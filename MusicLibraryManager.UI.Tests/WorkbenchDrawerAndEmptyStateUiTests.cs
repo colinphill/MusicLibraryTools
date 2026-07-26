@@ -532,11 +532,11 @@ public sealed class
                 (
                     WorkbenchSection.Reports,
                     "ReportsStickyFooter",
-                    "ReportPreviewEmptyState"),
+                    "PreviewReportButton"),
                 (
                     WorkbenchSection.Playlists,
                     "PlaylistsStickyFooter",
-                    "PlaylistPreviewEmptyState"),
+                    "PreviewPlaylistButton"),
                 (
                     WorkbenchSection.Tools,
                     "ToolsStickyFooter",
@@ -604,6 +604,295 @@ public sealed class
         {
             populatedWindow.Hide();
         }
+    }
+
+    [AvaloniaFact]
+    public void Report_and_playlist_empty_previews_collapse_until_reviewed_outputs_exist()
+    {
+        using ServiceProvider services =
+            BuildServices();
+        App.UseServicesForTests(services);
+        WorkbenchViewModel model =
+            services.GetRequiredService<
+                WorkbenchViewModel>();
+        WorkbenchTrackViewModel track =
+            Track("output-layout.flac");
+        model.Files.Add(track);
+        model.SelectedFile = track;
+        model.SetSelectedFiles([track]);
+        MainWindow window =
+            services.GetRequiredService<
+                MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(
+                    window,
+                    services,
+                    1440,
+                    900);
+            Carousel sections =
+                view.FindControl<Carousel>(
+                    "WorkbenchTabs")!;
+
+            model.SelectedSection =
+                WorkbenchSection.Reports;
+            Render();
+            WorkbenchReportsSectionView reports =
+                Assert.IsType<
+                    WorkbenchReportsSectionView>(
+                    sections.SelectedItem);
+            Grid reportLayout =
+                reports.FindControl<Grid>(
+                    "SectionLayout")!;
+            Grid reportPanel =
+                reports.FindControl<Grid>(
+                    "ReviewedPanel")!;
+            Assert.Single(
+                reportLayout.ColumnDefinitions);
+            Assert.Equal(
+                2,
+                Grid.GetRow(reportPanel));
+            Assert.False(
+                reports.FindControl<Border>(
+                        "ReportPreviewEmptyState")!
+                    .IsEffectivelyVisible);
+            Assert.True(
+                reports.FindControl<Border>(
+                        "ReportsStickyFooter")!
+                    .IsEffectivelyVisible);
+            Assert.True(
+                reports.FindControl<Button>(
+                        "PreviewReportButton")!
+                    .IsEffectivelyVisible);
+
+            services.GetRequiredService<
+                    ILocalizationService>()
+                .SetCulture("de-DE");
+            window.FontSize = 18;
+            window.Width = 900;
+            window.Height = 600;
+            Render();
+            Assert.True(
+                reports.FindControl<ScrollViewer>(
+                        "EditorScroll")!
+                    .Bounds.Height >=
+                140,
+                $"The collapsed Reports preview left only {reports.FindControl<ScrollViewer>("EditorScroll")!.Bounds.Height:0.#} px for the editor.");
+            string longDiagnostic =
+                string.Join(
+                    Environment.NewLine,
+                    Enumerable.Range(1, 120)
+                        .Select(index =>
+                            $"Report failure detail {index:000}: the diagnostic remains available without displacing the workflow."));
+            model.StatusDiagnosticDetail =
+                longDiagnostic;
+            Render();
+            LocalizedFormatTextBlock
+                reportDiagnostic =
+                    reports.FindControl<
+                        LocalizedFormatTextBlock>(
+                        "ReportsStatusDiagnostic")!;
+            Assert.True(
+                reportDiagnostic
+                    .IsEffectivelyVisible);
+            Assert.Equal(
+                3,
+                reportDiagnostic.MaxLines);
+            Assert.Equal(
+                longDiagnostic,
+                ToolTip.GetTip(
+                    reportDiagnostic));
+            Assert.Equal(
+                longDiagnostic,
+                global::Avalonia.Automation
+                    .AutomationProperties
+                    .GetHelpText(
+                        reportDiagnostic));
+            Assert.True(
+                reports.FindControl<ScrollViewer>(
+                        "EditorScroll")!
+                    .Bounds.Height >=
+                96,
+                $"A long Reports diagnostic collapsed the editor to {reports.FindControl<ScrollViewer>("EditorScroll")!.Bounds.Height:0.#} px.");
+            AssertControlInside(
+                reports.FindControl<Border>(
+                    "ReportsStatusBanner")!,
+                reports,
+                "Reports status");
+            AssertControlInside(
+                reports.FindControl<Border>(
+                    "ReportsStickyFooter")!,
+                reports,
+                "Reports footer");
+
+            services.GetRequiredService<
+                    ILocalizationService>()
+                .SetCulture("en-US");
+            window.FontSize = 14;
+            window.Width = 1440;
+            window.Height = 900;
+            Render();
+            model.ReportOutputs.Add(
+                new(
+                    "All files",
+                    "report.csv",
+                    1,
+                    64));
+            Render();
+
+            Assert.Equal(
+                3,
+                reportLayout.ColumnDefinitions
+                    .Count);
+            Assert.Equal(
+                2,
+                Grid.GetColumn(reportPanel));
+            Assert.False(
+                reports.FindControl<Border>(
+                        "ReportPreviewEmptyState")!
+                    .IsVisible);
+            Assert.True(
+                reports.FindControl<AppDataGrid>(
+                        "ReportOutputGrid")!
+                    .IsEffectivelyVisible);
+
+            model.SelectedSection =
+                WorkbenchSection.Playlists;
+            Render();
+            WorkbenchPlaylistsSectionView playlists =
+                Assert.IsType<
+                    WorkbenchPlaylistsSectionView>(
+                    sections.SelectedItem);
+            Grid playlistLayout =
+                playlists.FindControl<Grid>(
+                    "SectionLayout")!;
+            Grid playlistPanel =
+                playlists.FindControl<Grid>(
+                    "ReviewedPanel")!;
+            Assert.Single(
+                playlistLayout.ColumnDefinitions);
+            Assert.Equal(
+                2,
+                Grid.GetRow(playlistPanel));
+            Assert.False(
+                playlists.FindControl<Border>(
+                        "PlaylistPreviewEmptyState")!
+                    .IsEffectivelyVisible);
+            Assert.True(
+                playlists.FindControl<Border>(
+                        "PlaylistsStickyFooter")!
+                    .IsEffectivelyVisible);
+            Assert.True(
+                playlists.FindControl<Button>(
+                        "PreviewPlaylistButton")!
+                    .IsEffectivelyVisible);
+            window.Width = 900;
+            window.Height = 600;
+            window.FontSize = 18;
+            Render();
+            LocalizedFormatTextBlock
+                playlistDiagnostic =
+                    playlists.FindControl<
+                        LocalizedFormatTextBlock>(
+                        "PlaylistsStatusDiagnostic")!;
+            Assert.True(
+                playlistDiagnostic
+                    .IsEffectivelyVisible);
+            Assert.Equal(
+                3,
+                playlistDiagnostic.MaxLines);
+            Assert.Equal(
+                longDiagnostic,
+                ToolTip.GetTip(
+                    playlistDiagnostic));
+            Assert.Equal(
+                longDiagnostic,
+                global::Avalonia.Automation
+                    .AutomationProperties
+                    .GetHelpText(
+                        playlistDiagnostic));
+            Assert.True(
+                playlists.FindControl<ScrollViewer>(
+                        "EditorScroll")!
+                    .Bounds.Height >=
+                96,
+                $"A long Playlists diagnostic collapsed the editor to {playlists.FindControl<ScrollViewer>("EditorScroll")!.Bounds.Height:0.#} px.");
+            AssertControlInside(
+                playlists.FindControl<Border>(
+                    "PlaylistsStatusBanner")!,
+                playlists,
+                "Playlists status");
+            AssertControlInside(
+                playlists.FindControl<Border>(
+                    "PlaylistsStickyFooter")!,
+                playlists,
+                "Playlists footer");
+            window.Width = 1440;
+            window.Height = 900;
+            window.FontSize = 14;
+            Render();
+
+            model.PlaylistOutputs.Add(
+                new(
+                    "All files",
+                    "playlist.m3u8",
+                    1,
+                    64));
+            Render();
+
+            Assert.Equal(
+                3,
+                playlistLayout.ColumnDefinitions
+                    .Count);
+            Assert.Equal(
+                2,
+                Grid.GetColumn(playlistPanel));
+            Assert.False(
+                playlists.FindControl<Border>(
+                        "PlaylistPreviewEmptyState")!
+                    .IsVisible);
+            Assert.True(
+                playlists.FindControl<AppDataGrid>(
+                        "PlaylistOutputGrid")!
+                    .IsEffectivelyVisible);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    private static void AssertControlInside(
+        Control control,
+        Control viewport,
+        string description)
+    {
+        Point topLeft =
+            control.TranslatePoint(
+                default,
+                viewport) ??
+            throw new
+                InvalidOperationException(
+                    $"{description} is detached.");
+        Assert.InRange(
+            topLeft.X,
+            -1,
+            viewport.Bounds.Width + 1);
+        Assert.InRange(
+            topLeft.Y,
+            -1,
+            viewport.Bounds.Height + 1);
+        Assert.InRange(
+            topLeft.X +
+            control.Bounds.Width,
+            -1,
+            viewport.Bounds.Width + 1);
+        Assert.InRange(
+            topLeft.Y +
+            control.Bounds.Height,
+            -1,
+            viewport.Bounds.Height + 1);
     }
 
     [AvaloniaFact]

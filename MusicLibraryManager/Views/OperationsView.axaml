@@ -3,10 +3,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
   <controls:AdaptivePage RowDefinitions="Auto,*" RowSpacing="16">
-    <controls:PageHeader Title="{DynamicResource Loc.Operations.Title}"
-        Subtitle="{DynamicResource Loc.Operations.Subtitle}">
+    <controls:PageHeader x:Name="OperationsHeader"
+        Title="{DynamicResource Loc.Operations.Title}"
+        Subtitle="{DynamicResource Loc.Operations.Subtitle}"
+        SecondaryOverflowEnabled="True"
+        SecondaryOverflowLabel="{DynamicResource Loc.Workbench.Action.More}"
+        SecondaryOverflowAutomationName="{DynamicResource Loc.Workbench.Action.MoreAutomation}">
       <controls:PageHeader.SecondaryActions>
-        <Button Classes="app" Content="{DynamicResource Loc.Common.Cancel}" Command="{Binding CancelCommand}"
+        <Button x:Name="OperationsCancelButton"
+                Classes="app"
+                Content="{DynamicResource Loc.Common.Cancel}"
+                controls:PageHeader.OverflowHeader="{DynamicResource Loc.Common.Cancel}"
+                Command="{Binding CancelCommand}"
                 IsVisible="{Binding IsBusy}" />
       </controls:PageHeader.SecondaryActions>
     </controls:PageHeader>
@@ -265,7 +273,17 @@
                     </WrapPanel>
                   </Border>
                   <ItemsControl x:Name="RecoveryEntryList"
-                                ItemsSource="{Binding RootNodes}">
+                                ItemsSource="{Binding RecoveryEntryNodes}">
+                    <ItemsControl.Template>
+                      <ControlTemplate>
+                        <ItemsPresenter ItemsPanel="{TemplateBinding ItemsPanel}" />
+                      </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
                         <Border Classes="card"

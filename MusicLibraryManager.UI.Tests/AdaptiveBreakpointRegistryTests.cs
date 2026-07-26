@@ -175,6 +175,12 @@ public sealed class AdaptiveBreakpointRegistryTests
             "pageWidth < FourColumnPageWidth",
             "_responsivePageWidth < FieldMappingSingleColumnWidth"),
         new(
+            "MusicLibraryManager/Views/SettingsView.axaml.cs",
+            typeof(SettingsRuleSummaryCardTests),
+            nameof(SettingsRuleSummaryCardTests
+                .Settings_rule_cards_preserve_semantic_wide_and_narrow_command_layouts),
+            "_responsivePageWidth >= RuleSummaryInlineCommandWidth"),
+        new(
             "MusicLibraryManager/Views/WorkbenchView.axaml.cs",
             typeof(AdaptiveBreakpointCoverageTests),
             nameof(AdaptiveBreakpointCoverageTests

@@ -1463,6 +1463,17 @@
     <translation culture="zh-CN">所选修复操作：{0}</translation>
     <translation culture="zh-TW">所選修復動作：{0}</translation>
   </entry>
+  <entry key="Health.Artwork.AffectedFiles">
+    <translation culture="de-DE">Betroffene Dateien</translation>
+    <translation culture="es-ES">Archivos afectados</translation>
+    <translation culture="fr-FR">Fichiers concernés</translation>
+    <translation culture="it-IT">File interessati</translation>
+    <translation culture="pt-BR">Arquivos afetados</translation>
+    <translation culture="ja-JP">対象ファイル</translation>
+    <translation culture="ko-KR">영향받는 파일</translation>
+    <translation culture="zh-CN">受影响的文件</translation>
+    <translation culture="zh-TW">受影響的檔案</translation>
+  </entry>
   <entry key="Health.Artwork.AffectedFiles.One">
     <translation culture="de-DE">Betroffene Dateien ({0})</translation>
     <translation culture="es-ES">Archivos afectados ({0})</translation>
@@ -24730,6 +24741,17 @@
     <translation culture="ko-KR">지원되는 경우 보정 파일 만들기</translation>
     <translation culture="zh-CN">支持时创建校正文件</translation>
     <translation culture="zh-TW">支援時建立修正檔案</translation>
+  </entry>
+  <entry key="Transcode.Correction.Help">
+    <translation culture="de-DE">Erstellt eine Begleitdatei, mit der sich aus der Hybrid-Ausgabe das ursprüngliche verlustfreie Audio wiederherstellen lässt.</translation>
+    <translation culture="es-ES">Crea un archivo complementario que permite reconstruir el audio original sin pérdida a partir de la salida híbrida.</translation>
+    <translation culture="fr-FR">Crée un fichier associé permettant de reconstruire l’audio sans perte d’origine à partir de la sortie hybride.</translation>
+    <translation culture="it-IT">Crea un file complementare che consente di ricostruire l’audio lossless originale dall’output ibrido.</translation>
+    <translation culture="pt-BR">Cria um arquivo complementar que reconstrói o áudio original sem perdas a partir da saída híbrida.</translation>
+    <translation culture="ja-JP">ハイブリッド出力から元のロスレス音声を復元するための補助ファイルを作成します。</translation>
+    <translation culture="ko-KR">하이브리드 출력에서 원본 무손실 오디오를 복원하는 보조 파일을 만듭니다.</translation>
+    <translation culture="zh-CN">创建一个配套文件，用于从混合输出中还原原始无损音频。</translation>
+    <translation culture="zh-TW">建立一個配套檔案，用於從混合輸出中還原原始無損音訊。</translation>
   </entry>
   <entry key="Transcode.Destination.Title">
     <translation culture="de-DE">Ziel und Benennung</translation>

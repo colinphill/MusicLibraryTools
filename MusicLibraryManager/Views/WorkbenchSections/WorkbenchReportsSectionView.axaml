@@ -184,7 +184,8 @@
           Grid.Column="2"
           RowDefinitions="Auto,*,Auto,Auto"
           RowSpacing="8">
-      <TextBlock Classes="section-title"
+      <TextBlock x:Name="ReviewedTitle"
+                 Classes="section-title"
                  Text="{DynamicResource Loc.Workbench.Reports.Reviewed}" />
       <controls:AppDataGrid x:Name="ReportOutputGrid"
                             Grid.Row="1"
@@ -194,6 +195,7 @@
       <Border x:Name="ReportPreviewEmptyState"
               Grid.Row="1"
               Classes="empty-state"
+              MaxHeight="132"
               IsVisible="{Binding !ReportOutputs.Count}">
         <StackPanel HorizontalAlignment="Center"
                     VerticalAlignment="Center"
@@ -208,17 +210,27 @@
                      Text="{DynamicResource Loc.Workbench.Reports.EmptyPreviewDescription}" />
         </StackPanel>
       </Border>
-      <Border Grid.Row="2" Classes="status-banner info">
+      <Border x:Name="ReportsStatusBanner"
+              Grid.Row="2"
+              Classes="status-banner info">
         <StackPanel Spacing="4">
-          <TextBlock Text="{Binding StatusText}"
-                     TextWrapping="Wrap" />
+          <TextBlock x:Name="ReportsStatusText"
+                     Text="{Binding StatusText}"
+                     TextWrapping="Wrap"
+                     TextTrimming="CharacterEllipsis"
+                     MaxLines="2" />
           <controls:LocalizedFormatTextBlock
+              x:Name="ReportsStatusDiagnostic"
               Classes="muted"
               FontSize="{DynamicResource AppFontSizeCaption}"
               TextWrapping="Wrap"
+              TextTrimming="CharacterEllipsis"
+              MaxLines="3"
               ResourceKey="Common.DiagnosticDetailFormat"
               Value="{Binding StatusDiagnosticDetail}"
-              IsVisible="{Binding HasStatusDiagnosticDetail}" />
+              IsVisible="{Binding HasStatusDiagnosticDetail}"
+              ToolTip.Tip="{Binding StatusDiagnosticDetail}"
+              AutomationProperties.HelpText="{Binding StatusDiagnosticDetail}" />
         </StackPanel>
       </Border>
       <Border x:Name="ReportsStickyFooter"

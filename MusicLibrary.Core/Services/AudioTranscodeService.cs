@@ -1559,6 +1559,7 @@ public sealed class AudioTranscodeService(
         ArgumentNullException.ThrowIfNull(plan);
         AudioTranscodeCapabilitySnapshot snapshot =
             await capabilities.GetAsync(
+                forceRefresh: true,
                 ct: ct).ConfigureAwait(false);
         AudioTranscodeFormatDescriptor format =
             snapshot.FindFormat(
@@ -1572,6 +1573,23 @@ public sealed class AudioTranscodeService(
                 plan.Request.Settings.EncoderId) ??
             throw new InvalidOperationException(
                 "The reviewed encoder is no longer available.");
+        var currentSettingsIssues =
+            new List<OperationIssue>();
+        ValidateSettings(
+            plan.Request.Settings,
+            encoder,
+            currentSettingsIssues);
+        OperationIssue? currentSettingsBlocker =
+            currentSettingsIssues.FirstOrDefault(
+                issue =>
+                    issue.Severity ==
+                    OperationIssueSeverity.Blocker);
+        if (currentSettingsBlocker is not null)
+        {
+            throw new InvalidOperationException(
+                "The reviewed transcode settings are no longer " +
+                $"available. {currentSettingsBlocker.Message}");
+        }
         AudioTranscodePlanItem[] applicable =
         [
             .. plan.Items.Where(item => item.CanApply),
@@ -2319,11 +2337,12 @@ public sealed class AudioTranscodeService(
                 OperationIssueSeverity.Blocker,
                 "The selected encoder does not support this bit depth."));
         if (settings.CreateCorrectionFile &&
-            !encoder.SupportsCorrectionFile)
+            (!encoder.SupportsCorrectionFile ||
+             !rate.SupportsCorrectionFile))
             issues.Add(new(
                 "transcode.correction-unavailable",
                 OperationIssueSeverity.Blocker,
-                "The selected encoder does not support a correction file."));
+                "The selected encoder and rate mode do not support a correction file."));
     }
 
     internal static void AddPreviewCapacityIssues(

@@ -362,6 +362,108 @@ public sealed class LibraryDrawerInteractionTests
     }
 
     [AvaloniaFact]
+    public async Task Automatic_inspector_follows_selection_while_closed_and_pinned_preferences_override_it()
+    {
+        var settings = new MemorySettings();
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+                collection.AddSingleton<IAppSettings>(
+                    settings));
+        App.UseServicesForTests(services);
+        var view = new LibraryView();
+        var window = new Window
+        {
+            Width = 1300,
+            Height = 800,
+            Content = view,
+        };
+        try
+        {
+            LibraryViewModel model =
+                services.GetRequiredService<
+                    LibraryViewModel>();
+            var row = new LibraryRow(
+                new TrackRecord
+                {
+                    Path =
+                        Path.GetFullPath(
+                            "auto-inspector.flac"),
+                    Title = "Automatic inspector",
+                });
+            model.Rows = [row];
+            model.PageState =
+                LibraryPageState.Ready;
+            model.SetInspectorPreference(
+                LibraryInspectorPreference.Auto);
+
+            window.Show();
+            Render();
+
+            PersistedSplitView split =
+                view.FindControl<PersistedSplitView>(
+                    "WorkspaceSplit")!;
+            ContentPresenter right =
+                split.FindControl<ContentPresenter>(
+                    "RightPresenter")!;
+            Assert.False(
+                right.IsEffectivelyVisible);
+
+            Assert.True(
+                await model.SelectAsync([row]));
+            Render();
+            Assert.True(
+                right.IsEffectivelyVisible);
+            Assert.True(
+                split.FindControl<GridSplitter>(
+                        "Splitter")!
+                    .IsEffectivelyVisible);
+
+            Assert.True(
+                await model.SelectAsync([]));
+            Render();
+            Assert.False(
+                right.IsEffectivelyVisible);
+
+            model.SetInspectorPreference(
+                LibraryInspectorPreference.Pinned);
+            Render();
+            Assert.True(
+                right.IsEffectivelyVisible);
+
+            Assert.True(
+                await model.SelectAsync([row]));
+            model.SetInspectorPreference(
+                LibraryInspectorPreference.Closed);
+            Render();
+            Assert.False(
+                right.IsEffectivelyVisible);
+            Assert.True(
+                view.FindControl<Button>(
+                        "InspectorToggle")!
+                    .IsEffectivelyVisible);
+
+            model.SetInspectorPreference(
+                LibraryInspectorPreference.Auto);
+            Render();
+            Assert.True(
+                right.IsEffectivelyVisible);
+
+            window.Width = 900;
+            Render();
+            Assert.False(
+                right.IsEffectivelyVisible);
+            Assert.True(
+                view.FindControl<Button>(
+                        "InspectorToggle")!
+                    .IsEffectivelyVisible);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Columns_and_visual_filter_overlays_clamp_to_the_library_viewport()
     {
         using ServiceProvider services =

@@ -60,7 +60,10 @@ public partial class WorkbenchPlaylistsSectionView : UserControl
         PlaylistOutputGrid.IsVisible =
             hasPreview;
         PlaylistPreviewEmptyState.IsVisible =
-            !hasPreview;
+            false;
+        ReviewedTitle.IsVisible =
+            hasPreview;
+        ApplyResponsiveLayout();
     }
 
     private void ApplyResponsiveLayout()
@@ -69,28 +72,57 @@ public partial class WorkbenchPlaylistsSectionView : UserControl
             Bounds.Width < 880;
         bool compactHeight = Bounds.Height > 0 &&
             Bounds.Height < 430;
+        bool hasPreview =
+            _viewModel.PlaylistOutputs.Count > 0;
+        bool stacked =
+            narrow || !hasPreview;
         SupportingText.IsVisible = !compactHeight;
         SafetyNote.IsVisible = !compactHeight;
         SectionLayout.ColumnDefinitions.Clear();
         SectionLayout.RowDefinitions.Clear();
-        if (narrow)
+        ReviewedPanel.RowDefinitions.Clear();
+        ReviewedPanel.RowDefinitions.Add(
+            new RowDefinition(GridLength.Auto));
+        ReviewedPanel.RowDefinitions.Add(
+            new RowDefinition(
+                hasPreview
+                    ? new GridLength(
+                        1,
+                        GridUnitType.Star)
+                    : GridLength.Auto));
+        ReviewedPanel.RowDefinitions.Add(
+            new RowDefinition(GridLength.Auto));
+        ReviewedPanel.RowDefinitions.Add(
+            new RowDefinition(GridLength.Auto));
+        if (stacked)
         {
             SectionLayout.ColumnDefinitions.Add(
                 new ColumnDefinition(
                     new GridLength(1, GridUnitType.Star)));
             SectionLayout.RowDefinitions.Add(
-                new RowDefinition(GridLength.Auto));
+                new RowDefinition(
+                    hasPreview
+                        ? GridLength.Auto
+                        : new GridLength(
+                            1,
+                            GridUnitType.Star)));
             SectionLayout.RowDefinitions.Add(
                 new RowDefinition(new GridLength(12)));
             SectionLayout.RowDefinitions.Add(
                 new RowDefinition(
-                    new GridLength(
-                        1,
-                        GridUnitType.Star)));
+                    hasPreview
+                        ? new GridLength(
+                            1,
+                            GridUnitType.Star)
+                        : GridLength.Auto));
             Grid.SetColumn(ReviewedPanel, 0);
             Grid.SetRow(ReviewedPanel, 2);
             EditorScroll.MaxHeight =
-                compactHeight ? 110 : 270;
+                !hasPreview
+                    ? double.PositiveInfinity
+                    : compactHeight
+                        ? 110
+                        : 270;
             PlaylistOutputGrid.MinHeight =
                 compactHeight ? 80 : 150;
             PlaylistOutputGrid.Height =

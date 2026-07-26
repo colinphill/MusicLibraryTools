@@ -56,6 +56,8 @@ public partial class AnalyzerViewModel : ViewModelBase
     private long _analysisProgressTotal;
     private long _analysisProgressOrigin;
     private long _analysisProgressCompleted;
+    private readonly object _analysisProgressGate = new();
+    private long _analysisProgressGeneration;
     private AnalysisProgress? _lastAnalysisProgress;
     private string? _statusTextKey;
     private object?[] _statusTextArguments = [];
@@ -1212,13 +1214,16 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.Findings);
         try
         {
+            long progressGeneration =
+                CurrentAnalysisProgressGeneration();
             var progress = new Progress<DecodedAudioProgress>(item =>
                 ReportAnalysisProgress(new(
                     item.CompletedFiles,
                     item.TotalFiles,
                     "Health.Progress.Unit.Files",
                     "Health.Progress.Stage.DecodingAudio",
-                    item.Path)));
+                    item.Path),
+                    progressGeneration));
             var report = await _decodedAudio.VerifyAsync(
                 FfmpegPath, _decodedAudioPairs, progress, scope.Token);
             HealthRunText text = report.Count == 0
@@ -1542,10 +1547,11 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.ItlRepairs);
         try
         {
-            var progress = new Progress<OperationProgress>(value =>
-                SetProviderProgressStatus(
-                    value,
-                    "Health.Progress.PreparingItlMetadataRepairs"));
+            IProgress<OperationProgress> progress =
+                CreateSerializedRunProgress<OperationProgress>(value =>
+                    SetProviderProgressStatus(
+                        value,
+                        "Health.Progress.PreparingItlMetadataRepairs"));
             ItlMetadataRepairPlan plan = await _itlMetadataRepairs.PreviewAsync(
                 progress: progress, ct: scope.Token);
             var items = plan.Items.Select(item =>
@@ -1614,11 +1620,12 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.ItlRepairs);
         try
         {
-            var progress = new Progress<int>(done =>
-                SetStatusText(
-                    "Health.Progress.ApplyingItlMetadataRepairs",
-                    done,
-                    selected.Length));
+            IProgress<int> progress =
+                CreateSerializedRunProgress<int>(done =>
+                    SetStatusText(
+                        "Health.Progress.ApplyingItlMetadataRepairs",
+                        done,
+                        selected.Length));
             ItlMetadataRepairApplyResult result = await _itlMetadataRepairs.ApplyAsync(
                 plan, selected.Select(item => item.Item.Id).ToArray(), progress, scope.Token);
             var byId = result.Items.ToDictionary(item => item.Item.Id);
@@ -1644,12 +1651,12 @@ public partial class AnalyzerViewModel : ViewModelBase
                     item.Disposition = AnalysisRepairDisposition.Completed;
                 }
             }
+            scope.Complete(result.Failed > 0 ? MessageTone.Warning : MessageTone.Success);
             SetStatusText(
                 "Health.Status.ItlMetadataRepair.Completed",
                 result.Applied,
                 result.Skipped,
                 result.Failed);
-            scope.Complete(result.Failed > 0 ? MessageTone.Warning : MessageTone.Success);
         }
         catch (OperationCanceledException)
         {
@@ -1690,11 +1697,12 @@ public partial class AnalyzerViewModel : ViewModelBase
         try
         {
             var selectedPlan = repairPlan with { Items = selected.Select(item => item.Repair).ToList() };
-            var progress = new Progress<int>(done =>
-                SetStatusText(
-                    "Health.Progress.ApplyingMetadataRepairs",
-                    done,
-                    selectedRepairs));
+            IProgress<int> progress =
+                CreateSerializedRunProgress<int>(done =>
+                    SetStatusText(
+                        "Health.Progress.ApplyingMetadataRepairs",
+                        done,
+                        selectedRepairs));
             AnalysisRepairApplyResult result = _settings.Configuration is { } configuration
                 ? await _repairs.ApplyReviewedAsync(
                     selectedPlan, configuration, progress, scope.Token)
@@ -1736,15 +1744,15 @@ public partial class AnalyzerViewModel : ViewModelBase
                 if (item.IsApplied)
                     item.Disposition = AnalysisRepairDisposition.Completed;
             }
+            scope.Complete(result.FailedCount > 0 || result.CacheFailedCount > 0
+                ? MessageTone.Warning
+                : MessageTone.Success);
             SetStatusText(
                 "Health.Status.MetadataRepair.Completed",
                 result.SavedCount,
                 result.SkippedCount,
                 result.FailedCount,
                 result.CacheFailedCount);
-            scope.Complete(result.FailedCount > 0 || result.CacheFailedCount > 0
-                ? MessageTone.Warning
-                : MessageTone.Success);
             var changed = result.Items
                 .Where(item => item.Outcome == WriteOutcome.Saved)
                 .Select(item => item.AppliedPath ?? item.Repair.Path)
@@ -1804,12 +1812,13 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.RepresentationRepairs);
         try
         {
-            var progress = new Progress<RepresentationRepairProgress>(value =>
-                SetStatusText(
-                    "Health.Progress.ApplyingRepresentationRepairs",
-                    value.Completed,
-                    value.Total,
-                    Path.GetFileName(value.SourcePath)));
+            IProgress<RepresentationRepairProgress> progress =
+                CreateSerializedRunProgress<RepresentationRepairProgress>(value =>
+                    SetStatusText(
+                        "Health.Progress.ApplyingRepresentationRepairs",
+                        value.Completed,
+                        value.Total,
+                        Path.GetFileName(value.SourcePath)));
             RepresentationRepairApplyResult result =
                 await _representationRepairs.ApplyAsync(
                     active.Select(item => item.Action).ToList(),
@@ -1839,6 +1848,10 @@ public partial class AnalyzerViewModel : ViewModelBase
             }
 
             if (result.Cancelled)
+                scope.Cancel();
+            else
+                scope.Complete(result.Failed > 0 ? MessageTone.Warning : MessageTone.Success);
+            if (result.Cancelled)
                 SetCountStatusText(
                     "Health.Status.RepresentationRepair.CancelledAfter",
                     result.Applied);
@@ -1847,10 +1860,6 @@ public partial class AnalyzerViewModel : ViewModelBase
                     "Health.Status.RepresentationRepair.Completed",
                     result.Applied,
                     result.Failed);
-            if (result.Cancelled)
-                scope.Cancel();
-            else
-                scope.Complete(result.Failed > 0 ? MessageTone.Warning : MessageTone.Success);
             if (result.ChangedPaths.Count > 0)
                 RepairsApplied?.Invoke(result.ChangedPaths);
         }
@@ -1955,6 +1964,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     // Sets up busy state / cancellation / active view; disposing restores idle state.
     private RunScope BeginRun(string labelResourceKey, AnalysisResultView view)
     {
+        StopAnalysisProgress();
         IsBusy = true;
         AnalysisProgressFraction = 0;
         IsAnalysisProgressIndeterminate = true;
@@ -1979,68 +1989,127 @@ public partial class AnalyzerViewModel : ViewModelBase
         return new RunScope(this);
     }
 
-    private IProgress<AnalysisProgress> CreateAnalysisProgress() =>
-        new Progress<AnalysisProgress>(ReportAnalysisProgress);
-
-    private void ReportAnalysisProgress(AnalysisProgress value)
+    private IProgress<AnalysisProgress> CreateAnalysisProgress()
     {
-        if (!IsBusy || LastActivityState != AppActivityState.Running)
-            return;
-        _lastAnalysisProgress = value;
+        long generation =
+            CurrentAnalysisProgressGeneration();
+        return new Progress<AnalysisProgress>(
+            value =>
+                ReportAnalysisProgress(
+                    value,
+                    generation));
+    }
 
-        long completed = Math.Clamp(value.Completed, 0, Math.Max(0, value.Total));
-        long total = Math.Max(0, value.Total);
-        if (total == 0)
+    /// <summary>
+    /// Creates a progress reporter whose asynchronously posted callbacks remain tied to the run
+    /// that created it. Progress&lt;T&gt; may deliver a callback after its provider task has already
+    /// returned; serializing the generation check with the callback keeps those stale updates from
+    /// replacing a completed, cancelled, or failed summary.
+    /// </summary>
+    private IProgress<T> CreateSerializedRunProgress<T>(Action<T> report)
+    {
+        long generation = CurrentAnalysisProgressGeneration();
+        return new Progress<T>(value =>
+            ReportSerializedRunProgress(
+                value,
+                generation,
+                report));
+    }
+
+    private void ReportSerializedRunProgress<T>(
+        T value,
+        long generation,
+        Action<T> report)
+    {
+        lock (_analysisProgressGate)
         {
-            IsAnalysisProgressIndeterminate = true;
+            if (generation != _analysisProgressGeneration ||
+                !IsBusy ||
+                LastActivityState != AppActivityState.Running)
+            {
+                return;
+            }
+
+            report(value);
+        }
+    }
+
+    private void ReportAnalysisProgress(
+        AnalysisProgress value) =>
+        ReportAnalysisProgress(
+            value,
+            CurrentAnalysisProgressGeneration());
+
+    private void ReportAnalysisProgress(
+        AnalysisProgress value,
+        long generation)
+    {
+        lock (_analysisProgressGate)
+        {
+            if (generation !=
+                    _analysisProgressGeneration ||
+                !IsBusy ||
+                LastActivityState !=
+                    AppActivityState.Running)
+            {
+                return;
+            }
+            _lastAnalysisProgress = value;
+
+            long completed = Math.Clamp(value.Completed, 0, Math.Max(0, value.Total));
+            long total = Math.Max(0, value.Total);
+            if (total == 0)
+            {
+                IsAnalysisProgressIndeterminate = true;
+                SetStatusText(
+                    "Health.Progress.Indeterminate",
+                    ProgressStage(value.Stage));
+                return;
+            }
+
+            bool newPhase = !string.Equals(_analysisProgressStage, value.Stage, StringComparison.Ordinal) ||
+                !string.Equals(_analysisProgressUnit, value.Unit, StringComparison.Ordinal) ||
+                _analysisProgressTotal != total || completed < _analysisProgressCompleted;
+            if (newPhase)
+            {
+                _analysisProgressStage = value.Stage;
+                _analysisProgressUnit = value.Unit;
+                _analysisProgressTotal = total;
+                _analysisProgressOrigin = completed;
+                _analysisProgressClock = Stopwatch.StartNew();
+            }
+            _analysisProgressCompleted = completed;
+            IsAnalysisProgressIndeterminate = false;
+            AnalysisProgressFraction = Math.Clamp((double)completed / total, 0, 1);
+
+            long phaseCompleted = completed - _analysisProgressOrigin;
+            double elapsedSeconds = _analysisProgressClock?.Elapsed.TotalSeconds ?? 0;
+            string estimate;
+            if (phaseCompleted <= 0 || elapsedSeconds < 0.5)
+            {
+                estimate = L(
+                    "Health.Progress.EtaCalculating");
+            }
+            else
+            {
+                double rate = phaseCompleted / elapsedSeconds;
+                double remainingSeconds = (total - completed) / rate;
+                estimate = LF(
+                    "Health.Progress.RateAndEta",
+                    FormatRate(rate),
+                    ProgressUnit(value.Unit),
+                    FormatDuration(remainingSeconds));
+            }
+
             SetStatusText(
-                "Health.Progress.Indeterminate",
-                ProgressStage(value.Stage));
-            return;
-        }
-
-        bool newPhase = !string.Equals(_analysisProgressStage, value.Stage, StringComparison.Ordinal) ||
-            !string.Equals(_analysisProgressUnit, value.Unit, StringComparison.Ordinal) ||
-            _analysisProgressTotal != total || completed < _analysisProgressCompleted;
-        if (newPhase)
-        {
-            _analysisProgressStage = value.Stage;
-            _analysisProgressUnit = value.Unit;
-            _analysisProgressTotal = total;
-            _analysisProgressOrigin = completed;
-            _analysisProgressClock = Stopwatch.StartNew();
-        }
-        _analysisProgressCompleted = completed;
-        IsAnalysisProgressIndeterminate = false;
-        AnalysisProgressFraction = Math.Clamp((double)completed / total, 0, 1);
-
-        long phaseCompleted = completed - _analysisProgressOrigin;
-        double elapsedSeconds = _analysisProgressClock?.Elapsed.TotalSeconds ?? 0;
-        string estimate;
-        if (phaseCompleted <= 0 || elapsedSeconds < 0.5)
-        {
-            estimate = L(
-                "Health.Progress.EtaCalculating");
-        }
-        else
-        {
-            double rate = phaseCompleted / elapsedSeconds;
-            double remainingSeconds = (total - completed) / rate;
-            estimate = LF(
-                "Health.Progress.RateAndEta",
-                FormatRate(rate),
+                "Health.Progress.Determinate",
+                ProgressStage(value.Stage),
+                completed,
+                total,
                 ProgressUnit(value.Unit),
-                FormatDuration(remainingSeconds));
+                AnalysisProgressFraction,
+                estimate);
         }
-
-        SetStatusText(
-            "Health.Progress.Determinate",
-            ProgressStage(value.Stage),
-            completed,
-            total,
-            ProgressUnit(value.Unit),
-            AnalysisProgressFraction,
-            estimate);
     }
 
     private static string FormatRate(double rate) => rate switch
@@ -2071,24 +2140,39 @@ public partial class AnalyzerViewModel : ViewModelBase
             Math.Max(0, duration.Seconds));
     }
 
+    private long CurrentAnalysisProgressGeneration()
+    {
+        lock (_analysisProgressGate)
+            return _analysisProgressGeneration;
+    }
+
+    private void StopAnalysisProgress()
+    {
+        lock (_analysisProgressGate)
+            _analysisProgressGeneration++;
+    }
+
     private sealed class RunScope(AnalyzerViewModel vm) : IDisposable
     {
         public CancellationToken Token => vm._cts!.Token;
 
         public void Complete(MessageTone tone = MessageTone.Success)
         {
+            vm.StopAnalysisProgress();
             vm.LastActivityState = AppActivityState.Completed;
             vm.StatusTone = tone;
         }
 
         public void Cancel()
         {
+            vm.StopAnalysisProgress();
             vm.LastActivityState = AppActivityState.Cancelled;
             vm.StatusTone = MessageTone.Warning;
         }
 
         public void Fail()
         {
+            vm.StopAnalysisProgress();
             vm.LastActivityState = AppActivityState.Failed;
             vm.StatusTone = MessageTone.Error;
         }
@@ -2106,6 +2190,7 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     private void AddRun(AnalysisRunViewModel run)
     {
+        StopAnalysisProgress();
         run.PropertyChanged += RunChanged;
         foreach (var action in run.RepresentationActionItems)
             action.StateChanged += () =>

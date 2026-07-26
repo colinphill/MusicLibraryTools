@@ -49,7 +49,10 @@ public partial class IndexingViewModel : ObservableObject
         _settings = settings;
         _activities = activities;
         _localization = localization;
-        SetStatus("Index.Status.LoadConfiguration");
+        SetStatus(
+            settings.Configuration is null
+                ? "Index.Status.LoadConfiguration"
+                : "Index.Status.CachedLibraryReady");
         if (_localization is not null)
             _localization.CultureChanged +=
                 OnCultureChanged;

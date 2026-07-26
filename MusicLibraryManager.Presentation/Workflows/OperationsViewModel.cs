@@ -298,6 +298,8 @@ public partial class OperationsViewModel : ViewModelBase
 
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
+    public ObservableCollection<OperationEntryNodeViewModel>
+        RecoveryEntryNodes { get; } = [];
     public ObservableCollection<UnifiedJobHistoryItem> JobHistory { get; } = [];
     public ObservableCollection<UnifiedJobChoiceViewModel> JobChoices { get; } = [];
     public IReadOnlyList<UnifiedJobDescriptor> JobCatalog => _jobs?.Catalog ?? [];
@@ -355,6 +357,8 @@ public partial class OperationsViewModel : ViewModelBase
         _activities = activities;
         _configuredExport = configuredExport;
         _localization = localization;
+        RootNodes.CollectionChanged +=
+            (_, _) => RebuildRecoveryEntryNodes();
         SetStatus("Operations.Status.Ready");
         SetJobStatus("Operations.Job.Status.Ready");
         SearchRoot = settings.GetLibraryPreference(SearchRootPreference);
@@ -1682,6 +1686,28 @@ public partial class OperationsViewModel : ViewModelBase
     {
         InvalidateRestorePreview();
         PreviewRestoreCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RebuildRecoveryEntryNodes()
+    {
+        RecoveryEntryNodes.Clear();
+        foreach (OperationEntryNodeViewModel root in
+                 RootNodes)
+        {
+            AddRecoveryEntries(root);
+        }
+    }
+
+    private void AddRecoveryEntries(
+        OperationEntryNodeViewModel node)
+    {
+        if (node.HasEntry)
+            RecoveryEntryNodes.Add(node);
+        foreach (OperationEntryNodeViewModel child in
+                 node.Children)
+        {
+            AddRecoveryEntries(child);
+        }
     }
 
     [RelayCommand]

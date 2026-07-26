@@ -157,6 +157,17 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         RefreshProfileChoices();
         RefreshIngestProfileChoices();
         RefreshActiveConfiguration();
+        if (!string.IsNullOrWhiteSpace(
+                settings.ConfigPath) &&
+            string.Equals(
+                EditorPath,
+                settings.ConfigPath,
+                StringComparison
+                    .OrdinalIgnoreCase))
+        {
+            SetStatus(
+                "Settings.Status.ConfigurationLoaded");
+        }
         TrackRows(IndexTargets);
         TrackRows(SyncPlaylists);
         TrackRows(PlaylistSources);
@@ -1845,6 +1856,46 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     }
 
     [RelayCommand]
+    private void DuplicateIngestRecipe(
+        IngestRecipeEditorRow? row)
+    {
+        if (row is null ||
+            AdvancedIngestProfile is null)
+        {
+            return;
+        }
+
+        string sourceId =
+            string.IsNullOrWhiteSpace(row.Id)
+                ? "recipe"
+                : row.Id.Trim();
+        string candidateId =
+            UniqueNestedEditorId(
+                sourceId,
+                AdvancedIngestProfile
+                    .Recipes
+                    .Select(item => item.Id));
+        IngestRecipeEditorRow copyRow =
+            row.CloneForDuplicate(
+                candidateId,
+                row.Name +
+                _localization.Get(
+                    "Settings.Profile.CopySuffix"));
+        int index =
+            AdvancedIngestProfile
+                .Recipes
+                .IndexOf(row);
+        AdvancedIngestProfile
+            .Recipes
+            .Insert(
+                index < 0
+                    ? AdvancedIngestProfile
+                        .Recipes.Count
+                    : index + 1,
+                copyRow);
+    }
+
+    [RelayCommand]
     private void AddSidecarRule() =>
         AdvancedProfile?.SidecarRules.Add(SidecarRuleEditorRow.Create());
 
@@ -1853,6 +1904,66 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (row is not null)
             AdvancedProfile?.SidecarRules.Remove(row);
+    }
+
+    [RelayCommand]
+    private void DuplicateSidecarRule(
+        SidecarRuleEditorRow? row)
+    {
+        if (row is null ||
+            AdvancedProfile is null)
+        {
+            return;
+        }
+
+        string sourceId =
+            string.IsNullOrWhiteSpace(row.Id)
+                ? "sidecar"
+                : row.Id.Trim();
+        string candidateId =
+            UniqueNestedEditorId(
+                sourceId,
+                AdvancedProfile
+                    .SidecarRules
+                    .Select(item => item.Id));
+        int index =
+            AdvancedProfile
+                .SidecarRules
+                .IndexOf(row);
+        AdvancedProfile
+            .SidecarRules
+            .Insert(
+                index < 0
+                    ? AdvancedProfile
+                        .SidecarRules.Count
+                    : index + 1,
+                row.CloneForDuplicate(
+                    candidateId,
+                    row.Name +
+                    _localization.Get(
+                        "Settings.Profile.CopySuffix")));
+    }
+
+    private static string UniqueNestedEditorId(
+        string sourceId,
+        IEnumerable<string> existingIds)
+    {
+        string candidateId =
+            $"{sourceId}-copy";
+        var existing =
+            existingIds
+                .Select(id => id.Trim())
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase);
+        for (int suffix = 2;
+             existing.Contains(candidateId);
+             suffix++)
+        {
+            candidateId =
+                $"{sourceId}-copy-{suffix}";
+        }
+        return candidateId;
     }
 
     [RelayCommand]

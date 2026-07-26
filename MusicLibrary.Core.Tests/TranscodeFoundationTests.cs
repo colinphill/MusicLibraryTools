@@ -117,6 +117,43 @@ public sealed class TranscodeFoundationTests
     }
 
     [Fact]
+    public void IngestTranscodeResolverRequiresCorrectionSupportFromTheSelectedRateMode()
+    {
+        AudioTranscodeCapabilitySnapshot snapshot =
+            CorrectionCapabilitySnapshot();
+        var lossless = new AudioTranscodeSettings(
+            AudioTranscodeFormatIds.WavPack,
+            AudioTranscodeEncoderIds.WavPackCli,
+            AudioTranscodeRateMode.Lossless,
+            CreateCorrectionFile: true);
+
+        bool losslessResolved =
+            IngestTranscodeSettingsResolver.TryResolveCapability(
+                snapshot,
+                lossless,
+                out _,
+                out _,
+                out string? losslessError);
+        bool hybridResolved =
+            IngestTranscodeSettingsResolver.TryResolveCapability(
+                snapshot,
+                lossless with
+                {
+                    RateMode =
+                        AudioTranscodeRateMode.HybridBitrate,
+                },
+                out _,
+                out _,
+                out string? hybridError);
+
+        Assert.False(losslessResolved);
+        Assert.Contains(
+            nameof(AudioTranscodeRateMode.Lossless),
+            losslessError);
+        Assert.True(hybridResolved, hybridError);
+    }
+
+    [Fact]
     public async Task CapabilityProbeAdvertisesConfiguredMonkeysAudioMac()
     {
         using var service = new AudioTranscodeCapabilityService(
@@ -335,6 +372,140 @@ public sealed class TranscodeFoundationTests
             AudioTranscodeEncoderIds.Ffmpeg("flac_fixed"),
             flac.EncoderIds);
         Assert.Equal(first.ConfigurationVersion, forced.ConfigurationVersion);
+    }
+
+    [Fact]
+    public void CapabilityCatalogProjectsCorrectionSupportOnlyToCompatibleRateModes()
+    {
+        AudioToolProbeResult wavPack = new(
+            AudioTranscodeToolKind.WavPack,
+            AudioToolProbeState.Ready,
+            "wavpack",
+            "wavpack",
+            "test",
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "wavpack",
+                "correction"),
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "wavpack",
+                "correction"),
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "wv"),
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "wav",
+                "dsf"));
+        AudioToolProbeResult optimFrog = new(
+            AudioTranscodeToolKind.OptimFrog,
+            AudioToolProbeState.Ready,
+            "optimfrog",
+            "optimfrog",
+            "test",
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "ofs"),
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "ofs"),
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "ofs"),
+            ImmutableHashSet.Create(
+                StringComparer.Ordinal,
+                "wav",
+                "raw"));
+
+        AudioTranscodeCapabilityService.BuildCatalog(
+            [wavPack, optimFrog],
+            out _,
+            out ImmutableArray<
+                AudioEncoderDescriptor> encoders);
+
+        AudioEncoderDescriptor wavPackEncoder =
+            Assert.Single(
+                encoders,
+                encoder =>
+                    encoder.Id ==
+                    AudioTranscodeEncoderIds
+                        .WavPackCli);
+        Assert.False(
+            Assert.Single(
+                    wavPackEncoder.RateControls,
+                    rate =>
+                        rate.Mode ==
+                        AudioTranscodeRateMode
+                            .Lossless)
+                .SupportsCorrectionFile);
+        AudioRateControlDescriptor[]
+            wavPackHybridRates =
+            [
+                .. wavPackEncoder.RateControls
+                    .Where(
+                        rate =>
+                            rate.Mode is
+                                AudioTranscodeRateMode
+                                    .HybridBitrate or
+                                AudioTranscodeRateMode
+                                    .HybridQuality),
+            ];
+        Assert.Equal(
+            2,
+            wavPackHybridRates.Length);
+        Assert.All(
+            wavPackHybridRates,
+            rate =>
+                Assert.True(
+                    rate.SupportsCorrectionFile));
+        AudioEncoderDescriptor ofsEncoder =
+            Assert.Single(
+                encoders,
+                encoder =>
+                    encoder.Id ==
+                    AudioTranscodeEncoderIds
+                        .OptimFrogOfs);
+        Assert.True(
+            ofsEncoder.SupportsCorrectionFile);
+        Assert.All(
+            ofsEncoder.RateControls,
+            rate =>
+                Assert.True(
+                    rate.SupportsCorrectionFile));
+
+        AudioToolProbeResult noCorrection =
+            wavPack with
+            {
+                Encoders =
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "wavpack"),
+                Decoders =
+                    ImmutableHashSet.Create(
+                        StringComparer.Ordinal,
+                        "wavpack"),
+            };
+        AudioTranscodeCapabilityService.BuildCatalog(
+            [noCorrection],
+            out _,
+            out ImmutableArray<
+                AudioEncoderDescriptor>
+                encodersWithoutCorrection);
+        AudioEncoderDescriptor unsupported =
+            Assert.Single(
+                encodersWithoutCorrection,
+                encoder =>
+                    encoder.Id ==
+                    AudioTranscodeEncoderIds
+                        .WavPackCli);
+        Assert.False(
+            unsupported.SupportsCorrectionFile);
+        Assert.All(
+            unsupported.RateControls,
+            rate =>
+                Assert.False(
+                    rate.SupportsCorrectionFile));
     }
 
     [Fact]
@@ -780,6 +951,193 @@ public sealed class TranscodeFoundationTests
             Assert.Single(explicitPlan.Items).Issues,
             issue => issue.Code ==
                 "transcode.dsd-pcm-settings-required");
+    }
+
+    [Fact]
+    public async Task PreviewRequiresCorrectionSupportFromTheSelectedRateMode()
+    {
+        using var source =
+            MediaFixtures.Copy("sample.wav");
+        string outputRoot =
+            Path.GetDirectoryName(source.Path)!;
+        AudioTranscodeService service =
+            CreatePreviewService(
+                new MemorySettings(),
+                new StaticCapabilityService(
+                    CorrectionCapabilitySnapshot()));
+        AudioTranscodeRequest request =
+            PreviewRequest(
+                [source.Path],
+                outputRoot,
+                preserveLayout: false) with
+            {
+                Settings = new(
+                    AudioTranscodeFormatIds.WavPack,
+                    AudioTranscodeEncoderIds.WavPackCli,
+                    AudioTranscodeRateMode.Lossless,
+                    CreateCorrectionFile: true),
+            };
+
+        AudioTranscodePlan blocked =
+            await service.PreviewAsync(
+                request,
+                ct: TestContext.Current
+                    .CancellationToken);
+        AudioTranscodePlan allowed =
+            await service.PreviewAsync(
+                request with
+                {
+                    Settings = request.Settings with
+                    {
+                        RateMode =
+                            AudioTranscodeRateMode
+                                .HybridBitrate,
+                    },
+                },
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        Assert.Contains(
+            blocked.Issues,
+            issue =>
+                issue.Code ==
+                "transcode.correction-unavailable" &&
+                issue.Severity ==
+                OperationIssueSeverity.Blocker);
+        Assert.DoesNotContain(
+            allowed.Issues,
+            issue =>
+                issue.Code ==
+                "transcode.correction-unavailable");
+    }
+
+    [Fact]
+    public async Task StageRevalidatesCorrectionSupportBeforeStartingEncoderWork()
+    {
+        using var source =
+            MediaFixtures.Copy("sample.wav");
+        string outputRoot =
+            Path.GetDirectoryName(source.Path)!;
+        AudioTranscodeCapabilitySnapshot supported =
+            CorrectionCapabilitySnapshot();
+        var capabilities =
+            new MutableCapabilityService(supported);
+        AudioTranscodeService service =
+            CreatePreviewService(
+                new MemorySettings(),
+                capabilities);
+        AudioTranscodeRequest request =
+            PreviewRequest(
+                [source.Path],
+                outputRoot,
+                preserveLayout: false) with
+            {
+                Settings = new(
+                    AudioTranscodeFormatIds.WavPack,
+                    AudioTranscodeEncoderIds.WavPackCli,
+                    AudioTranscodeRateMode.HybridBitrate,
+                    BitrateKbps: 320,
+                    CreateCorrectionFile: true),
+            };
+        AudioTranscodePlan plan =
+            await service.PreviewAsync(
+                request,
+                ct: TestContext.Current
+                    .CancellationToken);
+        Assert.True(plan.CanApply);
+        AudioEncoderDescriptor changedEncoder =
+            Assert.Single(supported.Encoders) with
+            {
+                RateControls =
+                [
+                    new(
+                        AudioTranscodeRateMode
+                            .Lossless),
+                    new(
+                        AudioTranscodeRateMode
+                            .HybridBitrate,
+                        200,
+                        960),
+                ],
+            };
+        capabilities.Snapshot = supported with
+        {
+            Encoders = [changedEncoder],
+            ConfigurationVersion =
+                supported.ConfigurationVersion + 1,
+        };
+
+        InvalidOperationException error =
+            await Assert.ThrowsAsync<
+                InvalidOperationException>(
+                () => service.StageAsync(
+                    plan,
+                    ct: TestContext.Current
+                        .CancellationToken));
+
+        Assert.Contains(
+            "correction file",
+            error.Message,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task StageRevalidationBypassesTheProductionCapabilityCache()
+    {
+        using var source =
+            MediaFixtures.Copy("sample.wav");
+        string outputRoot =
+            Path.GetDirectoryName(source.Path)!;
+        var settings = new MemorySettings();
+        var runner =
+            new MutableWavPackProbeRunner();
+        using var capabilities =
+            new AudioTranscodeCapabilityService(
+                settings,
+                runner);
+        var adapter = new RecordingAdapter();
+        AudioTranscodeService service =
+            CreatePreviewService(
+                settings,
+                capabilities,
+                adapter);
+        AudioTranscodeRequest request =
+            PreviewRequest(
+                [source.Path],
+                outputRoot,
+                preserveLayout: false) with
+            {
+                Settings = new(
+                    AudioTranscodeFormatIds.WavPack,
+                    AudioTranscodeEncoderIds.WavPackCli,
+                    AudioTranscodeRateMode.HybridBitrate,
+                    BitrateKbps: 320,
+                    CreateCorrectionFile: true),
+            };
+
+        AudioTranscodePlan plan =
+            await service.PreviewAsync(
+                request,
+                ct: TestContext.Current
+                    .CancellationToken);
+        Assert.True(plan.CanApply);
+        Assert.Equal(1, runner.WavPackHelpCalls);
+        runner.SupportsCorrectionFile = false;
+
+        InvalidOperationException error =
+            await Assert.ThrowsAsync<
+                InvalidOperationException>(
+                () => service.StageAsync(
+                    plan,
+                    ct: TestContext.Current
+                        .CancellationToken));
+
+        Assert.Contains(
+            "reviewed transcode settings",
+            error.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(2, runner.WavPackHelpCalls);
+        Assert.Null(adapter.SourcePath);
     }
 
     [Theory]
@@ -1591,7 +1949,10 @@ public sealed class TranscodeFoundationTests
                 AudioTranscodeCollisionPolicy.Stop));
 
     private static AudioTranscodeService CreatePreviewService(
-        IAppSettings settings)
+        IAppSettings settings,
+        IAudioTranscodeCapabilityService? capabilities =
+            null,
+        IAudioTranscodeAdapter? adapter = null)
     {
         var coordinator =
             new FileMutationCoordinator();
@@ -1600,7 +1961,9 @@ public sealed class TranscodeFoundationTests
                 coordinator);
         return new(
             settings,
+            capabilities ??
             new FixedCapabilityService(),
+            adapter ??
             new RecordingAdapter(),
             new RecordingProjection(),
             new TranscodeWorkScheduler(
@@ -1615,6 +1978,48 @@ public sealed class TranscodeFoundationTests
                 journals),
             new SuccessfulDecodedVerifier());
     }
+
+    private static AudioTranscodeCapabilitySnapshot
+        CorrectionCapabilitySnapshot() =>
+        new(
+            [],
+            [
+                new(
+                    AudioTranscodeFormatIds.WavPack,
+                    "wavpack",
+                    "wv",
+                    ".wv",
+                    true,
+                    [
+                        AudioTranscodeEncoderIds
+                            .WavPackCli,
+                    ]),
+            ],
+            [
+                new(
+                    AudioTranscodeEncoderIds.WavPackCli,
+                    AudioTranscodeToolKind.WavPack,
+                    "wavpack",
+                    AudioEncoderThreadingMode
+                        .SingleThreaded,
+                    [
+                        new(
+                            AudioTranscodeRateMode
+                                .Lossless),
+                        new(
+                            AudioTranscodeRateMode
+                                .HybridBitrate,
+                            200,
+                            960,
+                            SupportsCorrectionFile:
+                                true),
+                    ],
+                    [],
+                    [16, 24],
+                    SupportsCorrectionFile: true),
+            ],
+            DateTimeOffset.UtcNow,
+            1);
 
     private static AudioTranscodeCapabilitySnapshot SnapshotWithTools(
         params AudioToolProbeResult[] tools) =>
@@ -1714,6 +2119,40 @@ public sealed class TranscodeFoundationTests
                 [FfmpegEncoder()],
                 DateTimeOffset.UtcNow,
                 1));
+
+        public void Invalidate()
+        {
+        }
+    }
+
+    private sealed class StaticCapabilityService(
+        AudioTranscodeCapabilitySnapshot snapshot) :
+        IAudioTranscodeCapabilityService
+    {
+        public Task<AudioTranscodeCapabilitySnapshot> GetAsync(
+            bool forceRefresh = false,
+            CancellationToken ct = default) =>
+            Task.FromResult(snapshot);
+
+        public void Invalidate()
+        {
+        }
+    }
+
+    private sealed class MutableCapabilityService(
+        AudioTranscodeCapabilitySnapshot snapshot) :
+        IAudioTranscodeCapabilityService
+    {
+        public AudioTranscodeCapabilitySnapshot Snapshot
+        {
+            get;
+            set;
+        } = snapshot;
+
+        public Task<AudioTranscodeCapabilitySnapshot> GetAsync(
+            bool forceRefresh = false,
+            CancellationToken ct = default) =>
+            Task.FromResult(Snapshot);
 
         public void Invalidate()
         {
@@ -1861,6 +2300,65 @@ public sealed class TranscodeFoundationTests
             };
             return Task.FromResult(
                 new ManagedProcessResult(0, output, ""));
+        }
+    }
+
+    private sealed class MutableWavPackProbeRunner :
+        IManagedProcessRunner
+    {
+        private int _wavPackHelpCalls;
+
+        public bool SupportsCorrectionFile
+        {
+            get;
+            set;
+        } = true;
+
+        public int WavPackHelpCalls =>
+            Volatile.Read(ref _wavPackHelpCalls);
+
+        public Task<ManagedProcessResult> RunAsync(
+            string executable,
+            IReadOnlyList<string> arguments,
+            string? workingDirectory = null,
+            IProgress<string>? standardOutputLines = null,
+            CancellationToken ct = default)
+        {
+            if (!executable.Equals(
+                    "wavpack",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new FileNotFoundException(executable);
+            }
+
+            if (arguments.SequenceEqual(["--version"]))
+            {
+                return Task.FromResult(
+                    new ManagedProcessResult(
+                        0,
+                        "WavPack version test",
+                        ""));
+            }
+
+            if (arguments.SequenceEqual(["--help"]))
+            {
+                Interlocked.Increment(
+                    ref _wavPackHelpCalls);
+                string help = SupportsCorrectionFile
+                    ? "WavPack help with correction support"
+                    : "WavPack help";
+                return Task.FromResult(
+                    new ManagedProcessResult(
+                        0,
+                        help,
+                        ""));
+            }
+
+            return Task.FromResult(
+                new ManagedProcessResult(
+                    1,
+                    "",
+                    "Unexpected arguments."));
         }
     }
 

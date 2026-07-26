@@ -96,6 +96,147 @@ public sealed class TranscodeEditorViewModelTests
     }
 
     [Fact]
+    public async Task CorrectionFileOptionTracksEncoderCapabilityAndClearsAnInapplicableChoice()
+    {
+        var editor = new TranscodeEditorViewModel(
+            new RecordingTranscodeService(),
+            new CapabilityService(),
+            new PresetStore(),
+            new Scheduler(),
+            new FilePicker(),
+            new Dialogs(),
+            new RecordingPendingCoordinator());
+
+        await editor.OpenAsync(
+            [Path.GetFullPath("one.flac")],
+            TestContext.Current.CancellationToken);
+
+        Assert.False(editor.IsCorrectionFileSupported);
+        Assert.False(editor.IsCorrectionFileOptionVisible);
+        Assert.False(editor.CanEditCorrectionFile);
+
+        editor.SelectedFormatId =
+            AudioTranscodeFormatIds.WavPack;
+        editor.SelectedEncoderId =
+            AudioTranscodeEncoderIds.WavPackCli;
+
+        Assert.False(editor.IsCorrectionFileSupported);
+        Assert.False(editor.IsCorrectionFileOptionVisible);
+        Assert.False(editor.CanEditCorrectionFile);
+        editor.SelectedRateMode =
+            AudioTranscodeRateMode.HybridBitrate;
+        Assert.True(editor.IsCorrectionFileSupported);
+        Assert.True(editor.IsCorrectionFileOptionVisible);
+        Assert.True(editor.CanEditCorrectionFile);
+        Assert.Equal(
+            LocalizedText.Get(
+                "Transcode.Correction.Help"),
+            editor.CorrectionFileHelpText);
+        editor.CreateCorrectionFile = true;
+
+        editor.SelectedFormatId =
+            AudioTranscodeFormatIds.Flac;
+        Assert.False(editor.IsCorrectionFileSupported);
+        Assert.False(editor.CreateCorrectionFile);
+        editor.SelectedFormatId =
+            AudioTranscodeFormatIds.WavPack;
+        Assert.True(editor.IsCorrectionFileSupported);
+        editor.CreateCorrectionFile = true;
+
+        editor.SelectedRateMode =
+            AudioTranscodeRateMode.Lossless;
+
+        Assert.False(editor.IsCorrectionFileSupported);
+        Assert.False(editor.IsCorrectionFileOptionVisible);
+        Assert.False(editor.CanEditCorrectionFile);
+        Assert.False(editor.CreateCorrectionFile);
+
+        editor.SelectedFormatId =
+            AudioTranscodeFormatIds
+                .OptimFrogDualStream;
+        Assert.False(editor.IsCorrectionFileSupported);
+        editor.SelectedEncoderId =
+            AudioTranscodeEncoderIds
+                .OptimFrogOfs;
+
+        Assert.True(editor.IsCorrectionFileSupported);
+        Assert.True(editor.IsCorrectionFileOptionVisible);
+        Assert.True(editor.CanEditCorrectionFile);
+        editor.CreateCorrectionFile = true;
+
+        editor.SelectedFormatId =
+            AudioTranscodeFormatIds.Flac;
+
+        Assert.False(editor.IsCorrectionFileSupported);
+        Assert.False(editor.IsCorrectionFileOptionVisible);
+        Assert.False(editor.CanEditCorrectionFile);
+        Assert.False(editor.CreateCorrectionFile);
+    }
+
+    [Fact]
+    public async Task InvalidPresetKeepsCorrectionVisibleAndEditableSoTheUserCanRepairIt()
+    {
+        var presets = new PresetStore();
+        var localization =
+            new SwitchingLocalizationService();
+        AudioTranscodePreset preset = new(
+            Guid.NewGuid(),
+            "Legacy correction preset",
+            new(
+                AudioTranscodeFormatIds.WavPack,
+                AudioTranscodeEncoderIds.WavPackCli,
+                AudioTranscodeRateMode.Lossless,
+                CreateCorrectionFile: true),
+            true,
+            true,
+            true,
+            "{Name}{Extension}",
+            AudioTranscodeCollisionPolicy.Stop,
+            DateTimeOffset.UtcNow);
+        presets.Values.Add(preset);
+        var editor = new TranscodeEditorViewModel(
+            new RecordingTranscodeService(),
+            new CapabilityService(),
+            presets,
+            new Scheduler(),
+            new FilePicker(),
+            new Dialogs(),
+            new RecordingPendingCoordinator(),
+            localization);
+        await editor.OpenAsync(
+            [Path.GetFullPath("one.flac")],
+            TestContext.Current.CancellationToken);
+
+        editor.SelectedPreset = preset;
+
+        Assert.True(editor.CreateCorrectionFile);
+        Assert.False(editor.IsCorrectionFileSupported);
+        Assert.True(editor.IsCorrectionFileOptionVisible);
+        Assert.True(editor.CanEditCorrectionFile);
+        Assert.Equal(
+            "en-US:Transcode.Issue.CorrectionUnavailable",
+            editor.CorrectionFileHelpText);
+
+        localization.SetCulture("fr-FR");
+        await editor.RefreshCapabilitiesCommand
+            .ExecuteAsync(null);
+
+        Assert.True(editor.CreateCorrectionFile);
+        Assert.False(editor.IsCorrectionFileSupported);
+        Assert.True(editor.IsCorrectionFileOptionVisible);
+        Assert.True(editor.CanEditCorrectionFile);
+        Assert.Equal(
+            "fr-FR:Transcode.Issue.CorrectionUnavailable",
+            editor.CorrectionFileHelpText);
+
+        editor.CreateCorrectionFile = false;
+
+        Assert.False(editor.CreateCorrectionFile);
+        Assert.False(editor.IsCorrectionFileOptionVisible);
+        Assert.False(editor.CanEditCorrectionFile);
+    }
+
+    [Fact]
     public async Task PreviewLocalizesIssueSummaryAndRetainsRawDiagnostic()
     {
         var service = new RecordingTranscodeService
@@ -227,7 +368,13 @@ public sealed class TranscodeEditorViewModelTests
         editor.SelectedSampleRate = 48_000;
         editor.SelectedBitDepth = 24;
         string formatLabel =
-            Assert.Single(editor.FormatChoices).Label;
+            Assert.Single(
+                editor.FormatChoices,
+                choice =>
+                    choice.Value ==
+                    AudioTranscodeFormatIds
+                        .Flac)
+                .Label;
 
         localization.SetCulture("fr-FR");
         await editor.PreviewCommand.ExecuteAsync(null);
@@ -247,12 +394,20 @@ public sealed class TranscodeEditorViewModelTests
             editor.SelectedRateMode);
         Assert.Equal(48_000, editor.SelectedSampleRate);
         Assert.Equal(24, editor.SelectedBitDepth);
+        LocalizedChoice<string>
+            localizedFlac =
+            Assert.Single(
+                editor.FormatChoices,
+                choice =>
+                    choice.Value ==
+                    AudioTranscodeFormatIds
+                        .Flac);
         Assert.NotEqual(
             formatLabel,
-            Assert.Single(editor.FormatChoices).Label);
+            localizedFlac.Label);
         Assert.StartsWith(
             "fr-FR:",
-            Assert.Single(editor.FormatChoices).Label,
+            localizedFlac.Label,
             StringComparison.Ordinal);
     }
 
@@ -600,6 +755,22 @@ public sealed class TranscodeEditorViewModelTests
                         ".flac",
                         true,
                         [AudioTranscodeEncoderIds.Ffmpeg("flac")]),
+                    new(
+                        AudioTranscodeFormatIds.WavPack,
+                        "wavpack",
+                        "wv",
+                        ".wv",
+                        true,
+                        [AudioTranscodeEncoderIds.WavPackCli]),
+                    new(
+                        AudioTranscodeFormatIds
+                            .OptimFrogDualStream,
+                        "ofs",
+                        "ofs",
+                        ".ofs",
+                        false,
+                        [AudioTranscodeEncoderIds
+                            .OptimFrogOfs]),
                 ],
                 [
                     new(
@@ -610,6 +781,47 @@ public sealed class TranscodeEditorViewModelTests
                         [new(AudioTranscodeRateMode.Lossless)],
                         [],
                         [16, 24]),
+                    new(
+                        AudioTranscodeEncoderIds.WavPackCli,
+                        AudioTranscodeToolKind.WavPack,
+                        "wavpack",
+                        AudioEncoderThreadingMode.SingleThreaded,
+                        [
+                            new(
+                                AudioTranscodeRateMode
+                                    .Lossless),
+                            new(
+                                AudioTranscodeRateMode
+                                    .HybridBitrate,
+                                SupportsCorrectionFile:
+                                    true),
+                        ],
+                        [],
+                        [16, 24],
+                        SupportsCorrectionFile: true),
+                    new(
+                        AudioTranscodeEncoderIds
+                            .OptimFrogOfs,
+                        AudioTranscodeToolKind
+                            .OptimFrog,
+                        "ofs",
+                        AudioEncoderThreadingMode
+                            .SingleThreaded,
+                        [
+                            new(
+                                AudioTranscodeRateMode
+                                    .AverageBitrate,
+                                SupportsCorrectionFile:
+                                    true),
+                            new(
+                                AudioTranscodeRateMode
+                                    .VariableQuality,
+                                SupportsCorrectionFile:
+                                    true),
+                        ],
+                        [],
+                        [16, 24],
+                        SupportsCorrectionFile: true),
                 ],
                 DateTimeOffset.UtcNow,
                 1));

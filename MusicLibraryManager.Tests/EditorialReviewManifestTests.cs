@@ -19,7 +19,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
 
-        Assert.Equal(3_653, manifest.Records.Count);
+        Assert.Equal(3_655, manifest.Records.Count);
         Assert.Equal(
             0,
             Count(
@@ -36,7 +36,7 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            3_291,
+            3_293,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -511,7 +511,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                3_291,
+                3_293,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));

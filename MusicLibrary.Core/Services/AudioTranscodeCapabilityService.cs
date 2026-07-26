@@ -493,7 +493,7 @@ public sealed class AudioTranscodeCapabilityService :
         return values.ToImmutable();
     }
 
-    private static void BuildCatalog(
+    internal static void BuildCatalog(
         IReadOnlyList<AudioToolProbeResult> probes,
         out ImmutableArray<AudioTranscodeFormatDescriptor> formats,
         out ImmutableArray<AudioEncoderDescriptor> encoders)
@@ -693,11 +693,17 @@ public sealed class AudioTranscodeCapabilityService :
                     new(
                         AudioTranscodeRateMode.HybridBitrate,
                         200,
-                        960),
+                        960,
+                        SupportsCorrectionFile:
+                            wavpack.Encoders.Contains(
+                                "correction")),
                     new(
                         AudioTranscodeRateMode.HybridQuality,
                         MinimumQuality: 2,
-                        MaximumQuality: 6),
+                        MaximumQuality: 6,
+                        SupportsCorrectionFile:
+                            wavpack.Encoders.Contains(
+                                "correction")),
                 ],
                 [],
                 [8, 16, 24, 32],
@@ -862,11 +868,13 @@ public sealed class AudioTranscodeCapabilityService :
                     new(
                         AudioTranscodeRateMode.AverageBitrate,
                         300,
-                        1000),
+                        1000,
+                        SupportsCorrectionFile: true),
                     new(
                         AudioTranscodeRateMode.VariableQuality,
                         MinimumQuality: 0,
-                        MaximumQuality: 6),
+                        MaximumQuality: 6,
+                        SupportsCorrectionFile: true),
                 ]
                 : [Lossless()],
             [],

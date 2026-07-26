@@ -24,13 +24,20 @@ public partial class SettingsView : UserControl
         CategoryRailWidth +
         MinimumPageWidthWithRail;
     internal const double FieldMappingSingleColumnWidth = 760;
+    internal const double RuleSummaryInlineCommandWidth =
+        TwoColumnPageWidth;
     private readonly Dictionary<Grid, ResponsiveGridSnapshot> _responsiveGrids = [];
     private readonly HashSet<ComboBox> _localizedChoiceBoxes = [];
+    private readonly Dictionary<MenuFlyout, EventHandler>
+        _activeRuleRemovalMenus = [];
     private readonly ILocalizationService _localization;
     private readonly SettingsCategoryOption[] _categories;
     private int _responsiveColumnCount = -1;
     private double _responsivePageWidth;
     private bool _localizationSubscribed;
+
+    internal int ActiveRuleRemovalMenuCount =>
+        _activeRuleRemovalMenus.Count;
 
     private static readonly SettingsCategoryDefinition[] CategoryDefinitions =
     [
@@ -78,6 +85,7 @@ public partial class SettingsView : UserControl
         };
         DetachedFromVisualTree += (_, _) =>
         {
+            ReleaseRuleRemovalMenus();
             if (!_localizationSubscribed)
                 return;
             _localization.CultureChanged -= OnLocalizationCultureChanged;
@@ -181,6 +189,28 @@ public partial class SettingsView : UserControl
                 _responsiveGrids.Add(grid, snapshot);
             }
 
+            if (IsRuleSummaryCommandGrid(grid))
+            {
+                bool useInlineLayout =
+                    _responsivePageWidth >=
+                    RuleSummaryInlineCommandWidth;
+                int layoutKey =
+                    useInlineLayout ? 5 : -3;
+                if (snapshot.AppliedColumnCount ==
+                    layoutKey)
+                {
+                    continue;
+                }
+
+                if (useInlineLayout)
+                    snapshot.Restore(grid);
+                else
+                    snapshot.ApplyRuleSummaryStack(grid);
+                snapshot.AppliedColumnCount =
+                    layoutKey;
+                continue;
+            }
+
             int desiredColumns =
                 grid.Classes.Contains("field-mapping-fields") &&
                 _responsivePageWidth <
@@ -238,6 +268,12 @@ public partial class SettingsView : UserControl
                 choice.UntypedValue);
         }
     }
+
+    private static bool IsRuleSummaryCommandGrid(
+        Grid grid) =>
+        grid.Name is
+            "SidecarRuleSummaryCommandGrid" or
+            "IngestRecipeSummaryCommandGrid";
 
     private static bool IsResponsiveForm(Grid grid) =>
         grid.Classes.Contains("responsive-form");
@@ -327,7 +363,208 @@ public partial class SettingsView : UserControl
 
     private void OnEditExportProfileClicked(
         object? sender,
+        RoutedEventArgs e) =>
+        ExpandCardEditor(
+            sender,
+            "export-profile-card",
+            "ExportProfileEditorExpander");
+
+    private void OnEditSidecarRuleClicked(
+        object? sender,
+        RoutedEventArgs e) =>
+        ExpandCardEditor(
+            sender,
+            "SidecarRuleCard",
+            "SidecarRuleEditorExpander");
+
+    private void OnEditIngestRecipeClicked(
+        object? sender,
+        RoutedEventArgs e) =>
+        ExpandCardEditor(
+            sender,
+            "IngestRecipeCard",
+            "IngestRecipeEditorExpander");
+
+    private void OnSidecarRuleMoreClicked(
+        object? sender,
         RoutedEventArgs e)
+    {
+        if (DataContext is
+            SettingsViewModel model)
+        {
+            PrepareRemovalMenu(
+                sender,
+                model
+                    .RemoveSidecarRuleCommand,
+                "SidecarRuleCard",
+                "EditSidecarRuleButton",
+                "AddSidecarRuleButton");
+        }
+    }
+
+    private void OnIngestRecipeMoreClicked(
+        object? sender,
+        RoutedEventArgs e)
+    {
+        if (DataContext is
+            SettingsViewModel model)
+        {
+            PrepareRemovalMenu(
+                sender,
+                model
+                    .RemoveIngestRecipeCommand,
+                "IngestRecipeCard",
+                "EditIngestRecipeButton",
+                "AddIngestRecipeButton");
+        }
+    }
+
+    private void PrepareRemovalMenu(
+        object? sender,
+        System.Windows.Input.ICommand
+            command,
+        string cardName,
+        string editButtonName,
+        string addButtonName)
+    {
+        if (sender is not Button
+                {
+                    Flyout: MenuFlyout flyout,
+                } button)
+        {
+            return;
+        }
+
+        MenuItem? remove =
+            flyout.Items
+                .OfType<MenuItem>()
+                .SingleOrDefault();
+        if (remove is null)
+            return;
+        remove.Command = command;
+        remove.CommandParameter =
+            button.DataContext;
+
+        if (_activeRuleRemovalMenus.Remove(
+                flyout,
+                out EventHandler? previousHandler))
+        {
+            flyout.Closed -= previousHandler;
+        }
+
+        Button? nextEditButton =
+            FindNextRuleCardEditButton(
+                button,
+                cardName,
+                editButtonName);
+        EventHandler? closedHandler = null;
+        closedHandler = (_, _) =>
+        {
+            if (closedHandler is not null)
+            {
+                flyout.Closed -= closedHandler;
+                _activeRuleRemovalMenus.Remove(
+                    flyout);
+            }
+
+            Dispatcher.UIThread.Post(
+                () =>
+                {
+                    if (TopLevel
+                            .GetTopLevel(button)
+                        is not null &&
+                        button.IsEffectivelyVisible)
+                    {
+                        button.Focus();
+                        return;
+                    }
+
+                    if (nextEditButton is not null &&
+                        TopLevel.GetTopLevel(
+                            nextEditButton)
+                        is not null &&
+                        nextEditButton
+                            .IsEffectivelyVisible)
+                    {
+                        nextEditButton.Focus();
+                        return;
+                    }
+
+                    this.GetVisualDescendants()
+                        .OfType<Button>()
+                        .FirstOrDefault(candidate =>
+                            candidate.Name ==
+                            addButtonName)?
+                        .Focus();
+                },
+                DispatcherPriority.Input);
+        };
+        _activeRuleRemovalMenus.Add(
+            flyout,
+            closedHandler);
+        flyout.Closed += closedHandler;
+    }
+
+    private Button? FindNextRuleCardEditButton(
+        Button source,
+        string cardName,
+        string editButtonName)
+    {
+        Border? sourceCard = source
+            .GetVisualAncestors()
+            .OfType<Border>()
+            .FirstOrDefault(card =>
+                card.Name == cardName);
+        if (sourceCard is null)
+            return null;
+
+        Border[] cards =
+        [
+            .. this.GetVisualDescendants()
+                .OfType<Border>()
+                .Where(card =>
+                    card.Name == cardName),
+        ];
+        int sourceIndex =
+            Array.IndexOf(
+                cards,
+                sourceCard);
+        if (sourceIndex < 0)
+            return null;
+
+        for (int index = sourceIndex + 1;
+             index < cards.Length;
+             index++)
+        {
+            Button? next = cards[index]
+                .GetVisualDescendants()
+                .OfType<Button>()
+                .FirstOrDefault(candidate =>
+                    candidate.Name ==
+                    editButtonName);
+            if (next is not null)
+                return next;
+        }
+
+        return null;
+    }
+
+    private void ReleaseRuleRemovalMenus()
+    {
+        foreach ((
+                     MenuFlyout flyout,
+                     EventHandler handler) in
+                 _activeRuleRemovalMenus)
+        {
+            flyout.Closed -= handler;
+        }
+        _activeRuleRemovalMenus.Clear();
+    }
+
+    private void ExpandCardEditor(
+        object? sender,
+        string cardIdentity,
+        string editorName)
     {
         if (sender is not Button button)
             return;
@@ -337,13 +574,15 @@ public partial class SettingsView : UserControl
             .OfType<Border>()
             .FirstOrDefault(border =>
                 border.Classes.Contains(
-                    "export-profile-card"));
+                    cardIdentity) ||
+                border.Name ==
+                    cardIdentity);
         Expander? selectedEditor = card?
             .GetVisualDescendants()
             .OfType<Expander>()
             .FirstOrDefault(expander =>
                 expander.Name ==
-                "ExportProfileEditorExpander");
+                editorName);
         if (selectedEditor is null)
             return;
 
@@ -352,7 +591,7 @@ public partial class SettingsView : UserControl
                      .OfType<Expander>()
                      .Where(expander =>
                          expander.Name ==
-                         "ExportProfileEditorExpander"))
+                         editorName))
         {
             editor.IsExpanded =
                 ReferenceEquals(
@@ -484,6 +723,69 @@ public partial class SettingsView : UserControl
                 Grid.SetColumn(child, index % columnCount);
                 Grid.SetRowSpan(child, 1);
                 Grid.SetColumnSpan(child, 1);
+            }
+        }
+
+        public void ApplyRuleSummaryStack(
+            Grid grid)
+        {
+            if (_columns.Length != 5 ||
+                _children.Length != 5)
+            {
+                ApplyFlow(grid, 1);
+                return;
+            }
+
+            grid.ColumnDefinitions.Clear();
+            grid.ColumnDefinitions.Add(
+                new ColumnDefinition(
+                    GridLength.Auto));
+            grid.ColumnDefinitions.Add(
+                new ColumnDefinition(
+                    GridLength.Star));
+            grid.ColumnDefinitions.Add(
+                new ColumnDefinition(
+                    GridLength.Auto));
+            grid.RowDefinitions.Clear();
+            grid.RowDefinitions.Add(
+                new RowDefinition(
+                    GridLength.Auto));
+            grid.RowDefinitions.Add(
+                new RowDefinition(
+                    GridLength.Auto));
+            grid.ColumnSpacing =
+                Math.Max(8, _columnSpacing);
+            grid.RowSpacing =
+                Math.Max(8, _rowSpacing);
+
+            foreach (ChildPlacement placement
+                     in _children)
+            {
+                int originalColumn =
+                    placement.Column;
+                Control child =
+                    placement.Child;
+                Grid.SetRow(
+                    child,
+                    originalColumn <= 1
+                        ? 0
+                        : 1);
+                Grid.SetColumn(
+                    child,
+                    originalColumn switch
+                    {
+                        0 => 0,
+                        1 => 1,
+                        2 => 0,
+                        3 => 1,
+                        _ => 2,
+                    });
+                Grid.SetRowSpan(child, 1);
+                Grid.SetColumnSpan(
+                    child,
+                    originalColumn == 1
+                        ? 2
+                        : 1);
             }
         }
 

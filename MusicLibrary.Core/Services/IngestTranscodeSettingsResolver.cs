@@ -148,10 +148,11 @@ public static class IngestTranscodeSettingsResolver
             return false;
         }
         if (settings.CreateCorrectionFile &&
-            !encoder.SupportsCorrectionFile)
+            (!encoder.SupportsCorrectionFile ||
+             !rate.SupportsCorrectionFile))
         {
             error =
-                $"Encoder '{encoder.Id}' cannot create a correction file.";
+                $"Encoder '{encoder.Id}' cannot create a correction file in rate mode '{settings.RateMode}'.";
             return false;
         }
 

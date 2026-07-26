@@ -305,6 +305,8 @@ public partial class HealthView : UserControl
             !compactHeight;
         HealthStatusBanner.IsVisible =
             !compactHeight;
+        ArtworkRepairReviewDescription.IsVisible =
+            !compactHeight;
         HealthActionCard.Padding =
             new Thickness(
                 compactHeight ? 8 : 16);

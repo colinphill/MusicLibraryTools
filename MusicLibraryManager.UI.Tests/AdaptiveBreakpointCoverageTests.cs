@@ -7,6 +7,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
@@ -782,6 +783,16 @@ public sealed class AdaptiveBreakpointCoverageTests
         Grid summary =
             view.FindControl<Grid>(
                 "PreviewSummaryLayout")!;
+        Assert.True(
+            Application.Current!.TryGetResource(
+                "AppSpaceSmall",
+                ThemeVariant.Light,
+                out object? comfortableFieldSpacing));
+        Assert.True(
+            Application.Current.TryGetResource(
+                "AppSpaceXSmall",
+                ThemeVariant.Light,
+                out object? compactFieldSpacing));
         try
         {
             AssertSourceLayout(759, 2, 2);
@@ -794,13 +805,38 @@ public sealed class AdaptiveBreakpointCoverageTests
 
             AssertCompactHeight(
                 559,
-                compact: true);
+                compact: true,
+                Assert.IsType<double>(
+                    comfortableFieldSpacing));
             AssertCompactHeight(
                 560,
-                compact: true);
+                compact: true,
+                Assert.IsType<double>(
+                    comfortableFieldSpacing));
             AssertCompactHeight(
                 561,
-                compact: false);
+                compact: false,
+                Assert.IsType<double>(
+                    comfortableFieldSpacing));
+
+            window.Classes.Add(
+                "density-compact");
+            Render();
+            AssertCompactHeight(
+                559,
+                compact: true,
+                Assert.IsType<double>(
+                    compactFieldSpacing));
+            AssertCompactHeight(
+                560,
+                compact: true,
+                Assert.IsType<double>(
+                    compactFieldSpacing));
+            AssertCompactHeight(
+                561,
+                compact: false,
+                Assert.IsType<double>(
+                    compactFieldSpacing));
         }
         finally
         {
@@ -837,7 +873,8 @@ public sealed class AdaptiveBreakpointCoverageTests
 
         void AssertCompactHeight(
             double height,
-            bool compact)
+            bool compact,
+            double expectedFieldSpacing)
         {
             ResizeHost(host, view, 900, height);
             Assert.Equal(
@@ -855,6 +892,22 @@ public sealed class AdaptiveBreakpointCoverageTests
                 view.FindControl<TextBlock>(
                     "HistoryEmptyDescription")!
                     .IsVisible);
+            Assert.Equal(
+                compact ? 128 : 180,
+                view.FindControl<ScrollViewer>(
+                    "PreflightChecksScroll")!
+                    .MaxHeight);
+            StackPanel previewFilter =
+                view.FindControl<StackPanel>(
+                    "PreviewFilterField")!;
+            Assert.Equal(
+                compact
+                    ? Orientation.Horizontal
+                    : Orientation.Vertical,
+                previewFilter.Orientation);
+            Assert.Equal(
+                expectedFieldSpacing,
+                previewFilter.Spacing);
         }
     }
 
@@ -1451,11 +1504,28 @@ public sealed class AdaptiveBreakpointCoverageTests
             "ArtworkEditorLayout",
             "DiscoverySupportingText",
             620);
-        AssertSectionBreakpoint(
-            new WorkbenchPlaylistsSectionView(),
-            "SectionLayout",
-            "SupportingText",
-            430);
+        WorkbenchViewModel breakpointModel =
+            services.GetRequiredService<
+                WorkbenchViewModel>();
+        breakpointModel.PlaylistOutputs.Add(
+            new(
+                "All files",
+                "playlist.m3u8",
+                1,
+                64));
+        try
+        {
+            AssertSectionBreakpoint(
+                new WorkbenchPlaylistsSectionView(),
+                "SectionLayout",
+                "SupportingText",
+                430);
+        }
+        finally
+        {
+            breakpointModel
+                .PlaylistOutputs.Clear();
+        }
         AssertSectionBreakpoint(
             new WorkbenchToolsSectionView(),
             "SectionLayout",
@@ -1671,6 +1741,15 @@ public sealed class AdaptiveBreakpointCoverageTests
 
         void AssertReportBreakpoint()
         {
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            model.ReportOutputs.Add(
+                new(
+                    "All files",
+                    "report.csv",
+                    1,
+                    64));
             var reports =
                 new WorkbenchReportsSectionView();
             (Window reportsWindow,
@@ -1727,6 +1806,7 @@ public sealed class AdaptiveBreakpointCoverageTests
             finally
             {
                 reportsWindow.Hide();
+                model.ReportOutputs.Clear();
             }
         }
 

@@ -2271,6 +2271,173 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Ingest_recipe_correction_option_tracksEncoderAndRateModeAndKeepsInvalidStoredValuesRepairable()
+    {
+        IngestRecipeEditorRow seed =
+            IngestRecipeEditorRow.Create();
+        IngestRecipeEditorRow row =
+            IngestRecipeEditorRow.From(
+                seed.Source with
+                {
+                    Action =
+                        LibraryIngestAction
+                            .Transcode,
+                    TranscodeFormatId =
+                        AudioTranscodeFormatIds
+                            .WavPack,
+                    TranscodeEncoderId =
+                        AudioTranscodeEncoderIds
+                            .WavPackCli,
+                    TranscodeRateMode =
+                        AudioTranscodeRateMode
+                            .Lossless
+                            .ToString(),
+                    TranscodeCreateCorrectionFile =
+                        true,
+                });
+        row.ApplyTranscodeCapabilities(
+            new(
+                [],
+                [
+                    new(
+                        AudioTranscodeFormatIds.WavPack,
+                        "wavpack",
+                        "wv",
+                        ".wv",
+                        true,
+                        [
+                            AudioTranscodeEncoderIds
+                                .WavPackCli,
+                        ]),
+                    new(
+                        AudioTranscodeFormatIds
+                            .OptimFrogDualStream,
+                        "optimfrog",
+                        "ofs",
+                        ".ofs",
+                        false,
+                        [
+                            AudioTranscodeEncoderIds
+                                .OptimFrogOfs,
+                        ]),
+                ],
+                [
+                    new(
+                        AudioTranscodeEncoderIds
+                            .WavPackCli,
+                        AudioTranscodeToolKind
+                            .WavPack,
+                        "wavpack",
+                        AudioEncoderThreadingMode
+                            .SingleThreaded,
+                        [
+                            new(
+                                AudioTranscodeRateMode
+                                    .Lossless),
+                            new(
+                                AudioTranscodeRateMode
+                                    .HybridBitrate,
+                                200,
+                                960,
+                                SupportsCorrectionFile:
+                                    true),
+                        ],
+                        [],
+                        [16, 24],
+                        SupportsCorrectionFile:
+                            true),
+                    new(
+                        AudioTranscodeEncoderIds
+                            .OptimFrogOfs,
+                        AudioTranscodeToolKind
+                            .OptimFrog,
+                        "ofs",
+                        AudioEncoderThreadingMode
+                            .SingleThreaded,
+                        [
+                            new(
+                                AudioTranscodeRateMode
+                                    .AverageBitrate,
+                                300,
+                                1000,
+                                SupportsCorrectionFile:
+                                    true),
+                        ],
+                        [],
+                        [16, 24],
+                        SupportsCorrectionFile:
+                            true),
+                ],
+                DateTimeOffset.UtcNow,
+                1),
+            new ResourceLocalizationService(
+                new FakeSettings()));
+
+        Assert.True(
+            row.TranscodeCreateCorrectionFile);
+        Assert.False(
+            row.IsTranscodeCorrectionFileSupported);
+        Assert.True(
+            row.IsTranscodeCorrectionFileOptionVisible);
+        Assert.True(
+            row.CanEditTranscodeCorrectionFile);
+        Assert.Equal(
+            LocalizedText.Get(
+                "Transcode.Issue.CorrectionUnavailable"),
+            row.TranscodeCorrectionFileHelpText);
+
+        row.TranscodeCreateCorrectionFile = false;
+        Assert.False(
+            row.IsTranscodeCorrectionFileOptionVisible);
+        Assert.False(
+            row.CanEditTranscodeCorrectionFile);
+
+        row.TranscodeRateMode =
+            AudioTranscodeRateMode.HybridBitrate;
+        Assert.True(
+            row.IsTranscodeCorrectionFileSupported);
+        Assert.True(
+            row.IsTranscodeCorrectionFileOptionVisible);
+        Assert.True(
+            row.CanEditTranscodeCorrectionFile);
+        row.TranscodeCreateCorrectionFile = true;
+
+        row.TranscodeFormatId =
+            AudioTranscodeFormatIds
+                .OptimFrogDualStream;
+        Assert.False(
+            row.IsTranscodeCorrectionFileSupported);
+        Assert.False(
+            row.TranscodeCreateCorrectionFile);
+        row.TranscodeFormatId =
+            AudioTranscodeFormatIds.WavPack;
+        Assert.True(
+            row.IsTranscodeCorrectionFileSupported);
+        row.TranscodeCreateCorrectionFile = true;
+
+        row.TranscodeRateMode =
+            AudioTranscodeRateMode.Lossless;
+        Assert.False(
+            row.TranscodeCreateCorrectionFile);
+        Assert.False(
+            row.IsTranscodeCorrectionFileOptionVisible);
+
+        row.TranscodeFormatId =
+            AudioTranscodeFormatIds
+                .OptimFrogDualStream;
+        row.TranscodeEncoderId =
+            AudioTranscodeEncoderIds
+                .OptimFrogOfs;
+        Assert.Equal(
+            AudioTranscodeRateMode.AverageBitrate,
+            row.TranscodeRateMode);
+        Assert.True(
+            row.IsTranscodeCorrectionFileSupported);
+        Assert.True(
+            row.IsTranscodeCorrectionFileOptionVisible);
+    }
+
+    [Fact]
     public async Task Settings_playlist_sync_target_picker_selects_one_library_root()
     {
         var viewModel = new SettingsViewModel(

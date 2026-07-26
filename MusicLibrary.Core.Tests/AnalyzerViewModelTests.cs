@@ -935,6 +935,11 @@ public sealed class AnalyzerViewModelTests
                 new StubReconciler(), new StubRepairs(), settings);
 
             await viewModel.RunLossyCommand.ExecuteAsync(null);
+            // Progress<T> posts callbacks asynchronously. Give any callbacks
+            // already queued by the completed analysis an opportunity to run;
+            // they must not replace the final retained-run summary.
+            await Task.Yield();
+            await Task.Delay(25);
 
             Assert.Empty(viewModel.FindingGroups);
             Assert.Contains("No lossy files", viewModel.StatusText);
@@ -943,6 +948,145 @@ public sealed class AnalyzerViewModelTests
         {
             try { Directory.Delete(directory, true); } catch { }
         }
+    }
+
+    [Fact]
+    public async Task Analyzer_LateOperationProgressCannotReplaceFailedRepairPreviewSummary()
+    {
+        var progressContext =
+            new DeferredProgressSynchronizationContext<OperationProgress>();
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary([]),
+            new StubReconciler(),
+            new StubRepairs(),
+            new AppSettings(Path.Combine(
+                Path.GetTempPath(),
+                $"analyzer-{Guid.NewGuid():N}.json")),
+            itlMetadataRepairs:
+                new FailingProgressItlMetadataRepairs());
+
+        await ExecuteWithProgressContextAsync(
+            progressContext,
+            () => viewModel
+                .PreviewItlMetadataRepairsCommand
+                .ExecuteAsync(null));
+
+        string finalStatus = Assert.IsType<string>(
+            viewModel.StatusText);
+        Assert.Equal(AppActivityState.Failed,
+            viewModel.LastActivityState);
+        Assert.Equal(1, progressContext.DeferredCount);
+
+        progressContext.DeliverDeferred();
+
+        Assert.Equal(finalStatus, viewModel.StatusText);
+        Assert.Equal(AppActivityState.Failed,
+            viewModel.LastActivityState);
+    }
+
+    [Fact]
+    public async Task Analyzer_LateIntegerProgressCannotReplaceCompletedMetadataRepairSummary()
+    {
+        TrackRecord record =
+            Track("track.flac", "AA", "Album");
+        var repair = new AnalysisTagRepair(
+            record.Path,
+            TagFields.Title,
+            "Before",
+            "After",
+            "Test repair.",
+            100,
+            DateTime.UtcNow);
+        var repairs = new ReportingRepairs(
+            new AnalysisRepairPlan(
+                "Safe metadata repairs",
+                [repair]));
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary([record]),
+            new StubReconciler(),
+            repairs,
+            new AppSettings(Path.Combine(
+                Path.GetTempPath(),
+                $"analyzer-{Guid.NewGuid():N}.json")));
+        await viewModel.PreviewMetadataRepairsCommand.ExecuteAsync(null);
+        Assert.Single(viewModel.RepairItems).Disposition =
+            AnalysisRepairDisposition.Active;
+        var progressContext =
+            new DeferredProgressSynchronizationContext<int>();
+
+        await ExecuteWithProgressContextAsync(
+            progressContext,
+            () => viewModel.ApplyRepairsCommand.ExecuteAsync(null));
+
+        string finalStatus = Assert.IsType<string>(
+            viewModel.StatusText);
+        Assert.Equal(AppActivityState.Completed,
+            viewModel.LastActivityState);
+        Assert.Equal(1, progressContext.DeferredCount);
+
+        progressContext.DeliverDeferred();
+
+        Assert.Equal(finalStatus, viewModel.StatusText);
+        Assert.Equal(AppActivityState.Completed,
+            viewModel.LastActivityState);
+    }
+
+    [Fact]
+    public async Task Analyzer_LateRepresentationProgressCannotReplaceCancelledRepairSummary()
+    {
+        TrackRecord record =
+            Track(
+                @"Z:\FLAC\Album\01.flac",
+                "AA",
+                "Album");
+        var action = new RepresentationRepairAction(
+            RepresentationRepairKind.DeriveAac,
+            record.Path,
+            @"Z:\AAC\Album\01.m4a",
+            "Encode AAC.");
+        var repairs =
+            new ReportingCancelledRepresentationRepairs(
+                new RepresentationRepairPreview(
+                    new AnalysisRepairPlan(
+                        "Copy representation metadata",
+                        []),
+                    [action],
+                    []));
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary([record]),
+            new StubReconciler(),
+            new StubRepairs(),
+            new AppSettings(Path.Combine(
+                Path.GetTempPath(),
+                $"analyzer-{Guid.NewGuid():N}.json")),
+            representationRepairs: repairs);
+        await viewModel
+            .PreviewRepresentationRepairsCommand
+            .ExecuteAsync(null);
+        Assert.Single(viewModel.RepresentationActionItems)
+            .Disposition =
+                AnalysisRepairDisposition.Active;
+        var progressContext =
+            new DeferredProgressSynchronizationContext<
+                RepresentationRepairProgress>();
+
+        await ExecuteWithProgressContextAsync(
+            progressContext,
+            () => viewModel
+                .ApplyRepresentationRepairsCommand
+                .ExecuteAsync(null));
+
+        string finalStatus = Assert.IsType<string>(
+            viewModel.StatusText);
+        Assert.Equal(AppActivityState.Cancelled,
+            viewModel.LastActivityState);
+        Assert.Equal(1, progressContext.DeferredCount);
+
+        progressContext.DeliverDeferred();
+
+        Assert.Equal(finalStatus, viewModel.StatusText);
+        Assert.Equal(AppActivityState.Cancelled,
+            viewModel.LastActivityState);
     }
 
     [Fact]
@@ -1104,6 +1248,28 @@ public sealed class AnalyzerViewModelTests
     private static AnalyzerViewModel Create(IReadOnlyList<TrackRecord> records) =>
         new(new StubLibrary(records), new StubReconciler(), new StubRepairs(),
             new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));
+
+    private static async Task ExecuteWithProgressContextAsync<T>(
+        DeferredProgressSynchronizationContext<T> context,
+        Func<Task> operation)
+    {
+        SynchronizationContext? previous =
+            SynchronizationContext.Current;
+        Task task;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(
+                context);
+            task = operation();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(
+                previous);
+        }
+
+        await task;
+    }
 
     private static TrackRecord Track(
         string path,
@@ -1312,6 +1478,65 @@ public sealed class AnalyzerViewModelTests
         }
     }
 
+    private sealed class ReportingCancelledRepresentationRepairs(
+        RepresentationRepairPreview preview)
+        : IRepresentationRepairService
+    {
+        public Task<RepresentationRepairPreview> PreviewAsync(
+            IReadOnlyList<TrackRecord> records,
+            LibraryConfiguration? configuration,
+            CancellationToken ct = default) =>
+            Task.FromResult(preview);
+
+        public Task<RepresentationRepairApplyResult> ApplyAsync(
+            IReadOnlyList<RepresentationRepairAction> actions,
+            LibraryConfiguration? configuration,
+            IProgress<RepresentationRepairProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            RepresentationRepairAction action =
+                Assert.Single(actions);
+            progress?.Report(new RepresentationRepairProgress(
+                1,
+                1,
+                action.SourcePath,
+                action.Kind));
+            return Task.FromResult(
+                new RepresentationRepairApplyResult(
+                    [new RepresentationRepairActionResult(
+                        action,
+                        RepresentationRepairOutcome.Applied)],
+                    Cancelled: true));
+        }
+    }
+
+    private sealed class FailingProgressItlMetadataRepairs
+        : IItlMetadataRepairService
+    {
+        public Task<ItlMetadataRepairPlan> PreviewAsync(
+            string? configurationPath = null,
+            string? itunesLibraryPath = null,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            progress?.Report(new OperationProgress(
+                OperationPhase.Applying,
+                1,
+                2,
+                "Late ITL progress"));
+            return Task.FromException<ItlMetadataRepairPlan>(
+                new InvalidOperationException(
+                    "Expected preview failure."));
+        }
+
+        public Task<ItlMetadataRepairApplyResult> ApplyAsync(
+            ItlMetadataRepairPlan plan,
+            IReadOnlyCollection<Guid> selectedItemIds,
+            IProgress<int>? progress = null,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException();
+    }
+
     private sealed class StubRepairs : IAnalysisRepairService
     {
         public AnalysisRepairPlan PreviewSafeRepairs(IReadOnlyList<TrackRecord> records) =>
@@ -1332,6 +1557,61 @@ public sealed class AnalyzerViewModelTests
         public Task<BatchWriteResult> ApplyAsync(
             AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>
             Task.FromResult(new BatchWriteResult([]));
+    }
+
+    private sealed class ReportingRepairs(
+        AnalysisRepairPlan plan)
+        : IAnalysisRepairService
+    {
+        public AnalysisRepairPlan PreviewSafeRepairs(
+            IReadOnlyList<TrackRecord> records) =>
+            plan;
+
+        public AnalysisRepairPlan PreviewMissingAlbumArtists(
+            IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+
+        public AnalysisRepairPlan PreviewNumberingAndTotals(
+            IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+
+        public AnalysisRepairPlan PreviewTextNormalization(
+            IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+
+        public AnalysisRepairPlan PreviewMultiDiscAlbumNames(
+            IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+
+        public AnalysisRepairPlan PreviewId3VersionUpgrades(
+            IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+
+        public IReadOnlyList<AnalysisTagConflict>
+            FindAlbumArtistConflicts(
+                IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+
+        public AnalysisRepairPlan PreviewConflictRepairs(
+            IReadOnlyList<AnalysisConflictResolution>
+                resolutions) =>
+            throw new NotSupportedException();
+
+        public Task<BatchWriteResult> ApplyAsync(
+            AnalysisRepairPlan selectedPlan,
+            IProgress<int>? progress = null,
+            CancellationToken ct = default)
+        {
+            progress?.Report(selectedPlan.Items.Count);
+            return Task.FromResult(new BatchWriteResult(
+                selectedPlan.Items
+                    .Select(item => new FileWriteResult
+                    {
+                        Path = item.Path,
+                        Outcome = WriteOutcome.Saved,
+                    })
+                    .ToArray()));
+        }
     }
 
     private sealed class TrackingRepairs(AnalysisRepairPlan plan) : IAnalysisRepairService
@@ -1394,5 +1674,58 @@ public sealed class AnalyzerViewModelTests
         public Task<BatchWriteResult> ApplyAsync(
             AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>
             throw new NotSupportedException();
+    }
+
+    private sealed class DeferredProgressSynchronizationContext<T>
+        : SynchronizationContext
+    {
+        private readonly object _gate = new();
+        private readonly Queue<(SendOrPostCallback Callback, object? State)>
+            _deferred = new();
+
+        public int DeferredCount
+        {
+            get
+            {
+                lock (_gate)
+                    return _deferred.Count;
+            }
+        }
+
+        public override void Post(
+            SendOrPostCallback d,
+            object? state)
+        {
+            if (state is T)
+            {
+                lock (_gate)
+                    _deferred.Enqueue((d, state));
+                return;
+            }
+
+            d(state);
+        }
+
+        public override void Send(
+            SendOrPostCallback d,
+            object? state) =>
+            d(state);
+
+        public void DeliverDeferred()
+        {
+            while (true)
+            {
+                (SendOrPostCallback Callback, object? State)
+                    next;
+                lock (_gate)
+                {
+                    if (_deferred.Count == 0)
+                        return;
+                    next = _deferred.Dequeue();
+                }
+
+                next.Callback(next.State);
+            }
+        }
     }
 }

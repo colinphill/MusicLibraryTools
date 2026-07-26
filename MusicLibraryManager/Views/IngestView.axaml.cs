@@ -39,6 +39,14 @@ public partial class IngestView : UserControl
         bool compactHeight = Bounds.Height <= 560;
         SetupCard.Padding = new global::Avalonia.Thickness(compactHeight ? 12 : 16);
         SetupPanel.Spacing = compactHeight ? 6 : 10;
+        PreflightChecksScroll.MaxHeight =
+            compactHeight ? 128 : 180;
+        PreviewFilterField.Orientation =
+            compactHeight
+                ? global::Avalonia.Layout
+                    .Orientation.Horizontal
+                : global::Avalonia.Layout
+                    .Orientation.Vertical;
         PreviewEmptyDescription.IsVisible = !compactHeight;
         HistoryEmptyDescription.IsVisible = !compactHeight;
 

@@ -2179,6 +2179,34 @@ public partial class IngestRecipeEditorRow : ObservableObject
     public bool HasQualityControl => TranscodeRateMode is
         AudioTranscodeRateMode.VariableQuality or
         AudioTranscodeRateMode.HybridQuality;
+    public bool IsTranscodeCorrectionFileSupported
+    {
+        get
+        {
+            AudioEncoderDescriptor? encoder =
+                ResolveSelectedTranscodeEncoder();
+            return encoder?
+                       .SupportsCorrectionFile ==
+                   true &&
+                   encoder.RateControls.Any(
+                       control =>
+                           control.Mode ==
+                               TranscodeRateMode &&
+                           control
+                               .SupportsCorrectionFile);
+        }
+    }
+    public bool IsTranscodeCorrectionFileOptionVisible =>
+        IsTranscodeCorrectionFileSupported ||
+        TranscodeCreateCorrectionFile;
+    public bool CanEditTranscodeCorrectionFile =>
+        IsTranscodeCorrectionFileSupported ||
+        TranscodeCreateCorrectionFile;
+    public string TranscodeCorrectionFileHelpText =>
+        _getText(
+            IsTranscodeCorrectionFileSupported
+                ? "Transcode.Correction.Help"
+                : "Transcode.Issue.CorrectionUnavailable");
 
     public LocalizedChoice<string>? SelectedTranscodeFormatChoice
     {
@@ -2333,6 +2361,102 @@ public partial class IngestRecipeEditorRow : ObservableObject
         PreserveArtwork: true,
         CollisionPolicy: null));
 
+    public IngestRecipeEditorRow CloneForDuplicate(
+        string id,
+        string name)
+    {
+        var clone = new IngestRecipeEditorRow
+        {
+            Source = Source with
+            {
+                Id = id,
+                Name = name,
+            },
+        };
+        clone._getText = _getText;
+        clone._formatText = _formatText;
+        clone.Id = id;
+        clone.Name = name;
+        clone.Enabled = Enabled;
+        clone.InputExtensions = InputExtensions;
+        clone.RequireLossless = RequireLossless;
+        clone.MinimumSampleRateHz =
+            MinimumSampleRateHz;
+        clone.MinimumBitsPerSample =
+            MinimumBitsPerSample;
+        clone.InputChannelChoice =
+            InputChannelChoice;
+        clone.MatchAnyQualityMinimum =
+            MatchAnyQualityMinimum;
+        clone.AlbumCondition = AlbumCondition;
+        clone.SourceSelection = SourceSelection;
+        clone.RequireFallbackApproval =
+            RequireFallbackApproval;
+        clone.Action = Action;
+        clone.DestinationRootChoice =
+            DestinationRootChoice;
+        clone.DestinationRootId =
+            DestinationRootId;
+        clone.OutputExtension =
+            OutputExtension;
+        clone.Codec = Codec;
+        clone.Encoder = Encoder;
+        clone.ExtraFfmpegOptions =
+            ExtraFfmpegOptions;
+        clone.AddToMediaCatalog =
+            AddToMediaCatalog;
+        clone.BitrateKbps = BitrateKbps;
+        clone.SampleRateHz = SampleRateHz;
+        clone.BitsPerSample = BitsPerSample;
+        clone.TranscodeFormatId =
+            TranscodeFormatId;
+        clone.TranscodeEncoderId =
+            TranscodeEncoderId;
+        clone.TranscodeRateMode =
+            TranscodeRateMode;
+        clone.TranscodeQuality =
+            TranscodeQuality;
+        clone.TranscodeCompressionEffort =
+            TranscodeCompressionEffort;
+        clone.TranscodeCreateCorrectionFile =
+            TranscodeCreateCorrectionFile;
+        clone.OutputChannelChoice =
+            OutputChannelChoice;
+        clone.PreserveMetadata =
+            PreserveMetadata;
+        clone.PreserveArtwork =
+            PreserveArtwork;
+        clone.UseProfileCollision =
+            UseProfileCollision;
+        clone.CollisionPolicy =
+            CollisionPolicy;
+        clone._transcodeCapabilities =
+            _transcodeCapabilities;
+        clone.DestinationRootChoices.Clear();
+        foreach (SettingsRootChoice choice in
+                 DestinationRootChoices)
+        {
+            clone.DestinationRootChoices.Add(
+                choice);
+        }
+        CopyChoices(
+            TranscodeFormatChoices,
+            clone.TranscodeFormatChoices);
+        CopyChoices(
+            TranscodeEncoderChoices,
+            clone.TranscodeEncoderChoices);
+        CopyChoices(
+            TranscodeRateModeChoices,
+            clone.TranscodeRateModeChoices);
+        CopyChoices(
+            TranscodeSampleRateChoices,
+            clone.TranscodeSampleRateChoices);
+        CopyChoices(
+            TranscodeBitDepthChoices,
+            clone.TranscodeBitDepthChoices);
+        return clone;
+    }
+
     public LibraryIngestRecipe Build()
     {
         return Source with
@@ -2464,6 +2588,8 @@ public partial class IngestRecipeEditorRow : ObservableObject
         finally
         {
             _refreshingTranscodeChoices = false;
+            RefreshTranscodeCorrectionFileOption(
+                clearInapplicable: false);
         }
     }
 
@@ -2495,16 +2621,8 @@ public partial class IngestRecipeEditorRow : ObservableObject
 
     private void RefreshTranscodeRateModeChoices()
     {
-        AudioTranscodeFormatDescriptor? format =
-            _transcodeCapabilities?.FindFormat(
-                TranscodeFormatId ?? "");
-        string? encoderId = TranscodeEncoderId ==
-                            AudioTranscodeEncoderIds.Automatic
-            ? format?.EncoderIds.FirstOrDefault()
-            : TranscodeEncoderId;
-        AudioEncoderDescriptor? encoder = encoderId is null
-            ? null
-            : _transcodeCapabilities?.FindEncoder(encoderId);
+        AudioEncoderDescriptor? encoder =
+            ResolveSelectedTranscodeEncoder();
         AudioTranscodeRateMode[] modes = encoder is null
             ? [TranscodeRateMode]
             : [.. encoder.RateControls.Select(control =>
@@ -2519,6 +2637,53 @@ public partial class IngestRecipeEditorRow : ObservableObject
             : modes[0];
         OnPropertyChanged(
             nameof(SelectedTranscodeRateModeChoice));
+        RefreshTranscodeCorrectionFileOption(
+            clearInapplicable:
+                !_refreshingTranscodeChoices);
+    }
+
+    private AudioEncoderDescriptor?
+        ResolveSelectedTranscodeEncoder()
+    {
+        AudioTranscodeFormatDescriptor? format =
+            _transcodeCapabilities?.FindFormat(
+                TranscodeFormatId ?? "");
+        string? encoderId = TranscodeEncoderId ==
+                            AudioTranscodeEncoderIds.Automatic
+            ? format?.EncoderIds.FirstOrDefault()
+            : TranscodeEncoderId;
+        return encoderId is null ||
+               format is null ||
+               !format.EncoderIds.Contains(
+                   encoderId,
+                   StringComparer.Ordinal)
+            ? null
+            : _transcodeCapabilities?.FindEncoder(
+                encoderId);
+    }
+
+    private void RefreshTranscodeCorrectionFileOption(
+        bool clearInapplicable)
+    {
+        if (clearInapplicable &&
+            !IsTranscodeCorrectionFileSupported &&
+            TranscodeCreateCorrectionFile)
+        {
+            TranscodeCreateCorrectionFile = false;
+        }
+
+        OnPropertyChanged(
+            nameof(
+                IsTranscodeCorrectionFileSupported));
+        OnPropertyChanged(
+            nameof(
+                IsTranscodeCorrectionFileOptionVisible));
+        OnPropertyChanged(
+            nameof(
+                CanEditTranscodeCorrectionFile));
+        OnPropertyChanged(
+            nameof(
+                TranscodeCorrectionFileHelpText));
     }
 
     private string FormatLabel(
@@ -2586,6 +2751,23 @@ public partial class IngestRecipeEditorRow : ObservableObject
         choices.Clear();
         foreach (T value in values)
             choices.Add(new(value, label(value)));
+    }
+
+    private static void CopyChoices<T>(
+        IEnumerable<LocalizedChoice<T>> source,
+        ICollection<LocalizedChoice<T>> destination)
+    {
+        destination.Clear();
+        var seen = new HashSet<T>();
+        foreach (LocalizedChoice<T> choice in source)
+        {
+            if (!seen.Add(choice.Value))
+                continue;
+            destination.Add(
+                new(
+                    choice.Value,
+                    choice.Label));
+        }
     }
 
     private static string? InferLegacyFormatId(
@@ -2674,9 +2856,29 @@ public partial class IngestRecipeEditorRow : ObservableObject
     }
 
     partial void OnTranscodeRateModeChanged(
-        AudioTranscodeRateMode value) =>
+        AudioTranscodeRateMode value)
+    {
         OnPropertyChanged(
             nameof(SelectedTranscodeRateModeChoice));
+        RefreshTranscodeCorrectionFileOption(
+            clearInapplicable:
+                !_refreshingTranscodeChoices);
+    }
+
+    partial void
+        OnTranscodeCreateCorrectionFileChanged(
+            bool value)
+    {
+        OnPropertyChanged(
+            nameof(
+                IsTranscodeCorrectionFileOptionVisible));
+        OnPropertyChanged(
+            nameof(
+                CanEditTranscodeCorrectionFile));
+        OnPropertyChanged(
+            nameof(
+                TranscodeCorrectionFileHelpText));
+    }
 
     partial void OnSampleRateHzChanged(int? value) =>
         OnPropertyChanged(
@@ -2798,6 +3000,23 @@ public partial class SidecarRuleEditorRow : ObservableObject
         true,
         ["*.txt"],
         LibrarySidecarDisposition.Preserve));
+
+    public SidecarRuleEditorRow CloneForDuplicate(
+        string id,
+        string name) =>
+        new()
+        {
+            Source = Source with
+            {
+                Id = id,
+                Name = name,
+            },
+            Id = id,
+            Name = name,
+            Patterns = Patterns,
+            Enabled = Enabled,
+            Disposition = Disposition,
+        };
 
     public LibrarySidecarRule Build() => Source with
     {

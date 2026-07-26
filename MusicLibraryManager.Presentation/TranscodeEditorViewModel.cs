@@ -21,6 +21,7 @@ public sealed partial class TranscodeEditorViewModel :
     private AudioTranscodeCapabilitySnapshot? _capabilitySnapshot;
     private ImmutableArray<string> _capturedPaths = [];
     private bool _loadingSettings;
+    private bool _refreshingCapabilityChoices;
 
     public TranscodeEditorViewModel(
         IAudioTranscodeService transcodes,
@@ -99,6 +100,38 @@ public sealed partial class TranscodeEditorViewModel :
         SelectedRateMode is
             AudioTranscodeRateMode.VariableQuality or
             AudioTranscodeRateMode.HybridQuality;
+
+    public bool IsCorrectionFileSupported
+    {
+        get
+        {
+            AudioEncoderDescriptor? encoder =
+                ResolveSelectedEncoder();
+            return encoder?
+                       .SupportsCorrectionFile ==
+                   true &&
+                   encoder.RateControls.Any(
+                       control =>
+                           control.Mode ==
+                               SelectedRateMode &&
+                           control
+                               .SupportsCorrectionFile);
+        }
+    }
+
+    public bool IsCorrectionFileOptionVisible =>
+        IsCorrectionFileSupported ||
+        CreateCorrectionFile;
+
+    public bool CanEditCorrectionFile =>
+        IsCorrectionFileSupported ||
+        CreateCorrectionFile;
+
+    public string CorrectionFileHelpText =>
+        L(
+            IsCorrectionFileSupported
+                ? "Transcode.Correction.Help"
+                : "Transcode.Issue.CorrectionUnavailable");
 
     public bool HasSelectedPreset =>
         SelectedPreset is not null;
@@ -440,6 +473,20 @@ public sealed partial class TranscodeEditorViewModel :
             nameof(SelectedRateModeChoice));
         OnPropertyChanged(nameof(HasBitrateControl));
         OnPropertyChanged(nameof(HasQualityControl));
+        RefreshCorrectionFileOption(
+            clearInapplicable:
+                !_refreshingCapabilityChoices);
+    }
+
+    partial void OnCreateCorrectionFileChanged(
+        bool value)
+    {
+        OnPropertyChanged(
+            nameof(IsCorrectionFileOptionVisible));
+        OnPropertyChanged(
+            nameof(CanEditCorrectionFile));
+        OnPropertyChanged(
+            nameof(CorrectionFileHelpText));
     }
 
     partial void OnSelectedPresetChanged(
@@ -494,37 +541,47 @@ public sealed partial class TranscodeEditorViewModel :
 
     private void RefreshCapabilityChoices()
     {
-        string? selected = SelectedFormatId;
-        var choices =
-            new List<(string Value, string Label)>();
-        if (_capabilitySnapshot is not null)
+        _refreshingCapabilityChoices = true;
+        try
         {
-            foreach (AudioTranscodeFormatDescriptor format in
-                     _capabilitySnapshot.Formats)
+            string? selected = SelectedFormatId;
+            var choices =
+                new List<(string Value, string Label)>();
+            if (_capabilitySnapshot is not null)
+            {
+                foreach (AudioTranscodeFormatDescriptor format in
+                         _capabilitySnapshot.Formats)
+                    choices.Add((
+                        format.Id,
+                        FormatLabel(format)));
+            }
+            if (!string.IsNullOrWhiteSpace(selected) &&
+                !choices.Any(item =>
+                    item.Value == selected))
                 choices.Add((
-                    format.Id,
-                    FormatLabel(format)));
+                    selected,
+                    selected + " — " +
+                    L("Transcode.Value.Unavailable")));
+            RefreshChoices(
+                FormatChoices,
+                choices);
+            SelectedFormatId = !string.IsNullOrWhiteSpace(selected)
+                ? selected
+                : FormatChoices.FirstOrDefault(item =>
+                    item.Value == AudioTranscodeFormatIds.Flac)?.Value ??
+                  FormatChoices.FirstOrDefault()?.Value;
+            OnPropertyChanged(
+                nameof(SelectedFormatId));
+            OnPropertyChanged(
+                nameof(SelectedFormatChoice));
+            RefreshEncoderChoices();
         }
-        if (!string.IsNullOrWhiteSpace(selected) &&
-            !choices.Any(item =>
-                item.Value == selected))
-            choices.Add((
-                selected,
-                selected + " — " +
-                L("Transcode.Value.Unavailable")));
-        RefreshChoices(
-            FormatChoices,
-            choices);
-        SelectedFormatId = !string.IsNullOrWhiteSpace(selected)
-            ? selected
-            : FormatChoices.FirstOrDefault(item =>
-                item.Value == AudioTranscodeFormatIds.Flac)?.Value ??
-              FormatChoices.FirstOrDefault()?.Value;
-        OnPropertyChanged(
-            nameof(SelectedFormatId));
-        OnPropertyChanged(
-            nameof(SelectedFormatChoice));
-        RefreshEncoderChoices();
+        finally
+        {
+            _refreshingCapabilityChoices = false;
+            RefreshCorrectionFileOption(
+                clearInapplicable: false);
+        }
     }
 
     private void RefreshEncoderChoices()
@@ -587,6 +644,32 @@ public sealed partial class TranscodeEditorViewModel :
             nameof(SelectedRateMode));
         OnPropertyChanged(
             nameof(SelectedRateModeChoice));
+        RefreshCorrectionFileOption(
+            clearInapplicable:
+                !_refreshingCapabilityChoices);
+    }
+
+    private void RefreshCorrectionFileOption(
+        bool clearInapplicable = true)
+    {
+        bool supported =
+            IsCorrectionFileSupported;
+        if (clearInapplicable &&
+            !supported &&
+            !_loadingSettings &&
+            CreateCorrectionFile)
+        {
+            CreateCorrectionFile = false;
+        }
+
+        OnPropertyChanged(
+            nameof(IsCorrectionFileSupported));
+        OnPropertyChanged(
+            nameof(IsCorrectionFileOptionVisible));
+        OnPropertyChanged(
+            nameof(CanEditCorrectionFile));
+        OnPropertyChanged(
+            nameof(CorrectionFileHelpText));
     }
 
     private AudioEncoderDescriptor? ResolveSelectedEncoder()
@@ -598,7 +681,11 @@ public sealed partial class TranscodeEditorViewModel :
                      AudioTranscodeEncoderIds.Automatic
             ? format?.EncoderIds.FirstOrDefault()
             : SelectedEncoderId;
-        return id is null
+        return id is null ||
+               format is null ||
+               !format.EncoderIds.Contains(
+                   id,
+                   StringComparer.Ordinal)
             ? null
             : _capabilitySnapshot?.FindEncoder(id);
     }
@@ -762,6 +849,8 @@ public sealed partial class TranscodeEditorViewModel :
         RefreshStaticChoices();
         RefreshCapabilityChoices();
         OnPropertyChanged(nameof(CapturedSelectionSummary));
+        OnPropertyChanged(
+            nameof(CorrectionFileHelpText));
     }
 
     private static void Refresh<T>(

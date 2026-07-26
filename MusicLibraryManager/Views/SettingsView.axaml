@@ -977,32 +977,90 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <Grid ColumnDefinitions="*,Auto"><TextBlock FontSize="16" FontWeight="SemiBold" Text="{DynamicResource Loc.Settings.RootPolicy.SidecarRules}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.RootPolicy.AddSidecarRule}" Command="{Binding DataContext.AddSidecarRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" /></Grid>
+              <Grid ColumnDefinitions="*,Auto"><TextBlock FontSize="16" FontWeight="SemiBold" Text="{DynamicResource Loc.Settings.RootPolicy.SidecarRules}" /><Button x:Name="AddSidecarRuleButton" Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.RootPolicy.AddSidecarRule}" Command="{Binding DataContext.AddSidecarRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" /></Grid>
               <StackPanel Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.UnknownFileDisposition}" /><ComboBox MaxWidth="260" HorizontalAlignment="Stretch" Classes="app" ItemsSource="{Binding DataContext.SidecarDispositionChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibrarySidecarDisposition" local:LocalizedChoiceSelection.Value="{Binding UnknownSidecarDisposition, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.UnknownFileDisposition}" /></StackPanel>
               <ItemsControl ItemsSource="{Binding SidecarRules}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border Classes="card" Margin="0,0,0,8" Padding="8">
-                      <Grid Classes="responsive-form" ColumnDefinitions="Auto,160,200,*,200,Auto" ColumnSpacing="12">
-                        <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" AutomationProperties.Name="{Binding Name}" />
-                        <StackPanel Grid.Column="1" Classes="field">
-                          <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.StableId}" />
-                          <TextBox Classes="app" Text="{Binding Id, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Common.StableId}" AutomationProperties.Name="{DynamicResource Loc.Settings.Common.StableId}" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Classes="field">
-                          <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.Name}" />
-                          <TextBox Classes="app" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Common.Name}" AutomationProperties.Name="{DynamicResource Loc.Settings.Common.Name}" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="3" Classes="field">
-                          <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.SidecarRules}" />
-                          <TextBox Classes="app" Text="{Binding Patterns, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.RootPolicy.SidecarPatternsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.SidecarPatternsPlaceholder}" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="4" Classes="field">
-                          <TextBlock Classes="field-label" Text="{DynamicResource Loc.Column.Disposition}" />
-                          <ComboBox Classes="app" ItemsSource="{Binding DataContext.SidecarDispositionChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibrarySidecarDisposition" local:LocalizedChoiceSelection.Value="{Binding Disposition, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Column.Disposition}" />
-                        </StackPanel>
-                        <Button Grid.Column="5" Classes="app danger" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Settings.Action.Remove}" Command="{Binding DataContext.RemoveSidecarRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                      </Grid>
+                    <Border x:Name="SidecarRuleCard"
+                            Classes="card"
+                            Margin="0,0,0,8"
+                            Padding="12">
+                      <StackPanel Spacing="12">
+                        <Grid x:Name="SidecarRuleSummaryCommandGrid"
+                              Classes="responsive-form"
+                              ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                              ColumnSpacing="8">
+                          <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                    VerticalAlignment="Center"
+                                    AutomationProperties.Name="{Binding Name}" />
+                          <StackPanel Grid.Column="1"
+                                      Spacing="4"
+                                      VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Classes="muted caption"
+                                       Text="{Binding Patterns}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Classes="faint caption"
+                                       Text="{Binding Id}"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                          <Button x:Name="EditSidecarRuleButton"
+                                  Grid.Column="2"
+                                  Classes="app"
+                                  Content="{DynamicResource Loc.Workbench.Navigation.Group.Edit}"
+                                  Click="OnEditSidecarRuleClicked"
+                                  CommandParameter="{Binding}" />
+                          <Button x:Name="DuplicateSidecarRuleButton"
+                                  Grid.Column="3"
+                                  Classes="app"
+                                  Content="{DynamicResource Loc.Settings.Action.Duplicate}"
+                                  Command="{Binding DataContext.DuplicateSidecarRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding}" />
+                          <Button x:Name="SidecarRuleMoreButton"
+                                  Grid.Column="4"
+                                  Classes="app quiet overflow"
+                                  Content="{DynamicResource Loc.Workbench.Action.More}"
+                                  AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.MoreAutomation}"
+                                  Click="OnSidecarRuleMoreClicked">
+                            <Button.Flyout>
+                              <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuItem Classes="danger"
+                                          Header="{DynamicResource Loc.Settings.Action.Remove}"
+                                          Command="{Binding DataContext.RemoveSidecarRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          CommandParameter="{Binding}" />
+                              </MenuFlyout>
+                            </Button.Flyout>
+                          </Button>
+                        </Grid>
+                        <Expander x:Name="SidecarRuleEditorExpander"
+                                  Header="{DynamicResource Loc.Workbench.Navigation.Group.Edit}"
+                                  AutomationProperties.Name="{Binding Name}">
+                          <Grid Classes="responsive-form"
+                                Margin="0,8,0,0"
+                                ColumnDefinitions="160,200,*,200"
+                                ColumnSpacing="12">
+                            <StackPanel Classes="field">
+                              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.StableId}" />
+                              <TextBox Classes="app" Text="{Binding Id, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Common.StableId}" AutomationProperties.Name="{DynamicResource Loc.Settings.Common.StableId}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Classes="field">
+                              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.Name}" />
+                              <TextBox Classes="app" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Common.Name}" AutomationProperties.Name="{DynamicResource Loc.Settings.Common.Name}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Classes="field">
+                              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.SidecarRules}" />
+                              <TextBox Classes="app" Text="{Binding Patterns, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.RootPolicy.SidecarPatternsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.SidecarPatternsPlaceholder}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" Classes="field">
+                              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Column.Disposition}" />
+                              <ComboBox Classes="app" ItemsSource="{Binding DataContext.SidecarDispositionChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibrarySidecarDisposition" local:LocalizedChoiceSelection.Value="{Binding Disposition, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Column.Disposition}" />
+                            </StackPanel>
+                          </Grid>
+                        </Expander>
+                      </StackPanel>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -1082,32 +1140,70 @@
                 </Expander>
               <Grid ColumnDefinitions="*,Auto">
                 <WrapPanel><CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Settings.Ingest.EnableRecipes}" IsChecked="{Binding Enabled, Mode=TwoWay}" /><CheckBox Content="{DynamicResource Loc.Settings.Ingest.PreserveSidecars}" IsChecked="{Binding PreserveSidecars, Mode=TwoWay}" /></WrapPanel>
-                <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Ingest.AddRecipe}" Command="{Binding DataContext.AddIngestRecipeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                <Button x:Name="AddIngestRecipeButton" Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Ingest.AddRecipe}" Command="{Binding DataContext.AddIngestRecipeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
               </Grid>
               <ItemsControl ItemsSource="{Binding Recipes}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border Classes="card" Margin="0,0,0,8" Padding="12">
-                      <Expander x:Name="IngestRecipeEditorExpander"
-                                AutomationProperties.Name="{Binding Name}">
-                        <Expander.Header>
-                          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                            <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}"
-                                      VerticalAlignment="Center"
-                                      AutomationProperties.Name="{Binding Name}"
-                                      ToolTip.Tip="{DynamicResource Loc.Settings.Ingest.EnableRecipeTooltip}" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Name}"
+                    <Border x:Name="IngestRecipeCard"
+                            Classes="card"
+                            Margin="0,0,0,8"
+                            Padding="12">
+                      <StackPanel Spacing="12">
+                        <Grid x:Name="IngestRecipeSummaryCommandGrid"
+                              Classes="responsive-form"
+                              ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                              ColumnSpacing="8">
+                          <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                    VerticalAlignment="Center"
+                                    AutomationProperties.Name="{Binding Name}"
+                                    ToolTip.Tip="{DynamicResource Loc.Settings.Ingest.EnableRecipeTooltip}" />
+                          <StackPanel Grid.Column="1"
+                                      Spacing="4"
+                                      VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}"
                                        FontWeight="SemiBold"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="2"
-                                       Classes="faint"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Classes="muted caption"
+                                       Text="{Binding Summary}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Classes="faint caption"
                                        Text="{Binding Id}"
-                                       VerticalAlignment="Center" />
-                          </Grid>
-                        </Expander.Header>
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                          <Button x:Name="EditIngestRecipeButton"
+                                  Grid.Column="2"
+                                  Classes="app"
+                                  Content="{DynamicResource Loc.Workbench.Navigation.Group.Edit}"
+                                  Click="OnEditIngestRecipeClicked"
+                                  CommandParameter="{Binding}" />
+                          <Button x:Name="DuplicateIngestRecipeButton"
+                                  Grid.Column="3"
+                                  Classes="app"
+                                  Content="{DynamicResource Loc.Settings.Action.Duplicate}"
+                                  Command="{Binding DataContext.DuplicateIngestRecipeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding}" />
+                          <Button x:Name="IngestRecipeMoreButton"
+                                  Grid.Column="4"
+                                  Classes="app quiet overflow"
+                                  Content="{DynamicResource Loc.Workbench.Action.More}"
+                                  AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.MoreAutomation}"
+                                  Click="OnIngestRecipeMoreClicked">
+                            <Button.Flyout>
+                              <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuItem Classes="danger"
+                                          Header="{DynamicResource Loc.Settings.Action.Remove}"
+                                          Command="{Binding DataContext.RemoveIngestRecipeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                          CommandParameter="{Binding}" />
+                              </MenuFlyout>
+                            </Button.Flyout>
+                          </Button>
+                        </Grid>
+                        <Expander x:Name="IngestRecipeEditorExpander"
+                                  Header="{DynamicResource Loc.Workbench.Navigation.Group.Edit}"
+                                  AutomationProperties.Name="{Binding Name}">
                       <StackPanel Spacing="8" Margin="0,8,0,0">
-                        <Grid Classes="responsive-form" ColumnDefinitions="*,*,Auto" ColumnSpacing="12">
+                        <Grid Classes="responsive-form" ColumnDefinitions="*,*" ColumnSpacing="12">
                           <StackPanel Classes="field">
                             <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.StableId}" />
                             <TextBox Classes="app" Text="{Binding Id, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Ingest.RecipeIdPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.Common.StableId}" />
@@ -1116,7 +1212,6 @@
                             <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.Name}" />
                             <TextBox Classes="app" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Ingest.DisplayNamePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.Common.Name}" />
                           </StackPanel>
-                          <Button Grid.Column="2" Classes="app danger" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Settings.Action.Remove}" Command="{Binding DataContext.RemoveIngestRecipeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                         </Grid>
                         <Grid Classes="responsive-form" ColumnDefinitions="*,*,*" ColumnSpacing="12">
                           <StackPanel Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.AcceptedExtensions}" /><TextBox Classes="app" Text="{Binding InputExtensions, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Ingest.ExtensionsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.AcceptedExtensions}" /></StackPanel>
@@ -1179,7 +1274,23 @@
                               <NumericUpDown Classes="app" Minimum="0" Maximum="10" Value="{Binding TranscodeCompressionEffort, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Transcode.CompressionEffort.Label}" />
                             </StackPanel>
                           </Grid>
-                          <CheckBox Content="{DynamicResource Loc.Transcode.Correction.Create}" IsChecked="{Binding TranscodeCreateCorrectionFile, Mode=TwoWay}" />
+                          <StackPanel
+                              x:Name="IngestCorrectionFileOption"
+                              IsVisible="{Binding IsTranscodeCorrectionFileOptionVisible}"
+                              Spacing="{DynamicResource AppSpaceXSmall}">
+                            <CheckBox
+                                x:Name="IngestCorrectionFileCheckBox"
+                                Content="{DynamicResource Loc.Transcode.Correction.Create}"
+                                IsChecked="{Binding TranscodeCreateCorrectionFile, Mode=TwoWay}"
+                                IsEnabled="{Binding CanEditTranscodeCorrectionFile}"
+                                AutomationProperties.Name="{DynamicResource Loc.Transcode.Correction.Create}"
+                                AutomationProperties.HelpText="{Binding TranscodeCorrectionFileHelpText}" />
+                            <TextBlock
+                                Classes="field-help warning"
+                                IsVisible="{Binding !IsTranscodeCorrectionFileSupported}"
+                                Text="{DynamicResource Loc.Transcode.Issue.CorrectionUnavailable}"
+                                TextWrapping="Wrap" />
+                          </StackPanel>
                         </StackPanel>
                         <CheckBox Content="{DynamicResource Loc.Settings.Ingest.AddToCatalog}" IsChecked="{Binding AddToMediaCatalog, Mode=TwoWay}" />
                         <Grid Classes="responsive-form" ColumnDefinitions="*,*,*" ColumnSpacing="12">
@@ -1197,7 +1308,8 @@
                           </StackPanel>
                         </Expander>
                       </StackPanel>
-                      </Expander>
+                        </Expander>
+                      </StackPanel>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

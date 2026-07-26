@@ -180,10 +180,21 @@
                     IsChecked="{Binding TranscodeEditor.PreserveMetadata}" />
           <CheckBox Content="{DynamicResource Loc.Transcode.Artwork.Preserve}"
                     IsChecked="{Binding TranscodeEditor.PreserveArtwork}" />
-          <CheckBox x:Name="CreateCorrectionFileCheckBox"
-                    Content="{DynamicResource Loc.Transcode.Correction.Create}"
-                    IsChecked="{Binding TranscodeEditor.CreateCorrectionFile}"
-                    AutomationProperties.Name="{DynamicResource Loc.Transcode.Correction.Create}" />
+          <StackPanel
+              IsVisible="{Binding TranscodeEditor.IsCorrectionFileOptionVisible}"
+              Spacing="{DynamicResource AppSpaceXSmall}">
+            <CheckBox x:Name="CreateCorrectionFileCheckBox"
+                      Content="{DynamicResource Loc.Transcode.Correction.Create}"
+                      IsChecked="{Binding TranscodeEditor.CreateCorrectionFile}"
+                      IsEnabled="{Binding TranscodeEditor.CanEditCorrectionFile}"
+                      AutomationProperties.Name="{DynamicResource Loc.Transcode.Correction.Create}"
+                      AutomationProperties.HelpText="{Binding TranscodeEditor.CorrectionFileHelpText}" />
+            <TextBlock
+                Classes="field-help warning"
+                IsVisible="{Binding !TranscodeEditor.IsCorrectionFileSupported}"
+                Text="{DynamicResource Loc.Transcode.Issue.CorrectionUnavailable}"
+                TextWrapping="Wrap" />
+          </StackPanel>
         </StackPanel>
 
         <StackPanel Classes="content-stack">

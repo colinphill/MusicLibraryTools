@@ -865,6 +865,9 @@
   <data name="Health.Artwork.SelectedCount.Other" xml:space="preserve">
     <value>선택한 복구 작업: {0}</value>
   </data>
+  <data name="Health.Artwork.AffectedFiles" xml:space="preserve">
+    <value>영향받는 파일</value>
+  </data>
   <data name="Health.Artwork.AffectedFiles.One" xml:space="preserve">
     <value>영향받는 파일 ({0})</value>
   </data>
@@ -6281,6 +6284,7 @@
   <data name="Transcode.Metadata.Preserve" xml:space="preserve"><value>메타데이터 유지</value></data>
   <data name="Transcode.Artwork.Preserve" xml:space="preserve"><value>아트워크 유지</value></data>
   <data name="Transcode.Correction.Create" xml:space="preserve"><value>지원되는 경우 보정 파일 만들기</value></data>
+  <data name="Transcode.Correction.Help" xml:space="preserve"><value>하이브리드 출력에서 원본 무손실 오디오를 복원하는 보조 파일을 만듭니다.</value></data>
   <data name="Transcode.Destination.Title" xml:space="preserve"><value>대상 및 이름</value></data>
   <data name="Transcode.Destination.Alongside" xml:space="preserve"><value>원본 파일 옆</value></data>
   <data name="Transcode.Destination.ReplaceOriginal" xml:space="preserve"><value>원본 바꾸기</value></data>

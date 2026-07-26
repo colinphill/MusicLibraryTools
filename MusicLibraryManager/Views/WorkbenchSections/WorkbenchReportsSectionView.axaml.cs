@@ -60,33 +60,63 @@ public partial class WorkbenchReportsSectionView : UserControl
         ReportOutputGrid.IsVisible =
             hasPreview;
         ReportPreviewEmptyState.IsVisible =
-            !hasPreview;
+            false;
+        ReviewedTitle.IsVisible =
+            hasPreview;
+        ApplyResponsiveLayout();
     }
 
     private void ApplyResponsiveLayout()
     {
         bool narrow = Bounds.Width > 0 &&
             Bounds.Width < 880;
+        bool hasPreview =
+            _viewModel.ReportOutputs.Count > 0;
+        bool stacked =
+            narrow || !hasPreview;
         SectionLayout.ColumnDefinitions.Clear();
         SectionLayout.RowDefinitions.Clear();
-        if (narrow)
+        ReviewedPanel.RowDefinitions.Clear();
+        ReviewedPanel.RowDefinitions.Add(
+            new RowDefinition(GridLength.Auto));
+        ReviewedPanel.RowDefinitions.Add(
+            new RowDefinition(
+                hasPreview
+                    ? new GridLength(
+                        1,
+                        GridUnitType.Star)
+                    : GridLength.Auto));
+        ReviewedPanel.RowDefinitions.Add(
+            new RowDefinition(GridLength.Auto));
+        ReviewedPanel.RowDefinitions.Add(
+            new RowDefinition(GridLength.Auto));
+        if (stacked)
         {
             SectionLayout.ColumnDefinitions.Add(
                 new ColumnDefinition(
                     new GridLength(1, GridUnitType.Star)));
             SectionLayout.RowDefinitions.Add(
-                new RowDefinition(GridLength.Auto));
+                new RowDefinition(
+                    hasPreview
+                        ? GridLength.Auto
+                        : new GridLength(
+                            1,
+                            GridUnitType.Star)));
             SectionLayout.RowDefinitions.Add(
                 new RowDefinition(new GridLength(12)));
             SectionLayout.RowDefinitions.Add(
                 new RowDefinition(
-                    new GridLength(
-                        1,
-                        GridUnitType.Star)));
+                    hasPreview
+                        ? new GridLength(
+                            1,
+                            GridUnitType.Star)
+                        : GridLength.Auto));
             Grid.SetColumn(ReviewedPanel, 0);
             Grid.SetRow(ReviewedPanel, 2);
             EditorScroll.MaxHeight =
-                Bounds.Height < 430
+                !hasPreview
+                    ? double.PositiveInfinity
+                    : Bounds.Height < 430
                     ? Math.Clamp(
                         Bounds.Height * .42,
                         150,

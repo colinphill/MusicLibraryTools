@@ -1,9 +1,11 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -428,6 +430,418 @@ public sealed class WorkbenchInteractionTests
                 window,
                 view,
                 inspectorDrawer);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Populated_inspector_artwork_and_tag_layer_editors_remain_reachable_at_compact_drawer_bounds()
+    {
+        var settings = new TestSettings();
+        string path =
+            Path.GetFullPath(
+                "inspector-artwork-tag-layers.mp3");
+        var documents =
+            new PopulatedInspectorDocumentService();
+        using ServiceProvider services =
+            BuildServices(
+                settings,
+                documents);
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(
+                    window,
+                    services,
+                    1920,
+                    900);
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            await view.AddDroppedSourcesAsync(
+                [path]);
+            WorkbenchTrackViewModel track =
+                Assert.Single(
+                    model.Files);
+            Assert.True(
+                model.HasFiles,
+                "The representative Inspector fixture did not enter the populated Workbench state.");
+            model.SelectedFile = track;
+            Assert.True(
+                await model.TrySetSelectedFilesAsync(
+                    [track]),
+                "The populated Inspector fixture selection was rejected.");
+            Render();
+
+            Control drawer =
+                view.FindControl<Control>(
+                    "WorkbenchInspectorDrawer")!;
+            if (!drawer.IsEffectivelyVisible)
+            {
+                view.FindControl<Button>(
+                        "WorkbenchInspectorToggle")!
+                    .RaiseEvent(
+                        new RoutedEventArgs(
+                            Button.ClickEvent));
+                Render();
+            }
+            PersistedSplitView split =
+                view.FindControl<PersistedSplitView>(
+                    "WorkbenchSplit")!;
+            SelectionInspectorView inspector =
+                drawer.FindControl<
+                    SelectionInspectorView>(
+                    "WorkbenchInspectorView")!;
+            ScrollViewer scroll =
+                inspector.FindControl<ScrollViewer>(
+                    "InspectorContent")!;
+            ListBox artworkList =
+                inspector.FindControl<ListBox>(
+                    "InspectorArtworkList")!;
+            Expander tagTools =
+                drawer.FindControl<Expander>(
+                    "WorkbenchTagToolsExpander")!;
+            ILocalizationService localization =
+                services.GetRequiredService<
+                    ILocalizationService>();
+
+            Assert.True(
+                drawer.IsEffectivelyVisible,
+                "The populated Inspector drawer did not open.");
+            Assert.Equal(
+                2,
+                model.Inspector!.ArtworkItems.Count);
+            Assert.Equal(
+                2,
+                artworkList.ItemCount);
+            artworkList.SelectedIndex = 0;
+            Render();
+            Assert.Same(
+                model.Inspector.ArtworkItems[0],
+                artworkList.SelectedItem);
+            Assert.False(
+                tagTools.IsExpanded);
+
+            foreach (double expectedWidth in
+                     new[] { 430d, 300d })
+            {
+                split.CommitLeftWidth(
+                    split.Bounds.Width -
+                    WorkbenchView
+                        .SplitDividerAllocation -
+                    expectedWidth);
+                Render();
+
+                Assert.InRange(
+                    split.CurrentRightWidth,
+                    expectedWidth - 1,
+                    expectedWidth + 1);
+                Assert.InRange(
+                    drawer.Bounds.Width,
+                    expectedWidth - 1,
+                    expectedWidth + 1);
+                Assert.True(
+                    drawer.Bounds.Height <=
+                    view.Bounds.Height + 1,
+                    $"The {expectedWidth:0}px Inspector drawer exceeded the Workbench height.");
+
+                artworkList.BringIntoView();
+                Render();
+                ListBoxItem[] artworkRows =
+                [
+                    .. artworkList
+                        .GetVisualDescendants()
+                        .OfType<ListBoxItem>(),
+                ];
+                Assert.Equal(
+                    2,
+                    artworkRows.Length);
+                Assert.All(
+                    artworkRows,
+                    row => Assert.Contains(
+                        row.GetVisualDescendants()
+                            .OfType<Border>(),
+                        preview =>
+                            AutomationProperties
+                                .GetName(preview) ==
+                            localization.Get(
+                                "Inspector.View.ArtworkPreview")));
+
+                ArtworkPreviewItem selected =
+                    Assert.IsType<ArtworkPreviewItem>(
+                        artworkList.SelectedItem);
+                ComboBox artworkType =
+                    Assert.Single(
+                        drawer
+                            .GetVisualDescendants()
+                            .OfType<ComboBox>(),
+                        control =>
+                            ReferenceEquals(
+                                control.DataContext,
+                                selected) &&
+                            AutomationProperties
+                                .GetName(control) ==
+                            localization.Get(
+                                "Inspector.View.ArtworkType"));
+                TextBox artworkDescription =
+                    Assert.Single(
+                        drawer
+                            .GetVisualDescendants()
+                            .OfType<TextBox>(),
+                        control =>
+                            ReferenceEquals(
+                                control.DataContext,
+                                selected) &&
+                            AutomationProperties
+                                .GetName(control) ==
+                            localization.Get(
+                                "Inspector.View.ArtworkDescription"));
+                AssertActionReachable(
+                    drawer,
+                    artworkType);
+                AssertActionReachable(
+                    drawer,
+                    artworkDescription);
+
+                Button addArtwork =
+                    FindAutomationButton(
+                        drawer,
+                        localization.Get(
+                            "Inspector.View.AddArtworkAutomation"));
+                Button optimizeArtwork =
+                    FindAutomationButton(
+                        drawer,
+                        localization.Get(
+                            "Inspector.View.OptimizeAutomation"));
+                Button artworkOverflow =
+                    Assert.Single(
+                        drawer
+                            .GetVisualDescendants()
+                            .OfType<Button>(),
+                        button =>
+                            ReferenceEquals(
+                                button.DataContext,
+                                model.Inspector) &&
+                            AutomationProperties
+                                .GetName(button) ==
+                            localization.Get(
+                                "Inspector.View.ArtworkActions"));
+                AssertActionReachable(
+                    drawer,
+                    addArtwork);
+                AssertActionReachable(
+                    drawer,
+                    optimizeArtwork);
+                AssertActionReachable(
+                    drawer,
+                    artworkOverflow);
+
+                Button rowOverflow =
+                    Assert.Single(
+                        drawer
+                            .GetVisualDescendants()
+                            .OfType<Button>(),
+                        button =>
+                            ReferenceEquals(
+                                button.DataContext,
+                                selected) &&
+                            AutomationProperties
+                                .GetName(button) ==
+                            localization.Get(
+                                "Inspector.View.ArtworkActions"));
+                AssertActionReachable(
+                    drawer,
+                    rowOverflow);
+                AssertMenuActions(
+                    rowOverflow,
+                    localization,
+                    "Inspector.View.SaveArtworkToFileAutomation",
+                    "Inspector.View.ReplaceArtworkAutomation",
+                    "Inspector.View.RemoveArtworkAutomation");
+
+                tagTools.IsExpanded = true;
+                Render();
+                AssertLayerRow(
+                    "Workbench.Inspector.Id3v2Actions",
+                    "Workbench.Inspector.LayerPresent",
+                    "Workbench.Inspector.AddId3v2Automation",
+                    "Workbench.Inspector.RemoveId3v2Automation",
+                    expectAddEnabled: false,
+                    expectRemoveEnabled: true);
+                AssertLayerRow(
+                    "Workbench.Inspector.ApeV2Actions",
+                    "Workbench.Inspector.LayerMissing",
+                    "Workbench.Inspector.AddApeV2Automation",
+                    "Workbench.Inspector.RemoveApeV2Automation",
+                    expectAddEnabled: true,
+                    expectRemoveEnabled: false);
+                AssertLayerRow(
+                    "Workbench.Inspector.Id3v1Actions",
+                    "Workbench.Inspector.LayerPresent",
+                    "Workbench.Inspector.AddId3v1Automation",
+                    "Workbench.Inspector.RemoveId3v1Automation",
+                    expectAddEnabled: false,
+                    expectRemoveEnabled: true);
+
+                Expander advanced =
+                    Assert.Single(
+                        tagTools
+                            .GetVisualDescendants()
+                            .OfType<Expander>(),
+                        expander =>
+                            Equals(
+                                expander.Header,
+                                localization.Get(
+                                    "Workbench.Common.Advanced")));
+                Assert.False(
+                    advanced.IsExpanded);
+                Control[] collapsedAdvancedControls =
+                [
+                    .. advanced
+                        .GetLogicalDescendants()
+                        .OfType<Control>()
+                        .Where(control =>
+                            AutomationProperties
+                                .GetName(control) is
+                                string name &&
+                            (name ==
+                             localization.Get(
+                                 "Workbench.Inspector.TargetId3VersionAutomation") ||
+                             name ==
+                             localization.Get(
+                                 "Workbench.Inspector.Id3EncodingAutomation"))),
+                ];
+                Assert.Equal(
+                    2,
+                    collapsedAdvancedControls.Length);
+
+                advanced.IsExpanded = true;
+                Render();
+                ComboBox targetVersion =
+                    FindAutomationControl<
+                        ComboBox>(
+                        drawer,
+                        localization.Get(
+                            "Workbench.Inspector.TargetId3VersionAutomation"));
+                ComboBox encoding =
+                    FindAutomationControl<
+                        ComboBox>(
+                        drawer,
+                        localization.Get(
+                            "Workbench.Inspector.Id3EncodingAutomation"));
+                Button previewConversion =
+                    FindAutomationButton(
+                        drawer,
+                        localization.Get(
+                            "Workbench.Inspector.PreviewConversionAutomation"));
+                Button previewEncoding =
+                    FindAutomationButton(
+                        drawer,
+                        localization.Get(
+                            "Workbench.Inspector.PreviewEncodingAutomation"));
+                AssertActionReachable(
+                    drawer,
+                    targetVersion);
+                AssertActionReachable(
+                    drawer,
+                    previewConversion);
+                AssertActionReachable(
+                    drawer,
+                    encoding);
+                AssertActionReachable(
+                    drawer,
+                    previewEncoding);
+
+                advanced.IsExpanded = false;
+                if (expectedWidth > 300)
+                {
+                    tagTools.IsExpanded = false;
+                    artworkList.BringIntoView();
+                }
+                else
+                {
+                    tagTools.IsExpanded = true;
+                    tagTools.BringIntoView();
+                }
+                Render();
+                CapturePopulatedInspector(
+                    window,
+                    (int)expectedWidth);
+            }
+
+            Assert.Equal(
+                0,
+                scroll.Offset.X);
+
+            void AssertLayerRow(
+                string launcherKey,
+                string statusKey,
+                string addKey,
+                string removeKey,
+                bool expectAddEnabled,
+                bool expectRemoveEnabled)
+            {
+                Button launcher =
+                    FindAutomationButton(
+                        drawer,
+                        localization.Get(
+                            launcherKey));
+                Grid row =
+                    Assert.IsType<Grid>(
+                        launcher.Parent);
+                Assert.Contains(
+                    row.Children
+                        .OfType<TextBlock>(),
+                    status =>
+                        status
+                            .IsEffectivelyVisible &&
+                        status.Text ==
+                        localization.Get(
+                            statusKey));
+                AssertActionReachable(
+                    drawer,
+                    launcher);
+                launcher.BringIntoView();
+                Render();
+
+                MenuFlyout flyout =
+                    Assert.IsType<MenuFlyout>(
+                        launcher.Flyout);
+                flyout.ShowAt(launcher);
+                Render();
+                MenuItem add =
+                    Assert.Single(
+                        flyout.Items
+                            .OfType<MenuItem>(),
+                        item =>
+                            AutomationProperties
+                                .GetName(item) ==
+                            localization.Get(
+                                addKey));
+                MenuItem remove =
+                    Assert.Single(
+                        flyout.Items
+                            .OfType<MenuItem>(),
+                        item =>
+                            AutomationProperties
+                                .GetName(item) ==
+                            localization.Get(
+                                removeKey));
+                Assert.Equal(
+                    expectAddEnabled,
+                    add.IsEffectivelyEnabled);
+                Assert.Equal(
+                    expectRemoveEnabled,
+                    remove.IsEffectivelyEnabled);
+                flyout.Hide();
+                Render();
+            }
         }
         finally
         {
@@ -978,6 +1392,100 @@ public sealed class WorkbenchInteractionTests
             PngBitmapEncoderOptions.Default);
     }
 
+    private static void CapturePopulatedInspector(
+        MainWindow window,
+        int drawerWidth)
+    {
+        string? captureDirectory =
+            Environment.GetEnvironmentVariable(
+                "MUSIC_LIBRARY_MANAGER_CAPTURE_DIR");
+        if (string.IsNullOrWhiteSpace(
+                captureDirectory))
+            return;
+        using var frame =
+            window.GetLastRenderedFrame();
+        Assert.NotNull(frame);
+        Directory.CreateDirectory(
+            captureDirectory);
+        frame.Save(
+            Path.Combine(
+                captureDirectory,
+                "supplemental-workbench-inspector-" +
+                "populated-artwork-tag-layers-" +
+                $"{drawerWidth}px.png"),
+            PngBitmapEncoderOptions.Default);
+    }
+
+    private static void AssertActionReachable(
+        Control root,
+        Control action)
+    {
+        UiActionReachabilityResult result =
+            UiViewportReachability
+                .VerifyAction(
+                    root,
+                    action,
+                    Render);
+        Assert.True(
+            result.IsReachable,
+            $"{AutomationProperties.GetName(action) ?? action.Name ?? action.GetType().Name} was not reachable. {result.Detail}");
+    }
+
+    private static T FindAutomationControl<T>(
+        Control root,
+        string name)
+        where T : Control =>
+        Assert.Single(
+            root.GetVisualDescendants()
+                .OfType<T>(),
+            control =>
+                AutomationProperties
+                    .GetName(control) ==
+                name);
+
+    private static Button FindAutomationButton(
+        Control root,
+        string name) =>
+        FindAutomationControl<Button>(
+            root,
+            name);
+
+    private static void AssertMenuActions(
+        Button launcher,
+        ILocalizationService localization,
+        params string[] actionKeys)
+    {
+        launcher.BringIntoView();
+        Render();
+        MenuFlyout flyout =
+            Assert.IsType<MenuFlyout>(
+                launcher.Flyout);
+        flyout.ShowAt(launcher);
+        Render();
+        string[] names =
+        [
+            .. flyout.Items
+                .OfType<MenuItem>()
+                .Select(
+                    AutomationProperties
+                        .GetName)
+                .Where(name =>
+                    !string.IsNullOrWhiteSpace(
+                        name))
+                .Cast<string>(),
+        ];
+        foreach (string actionKey in
+                 actionKeys)
+        {
+            Assert.Contains(
+                localization.Get(
+                    actionKey),
+                names);
+        }
+        flyout.Hide();
+        Render();
+    }
+
     private static void AssertDrawerCyclesForwardAndReverse(
         MainWindow window,
         WorkbenchView view,
@@ -1158,7 +1666,9 @@ public sealed class WorkbenchInteractionTests
     }
 
     private static ServiceProvider BuildServices(
-        TestSettings? settings = null)
+        TestSettings? settings = null,
+        IMetadataDocumentService?
+            metadataDocuments = null)
     {
         settings ??= new TestSettings();
         settings.SetPreference(
@@ -1175,6 +1685,20 @@ public sealed class WorkbenchInteractionTests
             collection.AddSingleton<
                 IAudioTranscodeCapabilityService>(
                 new FixedTranscodeCapabilities());
+            if (metadataDocuments is not null)
+            {
+                collection.AddSingleton<
+                    IMetadataDocumentService>(
+                    metadataDocuments);
+                if (metadataDocuments is
+                    IWorkbenchService
+                    workbench)
+                {
+                    collection.AddSingleton<
+                        IWorkbenchService>(
+                        workbench);
+                }
+            }
         });
     }
 
@@ -1182,6 +1706,152 @@ public sealed class WorkbenchInteractionTests
         CheckBox Check,
         Button Up,
         Button Down);
+
+    private sealed class
+        PopulatedInspectorDocumentService :
+        IMetadataDocumentService,
+        IWorkbenchService
+    {
+        private static readonly byte[] ArtworkPng =
+            Convert.FromBase64String(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+
+        public Task<MediaDocument> LoadAsync(
+            string path,
+            bool includeArtwork = true,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult(
+                CreateDocument(
+                    path,
+                    includeArtwork));
+        }
+
+        Task<WorkbenchLoadResult>
+            IWorkbenchService.LoadAsync(
+                WorkbenchLoadRequest request,
+                CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult(
+                new WorkbenchLoadResult(
+                [
+                    .. request.Sources
+                        .Select(source =>
+                            CreateDocument(
+                                Path.GetFullPath(
+                                    source),
+                                includeArtwork:
+                                    true)),
+                ],
+                []));
+        }
+
+        public MediaDocument CreateDocument(
+            string path,
+            bool includeArtwork)
+        {
+            System.Collections.Immutable
+                .ImmutableArray<ArtworkModel>
+                artwork =
+                includeArtwork
+                    ?
+                    [
+                        new()
+                        {
+                            Category =
+                                "FrontCover",
+                            Description =
+                                "Front cover",
+                            ImageType =
+                                "image/png",
+                            Width = 1,
+                            Height = 1,
+                            Size =
+                                ArtworkPng.Length,
+                            Data =
+                                [.. ArtworkPng],
+                        },
+                        new()
+                        {
+                            Category =
+                                "BackCover",
+                            Description =
+                                "Back cover",
+                            ImageType =
+                                "image/png",
+                            Width = 1,
+                            Height = 1,
+                            Size =
+                                ArtworkPng.Length,
+                            Data =
+                                [.. ArtworkPng],
+                        },
+                    ]
+                    : [];
+            return new MediaDocument(
+                path,
+                [
+                    new(
+                        "ID3v2",
+                        [
+                            new(
+                                MetadataFieldKey
+                                    .Known(
+                                        TagFields
+                                            .Title),
+                                ["Inspector fixture"]),
+                            new(
+                                MetadataFieldKey
+                                    .Known(
+                                        TagFields
+                                            .Artist),
+                                ["Fixture artist"]),
+                        ],
+                        true,
+                        true,
+                        true,
+                        true),
+                ],
+                artwork,
+                null,
+                new(
+                    path,
+                    256,
+                    DateTime.UnixEpoch,
+                    "inspector-artwork-tag-layers"),
+                true)
+            {
+                EditableTagLayers =
+                [
+                    new(
+                        TagLayerKind.Id3v2,
+                        "ID3v2",
+                        true,
+                        false,
+                        true,
+                        true),
+                    new(
+                        TagLayerKind.ApeV2,
+                        "APEv2",
+                        false,
+                        true,
+                        false,
+                        false),
+                    new(
+                        TagLayerKind.Id3v1,
+                        "ID3v1",
+                        true,
+                        false,
+                        true,
+                        false),
+                ],
+                Id3Version =
+                    ID3v2Version.V24,
+            };
+        }
+    }
 
     private static void Render()
     {

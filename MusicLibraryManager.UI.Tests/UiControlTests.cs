@@ -4918,7 +4918,7 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
-    public void Health_interactive_artwork_results_use_virtualized_master_detail()
+    public void Health_interactive_artwork_results_use_hierarchy_and_selected_detail()
     {
         using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
@@ -4937,6 +4937,7 @@ public sealed class UiControlTests
             "2,000 artwork repairs");
         viewModel.Runs.Add(run);
         viewModel.SelectedRun = run;
+        viewModel.ActiveResultIndex = 8;
         var window = new Window { Width = 1100, Height = 700, Content = health };
         try
         {
@@ -4944,15 +4945,12 @@ public sealed class UiControlTests
             Dispatcher.UIThread.RunJobs();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
 
-            ListBox list = health.FindControl<ListBox>("ArtworkRepairResultsList")!;
-            var panel = Assert.IsType<VirtualizingStackPanel>(list.ItemsPanelRoot);
-            Assert.InRange(panel.Children.Count, 1, 100);
-            Assert.True(panel.Children.Count < repairs.Length);
-            Assert.Empty(list.GetVisualAncestors().OfType<ScrollViewer>());
-            Assert.Same(repairs[0], list.SelectedItem);
-            ScrollViewer details =
-                health.FindControl<ScrollViewer>("ArtworkRepairDetailsScroll")!;
+            Grid details =
+                health.FindControl<Grid>("ArtworkRepairDetailsLayout")!;
             Assert.Same(repairs[0], details.DataContext);
+            Assert.Null(
+                health.FindControl<ListBox>(
+                    "ArtworkRepairResultsList"));
             Assert.NotNull(health.GetVisualDescendants().OfType<TreeView>().FirstOrDefault(tree =>
                 ReferenceEquals(tree.ItemsSource, viewModel.ArtworkRepairGroups)));
         }
@@ -4960,6 +4958,651 @@ public sealed class UiControlTests
         {
             window.Hide();
         }
+    }
+
+    [AvaloniaFact]
+    public void Health_large_artwork_candidate_sets_use_one_virtualized_detail_scroll_owner()
+    {
+        using ServiceProvider services =
+            BuildIsolatedServices([]);
+        App.UseServicesForTests(services);
+        var health = new HealthView();
+        var viewModel =
+            Assert.IsType<AnalyzerViewModel>(
+                health.DataContext);
+        ILibraryService library =
+            services.GetRequiredService<
+                ILibraryService>();
+        ArtworkRepairCandidateViewModel[]
+            candidates =
+            CreateArtworkCandidates(
+                library,
+                2_000);
+        var repair =
+            new ArtworkRepairItemViewModel(
+                ArtworkRepairKind.NormalizeAlbum,
+                "Large candidate set",
+                "Choose the canonical artwork.",
+                [@"C:\Music\Album\Track 01.flac"],
+                candidates,
+                true,
+                128_000,
+                800);
+        AnalysisRunViewModel run =
+            AnalysisRunViewModel.ForArtwork(
+                new AnalysisReport(
+                    "Artwork health",
+                    []),
+                [],
+                [repair],
+                "One artwork repair");
+        viewModel.Runs.Add(run);
+        viewModel.SelectedRun = run;
+        viewModel.ActiveResultIndex = 8;
+        var window = new Window
+        {
+            Width = 900,
+            Height = 600,
+            Content = health,
+        };
+        try
+        {
+            window.Show();
+            RenderUi();
+
+            ListBox candidateList =
+                health.FindControl<ListBox>(
+                    "ArtworkRepairCandidateList")!;
+            var panel =
+                Assert.IsType<VirtualizingStackPanel>(
+                    candidateList.ItemsPanelRoot);
+            ScrollViewer owner =
+                health.FindControl<ScrollViewer>(
+                    "ArtworkRepairDetailsScroll")!;
+            Assert.InRange(
+                panel.Children.Count,
+                1,
+                20);
+            Assert.True(
+                panel.Children.Count <
+                candidates.Length);
+            Assert.Same(
+                candidates[0],
+                candidateList.SelectedItem);
+            Assert.Contains(
+                owner,
+                candidateList
+                    .GetVisualAncestors()
+                    .OfType<ScrollViewer>());
+            Assert.Empty(
+                candidateList
+                    .GetVisualDescendants()
+                    .OfType<ScrollViewer>());
+            ScrollViewer[] effectiveOwners =
+            [
+                .. health
+                    .FindControl<Grid>(
+                        "ArtworkRepairMasterDetailLayout")!
+                    .GetVisualDescendants()
+                    .OfType<ScrollViewer>()
+                    .Where(viewer =>
+                        viewer.IsEffectivelyVisible &&
+                        viewer
+                            .VerticalScrollBarVisibility !=
+                        ScrollBarVisibility.Disabled),
+            ];
+            Assert.Single(effectiveOwners);
+            Assert.Same(owner, effectiveOwners[0]);
+            Assert.True(
+                owner.Extent.Height >
+                owner.Viewport.Height,
+                $"The candidate surface did not overflow its single owner: extent={owner.Extent}, viewport={owner.Viewport}.");
+
+            owner.Offset = new Vector(
+                0,
+                owner.Extent.Height -
+                owner.Viewport.Height);
+            RenderUi();
+
+            Assert.InRange(
+                panel.Children.Count,
+                1,
+                20);
+            Assert.True(
+                panel.Children.Count <
+                candidates.Length);
+            Assert.Contains(
+                panel.Children,
+                child =>
+                    ReferenceEquals(
+                        child.DataContext,
+                        candidates[^1]));
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Health_long_artwork_detail_text_is_reachable_through_its_single_scroll_owner_at_900_by_600()
+    {
+        using ServiceProvider services =
+            BuildIsolatedServices([]);
+        App.UseServicesForTests(services);
+        var health = new HealthView();
+        var viewModel =
+            Assert.IsType<AnalyzerViewModel>(
+                health.DataContext);
+        ILibraryService library =
+            services.GetRequiredService<
+                ILibraryService>();
+        string description =
+            string.Join(
+                " ",
+                Enumerable.Repeat(
+                    "The selected canonical artwork must be reviewed against every source before normalization can continue.",
+                    12));
+        string blockingReason =
+            string.Join(
+                " ",
+                Enumerable.Repeat(
+                    "The source image could not be decoded and the affected files remain blocked until another candidate is selected.",
+                    12));
+        string diagnostic =
+            string.Join(
+                " ",
+                Enumerable.Repeat(
+                    @"C:\Music\Album\Track 01.flac failed while writing the reviewed artwork because the destination rejected the metadata update.",
+                    12));
+        var repair =
+            new ArtworkRepairItemViewModel(
+                ArtworkRepairKind.NormalizeAlbum,
+                "Long artwork detail",
+                description,
+                [@"C:\Music\Album\Track 01.flac"],
+                CreateArtworkCandidates(
+                    library,
+                    24),
+                true,
+                128_000,
+                800,
+                blockingReason)
+            {
+                ResultText =
+                    "The reviewed artwork repair could not be completed.",
+                ResultDiagnosticDetail =
+                    diagnostic,
+            };
+        AnalysisRunViewModel run =
+            AnalysisRunViewModel.ForArtwork(
+                new AnalysisReport(
+                    "Artwork health",
+                    []),
+                [],
+                [repair],
+                "One artwork repair");
+        viewModel.Runs.Add(run);
+        viewModel.SelectedRun = run;
+        viewModel.ActiveResultIndex = 8;
+        var window = new Window
+        {
+            Width = 900,
+            Height = 600,
+            Content = health,
+        };
+        try
+        {
+            window.Show();
+            RenderUi();
+
+            ScrollViewer owner =
+                health.FindControl<ScrollViewer>(
+                    "ArtworkRepairDetailsScroll")!;
+            Control descriptionText =
+                health.FindControl<Control>(
+                    "ArtworkRepairDescriptionText")!;
+            Control blockingText =
+                health.FindControl<Control>(
+                    "ArtworkRepairBlockingReasonText")!;
+            Control resultText =
+                health.FindControl<Control>(
+                    "ArtworkRepairResultText")!;
+            Control diagnosticText =
+                health.FindControl<Control>(
+                    "ArtworkRepairResultDiagnosticText")!;
+            ScrollViewer[] effectiveOwners =
+            [
+                .. health
+                    .FindControl<Grid>(
+                        "ArtworkRepairMasterDetailLayout")!
+                    .GetVisualDescendants()
+                    .OfType<ScrollViewer>()
+                    .Where(viewer =>
+                        viewer.IsEffectivelyVisible &&
+                        viewer
+                            .VerticalScrollBarVisibility !=
+                        ScrollBarVisibility.Disabled),
+            ];
+            Assert.Single(effectiveOwners);
+            Assert.Same(owner, effectiveOwners[0]);
+            Assert.True(
+                owner.Extent.Height >
+                owner.Viewport.Height,
+                $"Long artwork detail text did not overflow: extent={owner.Extent}, viewport={owner.Viewport}.");
+
+            AssertReachable(descriptionText);
+            AssertReachable(blockingText);
+            CaptureConfiguredHealthState(
+                window,
+                "artwork-long-detail-single-scroll");
+            AssertReachable(resultText);
+            AssertReachable(diagnosticText);
+            Assert.True(
+                owner.Offset.Y > 0,
+                $"The result diagnostic did not move into the detail viewport: offset={owner.Offset}, extent={owner.Extent}, viewport={owner.Viewport}.");
+
+            void AssertReachable(
+                Control control)
+            {
+                control.BringIntoView();
+                RenderUi();
+                Point origin =
+                    Assert.NotNull(
+                        control.TranslatePoint(
+                            default,
+                            owner));
+                Rect bounds =
+                    new(
+                        origin,
+                        control.Bounds.Size);
+                Assert.True(
+                    bounds.Bottom >= -1 &&
+                    bounds.Top <=
+                    owner.Viewport.Height + 1,
+                    $"{control.Name} could not be brought into the artwork detail viewport: control={bounds}, offset={owner.Offset}, extent={owner.Extent}, viewport={owner.Viewport}.");
+            }
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Health_artwork_candidate_detail_supports_wheel_and_keyboard_at_900_by_600()
+    {
+        using ServiceProvider services =
+            BuildIsolatedServices([]);
+        App.UseServicesForTests(services);
+        var health = new HealthView();
+        var viewModel =
+            Assert.IsType<AnalyzerViewModel>(
+                health.DataContext);
+        ILibraryService library =
+            services.GetRequiredService<
+                ILibraryService>();
+        ArtworkRepairCandidateViewModel[]
+            candidates =
+            CreateArtworkCandidates(
+                library,
+                250);
+        var repair =
+            new ArtworkRepairItemViewModel(
+                ArtworkRepairKind.NormalizeAlbum,
+                "Keyboard and wheel candidates",
+                "Choose the canonical artwork.",
+                [@"C:\Music\Album\Track 01.flac"],
+                candidates,
+                true,
+                128_000,
+                800);
+        AnalysisRunViewModel run =
+            AnalysisRunViewModel.ForArtwork(
+                new AnalysisReport(
+                    "Artwork health",
+                    []),
+                [],
+                [repair],
+                "One artwork repair");
+        viewModel.Runs.Add(run);
+        viewModel.SelectedRun = run;
+        viewModel.ActiveResultIndex = 8;
+        var window = new Window
+        {
+            Width = 900,
+            Height = 600,
+            Content = health,
+        };
+        try
+        {
+            window.Show();
+            RenderUi();
+
+            ListBox candidateList =
+                health.FindControl<ListBox>(
+                    "ArtworkRepairCandidateList")!;
+            TabControl resultTabs =
+                health.FindControl<TabControl>(
+                    "HealthResultsTabs")!;
+            Assert.Equal(
+                8,
+                resultTabs.SelectedIndex);
+            Assert.True(
+                candidateList.IsEffectivelyVisible,
+                $"Candidate list is not visible: candidate={candidateList.Bounds}, details={health.FindControl<Grid>("ArtworkRepairDetailsLayout")!.Bounds}.");
+            Grid details =
+                candidateList
+                    .GetVisualAncestors()
+                    .OfType<Grid>()
+                    .Single(grid =>
+                        grid.Name ==
+                        "ArtworkRepairDetailsLayout");
+            Assert.Same(
+                repair,
+                details.DataContext);
+            ScrollViewer owner =
+                health.FindControl<ScrollViewer>(
+                    "ArtworkRepairDetailsScroll")!;
+            Assert.Contains(
+                owner,
+                candidateList
+                    .GetVisualAncestors()
+                    .OfType<ScrollViewer>());
+            Assert.Empty(
+                candidateList
+                    .GetVisualDescendants()
+                    .OfType<ScrollViewer>());
+            Assert.True(
+                candidateList.Bounds.Width > 0,
+                $"Candidate list has no width: {candidateList.Bounds}.");
+            Assert.True(
+                candidateList.Bounds.Height >= 80,
+                $"Candidate list is too short: candidate={candidateList.Bounds}, details={details.Bounds}.");
+            Point origin =
+                Assert.NotNull(
+                    candidateList.TranslatePoint(
+                        default,
+                        health));
+            Assert.InRange(
+                origin.X,
+                -1,
+                health.Bounds.Width + 1);
+            Assert.True(
+                origin.Y >= -1 &&
+                origin.Y <=
+                health.Bounds.Height + 1,
+                $"Candidate origin={origin}, candidate={candidateList.Bounds}, details={details.Bounds}, health={health.Bounds}, tabs={resultTabs.Bounds}. Ancestors: {string.Join(" | ", candidateList.GetVisualAncestors().OfType<Control>().Select(control => $"{control.GetType().Name}:{control.Name}:{control.Bounds}"))}");
+            Assert.True(
+                origin.X +
+                candidateList.Bounds.Width <=
+                health.Bounds.Width + 1,
+                $"Candidate right edge is clipped: origin={origin}, candidate={candidateList.Bounds}, health={health.Bounds}.");
+            Assert.True(
+                origin.Y <
+                health.Bounds.Height &&
+                origin.Y +
+                Math.Min(
+                    candidateList.Bounds.Height,
+                    owner.Viewport.Height) >
+                0,
+                $"The candidate extent does not intersect its visible outer viewport: origin={origin}, candidate={candidateList.Bounds}, owner={owner.Bounds}, viewport={owner.Viewport}, health={health.Bounds}.");
+
+            candidateList.Focus();
+            candidateList.RaiseEvent(
+                new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = Key.Down,
+                    PhysicalKey =
+                        PhysicalKey.ArrowDown,
+                });
+            RenderUi();
+            Assert.Same(
+                candidates[1],
+                candidateList.SelectedItem);
+            Assert.Same(
+                candidates[1],
+                repair.SelectedCandidate);
+
+            Point listPoint =
+                Assert.NotNull(
+                    owner.TranslatePoint(
+                        new Point(
+                            owner.Viewport.Width /
+                            2,
+                            owner.Viewport.Height /
+                            2),
+                        window));
+            double beforeWheel =
+                owner.Offset.Y;
+            window.MouseWheel(
+                listPoint,
+                new Vector(0, -6),
+                RawInputModifiers.None);
+            RenderUi();
+            Assert.True(
+                owner.Offset.Y > beforeWheel,
+                $"The candidate list did not scroll: {beforeWheel:0.##} -> {owner.Offset.Y:0.##}.");
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Health_expanded_artwork_paths_have_one_reachable_virtualized_scroll_owner_at_900_by_600()
+    {
+        using ServiceProvider services =
+            BuildIsolatedServices([]);
+        App.UseServicesForTests(services);
+        var health = new HealthView();
+        var viewModel =
+            Assert.IsType<AnalyzerViewModel>(
+                health.DataContext);
+        ILibraryService library =
+            services.GetRequiredService<
+                ILibraryService>();
+        ArtworkRepairCandidateViewModel[]
+            candidates =
+            CreateArtworkCandidates(
+                library,
+                250);
+        string[] paths = Enumerable.Range(0, 2_000)
+            .Select(index =>
+                $@"C:\Music\An intentionally very long artist name {index:N0}\An intentionally very long album name {index:N0}\Disc 01\Track {index:N0} with an intentionally long title.flac")
+            .ToArray();
+        var repair =
+            new ArtworkRepairItemViewModel(
+                ArtworkRepairKind.NormalizeAlbum,
+                "Large affected-file set",
+                "Choose the canonical artwork.",
+                paths,
+                candidates,
+                true,
+                128_000,
+                800);
+        AnalysisRunViewModel run =
+            AnalysisRunViewModel.ForArtwork(
+                new AnalysisReport(
+                    "Artwork health",
+                    []),
+                [],
+                [repair],
+                "One artwork repair");
+        viewModel.Runs.Add(run);
+        viewModel.SelectedRun = run;
+        viewModel.ActiveResultIndex = 8;
+        var window = new Window
+        {
+            Width = 900,
+            Height = 600,
+            Content = health,
+        };
+        try
+        {
+            window.Show();
+            RenderUi();
+
+            Expander affectedExpander =
+                health.FindControl<Expander>(
+                    "ArtworkAffectedFilesExpander")!;
+            affectedExpander.IsExpanded = true;
+            RenderUi();
+
+            ListBox candidateList =
+                health.FindControl<ListBox>(
+                    "ArtworkRepairCandidateList")!;
+            ListBox pathList =
+                health.FindControl<ListBox>(
+                    "ArtworkRepairAffectedPathList")!;
+            Grid details =
+                health.FindControl<Grid>(
+                    "ArtworkRepairDetailsLayout")!;
+            Assert.False(
+                candidateList.IsEffectivelyVisible,
+                $"Candidate list remained visible after expanding affected files: candidate={candidateList.Bounds}, expander={affectedExpander.Bounds}, details={details.Bounds}.");
+            Assert.True(
+                pathList.IsEffectivelyVisible,
+                $"Affected-path list is not visible: pathList={pathList.Bounds}, expander={affectedExpander.Bounds}, details={details.Bounds}.");
+            Assert.Same(
+                repair.AffectedPaths,
+                pathList.ItemsSource);
+
+            var panel =
+                Assert.IsType<VirtualizingStackPanel>(
+                    pathList.ItemsPanelRoot);
+            Assert.InRange(
+                panel.Children.Count,
+                1,
+                80);
+            Assert.True(
+                panel.Children.Count <
+                repair.AffectedPaths.Count,
+                $"Affected-path virtualization realized every item: children={panel.Children.Count}, paths={repair.AffectedPaths.Count}, list={pathList.Bounds}.");
+            Assert.Contains(
+                health.FindControl<ScrollViewer>(
+                    "ArtworkRepairDetailsScroll")!,
+                pathList
+                    .GetVisualAncestors()
+                    .OfType<ScrollViewer>());
+            Assert.Empty(
+                pathList
+                    .GetVisualDescendants()
+                    .OfType<ScrollViewer>());
+            ScrollViewer owner =
+                Assert.Single(
+                    health
+                        .FindControl<Grid>(
+                            "ArtworkRepairMasterDetailLayout")!
+                        .GetVisualDescendants()
+                        .OfType<ScrollViewer>(),
+                    viewer =>
+                        viewer.IsEffectivelyVisible &&
+                        viewer
+                            .VerticalScrollBarVisibility !=
+                        ScrollBarVisibility.Disabled);
+            Assert.Contains(
+                owner,
+                pathList
+                    .GetVisualAncestors()
+                    .OfType<ScrollViewer>());
+            Assert.True(
+                pathList.Bounds.Height >= 80,
+                $"Affected-path list is too short: pathList={pathList.Bounds}, expander={affectedExpander.Bounds}, details={details.Bounds}.");
+            Point origin =
+                Assert.NotNull(
+                    pathList.TranslatePoint(
+                        default,
+                        health));
+            Assert.InRange(
+                origin.X,
+                -1,
+                health.Bounds.Width + 1);
+            Assert.InRange(
+                origin.Y,
+                -1,
+                health.Bounds.Height + 1);
+            Assert.True(
+                origin.X +
+                pathList.Bounds.Width <=
+                health.Bounds.Width + 1,
+                $"Affected-path right edge is clipped: origin={origin}, pathList={pathList.Bounds}, health={health.Bounds}.");
+            Assert.True(
+                origin.Y <
+                health.Bounds.Height &&
+                origin.Y +
+                Math.Min(
+                    pathList.Bounds.Height,
+                    owner.Viewport.Height) >
+                0,
+                $"The affected-path extent does not intersect its visible outer viewport: origin={origin}, pathList={pathList.Bounds}, owner={owner.Bounds}, viewport={owner.Viewport}, health={health.Bounds}.");
+            Assert.True(
+                owner.Extent.Width <=
+                owner.Viewport.Width + 1,
+                $"Affected paths introduced horizontal overflow: extent={owner.Extent}, viewport={owner.Viewport}.");
+            CaptureConfiguredHealthState(
+                window,
+                "artwork-expanded-paths-virtualized");
+
+            pathList.Focus();
+            pathList.RaiseEvent(
+                new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = Key.End,
+                    PhysicalKey =
+                        PhysicalKey.End,
+                });
+            RenderUi();
+
+            Assert.Same(
+                repair.AffectedPaths[^1],
+                pathList.SelectedItem);
+            Assert.True(
+                owner.Offset.Y > 0,
+                $"The last affected path was not brought into view: offset={owner.Offset}, extent={owner.Extent}, viewport={owner.Viewport}.");
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    private static void CaptureConfiguredHealthState(
+        Window window,
+        string state)
+    {
+        string? captureDirectory =
+            Environment.GetEnvironmentVariable(
+                "MUSIC_LIBRARY_MANAGER_CAPTURE_DIR");
+        if (string.IsNullOrWhiteSpace(
+                captureDirectory))
+        {
+            return;
+        }
+
+        window.InvalidateVisual();
+        RenderUi();
+        using var frame =
+            window.GetLastRenderedFrame();
+        Assert.NotNull(frame);
+        Assert.Equal(
+            900,
+            frame.PixelSize.Width);
+        Assert.Equal(
+            600,
+            frame.PixelSize.Height);
+        Directory.CreateDirectory(
+            captureDirectory);
+        frame.Save(
+            Path.Combine(
+                captureDirectory,
+                $"configured-health-{state}-900x600.png"),
+            PngBitmapEncoderOptions.Default);
     }
 
     [AvaloniaFact]
@@ -6388,6 +7031,27 @@ public sealed class UiControlTests
                 services.AddSingleton<ILibraryService>(new FixtureLibraryService(records));
             configureServices?.Invoke(services);
         });
+
+    private static ArtworkRepairCandidateViewModel[]
+        CreateArtworkCandidates(
+            ILibraryService library,
+            int count) =>
+        [
+            .. Enumerable.Range(
+                    0,
+                    count)
+                .Select(index =>
+                    new ArtworkRepairCandidateViewModel(
+                        $@"C:\Music\Album\Candidate {index:N0}.flac",
+                        $"Candidate {index:N0}",
+                        $"hash-{index:N0}",
+                        $"{800 + index % 5} × {800 + index % 5} · {128 + index % 7} KiB",
+                        800 + index % 5,
+                        800 + index % 5,
+                        128_000 + index,
+                        library,
+                        null)),
+        ];
 
     private static void RenderUi()
     {

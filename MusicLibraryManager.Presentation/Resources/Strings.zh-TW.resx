@@ -865,6 +865,9 @@
   <data name="Health.Artwork.SelectedCount.Other" xml:space="preserve">
     <value>所選修復動作：{0}</value>
   </data>
+  <data name="Health.Artwork.AffectedFiles" xml:space="preserve">
+    <value>受影響的檔案</value>
+  </data>
   <data name="Health.Artwork.AffectedFiles.One" xml:space="preserve">
     <value>受影響的檔案 ({0})</value>
   </data>
@@ -6281,6 +6284,7 @@
   <data name="Transcode.Metadata.Preserve" xml:space="preserve"><value>保留中繼資料</value></data>
   <data name="Transcode.Artwork.Preserve" xml:space="preserve"><value>保留封面</value></data>
   <data name="Transcode.Correction.Create" xml:space="preserve"><value>支援時建立修正檔案</value></data>
+  <data name="Transcode.Correction.Help" xml:space="preserve"><value>建立一個配套檔案，用於從混合輸出中還原原始無損音訊。</value></data>
   <data name="Transcode.Destination.Title" xml:space="preserve"><value>目的地與命名</value></data>
   <data name="Transcode.Destination.Alongside" xml:space="preserve"><value>與來源檔案放在一起</value></data>
   <data name="Transcode.Destination.ReplaceOriginal" xml:space="preserve"><value>取代原始檔案</value></data>

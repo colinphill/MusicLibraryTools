@@ -3,12 +3,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
   <controls:AdaptivePage RowDefinitions="Auto,Auto,*" RowSpacing="16">
-    <controls:PageHeader Title="{DynamicResource Loc.Organize.Title}"
-        Subtitle="{DynamicResource Loc.Organize.Subtitle}">
+    <controls:PageHeader x:Name="OrganizeHeader"
+        Title="{DynamicResource Loc.Organize.Title}"
+        Subtitle="{DynamicResource Loc.Organize.Subtitle}"
+        SecondaryOverflowEnabled="True"
+        SecondaryOverflowLabel="{DynamicResource Loc.Workbench.Action.More}"
+        SecondaryOverflowAutomationName="{DynamicResource Loc.Workbench.Action.MoreAutomation}">
       <controls:PageHeader.PrimaryAction>
         <Grid x:Name="OrganizeWorkflowActions">
           <Button Classes="app"
                   Classes.primary="{Binding !HasPreview}"
+                  IsVisible="{Binding !HasPreview}"
                   Content="{DynamicResource Loc.Organize.Action.Preview}"
                   Command="{Binding PreviewCommand}" />
           <Button Classes="app primary"
@@ -18,8 +23,10 @@
         </Grid>
       </controls:PageHeader.PrimaryAction>
       <controls:PageHeader.SecondaryActions>
-        <Button Classes="app"
+        <Button x:Name="OrganizeCancelButton"
+                Classes="app"
                 Content="{DynamicResource Loc.Common.Cancel}"
+                controls:PageHeader.OverflowHeader="{DynamicResource Loc.Common.Cancel}"
                 Command="{Binding CancelCommand}"
                 IsVisible="{Binding IsBusy}" />
       </controls:PageHeader.SecondaryActions>

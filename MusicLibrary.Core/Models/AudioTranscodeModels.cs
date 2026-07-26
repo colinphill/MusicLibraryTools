@@ -89,7 +89,8 @@ public sealed record AudioRateControlDescriptor(
     int? MaximumBitrateKbps = null,
     double? MinimumQuality = null,
     double? MaximumQuality = null,
-    bool HigherQualityValueIsBetter = true);
+    bool HigherQualityValueIsBetter = true,
+    bool SupportsCorrectionFile = false);
 
 public sealed record AudioEncoderDescriptor(
     string Id,
