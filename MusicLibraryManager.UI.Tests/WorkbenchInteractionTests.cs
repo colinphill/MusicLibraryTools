@@ -665,6 +665,10 @@ public sealed class WorkbenchInteractionTests
                     closeButton,
                     window.FocusManager!
                         .GetFocusedElement());
+                AssertDrawerCyclesForwardAndReverse(
+                    window,
+                    view,
+                    drawer);
                 CaptureTranscodeDrawer(
                     window,
                     (int)width,
