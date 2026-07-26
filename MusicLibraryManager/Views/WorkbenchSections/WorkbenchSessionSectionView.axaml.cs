@@ -195,7 +195,7 @@ public partial class WorkbenchSessionSectionView : UserControl
             new("Date", L("Column.Date"), "Date", 90, 70, Editable: true, HeaderResourceKey: "Column.Date"),
             new("Track", L("Column.Track"), "Track", 75, 60, Editable: true, HeaderResourceKey: "Column.Track"),
             new("Disc", L("Column.Disc"), "Disc", 70, 60, Editable: true, HeaderResourceKey: "Column.Disc"),
-            new("Format", L("Column.Formats"), "Format", 80, 65, HeaderResourceKey: "Column.Formats"),
+            new("Format", L("Column.Format"), "Format", 80, 65, HeaderResourceKey: "Column.Format"),
             new("Codec", L("Column.Codec"), "Codec", 110, 80, false, HeaderResourceKey: "Column.Codec"),
             new("CodecType", L("Column.CodecType"), "CodecType", 105, 80, false, HeaderResourceKey: "Column.CodecType"),
             new("SampleRate", L("Column.SampleRate"), "SampleRate", 115, 85, false, HeaderResourceKey: "Column.SampleRate"),

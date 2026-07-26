@@ -46,7 +46,7 @@
           <TextBox x:Name="ReviewedFileOperationDestination"
                    Classes="app"
                    Text="{Binding DestinationDirectory, Mode=TwoWay}"
-                   PlaceholderText="{DynamicResource Loc.ReviewedFileOperation.DestinationPlaceholder}"
+                   PlaceholderText="{Binding DestinationPlaceholder}"
                    AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.DestinationAutomation}" />
           <Button Grid.Column="1"
                   Classes="app"

@@ -40,7 +40,7 @@
                 Classes="app"
                 HorizontalAlignment="Left"
                 IsVisible="False"
-                Content="{DynamicResource Loc.Column.Back}"
+                Content="{DynamicResource Loc.Common.Back}"
                 Click="OnBackToFields" />
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.AllFields.OrderedValues}" />

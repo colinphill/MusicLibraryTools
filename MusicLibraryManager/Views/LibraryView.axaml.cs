@@ -1082,9 +1082,46 @@ public partial class LibraryView : UserControl
             Math.Min(650, availableWidth);
         LibraryColumnsSurface.MaxHeight =
             Math.Min(610, availableHeight);
-        LibraryVisualFilterSurface.Width =
+        double visualFilterWidth =
             Math.Min(720, availableWidth);
+        LibraryVisualFilterSurface.Width =
+            visualFilterWidth;
         LibraryVisualFilterSurface.MaxHeight =
             Math.Min(620, availableHeight);
+        ApplyVisualFilterLayout(
+            visualFilterWidth < 600);
+    }
+
+    private void ApplyVisualFilterLayout(
+        bool compact)
+    {
+        LibraryVisualFilterLayout
+            .ColumnDefinitions =
+            compact
+                ? new ColumnDefinitions("*")
+                : new ColumnDefinitions("270,*");
+        LibraryVisualFilterLayout
+            .RowDefinitions =
+            compact
+                ? new RowDefinitions(
+                    "Auto,Auto,*")
+                : new RowDefinitions("Auto,*");
+        Grid.SetColumnSpan(
+            LibraryVisualFilterHeader,
+            compact ? 1 : 2);
+        Grid.SetRow(
+            LibraryVisualFilterConditionPane,
+            1);
+        Grid.SetColumn(
+            LibraryVisualFilterConditionPane,
+            0);
+        Grid.SetRow(
+            LibraryVisualFilterConditionEditorScroll,
+            compact ? 2 : 1);
+        Grid.SetColumn(
+            LibraryVisualFilterConditionEditorScroll,
+            compact ? 0 : 1);
+        VisualFilterConditionList.MaxHeight =
+            compact ? 96 : 360;
     }
 }

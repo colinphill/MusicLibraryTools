@@ -11,6 +11,51 @@ namespace MusicLibraryManager.Tests;
 public sealed class FieldsLocalizationTests
 {
     [Fact]
+    public void Preview_count_compositions_pluralize_each_count_independently()
+    {
+        var localization =
+            new SwitchingLocalizationService();
+
+        foreach (long firstCount in new[] { 1L, 2L })
+        foreach (long secondCount in new[] { 1L, 2L })
+        {
+            string activity =
+                FieldsStatusTexts.PreviewStarting(
+                        firstCount,
+                        secondCount)
+                    .Render(localization);
+            string status =
+                FieldsStatusTexts.PreviewReady(
+                        firstCount,
+                        secondCount)
+                    .Render(localization);
+            string firstCategory =
+                firstCount == 1
+                    ? "One"
+                    : "Other";
+            string secondCategory =
+                secondCount == 1
+                    ? "One"
+                    : "Other";
+
+            Assert.Equal(
+                "en-US:Fields.Activity.Preview.Starting:" +
+                $"en-US:Fields.Count.FieldChanges." +
+                $"{firstCategory}:{firstCount}|" +
+                $"en-US:Fields.Count.SelectedFiles." +
+                $"{secondCategory}:{secondCount}",
+                activity);
+            Assert.Equal(
+                "en-US:Fields.Status.PreviewReady:" +
+                $"en-US:Fields.Count.FilesWithChanges." +
+                $"{firstCategory}:{firstCount}|" +
+                $"en-US:Fields.Count.FieldChanges." +
+                $"{secondCategory}:{secondCount}",
+                status);
+        }
+    }
+
+    [Fact]
     public void Fields_editor_runtime_text_uses_localization_and_diagnostic_binding()
     {
         string source = File.ReadAllText(
@@ -63,12 +108,16 @@ public sealed class FieldsLocalizationTests
     {
         var localization =
             new SwitchingLocalizationService();
+        string firstPath =
+            @"C:\music\track-one.flac";
+        string secondPath =
+            @"C:\music\track-two.flac";
         var viewModel = new FieldsDialogViewModel(
             new FakeMetadataDocumentService(
-                Document(
-                    @"C:\music\track.flac")),
+                Document(firstPath),
+                Document(secondPath)),
             new FakeMetadataOperationService(),
-            [@"C:\music\track.flac"],
+            [firstPath, secondPath],
             (_, _) => Task.FromResult(true),
             localization: localization);
         await viewModel.Loading;
@@ -144,10 +193,11 @@ public sealed class FieldsLocalizationTests
         Assert.NotEqual(
             previewStatus,
             viewModel.StatusMessage);
-        Assert.StartsWith(
-            "fr-FR:Fields.Status.PreviewReady:1|1",
-            viewModel.StatusMessage,
-            StringComparison.Ordinal);
+        Assert.Equal(
+            "fr-FR:Fields.Status.PreviewReady:" +
+            "fr-FR:Fields.Count.FilesWithChanges.Other:2|" +
+            "fr-FR:Fields.Count.FieldChanges.One:1",
+            viewModel.StatusMessage);
     }
 
     [Fact]

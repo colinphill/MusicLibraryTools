@@ -1,3 +1,4 @@
+using System.Globalization;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Presentation;
@@ -170,6 +171,112 @@ public sealed class ReviewedFileOperationEditorViewModelTests
             viewModel.Status);
     }
 
+    [Fact]
+    public void Destination_placeholder_tracks_operation_and_culture_without_changing_semantic_choices()
+    {
+        var localization =
+            new SwitchingLocalizationService();
+        var viewModel =
+            new ReviewedFileOperationEditorViewModel(
+                new RecordingFileOperations(),
+                new NoFiles(),
+                () => [],
+                _ => Task.FromResult(true),
+                localization: localization);
+        Dictionary<
+            ReviewedFileOperationKind,
+            LocalizedChoice<ReviewedFileOperationKind>>
+            kindChoices =
+                viewModel.OperationKindChoices
+                    .ToDictionary(
+                        choice => choice.Value);
+        Dictionary<
+            ReviewedFileCollisionPolicy,
+            LocalizedChoice<ReviewedFileCollisionPolicy>>
+            collisionChoices =
+                viewModel.CollisionPolicyChoices
+                    .ToDictionary(
+                        choice => choice.Value);
+        var changed = new List<string?>();
+        viewModel.PropertyChanged +=
+            (_, e) => changed.Add(e.PropertyName);
+
+        Assert.Equal(
+            "en-US:ReviewedFileOperation.DestinationFolderPlaceholder",
+            viewModel.DestinationPlaceholder);
+
+        changed.Clear();
+        viewModel.SelectedKind =
+            ReviewedFileOperationKind.Quarantine;
+
+        Assert.Contains(
+            nameof(viewModel.DestinationPlaceholder),
+            changed);
+        Assert.Equal(
+            "en-US:ReviewedFileOperation.QuarantineFolderPlaceholder",
+            viewModel.DestinationPlaceholder);
+        Assert.Equal(
+            ReviewedFileOperationKind.Quarantine,
+            viewModel.SelectedKind);
+
+        changed.Clear();
+        localization.SetCulture("fr-FR");
+
+        Assert.Contains(
+            nameof(viewModel.DestinationPlaceholder),
+            changed);
+        Assert.Equal(
+            "fr-FR:ReviewedFileOperation.QuarantineFolderPlaceholder",
+            viewModel.DestinationPlaceholder);
+        Assert.Equal(
+            ReviewedFileOperationKind.Quarantine,
+            viewModel.SelectedKind);
+        foreach (
+            ReviewedFileOperationKind value in
+            Enum.GetValues<
+                ReviewedFileOperationKind>())
+        {
+            LocalizedChoice<
+                ReviewedFileOperationKind> choice =
+                viewModel.OperationKindChoices
+                    .Single(item =>
+                        item.Value == value);
+            Assert.Same(
+                kindChoices[value],
+                choice);
+            Assert.Equal(value, choice.Value);
+            Assert.StartsWith(
+                "fr-FR:",
+                choice.Label,
+                StringComparison.Ordinal);
+        }
+        foreach (
+            ReviewedFileCollisionPolicy value in
+            Enum.GetValues<
+                ReviewedFileCollisionPolicy>())
+        {
+            LocalizedChoice<
+                ReviewedFileCollisionPolicy> choice =
+                viewModel.CollisionPolicyChoices
+                    .Single(item =>
+                        item.Value == value);
+            Assert.Same(
+                collisionChoices[value],
+                choice);
+            Assert.Equal(value, choice.Value);
+            Assert.StartsWith(
+                "fr-FR:",
+                choice.Label,
+                StringComparison.Ordinal);
+        }
+
+        viewModel.SelectedKind =
+            ReviewedFileOperationKind.Move;
+        Assert.Equal(
+            "fr-FR:ReviewedFileOperation.DestinationFolderPlaceholder",
+            viewModel.DestinationPlaceholder);
+    }
+
     private sealed class RecordingFileOperations :
         IReviewedFileOperationService
     {
@@ -292,5 +399,57 @@ public sealed class ReviewedFileOperationEditorViewModelTests
             string suggestedName,
             string extension) =>
             Task.FromResult<string?>(null);
+    }
+
+    private sealed class SwitchingLocalizationService :
+        ILocalizationService
+    {
+        private CultureInfo _culture =
+            CultureInfo.GetCultureInfo("en-US");
+
+        public CultureInfo CurrentUICulture =>
+            _culture;
+
+        public IReadOnlyList<CultureInfo>
+            SupportedCultures { get; } =
+        [
+            CultureInfo.GetCultureInfo("en-US"),
+            CultureInfo.GetCultureInfo("fr-FR"),
+        ];
+
+        public event EventHandler? CultureChanged;
+
+        public string Get(string key) =>
+            $"{_culture.Name}:{key}";
+
+        public string Format(
+            string key,
+            params object?[] arguments) =>
+            $"{Get(key)}:{string.Join("|", arguments)}";
+
+        public string FormatCount(
+            string key,
+            long count,
+            params object?[] arguments) =>
+            $"{Get(
+                $"{key}.{(
+                    count == 1
+                        ? "One"
+                        : "Other")}")}:{count}";
+
+        public IReadOnlyDictionary<string, string>
+            Snapshot() =>
+            new Dictionary<string, string>();
+
+        public void SetCulture(
+            string cultureName)
+        {
+            _culture =
+                CultureInfo.GetCultureInfo(
+                    cultureName);
+            CultureChanged?.Invoke(
+                this,
+                EventArgs.Empty);
+        }
     }
 }

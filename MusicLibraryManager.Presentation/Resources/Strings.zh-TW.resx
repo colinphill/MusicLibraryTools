@@ -331,6 +331,7 @@
   <data name="Column.FileSize" xml:space="preserve">
     <value>檔案大小</value>
   </data>
+  <data name="Column.Format" xml:space="preserve"><value>格式</value></data>
   <data name="Column.Formats" xml:space="preserve">
     <value>格式</value>
   </data>
@@ -1287,6 +1288,7 @@
   <data name="Library.Columns.LabelPlaceholder" xml:space="preserve">
     <value>欄標籤</value>
   </data>
+  <data name="Library.Columns.DisplayLabel" xml:space="preserve"><value>顯示標籤</value></data>
   <data name="Library.Columns.KnownFieldPlaceholder" xml:space="preserve">
     <value>已知中繼資料欄位</value>
   </data>
@@ -1332,6 +1334,7 @@
   <data name="Library.VisualFilter.Title" xml:space="preserve">
     <value>視覺化篩選器</value>
   </data>
+  <data name="Library.VisualFilter.GroupNumber" xml:space="preserve"><value>條件群組編號</value></data>
   <data name="Library.VisualFilter.MatchMode" xml:space="preserve">
     <value>比對方式</value>
   </data>
@@ -1910,6 +1913,7 @@
   <data name="ReviewedFileOperation.DestinationAutomation" xml:space="preserve">
     <value>檔案操作目的地</value>
   </data>
+  <data name="ReviewedFileOperation.DestinationFolderPlaceholder" xml:space="preserve"><value>目的地資料夾</value></data>
   <data name="ReviewedFileOperation.DestinationPlaceholder" xml:space="preserve">
     <value>目的地或隔離資料夾</value>
   </data>
@@ -4136,8 +4140,8 @@
   <data name="Inspector.Artwork.Mixed" xml:space="preserve"><value>混合值 — 選取的檔案包含不同的內嵌封面。</value></data>
   <data name="Inspector.Artwork.NoneEmbedded" xml:space="preserve"><value>沒有內嵌封面。</value></data>
   <data name="Inspector.Artwork.NotLoaded" xml:space="preserve"><value>未載入封面。</value></data>
-  <data name="Inspector.Artwork.Shared.One" xml:space="preserve"><value> · 由 {0:N0} 個曲目共用</value></data>
-  <data name="Inspector.Artwork.Shared.Other" xml:space="preserve"><value> · 由 {0:N0} 個曲目共用</value></data>
+  <data name="Inspector.Artwork.Shared.One" xml:space="preserve"><value>由 {0:N0} 個曲目共用。</value></data>
+  <data name="Inspector.Artwork.Shared.Other" xml:space="preserve"><value>由 {0:N0} 個曲目共用。</value></data>
   <data name="Inspector.Artwork.Type.Other.Label" xml:space="preserve"><value>其他</value></data>
   <data name="Inspector.Artwork.Type.FileIcon.Label" xml:space="preserve"><value>檔案圖示</value></data>
   <data name="Inspector.Artwork.Type.OtherFileIcon.Label" xml:space="preserve"><value>其他檔案圖示</value></data>
@@ -4166,7 +4170,7 @@
   <data name="Inspector.Dialog.ApplyReviewed.Title" xml:space="preserve"><value>要套用已檢閱的操作「{0}」嗎？</value></data>
   <data name="Inspector.Dialog.DirectWriteWarning" xml:space="preserve"><value>這會直接寫入檔案；不會建立復原日誌。</value></data>
   <data name="Inspector.Dialog.Discard.Confirm" xml:space="preserve"><value>捨棄變更</value></data>
-  <data name="Inspector.Dialog.Discard.Message" xml:space="preserve"><value>{1} 有 {0}。要捨棄並繼續嗎？</value></data>
+  <data name="Inspector.Dialog.Discard.Message" xml:space="preserve"><value>要捨棄目前所選項目中未儲存的變更並繼續嗎？</value></data>
   <data name="Inspector.Dialog.Discard.Title" xml:space="preserve"><value>要捨棄未儲存的中繼資料變更嗎？</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.Confirm" xml:space="preserve"><value>最佳化</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.DirectMessage" xml:space="preserve"><value>要重新編碼 {1:N0} 個曲目的封面並將其限制為 {0:N0}px 嗎？這會直接寫入檔案；不會建立復原日誌。</value></data>
@@ -4184,7 +4188,7 @@
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.One" xml:space="preserve"><value>要取代選取的 {0:N0} 個曲目的正面封面嗎？</value></data>
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.Other" xml:space="preserve"><value>要取代選取的 {0:N0} 個曲目的正面封面嗎？</value></data>
   <data name="Inspector.Dialog.Revert.Confirm" xml:space="preserve"><value>還原變更</value></data>
-  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>{1} 有 {0}。要還原為檔案中目前儲存的值嗎？</value></data>
+  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>要將未儲存的變更還原為所選檔案中目前儲存的值嗎？</value></data>
   <data name="Inspector.Dialog.Revert.Title" xml:space="preserve"><value>要還原未儲存的中繼資料變更嗎？</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.ArtworkOnly" xml:space="preserve"><value>要將選取的 {0:N0} 個曲目的內嵌封面集取代為這 {1:N0} 個影像嗎？</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.TagsAndArtwork" xml:space="preserve"><value>要套用 {0:N0} 項標籤變更，並將選取的 {2:N0} 個曲目的內嵌封面集取代為 {1:N0} 個影像嗎？</value></data>
@@ -4227,7 +4231,7 @@
   <data name="Inspector.Picker.ChooseCoverArtwork" xml:space="preserve"><value>選擇封面</value></data>
   <data name="Inspector.Picker.ChooseReplacementArtwork" xml:space="preserve"><value>選擇替換封面</value></data>
   <data name="Inspector.Picker.Images" xml:space="preserve"><value>影像</value></data>
-  <data name="Inspector.Picker.SaveArtwork" xml:space="preserve"><value>儲存 {0} 封面</value></data>
+  <data name="Inspector.Picker.SaveArtwork" xml:space="preserve"><value>儲存封面</value></data>
   <data name="Inspector.Progress.PreviewedCombined.One" xml:space="preserve"><value>已預覽 {0:N0} 個檔案的合併變更</value></data>
   <data name="Inspector.Progress.PreviewedCombined.Other" xml:space="preserve"><value>已預覽 {0:N0} 個檔案的合併變更</value></data>
   <data name="Inspector.Progress.UpdatedOfTotal" xml:space="preserve"><value>已更新 {0:N0}/{1:N0}</value></data>
@@ -5974,11 +5978,17 @@
   <data name="Fields.Action.UndoRemoval" xml:space="preserve"><value>復原</value></data>
   <data name="Fields.Activity.Preview.Completed.One" xml:space="preserve"><value>已預覽 {0:N0} 個檔案</value></data>
   <data name="Fields.Activity.Preview.Completed.Other" xml:space="preserve"><value>已預覽 {0:N0} 個檔案</value></data>
-  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>欄位變更：{0:N0}；檔案：{1:N0}。正在驗證…</value></data>
+  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>{0}；{1}。正在驗證…</value></data>
   <data name="Fields.Activity.Preview.Title" xml:space="preserve"><value>預覽中繼資料欄位</value></data>
   <data name="Fields.Activity.Save.Starting.One" xml:space="preserve"><value>正在將已檢閱的欄位計畫套用至 {0:N0} 個檔案</value></data>
   <data name="Fields.Activity.Save.Starting.Other" xml:space="preserve"><value>正在將已檢閱的欄位計畫套用至 {0:N0} 個檔案</value></data>
   <data name="Fields.Activity.Save.Title" xml:space="preserve"><value>儲存中繼資料欄位</value></data>
+  <data name="Fields.Count.FieldChanges.One" xml:space="preserve"><value>{0:N0} 項欄位變更</value></data>
+  <data name="Fields.Count.FieldChanges.Other" xml:space="preserve"><value>{0:N0} 項欄位變更</value></data>
+  <data name="Fields.Count.FilesWithChanges.One" xml:space="preserve"><value>{0:N0} 個有變更的檔案</value></data>
+  <data name="Fields.Count.FilesWithChanges.Other" xml:space="preserve"><value>{0:N0} 個有變更的檔案</value></data>
+  <data name="Fields.Count.SelectedFiles.One" xml:space="preserve"><value>{0:N0} 個已選取的檔案</value></data>
+  <data name="Fields.Count.SelectedFiles.Other" xml:space="preserve"><value>{0:N0} 個已選取的檔案</value></data>
   <data name="Fields.Operation.Name" xml:space="preserve"><value>編輯資料庫中繼資料欄位</value></data>
   <data name="Fields.Progress.Phase.Applying" xml:space="preserve"><value>正在套用中繼資料變更</value></data>
   <data name="Fields.Progress.Phase.Completed" xml:space="preserve"><value>中繼資料更新完成</value></data>
@@ -6001,7 +6011,7 @@
   <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>預覽已過期。請再次預覽欄位變更。</value></data>
   <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>欄位變更預覽失敗。建議的變更仍可重試。</value></data>
   <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>預覽未發現適用的變更。未變更任何檔案。</value></data>
-  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>預覽已就緒。發生變更的檔案：{0:N0}；欄位變更：{1:N0}。尚未寫入任何內容。選擇「檢視變更」可將此預覽加入共用的待處理變更抽屜。</value></data>
+  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>預覽已就緒。{0}；{1}。尚未寫入任何內容。選擇「檢視變更」可將此預覽加入共用的待處理變更抽屜。</value></data>
   <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>儲存已取消。建議的欄位變更仍可重試。</value></data>
   <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>已更新 {0:N0} 個檔案。保留原始檔以便復原。</value></data>
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>已更新 {0:N0} 個檔案。保留原始檔以便復原。</value></data>
@@ -6353,6 +6363,7 @@
   <data name="Workbench.Inspector.ApeV2Actions" xml:space="preserve"><value>APEv2 動作</value></data>
   <data name="Workbench.Inspector.Id3v1Actions" xml:space="preserve"><value>ID3v1 動作</value></data>
   <data name="Transcode.Concurrency.ParallelJobs" xml:space="preserve"><value>平行工作</value></data>
+  <data name="ReviewedFileOperation.QuarantineFolderPlaceholder" xml:space="preserve"><value>隔離資料夾</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>已將 {0:N0} 個檔案操作新增至「檢閱變更」。</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>已將 {0:N0} 個檔案操作新增至「檢閱變更」。</value></data>
   <data name="Workbench.Dialog.PendingConflict.MetadataPlan" xml:space="preserve"><value>新的中繼資料預覽與同一欄位和檔案中已待處理的中繼資料變更衝突。請先捨棄或套用現有變更，再產生另一個預覽。</value></data>

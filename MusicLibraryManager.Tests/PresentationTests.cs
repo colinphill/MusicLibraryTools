@@ -2246,10 +2246,10 @@ public sealed class PresentationTests
         Assert.Null(closed);
         Assert.True(viewModel.IsConfirmingSave);
         Assert.Contains(
-            "Files with changes: 2",
+            "2 files with changes",
             viewModel.StatusMessage);
         Assert.Contains(
-            "field changes: 5",
+            "5 field changes",
             viewModel.StatusMessage);
         Assert.Contains(
             "Nothing has been written",

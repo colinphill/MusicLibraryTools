@@ -99,6 +99,10 @@
         <Border Height="1" Background="{DynamicResource AppBorderBrush}" />
         <TextBlock Classes="section-title" Text="{DynamicResource Loc.Inspector.View.Artwork}" />
         <TextBlock Classes="muted" Text="{Binding ArtworkSummary}" TextWrapping="Wrap" />
+        <TextBlock Classes="muted"
+                   Text="{Binding ArtworkSharingSummary}"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasArtworkSharingSummary}" />
         <Border Height="120" CornerRadius="8" Background="{DynamicResource AppInsetBrush}"
                 IsVisible="{Binding IsArtworkMixed}">
           <TextBlock Classes="muted" Text="{DynamicResource Loc.Inspector.View.MixedArtwork}" HorizontalAlignment="Center" VerticalAlignment="Center" />

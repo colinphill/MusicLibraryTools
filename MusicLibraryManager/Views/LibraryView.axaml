@@ -204,12 +204,14 @@
                 </ListBox>
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                   <StackPanel Classes="field" Spacing="4">
-                    <TextBlock Classes="field-label"
-                               Text="{DynamicResource Loc.Column.Label}" />
-                    <TextBox Classes="app"
+                    <TextBlock x:Name="LibraryColumnDisplayLabel"
+                               Classes="field-label"
+                               Text="{DynamicResource Loc.Library.Columns.DisplayLabel}" />
+                    <TextBox x:Name="LibraryColumnDisplayLabelEditor"
+                             Classes="app"
                              Text="{Binding ColumnEditor.Label, Mode=TwoWay}"
                              PlaceholderText="{DynamicResource Loc.Library.Columns.LabelPlaceholder}"
-                             AutomationProperties.Name="{DynamicResource Loc.Column.Label}" />
+                             AutomationProperties.Name="{DynamicResource Loc.Library.Columns.DisplayLabel}" />
                   </StackPanel>
                   <StackPanel Grid.Column="1" Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"
@@ -326,9 +328,13 @@
                 BorderBrush="{DynamicResource AppBorderStrongBrush}"
                 BorderThickness="1" CornerRadius="8" Padding="16"
                 BoxShadow="0 14 40 0 #77000000">
-          <Grid RowDefinitions="Auto,*" ColumnDefinitions="270,*"
+          <Grid x:Name="LibraryVisualFilterLayout"
+                RowDefinitions="Auto,*"
+                ColumnDefinitions="270,*"
                 RowSpacing="12" ColumnSpacing="16">
-            <Grid Grid.ColumnSpan="2" ColumnDefinitions="*,Auto">
+            <Grid x:Name="LibraryVisualFilterHeader"
+                  Grid.ColumnSpan="2"
+                  ColumnDefinitions="*,Auto">
               <TextBlock Text="{DynamicResource Loc.Library.VisualFilter.Title}" FontSize="14"
                          FontWeight="SemiBold" />
               <Button x:Name="CloseVisualFilterButton"
@@ -339,7 +345,9 @@
                 <controls:AppVectorIcon Kind="Close" />
               </Button>
             </Grid>
-            <StackPanel Grid.Row="1" Spacing="8">
+            <StackPanel x:Name="LibraryVisualFilterConditionPane"
+                        Grid.Row="1"
+                        Spacing="8">
               <StackPanel Classes="field" Spacing="4">
                 <TextBlock Classes="field-label"
                            Text="{DynamicResource Loc.Library.VisualFilter.MatchMode}" />
@@ -369,19 +377,23 @@
                         Command="{Binding VisualFilterEditor.RemoveConditionCommand}" />
               </WrapPanel>
             </StackPanel>
-            <ScrollViewer Grid.Row="1"
+            <ScrollViewer x:Name="LibraryVisualFilterConditionEditorScroll"
+                          Grid.Row="1"
                           Grid.Column="1"
                           VerticalScrollBarVisibility="Auto">
               <StackPanel Spacing="8"
                           DataContext="{Binding VisualFilterEditor.SelectedCondition}">
-                <Grid ColumnDefinitions="110,*" ColumnSpacing="8">
+                <Grid ColumnDefinitions="2*,3*" ColumnSpacing="8">
                   <StackPanel Classes="field" Spacing="4">
-                    <TextBlock Classes="field-label"
-                               Text="{DynamicResource Loc.Column.Group}" />
-                    <NumericUpDown Classes="app" Minimum="1"
+                    <TextBlock x:Name="LibraryVisualFilterGroupNumberLabel"
+                               Classes="field-label"
+                               TextWrapping="Wrap"
+                               Text="{DynamicResource Loc.Library.VisualFilter.GroupNumber}" />
+                    <NumericUpDown x:Name="LibraryVisualFilterGroupNumberEditor"
+                                   Classes="app" Minimum="1"
                                    Value="{Binding Group, Mode=TwoWay}"
                                    FormatString="0"
-                                   AutomationProperties.Name="{DynamicResource Loc.Column.Group}" />
+                                   AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.GroupNumber}" />
                   </StackPanel>
                   <StackPanel Grid.Column="1" Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"

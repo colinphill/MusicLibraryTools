@@ -74,6 +74,7 @@ public partial class ReviewedFileOperationEditorViewModel :
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(NeedsDestination))]
+    [NotifyPropertyChangedFor(nameof(DestinationPlaceholder))]
     private ReviewedFileOperationKind _selectedKind =
         ReviewedFileOperationKind.Copy;
 
@@ -120,6 +121,13 @@ public partial class ReviewedFileOperationEditorViewModel :
     public bool NeedsDestination =>
         SelectedKind !=
         ReviewedFileOperationKind.Rename;
+
+    public string DestinationPlaceholder =>
+        L(
+            SelectedKind ==
+            ReviewedFileOperationKind.Quarantine
+                ? "ReviewedFileOperation.QuarantineFolderPlaceholder"
+                : "ReviewedFileOperation.DestinationFolderPlaceholder");
 
     public bool HasPreview =>
         PreviewItems.Count > 0;
@@ -474,6 +482,8 @@ public partial class ReviewedFileOperationEditorViewModel :
     {
         RefreshLocalizedChoices();
         OnPropertyChanged(nameof(TargetSummary));
+        OnPropertyChanged(
+            nameof(DestinationPlaceholder));
         if (_statusKey is null)
             return;
         Status = _statusCount is { } count

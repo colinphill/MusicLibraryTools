@@ -55,6 +55,10 @@ public partial class SelectionInspectorViewModel : ObservableObject
     [ObservableProperty] private object? _artworkSource;
     [ObservableProperty] private bool _isArtworkMixed;
     [ObservableProperty] private string _artworkSummary = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(HasArtworkSharingSummary))]
+    private string _artworkSharingSummary = "";
     [ObservableProperty] private int _artworkMaxDimension = 600;
 
     [ObservableProperty]
@@ -123,6 +127,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
     public bool IsStatusSuccess => StatusTone == MessageTone.Success;
     public bool IsStatusWarning => StatusTone == MessageTone.Warning;
     public bool IsStatusError => StatusTone == MessageTone.Error;
+    public bool HasArtworkSharingSummary =>
+        !string.IsNullOrWhiteSpace(
+            ArtworkSharingSummary);
     public string StatusIcon => StatusTone switch
     {
         MessageTone.Success => "✓",
@@ -334,10 +341,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
             return true;
         if (!await _dialogs.ConfirmDestructiveAsync(
                 L("Inspector.Dialog.Discard.Title"),
-                LF(
-                    "Inspector.Dialog.Discard.Message",
-                    UnsavedChangesSummary,
-                    SelectionSummary),
+                L("Inspector.Dialog.Discard.Message"),
                 L("Inspector.Dialog.Discard.Confirm")))
             return false;
         await LoadAsync(Selection);
@@ -362,6 +366,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         IsArtworkMixed = false;
         ArtworkSummary = L(
             "Inspector.Artwork.NoneEmbedded");
+        ArtworkSharingSummary = "";
         foreach (EditableTagField field in Fields)
             field.SetLoaded([], false);
         NotifyUnsavedChangesChanged();
@@ -565,6 +570,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 : LC(
                     "Inspector.Artwork.Embedded",
                     embeddedArtwork.Length);
+            UpdateArtworkSharingSummary();
             if (invalidArtwork > 0)
             {
                 SetCountStatus(
@@ -572,10 +578,6 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     "Inspector.Status.InvalidArtwork",
                     invalidArtwork);
             }
-            if (selection.Paths.Count > 1)
-                ArtworkSummary += LC(
-                    "Inspector.Artwork.Shared",
-                    selection.Paths.Count);
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -1008,17 +1010,16 @@ public partial class SelectionInspectorViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(sourceName))
             sourceName = L(
                 "Inspector.Artwork.DefaultFileName");
-        string typeName = string.Join('-', item.Label.ToLowerInvariant()
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        string typeName =
+            InvariantArtworkTypeFileToken(
+                item.Type);
         int typeCount = ArtworkItems.Count(candidate => candidate.Type == item.Type);
         int typeIndex = ArtworkItems.Take(ArtworkItems.IndexOf(item) + 1)
             .Count(candidate => candidate.Type == item.Type);
         string ordinal = typeCount > 1 ? $"-{typeIndex}" : "";
         string suggestedName = $"{sourceName}-{typeName}{ordinal}{extension}";
         string? path = await _files.SaveFileAsync(
-            LF(
-                "Inspector.Picker.SaveArtwork",
-                item.Label),
+            L("Inspector.Picker.SaveArtwork"),
             suggestedName,
             extension);
         if (path is null)
@@ -1125,6 +1126,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         IsArtworkMixed = false;
         ArtworkSummary = L(
             "Inspector.Artwork.NoneEmbedded");
+        ArtworkSharingSummary = "";
         _artworkSetModified = true;
         HasPendingArtworkChanges = true;
         NotifyPendingChangeRowsChanged();
@@ -1138,10 +1140,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
     {
         if (!await _dialogs.ConfirmDestructiveAsync(
                 L("Inspector.Dialog.Revert.Title"),
-                LF(
-                    "Inspector.Dialog.Revert.Message",
-                    UnsavedChangesSummary,
-                    SelectionSummary),
+                L("Inspector.Dialog.Revert.Message"),
                 L("Inspector.Dialog.Revert.Confirm")))
             return;
         await LoadAsync(Selection);
@@ -1239,11 +1238,72 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 "Inspector.Artwork.Embedded",
                 ArtworkItems.Count),
         };
-        if (Selection.Paths.Count > 1 && ArtworkItems.Count > 0)
-            ArtworkSummary += LC(
-                "Inspector.Artwork.Shared",
-                Selection.Paths.Count);
+        UpdateArtworkSharingSummary();
     }
+
+    private void UpdateArtworkSharingSummary()
+    {
+        ArtworkSharingSummary =
+            Selection.Paths.Count > 1 &&
+            ArtworkItems.Count > 0
+                ? LC(
+                    "Inspector.Artwork.Shared",
+                    Selection.Paths.Count)
+                : "";
+    }
+
+    internal static string
+        InvariantArtworkTypeFileToken(
+            ID3v2Util.APICType type) =>
+        type switch
+        {
+            ID3v2Util.APICType.Other =>
+                "other",
+            ID3v2Util.APICType.FileIcon =>
+                "file-icon",
+            ID3v2Util.APICType.OtherFileIcon =>
+                "other-file-icon",
+            ID3v2Util.APICType.FrontCover =>
+                "front-cover",
+            ID3v2Util.APICType.BackCover =>
+                "back-cover",
+            ID3v2Util.APICType.LeafletPage =>
+                "leaflet-page",
+            ID3v2Util.APICType.Media =>
+                "media",
+            ID3v2Util.APICType.LeadArtist =>
+                "lead-artist",
+            ID3v2Util.APICType.Arist =>
+                "arist",
+            ID3v2Util.APICType.Conductor =>
+                "conductor",
+            ID3v2Util.APICType.Band =>
+                "band",
+            ID3v2Util.APICType.Composer =>
+                "composer",
+            ID3v2Util.APICType.Lyricist =>
+                "lyricist",
+            ID3v2Util.APICType.RecordingLocation =>
+                "recording-location",
+            ID3v2Util.APICType.DuringRecording =>
+                "during-recording",
+            ID3v2Util.APICType.DuringPerformance =>
+                "during-performance",
+            ID3v2Util.APICType.VideoScreenCapture =>
+                "video-screen-capture",
+            ID3v2Util.APICType.BrightColoredFish =>
+                "bright-colored-fish",
+            ID3v2Util.APICType.Illustration =>
+                "illustration",
+            ID3v2Util.APICType.BandLogo =>
+                "band-logo",
+            ID3v2Util.APICType.StudioLogo =>
+                "studio-logo",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(type),
+                type,
+                "Unknown APIC artwork type."),
+        };
 
     private string DescribeOverview(
         SelectionContext selection,
@@ -1579,8 +1639,11 @@ public partial class SelectionInspectorViewModel : ObservableObject
                         _statusMessageKey,
                         _statusMessageArguments);
         if (IsArtworkMixed)
+        {
             ArtworkSummary = L(
                 "Inspector.Artwork.Mixed");
+            ArtworkSharingSummary = "";
+        }
         else
             UpdateArtworkSummary();
         OnPropertyChanged(

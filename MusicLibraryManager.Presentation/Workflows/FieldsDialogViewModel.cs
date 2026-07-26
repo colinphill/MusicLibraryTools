@@ -139,9 +139,7 @@ public partial class FieldsDialogViewModel :
     private readonly ILocalizationService? _localization;
     private CancellationTokenSource? _saveCancellation;
     private MetadataOperationPlan? _plan;
-    private string? _statusKey;
-    private object?[] _statusArguments = [];
-    private long? _statusCount;
+    private FieldsStatusText? _statusText;
     private bool _disposed;
 
     [ObservableProperty]
@@ -456,10 +454,10 @@ public partial class FieldsDialogViewModel :
             DiagnosticDetail = null;
             Guid? previewActivity = _activities?.Start(
                 L("Fields.Activity.Preview.Title"),
-                LF(
-                    "Fields.Activity.Preview.Starting",
+                FieldsStatusTexts.PreviewStarting(
                     edits.Count,
-                    _paths.Count),
+                    _paths.Count)
+                    .Render(_localization),
                 ShellDestination.Library,
                 _saveCancellation.Cancel);
             IProgress<OperationProgress> previewProgress =
@@ -503,9 +501,9 @@ public partial class FieldsDialogViewModel :
                 IsConfirmingSave = true;
                 SetStatus(
                     MessageTone.Info,
-                    "Fields.Status.PreviewReady",
-                    _plan.ChangedFileCount,
-                    edits.Count);
+                    FieldsStatusTexts.PreviewReady(
+                        _plan.ChangedFileCount,
+                        edits.Count));
                 if (previewActivity.HasValue)
                     _activities!.Finish(
                         previewActivity.Value,
@@ -757,13 +755,12 @@ public partial class FieldsDialogViewModel :
         string key,
         params object?[] arguments)
     {
-        _statusKey = key;
-        _statusArguments = arguments;
-        _statusCount = null;
-        StatusTone = tone;
-        StatusMessage = LF(
+        _statusText = FieldsStatusText.Format(
             key,
             arguments);
+        StatusTone = tone;
+        StatusMessage =
+            _statusText.Render(_localization);
     }
 
     private void SetCountStatus(
@@ -772,14 +769,25 @@ public partial class FieldsDialogViewModel :
         long count,
         params object?[] arguments)
     {
-        _statusKey = key;
-        _statusArguments = arguments;
-        _statusCount = count;
+        _statusText =
+            FieldsStatusText.FormatCount(
+                key,
+                count,
+                arguments);
         StatusTone = tone;
-        StatusMessage = LFC(
-            key,
-            count,
-            arguments);
+        StatusMessage =
+            _statusText.Render(_localization);
+    }
+
+    private void SetStatus(
+        MessageTone tone,
+        FieldsStatusText status)
+    {
+        ArgumentNullException.ThrowIfNull(status);
+        _statusText = status;
+        StatusTone = tone;
+        StatusMessage =
+            _statusText.Render(_localization);
     }
 
     private void SetFailure(
@@ -794,9 +802,7 @@ public partial class FieldsDialogViewModel :
 
     private void ClearStatus()
     {
-        _statusKey = null;
-        _statusArguments = [];
-        _statusCount = null;
+        _statusText = null;
         StatusMessage = null;
         DiagnosticDetail = null;
     }
@@ -805,15 +811,9 @@ public partial class FieldsDialogViewModel :
         object? sender,
         EventArgs e)
     {
-        if (_statusKey is { } key)
-            StatusMessage = _statusCount is { } count
-                ? LFC(
-                    key,
-                    count,
-                    _statusArguments)
-                : LF(
-                    key,
-                    _statusArguments);
+        if (_statusText is not null)
+            StatusMessage =
+                _statusText.Render(_localization);
         RefreshLocalizedChoices();
         foreach (FieldRow row in Rows)
             row.RefreshLocalization();

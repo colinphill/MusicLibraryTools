@@ -331,6 +331,7 @@
   <data name="Column.FileSize" xml:space="preserve">
     <value>ファイルサイズ</value>
   </data>
+  <data name="Column.Format" xml:space="preserve"><value>形式</value></data>
   <data name="Column.Formats" xml:space="preserve">
     <value>形式</value>
   </data>
@@ -1287,6 +1288,7 @@
   <data name="Library.Columns.LabelPlaceholder" xml:space="preserve">
     <value>列のラベル</value>
   </data>
+  <data name="Library.Columns.DisplayLabel" xml:space="preserve"><value>表示ラベル</value></data>
   <data name="Library.Columns.KnownFieldPlaceholder" xml:space="preserve">
     <value>既知のメタデータフィールド</value>
   </data>
@@ -1332,6 +1334,7 @@
   <data name="Library.VisualFilter.Title" xml:space="preserve">
     <value>ビジュアルフィルター</value>
   </data>
+  <data name="Library.VisualFilter.GroupNumber" xml:space="preserve"><value>条件グループ番号</value></data>
   <data name="Library.VisualFilter.MatchMode" xml:space="preserve">
     <value>一致条件</value>
   </data>
@@ -1910,6 +1913,7 @@
   <data name="ReviewedFileOperation.DestinationAutomation" xml:space="preserve">
     <value>ファイル操作の宛先</value>
   </data>
+  <data name="ReviewedFileOperation.DestinationFolderPlaceholder" xml:space="preserve"><value>保存先フォルダー</value></data>
   <data name="ReviewedFileOperation.DestinationPlaceholder" xml:space="preserve">
     <value>宛先または隔離フォルダー</value>
   </data>
@@ -4136,8 +4140,8 @@
   <data name="Inspector.Artwork.Mixed" xml:space="preserve"><value>値が混在しています — 選択したファイルには異なる埋め込みアートワークがあります。</value></data>
   <data name="Inspector.Artwork.NoneEmbedded" xml:space="preserve"><value>埋め込みアートワークはありません。</value></data>
   <data name="Inspector.Artwork.NotLoaded" xml:space="preserve"><value>アートワークは読み込まれていません。</value></data>
-  <data name="Inspector.Artwork.Shared.One" xml:space="preserve"><value> · {0:N0} トラックで共有</value></data>
-  <data name="Inspector.Artwork.Shared.Other" xml:space="preserve"><value> · {0:N0} トラックで共有</value></data>
+  <data name="Inspector.Artwork.Shared.One" xml:space="preserve"><value>{0:N0} トラックで共有されています。</value></data>
+  <data name="Inspector.Artwork.Shared.Other" xml:space="preserve"><value>{0:N0} トラックで共有されています。</value></data>
   <data name="Inspector.Artwork.Type.Other.Label" xml:space="preserve"><value>その他</value></data>
   <data name="Inspector.Artwork.Type.FileIcon.Label" xml:space="preserve"><value>ファイルアイコン</value></data>
   <data name="Inspector.Artwork.Type.OtherFileIcon.Label" xml:space="preserve"><value>その他のファイルアイコン</value></data>
@@ -4166,7 +4170,7 @@
   <data name="Inspector.Dialog.ApplyReviewed.Title" xml:space="preserve"><value>確認済みの操作「{0}」を適用しますか？</value></data>
   <data name="Inspector.Dialog.DirectWriteWarning" xml:space="preserve"><value>ファイルへ直接書き込みます。復旧ジャーナルは作成されません。</value></data>
   <data name="Inspector.Dialog.Discard.Confirm" xml:space="preserve"><value>変更を破棄</value></data>
-  <data name="Inspector.Dialog.Discard.Message" xml:space="preserve"><value>{1} の {0}。破棄して続行しますか？</value></data>
+  <data name="Inspector.Dialog.Discard.Message" xml:space="preserve"><value>現在の選択項目の未保存の変更を破棄して続行しますか？</value></data>
   <data name="Inspector.Dialog.Discard.Title" xml:space="preserve"><value>未保存のメタデータ変更を破棄しますか？</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.Confirm" xml:space="preserve"><value>最適化</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.DirectMessage" xml:space="preserve"><value>{1:N0} トラックのアートワークを再エンコードし、{0:N0}px 以下にしますか？ファイルへ直接書き込むため、復旧ジャーナルは作成されません。</value></data>
@@ -4184,7 +4188,7 @@
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.One" xml:space="preserve"><value>選択した {0:N0} トラックのフロントカバーを置き換えますか？</value></data>
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.Other" xml:space="preserve"><value>選択した {0:N0} トラックのフロントカバーを置き換えますか？</value></data>
   <data name="Inspector.Dialog.Revert.Confirm" xml:space="preserve"><value>変更を元に戻す</value></data>
-  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>{1} の {0}。ファイルに現在保存されている値に戻しますか？</value></data>
+  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>未保存の変更を、選択したファイルに現在保存されている値に戻しますか？</value></data>
   <data name="Inspector.Dialog.Revert.Title" xml:space="preserve"><value>未保存のメタデータ変更を元に戻しますか？</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.ArtworkOnly" xml:space="preserve"><value>選択した {0:N0} トラックの埋め込みアートワーク一式を、これら {1:N0} 枚の画像に置き換えますか？</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.TagsAndArtwork" xml:space="preserve"><value>{0:N0} 件のタグ変更を適用し、選択した {2:N0} トラックの埋め込みアートワーク一式を {1:N0} 枚の画像に置き換えますか？</value></data>
@@ -4227,7 +4231,7 @@
   <data name="Inspector.Picker.ChooseCoverArtwork" xml:space="preserve"><value>カバーアートを選択</value></data>
   <data name="Inspector.Picker.ChooseReplacementArtwork" xml:space="preserve"><value>置換用アートワークを選択</value></data>
   <data name="Inspector.Picker.Images" xml:space="preserve"><value>画像</value></data>
-  <data name="Inspector.Picker.SaveArtwork" xml:space="preserve"><value>{0} アートワークを保存</value></data>
+  <data name="Inspector.Picker.SaveArtwork" xml:space="preserve"><value>アートワークを保存</value></data>
   <data name="Inspector.Progress.PreviewedCombined.One" xml:space="preserve"><value>{0:N0} ファイルの変更をまとめてプレビューしました</value></data>
   <data name="Inspector.Progress.PreviewedCombined.Other" xml:space="preserve"><value>{0:N0} ファイルの変更をまとめてプレビューしました</value></data>
   <data name="Inspector.Progress.UpdatedOfTotal" xml:space="preserve"><value>{1:N0} 件中 {0:N0} 件を更新</value></data>
@@ -5974,11 +5978,17 @@
   <data name="Fields.Action.UndoRemoval" xml:space="preserve"><value>元に戻す</value></data>
   <data name="Fields.Activity.Preview.Completed.One" xml:space="preserve"><value>{0:N0} ファイルをプレビューしました</value></data>
   <data name="Fields.Activity.Preview.Completed.Other" xml:space="preserve"><value>{0:N0} ファイルをプレビューしました</value></data>
-  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>フィールド変更: {0:N0}、ファイル: {1:N0}。検証中…</value></data>
+  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>{0}、{1}。検証中…</value></data>
   <data name="Fields.Activity.Preview.Title" xml:space="preserve"><value>メタデータフィールドをプレビュー</value></data>
   <data name="Fields.Activity.Save.Starting.One" xml:space="preserve"><value>確認済みのフィールドプランを {0:N0} ファイルに適用しています</value></data>
   <data name="Fields.Activity.Save.Starting.Other" xml:space="preserve"><value>確認済みのフィールドプランを {0:N0} ファイルに適用しています</value></data>
   <data name="Fields.Activity.Save.Title" xml:space="preserve"><value>メタデータフィールドを保存</value></data>
+  <data name="Fields.Count.FieldChanges.One" xml:space="preserve"><value>{0:N0} 件のフィールド変更</value></data>
+  <data name="Fields.Count.FieldChanges.Other" xml:space="preserve"><value>{0:N0} 件のフィールド変更</value></data>
+  <data name="Fields.Count.FilesWithChanges.One" xml:space="preserve"><value>変更のあるファイル {0:N0} 件</value></data>
+  <data name="Fields.Count.FilesWithChanges.Other" xml:space="preserve"><value>変更のあるファイル {0:N0} 件</value></data>
+  <data name="Fields.Count.SelectedFiles.One" xml:space="preserve"><value>選択したファイル {0:N0} 件</value></data>
+  <data name="Fields.Count.SelectedFiles.Other" xml:space="preserve"><value>選択したファイル {0:N0} 件</value></data>
   <data name="Fields.Operation.Name" xml:space="preserve"><value>ライブラリのメタデータフィールドを編集</value></data>
   <data name="Fields.Progress.Phase.Applying" xml:space="preserve"><value>メタデータの変更を適用しています</value></data>
   <data name="Fields.Progress.Phase.Completed" xml:space="preserve"><value>メタデータの更新が完了しました</value></data>
@@ -6001,7 +6011,7 @@
   <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>プレビューの有効期限が切れました。フィールド変更をもう一度プレビューしてください。</value></data>
   <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>フィールド変更のプレビューに失敗しました。提案された変更は再試行できる状態のままです。</value></data>
   <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>プレビューで適用可能な変更は見つかりませんでした。ファイルは変更されていません。</value></data>
-  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>プレビューの準備ができました。変更のあるファイル: {0:N0}、フィールド変更: {1:N0}。まだ書き込まれていません。［変更を確認］を選択して、このプレビューを共有の保留中の変更ドロワーに追加してください。</value></data>
+  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>プレビューの準備ができました。{0}、{1}。まだ書き込まれていません。［変更を確認］を選択して、このプレビューを共有の保留中の変更ドロワーに追加してください。</value></data>
   <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>保存がキャンセルされました。提案されたフィールド変更は再試行できる状態のままです。</value></data>
   <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>{0:N0} ファイルを更新しました。元に戻せるようにオリジナルが保持されます。</value></data>
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>{0:N0} ファイルを更新しました。元に戻せるようにオリジナルが保持されます。</value></data>
@@ -6353,6 +6363,7 @@
   <data name="Workbench.Inspector.ApeV2Actions" xml:space="preserve"><value>APEv2 操作</value></data>
   <data name="Workbench.Inspector.Id3v1Actions" xml:space="preserve"><value>ID3v1 操作</value></data>
   <data name="Transcode.Concurrency.ParallelJobs" xml:space="preserve"><value>並列ジョブ</value></data>
+  <data name="ReviewedFileOperation.QuarantineFolderPlaceholder" xml:space="preserve"><value>隔離フォルダー</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>{0:N0} 件のファイル操作を［変更を確認］に追加しました。</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>{0:N0} 件のファイル操作を［変更を確認］に追加しました。</value></data>
   <data name="Workbench.Dialog.PendingConflict.MetadataPlan" xml:space="preserve"><value>新しいメタデータプレビューは、同じフィールドとファイルで保留中のメタデータ変更と競合します。別のプレビューを作成する前に、既存の変更を破棄するか適用してください。</value></data>

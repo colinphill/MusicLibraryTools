@@ -331,6 +331,7 @@
   <data name="Column.FileSize" xml:space="preserve">
     <value>Dimensione file</value>
   </data>
+  <data name="Column.Format" xml:space="preserve"><value>Formato</value></data>
   <data name="Column.Formats" xml:space="preserve">
     <value>formati</value>
   </data>
@@ -1287,6 +1288,7 @@
   <data name="Library.Columns.LabelPlaceholder" xml:space="preserve">
     <value>Etichetta colonna</value>
   </data>
+  <data name="Library.Columns.DisplayLabel" xml:space="preserve"><value>Etichetta visualizzata</value></data>
   <data name="Library.Columns.KnownFieldPlaceholder" xml:space="preserve">
     <value>Campo metadati noto</value>
   </data>
@@ -1332,6 +1334,7 @@
   <data name="Library.VisualFilter.Title" xml:space="preserve">
     <value>Filtro visivo</value>
   </data>
+  <data name="Library.VisualFilter.GroupNumber" xml:space="preserve"><value>Numero del gruppo di condizioni</value></data>
   <data name="Library.VisualFilter.MatchMode" xml:space="preserve">
     <value>Modalità di corrispondenza</value>
   </data>
@@ -1910,6 +1913,7 @@
   <data name="ReviewedFileOperation.DestinationAutomation" xml:space="preserve">
     <value>Destinazione dell’operazione sui file</value>
   </data>
+  <data name="ReviewedFileOperation.DestinationFolderPlaceholder" xml:space="preserve"><value>Cartella di destinazione</value></data>
   <data name="ReviewedFileOperation.DestinationPlaceholder" xml:space="preserve">
     <value>Cartella di destinazione o di quarantena</value>
   </data>
@@ -4136,8 +4140,8 @@
   <data name="Inspector.Artwork.Mixed" xml:space="preserve"><value>Valori misti: i file selezionati contengono copertine incorporate diverse.</value></data>
   <data name="Inspector.Artwork.NoneEmbedded" xml:space="preserve"><value>Nessuna copertina incorporata.</value></data>
   <data name="Inspector.Artwork.NotLoaded" xml:space="preserve"><value>Nessuna copertina caricata.</value></data>
-  <data name="Inspector.Artwork.Shared.One" xml:space="preserve"><value> · condivisa da {0:N0} traccia</value></data>
-  <data name="Inspector.Artwork.Shared.Other" xml:space="preserve"><value> · condivisa da {0:N0} tracce</value></data>
+  <data name="Inspector.Artwork.Shared.One" xml:space="preserve"><value>Condivisa da {0:N0} traccia.</value></data>
+  <data name="Inspector.Artwork.Shared.Other" xml:space="preserve"><value>Condivisa da {0:N0} tracce.</value></data>
   <data name="Inspector.Artwork.Type.Other.Label" xml:space="preserve"><value>Altro</value></data>
   <data name="Inspector.Artwork.Type.FileIcon.Label" xml:space="preserve"><value>Icona file</value></data>
   <data name="Inspector.Artwork.Type.OtherFileIcon.Label" xml:space="preserve"><value>Altra icona di file</value></data>
@@ -4166,7 +4170,7 @@
   <data name="Inspector.Dialog.ApplyReviewed.Title" xml:space="preserve"><value>Applicare l’operazione verificata: {0}?</value></data>
   <data name="Inspector.Dialog.DirectWriteWarning" xml:space="preserve"><value>Questa operazione scrive direttamente nei file; non viene creato alcun registro di ripristino.</value></data>
   <data name="Inspector.Dialog.Discard.Confirm" xml:space="preserve"><value>Annulla modifiche</value></data>
-  <data name="Inspector.Dialog.Discard.Message" xml:space="preserve"><value>{0} per {1}. Scartarle e continuare?</value></data>
+  <data name="Inspector.Dialog.Discard.Message" xml:space="preserve"><value>Scartare le modifiche non salvate per la selezione corrente e continuare?</value></data>
   <data name="Inspector.Dialog.Discard.Title" xml:space="preserve"><value>Scartare le modifiche ai metadati non salvate?</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.Confirm" xml:space="preserve"><value>Ottimizza</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.DirectMessage" xml:space="preserve"><value>Ricodificare e limitare a {0:N0}px le copertine di {1:N0} tracce? Questa operazione scrive direttamente nei file; non viene creato alcun registro di ripristino.</value></data>
@@ -4184,7 +4188,7 @@
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.One" xml:space="preserve"><value>Sostituire la copertina anteriore di {0:N0} traccia selezionata?</value></data>
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.Other" xml:space="preserve"><value>Sostituire la copertina anteriore di {0:N0} tracce selezionate?</value></data>
   <data name="Inspector.Dialog.Revert.Confirm" xml:space="preserve"><value>Ripristina modifiche</value></data>
-  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>{0} per {1}. Ripristinare i valori attualmente salvati nei file?</value></data>
+  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>Ripristinare le modifiche non salvate ai valori attualmente memorizzati nei file selezionati?</value></data>
   <data name="Inspector.Dialog.Revert.Title" xml:space="preserve"><value>Ripristinare le modifiche ai metadati non salvate?</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.ArtworkOnly" xml:space="preserve"><value>Sostituire il set di copertine incorporate di {0:N0} tracce selezionate con queste {1:N0} immagini?</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.TagsAndArtwork" xml:space="preserve"><value>Applicare {0:N0} modifiche ai tag e sostituire con {1:N0} immagini il set di copertine incorporate di {2:N0} tracce selezionate?</value></data>
@@ -4227,7 +4231,7 @@
   <data name="Inspector.Picker.ChooseCoverArtwork" xml:space="preserve"><value>Scegli una copertina</value></data>
   <data name="Inspector.Picker.ChooseReplacementArtwork" xml:space="preserve"><value>Scegli la copertina sostitutiva</value></data>
   <data name="Inspector.Picker.Images" xml:space="preserve"><value>Immagini</value></data>
-  <data name="Inspector.Picker.SaveArtwork" xml:space="preserve"><value>Salva copertina {0}</value></data>
+  <data name="Inspector.Picker.SaveArtwork" xml:space="preserve"><value>Salva copertina</value></data>
   <data name="Inspector.Progress.PreviewedCombined.One" xml:space="preserve"><value>Anteprima delle modifiche combinate per {0:N0} file completata</value></data>
   <data name="Inspector.Progress.PreviewedCombined.Other" xml:space="preserve"><value>Anteprima delle modifiche combinate per {0:N0} file completata</value></data>
   <data name="Inspector.Progress.UpdatedOfTotal" xml:space="preserve"><value>{0:N0} di {1:N0} aggiornati</value></data>
@@ -5974,11 +5978,17 @@
   <data name="Fields.Action.UndoRemoval" xml:space="preserve"><value>Annulla</value></data>
   <data name="Fields.Activity.Preview.Completed.One" xml:space="preserve"><value>Anteprima di {0:N0} file completata</value></data>
   <data name="Fields.Activity.Preview.Completed.Other" xml:space="preserve"><value>Anteprima di {0:N0} file completata</value></data>
-  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>Modifiche ai campi: {0:N0}; file: {1:N0}. Convalida…</value></data>
+  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>{0}; {1}. Convalida…</value></data>
   <data name="Fields.Activity.Preview.Title" xml:space="preserve"><value>Anteprima dei campi dei metadati</value></data>
   <data name="Fields.Activity.Save.Starting.One" xml:space="preserve"><value>Applicazione del piano dei campi verificato a {0:N0} file</value></data>
   <data name="Fields.Activity.Save.Starting.Other" xml:space="preserve"><value>Applicazione del piano dei campi verificato a {0:N0} file</value></data>
   <data name="Fields.Activity.Save.Title" xml:space="preserve"><value>Salva campi dei metadati</value></data>
+  <data name="Fields.Count.FieldChanges.One" xml:space="preserve"><value>{0:N0} modifica al campo</value></data>
+  <data name="Fields.Count.FieldChanges.Other" xml:space="preserve"><value>{0:N0} modifiche ai campi</value></data>
+  <data name="Fields.Count.FilesWithChanges.One" xml:space="preserve"><value>{0:N0} file con modifiche</value></data>
+  <data name="Fields.Count.FilesWithChanges.Other" xml:space="preserve"><value>{0:N0} file con modifiche</value></data>
+  <data name="Fields.Count.SelectedFiles.One" xml:space="preserve"><value>{0:N0} file selezionato</value></data>
+  <data name="Fields.Count.SelectedFiles.Other" xml:space="preserve"><value>{0:N0} file selezionati</value></data>
   <data name="Fields.Operation.Name" xml:space="preserve"><value>Modifica i campi dei metadati della libreria</value></data>
   <data name="Fields.Progress.Phase.Applying" xml:space="preserve"><value>Applicazione delle modifiche ai metadati</value></data>
   <data name="Fields.Progress.Phase.Completed" xml:space="preserve"><value>Aggiornamento dei metadati completato</value></data>
@@ -6001,7 +6011,7 @@
   <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>L’anteprima è scaduta. Visualizza di nuovo le modifiche ai campi.</value></data>
   <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>L’anteprima delle modifiche ai campi non è riuscita. Le modifiche proposte restano pronte per un nuovo tentativo.</value></data>
   <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>L’anteprima non ha rilevato modifiche applicabili. Nessun file è stato modificato.</value></data>
-  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>Anteprima pronta. File con modifiche: {0:N0}; modifiche ai campi: {1:N0}. Non è stato ancora scritto nulla. Scegli Rivedi modifiche per aggiungere l’anteprima al riquadro condiviso delle modifiche in sospeso.</value></data>
+  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>Anteprima pronta. {0}; {1}. Non è stato ancora scritto nulla. Scegli Rivedi modifiche per aggiungere l'anteprima al riquadro condiviso delle modifiche in sospeso.</value></data>
   <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>Salvataggio annullato. Le modifiche ai campi proposte restano pronte per un nuovo tentativo.</value></data>
   <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>Aggiornato {0:N0} file. L’originale viene conservato per l’annullamento.</value></data>
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>Aggiornati {0:N0} file. Gli originali vengono conservati per l’annullamento.</value></data>
@@ -6353,6 +6363,7 @@
   <data name="Workbench.Inspector.ApeV2Actions" xml:space="preserve"><value>Azioni APEv2</value></data>
   <data name="Workbench.Inspector.Id3v1Actions" xml:space="preserve"><value>Azioni ID3v1</value></data>
   <data name="Transcode.Concurrency.ParallelJobs" xml:space="preserve"><value>Processi paralleli</value></data>
+  <data name="ReviewedFileOperation.QuarantineFolderPlaceholder" xml:space="preserve"><value>Cartella di quarantena</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>Aggiunta {0:N0} operazione sui file a Rivedi modifiche.</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>Aggiunte {0:N0} operazioni sui file a Rivedi modifiche.</value></data>
   <data name="Workbench.Dialog.PendingConflict.MetadataPlan" xml:space="preserve"><value>La nuova anteprima dei metadati è in conflitto con modifiche ai metadati già in sospeso per lo stesso campo e file. Scarta o applica la modifica esistente prima di generare un’altra anteprima.</value></data>

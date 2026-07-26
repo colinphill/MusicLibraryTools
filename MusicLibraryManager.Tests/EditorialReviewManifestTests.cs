@@ -19,7 +19,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
 
-        Assert.Equal(3_614, manifest.Records.Count);
+        Assert.Equal(3_625, manifest.Records.Count);
         Assert.Equal(
             0,
             Count(
@@ -36,7 +36,7 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            3_251,
+            3_262,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -515,7 +515,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                3_251,
+                3_262,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));
@@ -1217,8 +1217,8 @@ public sealed class EditorialReviewManifestTests
             (
                 "gui-usability-inspector-editorial-2026-07-26",
                 "Inspector.",
-                109,
-                108,
+                104,
+                103,
                 1),
             (
                 "gui-usability-column-editorial-2026-07-26",
@@ -1229,8 +1229,8 @@ public sealed class EditorialReviewManifestTests
             (
                 "gui-usability-fields-editorial-2026-07-26",
                 "Fields.",
-                35,
-                35,
+                33,
+                33,
                 0),
             (
                 "gui-usability-reviewed-file-operation-editorial-2026-07-26",
@@ -1288,6 +1288,107 @@ public sealed class EditorialReviewManifestTests
                         "packet:v1:",
                         record.Disposition,
                         StringComparison.Ordinal);
+                });
+        }
+    }
+
+    [Fact]
+    public void Editor_source_reconciliation_batches_contain_the_exact_reviewed_contract()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: true);
+        (
+            string Batch,
+            string Prefix,
+            int Count,
+            string PacketIdentity)[] batches =
+        [
+            (
+                "gui-usability-inspector-source-reconciliation-2026-07-26",
+                "Inspector.",
+                5,
+                "63971812999a7b253f6015896777aeff9103f9c914d69719d4d33f6b7211328d"),
+            (
+                "gui-usability-fields-source-reconciliation-2026-07-26",
+                "Fields.",
+                8,
+                "6dd648d1e5e50bdf32db7115df0f1a789f1eb8a954d24e3148eda8e9b62b6331"),
+            (
+                "gui-usability-library-source-reconciliation-2026-07-26",
+                "Library.",
+                2,
+                "3f2f746a23949289acecb8729fac2ba378258687ef91eb6ae71fb86e63b9255a"),
+            (
+                "gui-usability-column-editor-source-reconciliation-2026-07-26",
+                "Column.",
+                1,
+                "ccec4f0c0ec1e4189b90e85399cad43d44a2fa984057f35010af4229f4393b1f"),
+            (
+                "gui-usability-reviewed-file-operation-source-reconciliation-2026-07-26",
+                "ReviewedFileOperation.",
+                2,
+                "cab2d0914679e6b9f68c6e69e77743b880f41edbc9377140177097a05839e534"),
+        ];
+
+        Assert.Equal(
+            18,
+            EditorSourceReconciliationContract
+                .AddedOrChangedResources.Length);
+        foreach ((
+                     string batch,
+                     string prefix,
+                     int count,
+                     string packetIdentity) in batches)
+        {
+            string[] expectedKeys =
+            [
+                .. EditorSourceReconciliationContract
+                    .AddedOrChangedResources
+                    .Where(key =>
+                        key.StartsWith(
+                            prefix,
+                            StringComparison.Ordinal))
+                    .Order(StringComparer.Ordinal),
+            ];
+            EditorialReviewRecord[] records =
+            [
+                .. manifest.Records.Values
+                    .Where(record =>
+                        string.Equals(
+                            record.Batch,
+                            batch,
+                            StringComparison.Ordinal))
+                    .OrderBy(
+                        record => record.Key,
+                        StringComparer.Ordinal),
+            ];
+
+            Assert.Equal(count, expectedKeys.Length);
+            Assert.Equal(
+                expectedKeys,
+                records.Select(record => record.Key));
+            Assert.All(
+                records,
+                record =>
+                {
+                    Assert.Equal(
+                        EditorialReviewStatus.EditorialReviewed,
+                        record.Status);
+                    Assert.Equal(
+                        CatalogTranslationRoute.EditorialOverride,
+                        record.Route);
+                    Assert.Equal(
+                        "Codex editor source reconciliation",
+                        record.Reviewer);
+                    Assert.Equal("2026-07-26", record.Date);
+                    Assert.Matches(
+                        $"^packet:v1:{packetIdentity}:[0-9a-f]{{64}}$",
+                        record.Disposition);
                 });
         }
     }

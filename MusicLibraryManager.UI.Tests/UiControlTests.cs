@@ -150,6 +150,9 @@ public sealed class UiControlTests
     {
         using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
+        ILocalizationService localization =
+            services.GetRequiredService<
+                ILocalizationService>();
         MainWindow window = services.GetRequiredService<MainWindow>();
         INavigationService navigation =
             services.GetRequiredService<INavigationService>();
@@ -240,8 +243,12 @@ public sealed class UiControlTests
                 operations,
                 maintenance.GetVisualAncestors());
             Assert.Equal(
-                ["Preview retention purge",
-                    "Purge reviewed recovery history"],
+                [
+                    localization.Get(
+                        "Operations.PreviewRetentionPurge"),
+                    localization.Get(
+                        "Operations.PurgeReviewed"),
+                ],
                 MenuHeaders(maintenance));
             MenuItem purge = Assert.IsType<MenuFlyout>(
                     maintenance.Flyout)
@@ -661,9 +668,17 @@ public sealed class UiControlTests
                 text.Text?.StartsWith("The disc strategy is the destination representation",
                     StringComparison.Ordinal) == true);
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
-                text => text.Text == "Component limit (legacy LengthLimit)");
+                text => text.Text ==
+                    services.GetRequiredService<
+                            ILocalizationService>()
+                        .Get(
+                            "Settings.RootPolicy.ComponentLimit"));
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
-                text => text.Text == "Disc-album limit (legacy DiscNumLengthLimit)");
+                text => text.Text ==
+                    services.GetRequiredService<
+                            ILocalizationService>()
+                        .Get(
+                            "Settings.RootPolicy.DiscAlbumLimit"));
             settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 6;
             Dispatcher.UIThread.RunJobs();
             settings.FindControl<Expander>(
@@ -1293,6 +1308,9 @@ public sealed class UiControlTests
     {
         using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
+        ILocalizationService localization =
+            services.GetRequiredService<
+                ILocalizationService>();
         var settings = new SettingsView();
         var window = new Window
         {
@@ -1322,20 +1340,24 @@ public sealed class UiControlTests
                 visibleHeaderButtons,
                 button => Equals(
                     button.Content,
-                    "Save"));
+                    localization.Get(
+                        "Settings.Action.Save")));
             Assert.Contains(
                 visibleHeaderButtons,
                 button => Equals(
                     button.Content,
-                    "More"));
+                    localization.Get(
+                        "Workbench.Action.More")));
             Assert.DoesNotContain(
                 visibleHeaderButtons,
                 button => Equals(
                     button.Content,
-                    "Save as") ||
+                    localization.Get(
+                        "Settings.Action.SaveAs")) ||
                           Equals(
                               button.Content,
-                              "Discard"));
+                              localization.Get(
+                                  "Settings.Action.Discard")));
 
             Button more = settings.FindControl<Button>(
                 "SettingsMoreButton")!;
@@ -1349,12 +1371,14 @@ public sealed class UiControlTests
                 menu.Items.OfType<MenuItem>(),
                 item => Equals(
                     item.Header,
-                    "Save as"));
+                    localization.Get(
+                        "Settings.Action.SaveAs")));
             MenuItem discard = Assert.Single(
                 menu.Items.OfType<MenuItem>(),
                 item => Equals(
                     item.Header,
-                    "Discard"));
+                    localization.Get(
+                        "Settings.Action.Discard")));
             Assert.NotNull(saveAs.Command);
             Assert.True(discard.IsVisible);
             Assert.Contains(
@@ -4350,6 +4374,9 @@ public sealed class UiControlTests
     {
         using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
+        ILocalizationService localization =
+            services.GetRequiredService<
+                ILocalizationService>();
         MainWindow window = services.GetRequiredService<MainWindow>();
         ContentControl host = window.FindControl<ContentControl>("ContentHost")!;
         INavigationService navigation = services.GetRequiredService<INavigationService>();
@@ -4466,7 +4493,10 @@ public sealed class UiControlTests
                 Assert.Equal(5, grid.Columns.Count);
                 Assert.Equal("Status", grid.KeyFor(grid.Columns[0]));
                 Assert.Equal("Kind", grid.KeyFor(grid.Columns[1]));
-                Assert.Equal("Restore", restore.Content);
+                Assert.Equal(
+                    localization.Get(
+                        "Devices.Action.Restore"),
+                    restore.Content);
                 Assert.Equal("Android device",
                     global::Avalonia.Automation.AutomationProperties.GetName(deviceSelector));
                 Assert.Equal("Refresh Android devices",
@@ -5577,6 +5607,9 @@ public sealed class UiControlTests
                 Application.Current.RequestedThemeVariant = theme;
                 using ServiceProvider services = BuildIsolatedServices();
                 App.UseServicesForTests(services);
+                ILocalizationService localization =
+                    services.GetRequiredService<
+                        ILocalizationService>();
                 services.GetRequiredService<IAppSettings>()
                     .SetPreference(
                         AppearancePreferences
@@ -5682,7 +5715,8 @@ public sealed class UiControlTests
                                         .OfType<MenuItem>(),
                                     item => Equals(
                                         item.Header,
-                                        "Discard"));
+                                        localization.Get(
+                                            "Settings.Action.Discard")));
                             Assert.True(discard.IsVisible);
                             foreach (Button button in header.GetVisualDescendants().OfType<Button>()
                                          .Where(button => button.IsEffectivelyVisible))
@@ -5780,6 +5814,9 @@ public sealed class UiControlTests
     {
         using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
+        ILocalizationService localization =
+            services.GetRequiredService<
+                ILocalizationService>();
         MainWindow window = services.GetRequiredService<MainWindow>();
         AnalyzerViewModel analyzer = services.GetRequiredService<AnalyzerViewModel>();
         INavigationService navigation = services.GetRequiredService<INavigationService>();
@@ -5855,7 +5892,8 @@ public sealed class UiControlTests
                 health.FindControl<TextBox>(
                     "ArtistThresholdInput")!;
             Assert.Equal(
-                "Similar artist fuzzy threshold",
+                localization.Get(
+                    "Health.Artist.ThresholdAutomation"),
                 AutomationProperties.GetName(
                     artistThreshold));
             artistThreshold.Text = "0.13";

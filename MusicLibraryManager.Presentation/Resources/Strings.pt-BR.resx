@@ -331,6 +331,7 @@
   <data name="Column.FileSize" xml:space="preserve">
     <value>Tamanho do arquivo</value>
   </data>
+  <data name="Column.Format" xml:space="preserve"><value>Formato</value></data>
   <data name="Column.Formats" xml:space="preserve">
     <value>formatos</value>
   </data>
@@ -1287,6 +1288,7 @@
   <data name="Library.Columns.LabelPlaceholder" xml:space="preserve">
     <value>Rótulo da coluna</value>
   </data>
+  <data name="Library.Columns.DisplayLabel" xml:space="preserve"><value>Rótulo de exibição</value></data>
   <data name="Library.Columns.KnownFieldPlaceholder" xml:space="preserve">
     <value>Campo de metadados conhecido</value>
   </data>
@@ -1332,6 +1334,7 @@
   <data name="Library.VisualFilter.Title" xml:space="preserve">
     <value>Filtro visual</value>
   </data>
+  <data name="Library.VisualFilter.GroupNumber" xml:space="preserve"><value>Número do grupo de condições</value></data>
   <data name="Library.VisualFilter.MatchMode" xml:space="preserve">
     <value>Modo de correspondência</value>
   </data>
@@ -1910,6 +1913,7 @@
   <data name="ReviewedFileOperation.DestinationAutomation" xml:space="preserve">
     <value>Destino da operação de arquivos</value>
   </data>
+  <data name="ReviewedFileOperation.DestinationFolderPlaceholder" xml:space="preserve"><value>Pasta de destino</value></data>
   <data name="ReviewedFileOperation.DestinationPlaceholder" xml:space="preserve">
     <value>Pasta de destino ou quarentena</value>
   </data>
@@ -4136,8 +4140,8 @@
   <data name="Inspector.Artwork.Mixed" xml:space="preserve"><value>Valores mistos: os arquivos selecionados têm capas incorporadas diferentes.</value></data>
   <data name="Inspector.Artwork.NoneEmbedded" xml:space="preserve"><value>Nenhuma capa incorporada.</value></data>
   <data name="Inspector.Artwork.NotLoaded" xml:space="preserve"><value>Nenhuma capa carregada.</value></data>
-  <data name="Inspector.Artwork.Shared.One" xml:space="preserve"><value> · compartilhada por {0:N0} faixa</value></data>
-  <data name="Inspector.Artwork.Shared.Other" xml:space="preserve"><value> · compartilhada por {0:N0} faixas</value></data>
+  <data name="Inspector.Artwork.Shared.One" xml:space="preserve"><value>Compartilhada por {0:N0} faixa.</value></data>
+  <data name="Inspector.Artwork.Shared.Other" xml:space="preserve"><value>Compartilhada por {0:N0} faixas.</value></data>
   <data name="Inspector.Artwork.Type.Other.Label" xml:space="preserve"><value>Outro</value></data>
   <data name="Inspector.Artwork.Type.FileIcon.Label" xml:space="preserve"><value>Ícone do arquivo</value></data>
   <data name="Inspector.Artwork.Type.OtherFileIcon.Label" xml:space="preserve"><value>Outro ícone de arquivo</value></data>
@@ -4166,7 +4170,7 @@
   <data name="Inspector.Dialog.ApplyReviewed.Title" xml:space="preserve"><value>Aplicar a operação revisada: {0}?</value></data>
   <data name="Inspector.Dialog.DirectWriteWarning" xml:space="preserve"><value>Isso grava diretamente nos arquivos; nenhum diário de recuperação é criado.</value></data>
   <data name="Inspector.Dialog.Discard.Confirm" xml:space="preserve"><value>Descartar alterações</value></data>
-  <data name="Inspector.Dialog.Discard.Message" xml:space="preserve"><value>{0} para {1}. Descartar e continuar?</value></data>
+  <data name="Inspector.Dialog.Discard.Message" xml:space="preserve"><value>Descartar as alterações não salvas da seleção atual e continuar?</value></data>
   <data name="Inspector.Dialog.Discard.Title" xml:space="preserve"><value>Descartar as alterações de metadados não salvas?</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.Confirm" xml:space="preserve"><value>Otimizar</value></data>
   <data name="Inspector.Dialog.OptimizeArtwork.DirectMessage" xml:space="preserve"><value>Recodificar e limitar a {0:N0}px as capas de {1:N0} faixas? Isso grava diretamente nos arquivos; nenhum diário de recuperação é criado.</value></data>
@@ -4184,7 +4188,7 @@
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.One" xml:space="preserve"><value>Substituir a capa frontal de {0:N0} faixa selecionada?</value></data>
   <data name="Inspector.Dialog.ReplaceFrontCover.Message.Other" xml:space="preserve"><value>Substituir a capa frontal de {0:N0} faixas selecionadas?</value></data>
   <data name="Inspector.Dialog.Revert.Confirm" xml:space="preserve"><value>Reverter alterações</value></data>
-  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>{0} para {1}. Reverter para os valores armazenados atualmente nos arquivos?</value></data>
+  <data name="Inspector.Dialog.Revert.Message" xml:space="preserve"><value>Reverter as alterações não salvas para os valores armazenados atualmente nos arquivos selecionados?</value></data>
   <data name="Inspector.Dialog.Revert.Title" xml:space="preserve"><value>Reverter as alterações de metadados não salvas?</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.ArtworkOnly" xml:space="preserve"><value>Substituir o conjunto de capas incorporadas de {0:N0} faixas selecionadas por estas {1:N0} imagens?</value></data>
   <data name="Inspector.Dialog.SaveConfirmation.TagsAndArtwork" xml:space="preserve"><value>Aplicar {0:N0} alterações de etiquetas e substituir por {1:N0} imagens o conjunto de capas incorporadas de {2:N0} faixas selecionadas?</value></data>
@@ -4227,7 +4231,7 @@
   <data name="Inspector.Picker.ChooseCoverArtwork" xml:space="preserve"><value>Escolher capa</value></data>
   <data name="Inspector.Picker.ChooseReplacementArtwork" xml:space="preserve"><value>Escolher capa substituta</value></data>
   <data name="Inspector.Picker.Images" xml:space="preserve"><value>Imagens</value></data>
-  <data name="Inspector.Picker.SaveArtwork" xml:space="preserve"><value>Salvar capa {0}</value></data>
+  <data name="Inspector.Picker.SaveArtwork" xml:space="preserve"><value>Salvar capa</value></data>
   <data name="Inspector.Progress.PreviewedCombined.One" xml:space="preserve"><value>Visualização das alterações combinadas de {0:N0} arquivo concluída</value></data>
   <data name="Inspector.Progress.PreviewedCombined.Other" xml:space="preserve"><value>Visualização das alterações combinadas de {0:N0} arquivos concluída</value></data>
   <data name="Inspector.Progress.UpdatedOfTotal" xml:space="preserve"><value>{0:N0} de {1:N0} atualizados</value></data>
@@ -5974,11 +5978,17 @@
   <data name="Fields.Action.UndoRemoval" xml:space="preserve"><value>Desfazer</value></data>
   <data name="Fields.Activity.Preview.Completed.One" xml:space="preserve"><value>Visualização de {0:N0} arquivo concluída</value></data>
   <data name="Fields.Activity.Preview.Completed.Other" xml:space="preserve"><value>Visualização de {0:N0} arquivos concluída</value></data>
-  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>Alterações de campos: {0:N0}; arquivos: {1:N0}. Validando…</value></data>
+  <data name="Fields.Activity.Preview.Starting" xml:space="preserve"><value>{0}; {1}. Validando…</value></data>
   <data name="Fields.Activity.Preview.Title" xml:space="preserve"><value>Visualizar campos de metadados</value></data>
   <data name="Fields.Activity.Save.Starting.One" xml:space="preserve"><value>Aplicando o plano de campos revisado a {0:N0} arquivo</value></data>
   <data name="Fields.Activity.Save.Starting.Other" xml:space="preserve"><value>Aplicando o plano de campos revisado a {0:N0} arquivos</value></data>
   <data name="Fields.Activity.Save.Title" xml:space="preserve"><value>Salvar campos de metadados</value></data>
+  <data name="Fields.Count.FieldChanges.One" xml:space="preserve"><value>{0:N0} alteração de campo</value></data>
+  <data name="Fields.Count.FieldChanges.Other" xml:space="preserve"><value>{0:N0} alterações de campos</value></data>
+  <data name="Fields.Count.FilesWithChanges.One" xml:space="preserve"><value>{0:N0} arquivo com alterações</value></data>
+  <data name="Fields.Count.FilesWithChanges.Other" xml:space="preserve"><value>{0:N0} arquivos com alterações</value></data>
+  <data name="Fields.Count.SelectedFiles.One" xml:space="preserve"><value>{0:N0} arquivo selecionado</value></data>
+  <data name="Fields.Count.SelectedFiles.Other" xml:space="preserve"><value>{0:N0} arquivos selecionados</value></data>
   <data name="Fields.Operation.Name" xml:space="preserve"><value>Editar campos de metadados da biblioteca</value></data>
   <data name="Fields.Progress.Phase.Applying" xml:space="preserve"><value>Aplicando alterações de metadados</value></data>
   <data name="Fields.Progress.Phase.Completed" xml:space="preserve"><value>Atualização de metadados concluída</value></data>
@@ -6001,7 +6011,7 @@
   <data name="Fields.Status.PreviewExpired" xml:space="preserve"><value>A visualização expirou. Visualize as alterações de campos novamente.</value></data>
   <data name="Fields.Status.PreviewFailed" xml:space="preserve"><value>Falha na visualização das alterações de campos. As alterações propostas continuam prontas para nova tentativa.</value></data>
   <data name="Fields.Status.PreviewNoChanges" xml:space="preserve"><value>A visualização não encontrou alterações aplicáveis. Nenhum arquivo foi alterado.</value></data>
-  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>Visualização pronta. Arquivos com alterações: {0:N0}; alterações de campos: {1:N0}. Nada foi gravado ainda. Escolha Revisar alterações para adicionar esta visualização ao painel compartilhado de alterações pendentes.</value></data>
+  <data name="Fields.Status.PreviewReady" xml:space="preserve"><value>Visualização pronta. {0}; {1}. Nada foi gravado ainda. Escolha Revisar alterações para adicionar esta visualização ao painel compartilhado de alterações pendentes.</value></data>
   <data name="Fields.Status.SaveCancelled" xml:space="preserve"><value>Salvamento cancelado. As alterações de campos propostas continuam prontas para nova tentativa.</value></data>
   <data name="Fields.Status.SaveComplete.One" xml:space="preserve"><value>{0:N0} arquivo atualizado. O original é mantido para desfazer.</value></data>
   <data name="Fields.Status.SaveComplete.Other" xml:space="preserve"><value>{0:N0} arquivos atualizados. Os originais são mantidos para desfazer.</value></data>
@@ -6353,6 +6363,7 @@
   <data name="Workbench.Inspector.ApeV2Actions" xml:space="preserve"><value>Ações de APEv2</value></data>
   <data name="Workbench.Inspector.Id3v1Actions" xml:space="preserve"><value>Ações de ID3v1</value></data>
   <data name="Transcode.Concurrency.ParallelJobs" xml:space="preserve"><value>Trabalhos paralelos</value></data>
+  <data name="ReviewedFileOperation.QuarantineFolderPlaceholder" xml:space="preserve"><value>Pasta de quarentena</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.One" xml:space="preserve"><value>Adicionada {0:N0} operação de arquivo a Revisar alterações.</value></data>
   <data name="ReviewedFileOperation.Status.AddedToReview.Other" xml:space="preserve"><value>Adicionadas {0:N0} operações de arquivos a Revisar alterações.</value></data>
   <data name="Workbench.Dialog.PendingConflict.MetadataPlan" xml:space="preserve"><value>A nova visualização de metadados entra em conflito com alterações de metadados já pendentes para o mesmo campo e arquivo. Descarte ou aplique a alteração existente antes de gerar outra visualização.</value></data>

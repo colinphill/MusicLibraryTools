@@ -2354,6 +2354,17 @@
     <translation culture="zh-CN">删除所选视图</translation>
     <translation culture="zh-TW">刪除所選檢視</translation>
   </entry>
+  <entry key="Library.VisualFilter.GroupNumber">
+    <translation culture="de-DE">Nummer der Bedingungsgruppe</translation>
+    <translation culture="es-ES">Número del grupo de condiciones</translation>
+    <translation culture="fr-FR">Numéro du groupe de conditions</translation>
+    <translation culture="it-IT">Numero del gruppo di condizioni</translation>
+    <translation culture="pt-BR">Número do grupo de condições</translation>
+    <translation culture="ja-JP">条件グループ番号</translation>
+    <translation culture="ko-KR">조건 그룹 번호</translation>
+    <translation culture="zh-CN">条件组编号</translation>
+    <translation culture="zh-TW">條件群組編號</translation>
+  </entry>
   <entry key="Library.VisualFilter.MatchMode">
     <translation culture="de-DE">Übereinstimmungsmodus</translation>
     <translation culture="es-ES">Modo de coincidencia</translation>
@@ -2969,6 +2980,17 @@
     <translation culture="ko-KR">파일 작업 대상</translation>
     <translation culture="zh-CN">文件操作目标</translation>
     <translation culture="zh-TW">檔案操作目的地</translation>
+  </entry>
+  <entry key="ReviewedFileOperation.DestinationFolderPlaceholder">
+    <translation culture="de-DE">Zielordner</translation>
+    <translation culture="es-ES">Carpeta de destino</translation>
+    <translation culture="fr-FR">Dossier de destination</translation>
+    <translation culture="it-IT">Cartella di destinazione</translation>
+    <translation culture="pt-BR">Pasta de destino</translation>
+    <translation culture="ja-JP">保存先フォルダー</translation>
+    <translation culture="ko-KR">대상 폴더</translation>
+    <translation culture="zh-CN">目标文件夹</translation>
+    <translation culture="zh-TW">目的地資料夾</translation>
   </entry>
   <entry key="ReviewedFileOperation.DestinationPlaceholder">
     <translation culture="de-DE">Ziel- oder Quarantäneordner</translation>
@@ -4599,26 +4621,26 @@
     <translation culture="zh-TW">未載入封面。</translation>
   </entry>
   <entry key="Inspector.Artwork.Shared.One">
-    <translation culture="de-DE"> · von {0:N0} Titel gemeinsam verwendet</translation>
-    <translation culture="es-ES"> · compartida por {0:N0} pista</translation>
-    <translation culture="fr-FR"> · partagée par {0:N0} piste</translation>
-    <translation culture="it-IT"> · condivisa da {0:N0} traccia</translation>
-    <translation culture="pt-BR"> · compartilhada por {0:N0} faixa</translation>
-    <translation culture="ja-JP"> · {0:N0} トラックで共有</translation>
-    <translation culture="ko-KR"> · 트랙 {0:N0}개에서 공유</translation>
-    <translation culture="zh-CN"> · 由 {0:N0} 个音轨共享</translation>
-    <translation culture="zh-TW"> · 由 {0:N0} 個曲目共用</translation>
+    <translation culture="de-DE">Von {0:N0} Titel gemeinsam verwendet.</translation>
+    <translation culture="es-ES">Compartida por {0:N0} pista.</translation>
+    <translation culture="fr-FR">Partagée par {0:N0} piste.</translation>
+    <translation culture="it-IT">Condivisa da {0:N0} traccia.</translation>
+    <translation culture="pt-BR">Compartilhada por {0:N0} faixa.</translation>
+    <translation culture="ja-JP">{0:N0} トラックで共有されています。</translation>
+    <translation culture="ko-KR">트랙 {0:N0}개에서 공유됩니다.</translation>
+    <translation culture="zh-CN">由 {0:N0} 个音轨共享。</translation>
+    <translation culture="zh-TW">由 {0:N0} 個曲目共用。</translation>
   </entry>
   <entry key="Inspector.Artwork.Shared.Other">
-    <translation culture="de-DE"> · von {0:N0} Titeln gemeinsam verwendet</translation>
-    <translation culture="es-ES"> · compartida por {0:N0} pistas</translation>
-    <translation culture="fr-FR"> · partagée par {0:N0} pistes</translation>
-    <translation culture="it-IT"> · condivisa da {0:N0} tracce</translation>
-    <translation culture="pt-BR"> · compartilhada por {0:N0} faixas</translation>
-    <translation culture="ja-JP"> · {0:N0} トラックで共有</translation>
-    <translation culture="ko-KR"> · 트랙 {0:N0}개에서 공유</translation>
-    <translation culture="zh-CN"> · 由 {0:N0} 个音轨共享</translation>
-    <translation culture="zh-TW"> · 由 {0:N0} 個曲目共用</translation>
+    <translation culture="de-DE">Von {0:N0} Titeln gemeinsam verwendet.</translation>
+    <translation culture="es-ES">Compartida por {0:N0} pistas.</translation>
+    <translation culture="fr-FR">Partagée par {0:N0} pistes.</translation>
+    <translation culture="it-IT">Condivisa da {0:N0} tracce.</translation>
+    <translation culture="pt-BR">Compartilhada por {0:N0} faixas.</translation>
+    <translation culture="ja-JP">{0:N0} トラックで共有されています。</translation>
+    <translation culture="ko-KR">트랙 {0:N0}개에서 공유됩니다.</translation>
+    <translation culture="zh-CN">由 {0:N0} 个音轨共享。</translation>
+    <translation culture="zh-TW">由 {0:N0} 個曲目共用。</translation>
   </entry>
   <entry key="Inspector.Artwork.Type.OtherFileIcon.Label">
     <translation culture="de-DE">Anderes Dateisymbol</translation>
@@ -4687,15 +4709,15 @@
     <translation culture="zh-TW">這會直接寫入檔案；不會建立復原日誌。</translation>
   </entry>
   <entry key="Inspector.Dialog.Discard.Message">
-    <translation culture="de-DE">{0} für {1}. Verwerfen und fortfahren?</translation>
-    <translation culture="es-ES">{0} para {1}. ¿Descartarlos y continuar?</translation>
-    <translation culture="fr-FR">{0} pour {1}. Les abandonner et continuer ?</translation>
-    <translation culture="it-IT">{0} per {1}. Scartarle e continuare?</translation>
-    <translation culture="pt-BR">{0} para {1}. Descartar e continuar?</translation>
-    <translation culture="ja-JP">{1} の {0}。破棄して続行しますか？</translation>
-    <translation culture="ko-KR">{1}의 {0}. 버리고 계속하시겠습니까?</translation>
-    <translation culture="zh-CN">{1} 有 {0}。要放弃并继续吗？</translation>
-    <translation culture="zh-TW">{1} 有 {0}。要捨棄並繼續嗎？</translation>
+    <translation culture="de-DE">Nicht gespeicherte Änderungen für die aktuelle Auswahl verwerfen und fortfahren?</translation>
+    <translation culture="es-ES">¿Descartar los cambios sin guardar de la selección actual y continuar?</translation>
+    <translation culture="fr-FR">Abandonner les modifications non enregistrées de la sélection actuelle et continuer ?</translation>
+    <translation culture="it-IT">Scartare le modifiche non salvate per la selezione corrente e continuare?</translation>
+    <translation culture="pt-BR">Descartar as alterações não salvas da seleção atual e continuar?</translation>
+    <translation culture="ja-JP">現在の選択項目の未保存の変更を破棄して続行しますか？</translation>
+    <translation culture="ko-KR">현재 선택 항목의 저장하지 않은 변경 사항을 버리고 계속하시겠습니까?</translation>
+    <translation culture="zh-CN">要放弃当前所选内容中未保存的更改并继续吗？</translation>
+    <translation culture="zh-TW">要捨棄目前所選項目中未儲存的變更並繼續嗎？</translation>
   </entry>
   <entry key="Inspector.Dialog.Discard.Title">
     <translation culture="de-DE">Nicht gespeicherte Metadatenänderungen verwerfen?</translation>
@@ -4819,15 +4841,15 @@
     <translation culture="zh-TW">要取代選取的 {0:N0} 個曲目的正面封面嗎？</translation>
   </entry>
   <entry key="Inspector.Dialog.Revert.Message">
-    <translation culture="de-DE">{0} für {1}. Auf die derzeit in den Dateien gespeicherten Werte zurücksetzen?</translation>
-    <translation culture="es-ES">{0} para {1}. ¿Revertir a los valores guardados actualmente en los archivos?</translation>
-    <translation culture="fr-FR">{0} pour {1}. Revenir aux valeurs actuellement enregistrées dans les fichiers ?</translation>
-    <translation culture="it-IT">{0} per {1}. Ripristinare i valori attualmente salvati nei file?</translation>
-    <translation culture="pt-BR">{0} para {1}. Reverter para os valores armazenados atualmente nos arquivos?</translation>
-    <translation culture="ja-JP">{1} の {0}。ファイルに現在保存されている値に戻しますか？</translation>
-    <translation culture="ko-KR">{1}의 {0}. 파일에 현재 저장된 값으로 되돌리시겠습니까?</translation>
-    <translation culture="zh-CN">{1} 有 {0}。要还原为文件中当前存储的值吗？</translation>
-    <translation culture="zh-TW">{1} 有 {0}。要還原為檔案中目前儲存的值嗎？</translation>
+    <translation culture="de-DE">Nicht gespeicherte Änderungen auf die derzeit in den ausgewählten Dateien gespeicherten Werte zurücksetzen?</translation>
+    <translation culture="es-ES">¿Revertir los cambios sin guardar a los valores almacenados actualmente en los archivos seleccionados?</translation>
+    <translation culture="fr-FR">Rétablir les modifications non enregistrées aux valeurs actuellement stockées dans les fichiers sélectionnés ?</translation>
+    <translation culture="it-IT">Ripristinare le modifiche non salvate ai valori attualmente memorizzati nei file selezionati?</translation>
+    <translation culture="pt-BR">Reverter as alterações não salvas para os valores armazenados atualmente nos arquivos selecionados?</translation>
+    <translation culture="ja-JP">未保存の変更を、選択したファイルに現在保存されている値に戻しますか？</translation>
+    <translation culture="ko-KR">저장하지 않은 변경 사항을 선택한 파일에 현재 저장된 값으로 되돌리시겠습니까?</translation>
+    <translation culture="zh-CN">要将未保存的更改还原为所选文件中当前存储的值吗？</translation>
+    <translation culture="zh-TW">要將未儲存的變更還原為所選檔案中目前儲存的值嗎？</translation>
   </entry>
   <entry key="Inspector.Dialog.Revert.Title">
     <translation culture="de-DE">Nicht gespeicherte Metadatenänderungen zurücksetzen?</translation>
@@ -5050,15 +5072,15 @@
     <translation culture="zh-TW">選擇替換封面</translation>
   </entry>
   <entry key="Inspector.Picker.SaveArtwork">
-    <translation culture="de-DE">{0}-Cover speichern</translation>
-    <translation culture="es-ES">Guardar carátula {0}</translation>
-    <translation culture="fr-FR">Enregistrer l’illustration {0}</translation>
-    <translation culture="it-IT">Salva copertina {0}</translation>
-    <translation culture="pt-BR">Salvar capa {0}</translation>
-    <translation culture="ja-JP">{0} アートワークを保存</translation>
-    <translation culture="ko-KR">{0} 아트워크 저장</translation>
-    <translation culture="zh-CN">保存 {0} 封面</translation>
-    <translation culture="zh-TW">儲存 {0} 封面</translation>
+    <translation culture="de-DE">Bild speichern</translation>
+    <translation culture="es-ES">Guardar carátula</translation>
+    <translation culture="fr-FR">Enregistrer l'illustration</translation>
+    <translation culture="it-IT">Salva copertina</translation>
+    <translation culture="pt-BR">Salvar capa</translation>
+    <translation culture="ja-JP">アートワークを保存</translation>
+    <translation culture="ko-KR">아트워크 저장</translation>
+    <translation culture="zh-CN">保存封面</translation>
+    <translation culture="zh-TW">儲存封面</translation>
   </entry>
   <entry key="Inspector.Progress.PreviewedCombined.One">
     <translation culture="de-DE">Kombinierte Änderungen für {0:N0} Datei in Vorschau angezeigt</translation>
@@ -16581,15 +16603,15 @@
     <translation culture="zh-TW">已預覽 {0:N0} 個檔案</translation>
   </entry>
   <entry key="Fields.Activity.Preview.Starting">
-    <translation culture="de-DE">Feldänderungen: {0:N0}; Dateien: {1:N0}. Überprüfung…</translation>
-    <translation culture="es-ES">Cambios de campos: {0:N0}; archivos: {1:N0}. Validando…</translation>
-    <translation culture="fr-FR">Modifications de champs : {0:N0} ; fichiers : {1:N0}. Validation…</translation>
-    <translation culture="it-IT">Modifiche ai campi: {0:N0}; file: {1:N0}. Convalida…</translation>
-    <translation culture="pt-BR">Alterações de campos: {0:N0}; arquivos: {1:N0}. Validando…</translation>
-    <translation culture="ja-JP">フィールド変更: {0:N0}、ファイル: {1:N0}。検証中…</translation>
-    <translation culture="ko-KR">필드 변경: {0:N0}, 파일: {1:N0}. 검증 중…</translation>
-    <translation culture="zh-CN">字段更改：{0:N0}；文件：{1:N0}。正在验证…</translation>
-    <translation culture="zh-TW">欄位變更：{0:N0}；檔案：{1:N0}。正在驗證…</translation>
+    <translation culture="de-DE">{0}; {1}. Überprüfung…</translation>
+    <translation culture="es-ES">{0}; {1}. Validando…</translation>
+    <translation culture="fr-FR">{0} ; {1}. Validation…</translation>
+    <translation culture="it-IT">{0}; {1}. Convalida…</translation>
+    <translation culture="pt-BR">{0}; {1}. Validando…</translation>
+    <translation culture="ja-JP">{0}、{1}。検証中…</translation>
+    <translation culture="ko-KR">{0}, {1}. 검증 중…</translation>
+    <translation culture="zh-CN">{0}；{1}。正在验证…</translation>
+    <translation culture="zh-TW">{0}；{1}。正在驗證…</translation>
   </entry>
   <entry key="Fields.Activity.Preview.Title">
     <translation culture="de-DE">Metadatenfelder in Vorschau anzeigen</translation>
@@ -16634,6 +16656,72 @@
     <translation culture="ko-KR">메타데이터 필드 저장</translation>
     <translation culture="zh-CN">保存元数据字段</translation>
     <translation culture="zh-TW">儲存中繼資料欄位</translation>
+  </entry>
+  <entry key="Fields.Count.FieldChanges.One">
+    <translation culture="de-DE">{0:N0} Feldänderung</translation>
+    <translation culture="es-ES">{0:N0} cambio de campo</translation>
+    <translation culture="fr-FR">{0:N0} modification de champ</translation>
+    <translation culture="it-IT">{0:N0} modifica al campo</translation>
+    <translation culture="pt-BR">{0:N0} alteração de campo</translation>
+    <translation culture="ja-JP">{0:N0} 件のフィールド変更</translation>
+    <translation culture="ko-KR">필드 변경 {0:N0}건</translation>
+    <translation culture="zh-CN">{0:N0} 项字段更改</translation>
+    <translation culture="zh-TW">{0:N0} 項欄位變更</translation>
+  </entry>
+  <entry key="Fields.Count.FieldChanges.Other">
+    <translation culture="de-DE">{0:N0} Feldänderungen</translation>
+    <translation culture="es-ES">{0:N0} cambios de campo</translation>
+    <translation culture="fr-FR">{0:N0} modifications de champs</translation>
+    <translation culture="it-IT">{0:N0} modifiche ai campi</translation>
+    <translation culture="pt-BR">{0:N0} alterações de campos</translation>
+    <translation culture="ja-JP">{0:N0} 件のフィールド変更</translation>
+    <translation culture="ko-KR">필드 변경 {0:N0}건</translation>
+    <translation culture="zh-CN">{0:N0} 项字段更改</translation>
+    <translation culture="zh-TW">{0:N0} 項欄位變更</translation>
+  </entry>
+  <entry key="Fields.Count.FilesWithChanges.One">
+    <translation culture="de-DE">{0:N0} Datei mit Änderungen</translation>
+    <translation culture="es-ES">{0:N0} archivo con cambios</translation>
+    <translation culture="fr-FR">{0:N0} fichier comportant des modifications</translation>
+    <translation culture="it-IT">{0:N0} file con modifiche</translation>
+    <translation culture="pt-BR">{0:N0} arquivo com alterações</translation>
+    <translation culture="ja-JP">変更のあるファイル {0:N0} 件</translation>
+    <translation culture="ko-KR">변경 사항이 있는 파일 {0:N0}개</translation>
+    <translation culture="zh-CN">{0:N0} 个有更改的文件</translation>
+    <translation culture="zh-TW">{0:N0} 個有變更的檔案</translation>
+  </entry>
+  <entry key="Fields.Count.FilesWithChanges.Other">
+    <translation culture="de-DE">{0:N0} Dateien mit Änderungen</translation>
+    <translation culture="es-ES">{0:N0} archivos con cambios</translation>
+    <translation culture="fr-FR">{0:N0} fichiers comportant des modifications</translation>
+    <translation culture="it-IT">{0:N0} file con modifiche</translation>
+    <translation culture="pt-BR">{0:N0} arquivos com alterações</translation>
+    <translation culture="ja-JP">変更のあるファイル {0:N0} 件</translation>
+    <translation culture="ko-KR">변경 사항이 있는 파일 {0:N0}개</translation>
+    <translation culture="zh-CN">{0:N0} 个有更改的文件</translation>
+    <translation culture="zh-TW">{0:N0} 個有變更的檔案</translation>
+  </entry>
+  <entry key="Fields.Count.SelectedFiles.One">
+    <translation culture="de-DE">{0:N0} ausgewählte Datei</translation>
+    <translation culture="es-ES">{0:N0} archivo seleccionado</translation>
+    <translation culture="fr-FR">{0:N0} fichier sélectionné</translation>
+    <translation culture="it-IT">{0:N0} file selezionato</translation>
+    <translation culture="pt-BR">{0:N0} arquivo selecionado</translation>
+    <translation culture="ja-JP">選択したファイル {0:N0} 件</translation>
+    <translation culture="ko-KR">선택한 파일 {0:N0}개</translation>
+    <translation culture="zh-CN">{0:N0} 个选定文件</translation>
+    <translation culture="zh-TW">{0:N0} 個已選取的檔案</translation>
+  </entry>
+  <entry key="Fields.Count.SelectedFiles.Other">
+    <translation culture="de-DE">{0:N0} ausgewählte Dateien</translation>
+    <translation culture="es-ES">{0:N0} archivos seleccionados</translation>
+    <translation culture="fr-FR">{0:N0} fichiers sélectionnés</translation>
+    <translation culture="it-IT">{0:N0} file selezionati</translation>
+    <translation culture="pt-BR">{0:N0} arquivos selecionados</translation>
+    <translation culture="ja-JP">選択したファイル {0:N0} 件</translation>
+    <translation culture="ko-KR">선택한 파일 {0:N0}개</translation>
+    <translation culture="zh-CN">{0:N0} 个选定文件</translation>
+    <translation culture="zh-TW">{0:N0} 個已選取的檔案</translation>
   </entry>
   <entry key="Fields.Operation.Name">
     <translation culture="de-DE">Metadatenfelder der Bibliothek bearbeiten</translation>
@@ -16834,15 +16922,15 @@
     <translation culture="zh-TW">預覽未發現適用的變更。未變更任何檔案。</translation>
   </entry>
   <entry key="Fields.Status.PreviewReady">
-    <translation culture="de-DE">Vorschau bereit. Dateien mit Änderungen: {0:N0}; Feldänderungen: {1:N0}. Es wurde noch nichts geschrieben. Wählen Sie „Änderungen prüfen“, um diese Vorschau zum gemeinsamen Bereich „Ausstehende Änderungen“ hinzuzufügen.</translation>
-    <translation culture="es-ES">Vista previa lista. Archivos con cambios: {0:N0}; cambios de campos: {1:N0}. Todavía no se ha escrito nada. Elige Revisar cambios para añadir esta vista previa al panel compartido de cambios pendientes.</translation>
-    <translation culture="fr-FR">Aperçu prêt. Fichiers modifiés : {0:N0} ; modifications de champs : {1:N0}. Rien n’a encore été écrit. Choisissez Vérifier les modifications pour ajouter cet aperçu au volet partagé des modifications en attente.</translation>
-    <translation culture="it-IT">Anteprima pronta. File con modifiche: {0:N0}; modifiche ai campi: {1:N0}. Non è stato ancora scritto nulla. Scegli Rivedi modifiche per aggiungere l’anteprima al riquadro condiviso delle modifiche in sospeso.</translation>
-    <translation culture="pt-BR">Visualização pronta. Arquivos com alterações: {0:N0}; alterações de campos: {1:N0}. Nada foi gravado ainda. Escolha Revisar alterações para adicionar esta visualização ao painel compartilhado de alterações pendentes.</translation>
-    <translation culture="ja-JP">プレビューの準備ができました。変更のあるファイル: {0:N0}、フィールド変更: {1:N0}。まだ書き込まれていません。［変更を確認］を選択して、このプレビューを共有の保留中の変更ドロワーに追加してください。</translation>
-    <translation culture="ko-KR">미리 보기가 준비되었습니다. 변경되는 파일: {0:N0}, 필드 변경: {1:N0}. 아직 기록된 내용은 없습니다. 변경 내용 검토를 선택하여 이 미리 보기를 공유 보류 중인 변경 내용 창에 추가하세요.</translation>
-    <translation culture="zh-CN">预览已就绪。发生更改的文件：{0:N0}；字段更改：{1:N0}。尚未写入任何内容。选择“查看更改”可将此预览添加到共享的待处理更改抽屉。</translation>
-    <translation culture="zh-TW">預覽已就緒。發生變更的檔案：{0:N0}；欄位變更：{1:N0}。尚未寫入任何內容。選擇「檢視變更」可將此預覽加入共用的待處理變更抽屜。</translation>
+    <translation culture="de-DE">Vorschau bereit. {0}; {1}. Es wurde noch nichts geschrieben. Wählen Sie "Änderungen prüfen", um diese Vorschau zum gemeinsamen Bereich "Ausstehende Änderungen" hinzuzufügen.</translation>
+    <translation culture="es-ES">Vista previa lista. {0}; {1}. Todavía no se ha escrito nada. Elige Revisar cambios para añadir esta vista previa al panel compartido de cambios pendientes.</translation>
+    <translation culture="fr-FR">Aperçu prêt. {0} ; {1}. Rien n'a encore été écrit. Choisissez Vérifier les modifications pour ajouter cet aperçu au volet partagé des modifications en attente.</translation>
+    <translation culture="it-IT">Anteprima pronta. {0}; {1}. Non è stato ancora scritto nulla. Scegli Rivedi modifiche per aggiungere l'anteprima al riquadro condiviso delle modifiche in sospeso.</translation>
+    <translation culture="pt-BR">Visualização pronta. {0}; {1}. Nada foi gravado ainda. Escolha Revisar alterações para adicionar esta visualização ao painel compartilhado de alterações pendentes.</translation>
+    <translation culture="ja-JP">プレビューの準備ができました。{0}、{1}。まだ書き込まれていません。［変更を確認］を選択して、このプレビューを共有の保留中の変更ドロワーに追加してください。</translation>
+    <translation culture="ko-KR">미리 보기가 준비되었습니다. {0}, {1}. 아직 기록된 내용은 없습니다. 변경 내용 검토를 선택하여 이 미리 보기를 공유 보류 중인 변경 내용 창에 추가하세요.</translation>
+    <translation culture="zh-CN">预览已就绪。{0}；{1}。尚未写入任何内容。选择「查看更改」可将此预览添加到共享的待处理更改抽屉。</translation>
+    <translation culture="zh-TW">預覽已就緒。{0}；{1}。尚未寫入任何內容。選擇「檢視變更」可將此預覽加入共用的待處理變更抽屜。</translation>
   </entry>
   <entry key="Fields.Status.SaveCancelled">
     <translation culture="de-DE">Speichern abgebrochen. Die vorgeschlagenen Feldänderungen können erneut versucht werden.</translation>
@@ -18218,6 +18306,17 @@
     <translation culture="ko-KR">병렬 작업</translation>
     <translation culture="zh-CN">并行任务</translation>
     <translation culture="zh-TW">平行工作</translation>
+  </entry>
+  <entry key="ReviewedFileOperation.QuarantineFolderPlaceholder">
+    <translation culture="de-DE">Quarantäneordner</translation>
+    <translation culture="es-ES">Carpeta de cuarentena</translation>
+    <translation culture="fr-FR">Dossier de quarantaine</translation>
+    <translation culture="it-IT">Cartella di quarantena</translation>
+    <translation culture="pt-BR">Pasta de quarentena</translation>
+    <translation culture="ja-JP">隔離フォルダー</translation>
+    <translation culture="ko-KR">격리 폴더</translation>
+    <translation culture="zh-CN">隔离文件夹</translation>
+    <translation culture="zh-TW">隔離資料夾</translation>
   </entry>
   <entry key="ReviewedFileOperation.Status.AddedToReview.One">
     <translation culture="de-DE">{0:N0} Dateivorgang zu „Änderungen prüfen“ hinzugefügt.</translation>
@@ -19890,6 +19989,17 @@
     <translation culture="ko-KR">파일</translation>
     <translation culture="zh-CN">文件</translation>
     <translation culture="zh-TW">檔案</translation>
+  </entry>
+  <entry key="Column.Format">
+    <translation culture="de-DE">Format</translation>
+    <translation culture="es-ES">Formato</translation>
+    <translation culture="fr-FR">Format</translation>
+    <translation culture="it-IT">Formato</translation>
+    <translation culture="pt-BR">Formato</translation>
+    <translation culture="ja-JP">形式</translation>
+    <translation culture="ko-KR">형식</translation>
+    <translation culture="zh-CN">格式</translation>
+    <translation culture="zh-TW">格式</translation>
   </entry>
   <entry key="Column.Genre">
     <translation culture="de-DE">Genre</translation>
@@ -27931,6 +28041,17 @@
     <translation culture="ko-KR">열 저장</translation>
     <translation culture="zh-CN">保存列</translation>
     <translation culture="zh-TW">儲存欄</translation>
+  </entry>
+  <entry key="Library.Columns.DisplayLabel">
+    <translation culture="de-DE">Anzeigename</translation>
+    <translation culture="es-ES">Etiqueta visible</translation>
+    <translation culture="fr-FR">Libellé affiché</translation>
+    <translation culture="it-IT">Etichetta visualizzata</translation>
+    <translation culture="pt-BR">Rótulo de exibição</translation>
+    <translation culture="ja-JP">表示ラベル</translation>
+    <translation culture="ko-KR">표시 레이블</translation>
+    <translation culture="zh-CN">显示标签</translation>
+    <translation culture="zh-TW">顯示標籤</translation>
   </entry>
   <entry key="Library.Columns.KnownFieldPlaceholder">
     <translation culture="de-DE">Bekanntes Metadatenfeld</translation>
