@@ -458,16 +458,16 @@
     <value>年份</value>
   </data>
   <data name="Devices.Action.Initialize" xml:space="preserve">
-    <value>初始化</value>
+    <value>初始化目的地</value>
   </data>
   <data name="Devices.Action.Restore" xml:space="preserve">
-    <value>還原</value>
+    <value>還原上次同步</value>
   </data>
   <data name="Devices.AdbOverride" xml:space="preserve">
-    <value>ADB 可執行檔 覆寫 (選用)</value>
+    <value>ADB 可執行檔路徑（選用）</value>
   </data>
   <data name="Devices.AdbOverrideAutomation" xml:space="preserve">
-    <value>ADB 可執行檔 覆寫</value>
+    <value>ADB 可執行檔路徑</value>
   </data>
   <data name="Devices.AdbOverridePlaceholder" xml:space="preserve">
     <value>自動偵測 adb</value>
@@ -485,25 +485,25 @@
     <value>Android 裝置</value>
   </data>
   <data name="Devices.DeletionRecovery" xml:space="preserve">
-    <value>刪除 與 復原</value>
+    <value>刪除與復原</value>
   </data>
   <data name="Devices.DeleteExtras" xml:space="preserve">
     <value>刪除僅存在於目的地的項目</value>
   </data>
   <data name="Devices.DeviceDiscoveryFailed" xml:space="preserve">
-    <value>裝置 探索 失敗</value>
+    <value>裝置探索失敗</value>
   </data>
   <data name="Devices.DeviceSerial" xml:space="preserve">
-    <value>裝置 序號</value>
+    <value>裝置序號</value>
   </data>
   <data name="Devices.DeviceSerialOptional" xml:space="preserve">
-    <value>裝置 序號 (選用)</value>
+    <value>裝置序號（選用）</value>
   </data>
   <data name="Devices.DeviceSerialPlaceholder" xml:space="preserve">
     <value>自動選取唯一已就緒的裝置</value>
   </data>
   <data name="Devices.DirectTransfer" xml:space="preserve">
-    <value>直接 傳輸 (進階; 否 暫存 或 復原)</value>
+    <value>直接傳輸（不暫存且不保留復原資料）</value>
   </data>
   <data name="Devices.DirectTransferDescription" xml:space="preserve">
     <value>直接傳輸速度較快，但無法還原。請仔細檢閱預覽和最終確認。</value>
@@ -521,13 +521,13 @@
     <value>「music」別名僅選取卸除式 SD 儲存空間。內部共用儲存空間請使用 /sdcard/Music。</value>
   </data>
   <data name="Devices.ExclusionGlobs" xml:space="preserve">
-    <value>排除 萬用模式 (一個 每 行)</value>
+    <value>排除的路徑模式（glob 語法，每行一個）</value>
   </data>
   <data name="Devices.ExclusionGlobsAutomation" xml:space="preserve">
-    <value>排除 萬用模式</value>
+    <value>排除的路徑模式</value>
   </data>
   <data name="Devices.ExistingDestination" xml:space="preserve">
-    <value>現有 目的地</value>
+    <value>現有目的地</value>
   </data>
   <data name="Devices.InformationAutomation" xml:space="preserve">
     <value>資訊</value>
@@ -536,25 +536,25 @@
     <value>本機來源</value>
   </data>
   <data name="Devices.LocalSourceAutomation" xml:space="preserve">
-    <value>本機 音樂 來源 資料夾</value>
+    <value>本機音樂來源資料夾</value>
   </data>
   <data name="Devices.LocalSourcePlaceholder" xml:space="preserve">
-    <value>本機 音樂 資料夾</value>
+    <value>本機音樂資料夾</value>
   </data>
   <data name="Devices.MaximumRemovals" xml:space="preserve">
-    <value>最大值 移除</value>
+    <value>最大移除數</value>
   </data>
   <data name="Devices.MaximumRemovalsDescription" xml:space="preserve">
     <value>留白表示不限制移除數量；0 表示不允許移除。</value>
   </data>
   <data name="Devices.MirrorProfile" xml:space="preserve">
-    <value>鏡像 設定檔</value>
+    <value>同步設定檔</value>
   </data>
   <data name="Devices.MtimeTolerance" xml:space="preserve">
-    <value>修改時間 容許誤差 (秒)</value>
+    <value>修改時間容許誤差（秒）</value>
   </data>
   <data name="Devices.MtimeToleranceAutomation" xml:space="preserve">
-    <value>修改 時間 容許誤差 在 秒</value>
+    <value>修改時間容許誤差（秒）</value>
   </data>
   <data name="Devices.MultipleReady" xml:space="preserve">
     <value>已連接多個就緒裝置。同步前請在上方選擇一個裝置或輸入裝置序號。</value>
@@ -569,7 +569,7 @@
     <value>ADB 未偵測到 Android 裝置。請連接裝置或手動輸入序號。</value>
   </data>
   <data name="Devices.Policy" xml:space="preserve">
-    <value>原則</value>
+    <value>同步原則</value>
   </data>
   <data name="Devices.RefreshAutomation" xml:space="preserve">
     <value>重新整理 Android 裝置</value>
@@ -4723,22 +4723,22 @@
   <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} 相似 演出者 叢集 已找到 於 臨界值 {1:0.00}. 檢閱 該 變體, 然後 套用 該 作用中 修復.</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} 相似 演出者 叢集 已找到 於 臨界值 {1:0.00}. 檢閱 該 變體, 然後 套用 該 作用中 修復.</value></data>
   <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>在臨界值 {0:0.00} 下找不到相似的演出者名稱。</value></data>
-  <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>新增 檔案</value></data>
-  <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>建立 資料夾</value></data>
-  <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>刪除 資料夾</value></data>
-  <data name="Devices.ActionKind.DeleteFile" xml:space="preserve"><value>刪除 檔案</value></data>
-  <data name="Devices.ActionKind.DeleteOther" xml:space="preserve"><value>刪除 項目</value></data>
-  <data name="Devices.ActionKind.ReplaceWithDirectory" xml:space="preserve"><value>取代 含 資料夾</value></data>
-  <data name="Devices.ActionKind.ReplaceWithFile" xml:space="preserve"><value>取代 含 檔案</value></data>
-  <data name="Devices.ActionKind.UpdateFile" xml:space="preserve"><value>更新 檔案</value></data>
-  <data name="Devices.ActionReason.AddFile" xml:space="preserve"><value>該 檔案 是 遺失 從 該 Android 目的地.</value></data>
-  <data name="Devices.ActionReason.CreateDirectory" xml:space="preserve"><value>該 資料夾 是 遺失 從 該 Android 目的地.</value></data>
-  <data name="Devices.ActionReason.DeleteDirectory" xml:space="preserve"><value>該 目的地 資料夾 是 不 存在 在 該 來源.</value></data>
-  <data name="Devices.ActionReason.DeleteFile" xml:space="preserve"><value>該 目的地 檔案 是 不 存在 在 該 來源.</value></data>
-  <data name="Devices.ActionReason.DeleteOther" xml:space="preserve"><value>該 目的地 項目 是 不 存在 在 該 來源.</value></data>
-  <data name="Devices.ActionReason.ReplaceWithDirectory" xml:space="preserve"><value>一個 資料夾 必須 取代 一個 不相容 目的地 項目.</value></data>
-  <data name="Devices.ActionReason.ReplaceWithFile" xml:space="preserve"><value>一個 檔案 必須 取代 一個 不相容 目的地 項目.</value></data>
-  <data name="Devices.ActionReason.UpdateFile" xml:space="preserve"><value>該 來源 檔案 不同 從 該 目的地 檔案.</value></data>
+  <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>新增檔案</value></data>
+  <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>建立資料夾</value></data>
+  <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>刪除資料夾</value></data>
+  <data name="Devices.ActionKind.DeleteFile" xml:space="preserve"><value>刪除檔案</value></data>
+  <data name="Devices.ActionKind.DeleteOther" xml:space="preserve"><value>刪除項目</value></data>
+  <data name="Devices.ActionKind.ReplaceWithDirectory" xml:space="preserve"><value>取代為資料夾</value></data>
+  <data name="Devices.ActionKind.ReplaceWithFile" xml:space="preserve"><value>取代為檔案</value></data>
+  <data name="Devices.ActionKind.UpdateFile" xml:space="preserve"><value>更新檔案</value></data>
+  <data name="Devices.ActionReason.AddFile" xml:space="preserve"><value>Android 目的地中缺少此檔案。</value></data>
+  <data name="Devices.ActionReason.CreateDirectory" xml:space="preserve"><value>Android 目的地中缺少此資料夾。</value></data>
+  <data name="Devices.ActionReason.DeleteDirectory" xml:space="preserve"><value>來源中不存在此目的地資料夾。</value></data>
+  <data name="Devices.ActionReason.DeleteFile" xml:space="preserve"><value>來源中不存在此目的地檔案。</value></data>
+  <data name="Devices.ActionReason.DeleteOther" xml:space="preserve"><value>來源中不存在此目的地項目。</value></data>
+  <data name="Devices.ActionReason.ReplaceWithDirectory" xml:space="preserve"><value>必須以資料夾取代不相容的目的地項目。</value></data>
+  <data name="Devices.ActionReason.ReplaceWithFile" xml:space="preserve"><value>必須以檔案取代不相容的目的地項目。</value></data>
+  <data name="Devices.ActionReason.UpdateFile" xml:space="preserve"><value>來源檔案與目的地檔案不同。</value></data>
   <data name="Devices.ActionStatus.Complete" xml:space="preserve"><value>完成</value></data>
   <data name="Devices.ActionStatus.Failed" xml:space="preserve"><value>失敗</value></data>
   <data name="Devices.ActionStatus.InProgress" xml:space="preserve"><value>進行中</value></data>
@@ -4746,80 +4746,80 @@
   <data name="Devices.Activity.Initialize.Title" xml:space="preserve"><value>初始化 Android 目的地</value></data>
   <data name="Devices.Activity.Preview.Title" xml:space="preserve"><value>預覽 Android 同步</value></data>
   <data name="Devices.Activity.Restore.Title" xml:space="preserve"><value>還原 Android 同步</value></data>
-  <data name="Devices.Activity.Starting" xml:space="preserve"><value>正在開始…</value></data>
+  <data name="Devices.Activity.Starting" xml:space="preserve"><value>正在啟動…</value></data>
   <data name="Devices.Dialog.Apply.DirectMessage" xml:space="preserve"><value>是否套用 {0:N0} 項規劃的操作（包括 {1:N0} 項移除）並傳輸 {2:N0} 位元組？直接傳輸會略過暫存，因此無法復原。</value></data>
-  <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>套用 不含 復原</value></data>
+  <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>套用且不保留復原資料</value></data>
   <data name="Devices.Dialog.Apply.Message" xml:space="preserve"><value>是否套用 {0:N0} 項規劃的操作（包括 {1:N0} 項移除）並傳輸 {2:N0} 位元組？可以復原：已取代和已移除的目的地項目將隔離在復原執行中。</value></data>
   <data name="Devices.Dialog.Apply.Primary" xml:space="preserve"><value>同步</value></data>
   <data name="Devices.Dialog.Apply.Title" xml:space="preserve"><value>套用 Android 同步</value></data>
   <data name="Devices.Dialog.ChooseAdb" xml:space="preserve"><value>選擇 adb 可執行檔</value></data>
-  <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>選擇 該 本機 資料夾 至 鏡像</value></data>
+  <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>選擇要鏡像的本機資料夾</value></data>
   <data name="Devices.Dialog.Failure.Message" xml:space="preserve"><value>無法完成 {0}。請開啟診斷詳細資料以查看根本錯誤。</value></data>
-  <data name="Devices.Dialog.Failure.Title" xml:space="preserve"><value>{0} 失敗</value></data>
+  <data name="Devices.Dialog.Failure.Title" xml:space="preserve"><value>{0}失敗</value></data>
   <data name="Devices.Dialog.Initialize.Adopt" xml:space="preserve"><value>採用</value></data>
-  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>是否將「{0}」用作受管理的同步目的地？現有內容將包含在首次預覽中，並可能在允許套用時被隔離。</value></data>
+  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>是否將「{0}」採用為受管理的同步目的地？現有內容將顯示在第一次預覽中，並可能在套用同步時被隔離。</value></data>
   <data name="Devices.Dialog.Initialize.AdoptTitle" xml:space="preserve"><value>採用 Android 目的地</value></data>
   <data name="Devices.Dialog.Initialize.Create" xml:space="preserve"><value>初始化</value></data>
-  <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>初始化 “{0}” 作為 一個 已管理 同步 目的地? 該 資料夾 必須 為 新增 或 空白.</value></data>
+  <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>是否將「{0}」初始化為受管理的同步目的地？資料夾必須是新建立的或空白的。</value></data>
   <data name="Devices.Dialog.Initialize.Title" xml:space="preserve"><value>初始化 Android 目的地</value></data>
   <data name="Devices.Dialog.Restore.Message" xml:space="preserve"><value>是否還原位於「{1}」的復原執行「{0}」？已同步的檔案將被移除，已隔離的原始檔案將被還原，被取代的目前內容仍會保留在復原執行中。</value></data>
   <data name="Devices.Dialog.Restore.Primary" xml:space="preserve"><value>還原</value></data>
-  <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>還原 上一個 Android 同步</value></data>
-  <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB 可以 不 列舉 Android 裝置. 您 可以 仍然 輸入 一個 序號 手動.</value></data>
-  <data name="Devices.Error.NoRecovery" xml:space="preserve"><value>否 復原 執行 是 可用.</value></data>
-  <data name="Devices.Error.NoRecoveryDestination" xml:space="preserve"><value>否 復原 目的地 是 可用.</value></data>
-  <data name="Devices.Error.PreviewRequired" xml:space="preserve"><value>預覽 該 同步 之前 正在套用 它.</value></data>
+  <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>還原上次 Android 同步</value></data>
+  <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB 無法列舉 Android 裝置。您仍可手動輸入序號。</value></data>
+  <data name="Devices.Error.NoRecovery" xml:space="preserve"><value>沒有可用的復原作業。</value></data>
+  <data name="Devices.Error.NoRecoveryDestination" xml:space="preserve"><value>沒有可用的復原目的地。</value></data>
+  <data name="Devices.Error.PreviewRequired" xml:space="preserve"><value>請先預覽同步，然後再套用。</value></data>
   <data name="Devices.Issue.DirectMode" xml:space="preserve"><value>直接模式已啟用。取代和刪除作業將沒有復原資訊。</value></data>
   <data name="Devices.Issue.GenericBlocker" xml:space="preserve"><value>套用此計畫前，請先解決阻止作業的問題。</value></data>
-  <data name="Devices.Issue.GenericInformation" xml:space="preserve"><value>檢閱 此 同步 注意.</value></data>
-  <data name="Devices.Issue.GenericWarning" xml:space="preserve"><value>檢閱 此 同步 警告 之前 正在套用 該 計畫.</value></data>
-  <data name="Devices.Issue.RemovalLimit" xml:space="preserve"><value>該 已規劃 移除 超過 該 已設定 安全性 限制.</value></data>
-  <data name="Devices.Progress.ApplyingChanges" xml:space="preserve"><value>正在套用 同步 變更…</value></data>
-  <data name="Devices.Progress.ChangeComplete" xml:space="preserve"><value>同步 變更 完成.</value></data>
-  <data name="Devices.Progress.ChangeFailed" xml:space="preserve"><value>一個 同步 變更 失敗.</value></data>
-  <data name="Devices.Progress.Initializing" xml:space="preserve"><value>初始化 該 已管理 Android 目的地…</value></data>
-  <data name="Devices.Progress.Phase.Applying" xml:space="preserve"><value>正在套用 該 同步…</value></data>
-  <data name="Devices.Progress.Phase.Completed" xml:space="preserve"><value>操作 完成.</value></data>
-  <data name="Devices.Progress.Phase.IndexingSources" xml:space="preserve"><value>正在掃描 該 來源…</value></data>
-  <data name="Devices.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>正在掃描 該 目的地…</value></data>
-  <data name="Devices.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>正在載入 設定…</value></data>
-  <data name="Devices.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>正在載入 該 資料庫…</value></data>
-  <data name="Devices.Progress.Phase.Planning" xml:space="preserve"><value>正在規劃 同步 變更…</value></data>
-  <data name="Devices.Progress.Phase.RollingBack" xml:space="preserve"><value>正在回復 背面 變更…</value></data>
-  <data name="Devices.Progress.Phase.Validating" xml:space="preserve"><value>驗證 該 操作…</value></data>
-  <data name="Devices.Progress.RestoreComplete" xml:space="preserve"><value>Android 同步 已還原.</value></data>
-  <data name="Devices.Progress.Restoring" xml:space="preserve"><value>正在還原 該 上一個 Android 同步…</value></data>
+  <data name="Devices.Issue.GenericInformation" xml:space="preserve"><value>請檢閱此同步注意事項。</value></data>
+  <data name="Devices.Issue.GenericWarning" xml:space="preserve"><value>請先檢閱此同步警告，然後再套用計畫。</value></data>
+  <data name="Devices.Issue.RemovalLimit" xml:space="preserve"><value>規劃移除的項目數超過已設定的安全限制。</value></data>
+  <data name="Devices.Progress.ApplyingChanges" xml:space="preserve"><value>正在套用同步變更…</value></data>
+  <data name="Devices.Progress.ChangeComplete" xml:space="preserve"><value>同步變更已完成。</value></data>
+  <data name="Devices.Progress.ChangeFailed" xml:space="preserve"><value>同步變更失敗。</value></data>
+  <data name="Devices.Progress.Initializing" xml:space="preserve"><value>正在初始化受管理的 Android 目的地…</value></data>
+  <data name="Devices.Progress.Phase.Applying" xml:space="preserve"><value>正在套用同步…</value></data>
+  <data name="Devices.Progress.Phase.Completed" xml:space="preserve"><value>操作已完成。</value></data>
+  <data name="Devices.Progress.Phase.IndexingSources" xml:space="preserve"><value>正在掃描來源…</value></data>
+  <data name="Devices.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>正在掃描目的地…</value></data>
+  <data name="Devices.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>正在載入設定…</value></data>
+  <data name="Devices.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>正在載入資料庫…</value></data>
+  <data name="Devices.Progress.Phase.Planning" xml:space="preserve"><value>正在規劃同步變更…</value></data>
+  <data name="Devices.Progress.Phase.RollingBack" xml:space="preserve"><value>正在回復變更…</value></data>
+  <data name="Devices.Progress.Phase.Validating" xml:space="preserve"><value>正在驗證操作…</value></data>
+  <data name="Devices.Progress.RestoreComplete" xml:space="preserve"><value>Android 同步已還原。</value></data>
+  <data name="Devices.Progress.Restoring" xml:space="preserve"><value>正在還原上次 Android 同步…</value></data>
   <data name="Devices.Progress.ScanningBoth" xml:space="preserve"><value>正在掃描來源和受管理 Android 目的地…</value></data>
-  <data name="Devices.Progress.ScanningDestination" xml:space="preserve"><value>正在掃描 該 已管理 Android 目的地…</value></data>
-  <data name="Devices.Progress.ScanningSource" xml:space="preserve"><value>正在掃描 該 同步 來源…</value></data>
-  <data name="Devices.Progress.SelectingChanges" xml:space="preserve"><value>選取 同步 變更…</value></data>
-  <data name="Devices.Progress.StagingFile" xml:space="preserve"><value>暫存 一個 檔案 在 該 Android 裝置…</value></data>
-  <data name="Devices.Progress.SynchronizationComplete" xml:space="preserve"><value>Android 同步 完成.</value></data>
-  <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>正在傳輸 一個 檔案 至 該 Android 裝置…</value></data>
-  <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>驗證 受影響 路徑 從 該 已儲存 同步 計畫…</value></data>
-  <data name="Devices.Selection.Manual" xml:space="preserve"><value>自動 或 手動 序號</value></data>
+  <data name="Devices.Progress.ScanningDestination" xml:space="preserve"><value>正在掃描受管理的 Android 目的地…</value></data>
+  <data name="Devices.Progress.ScanningSource" xml:space="preserve"><value>正在掃描同步來源…</value></data>
+  <data name="Devices.Progress.SelectingChanges" xml:space="preserve"><value>正在選取同步變更…</value></data>
+  <data name="Devices.Progress.StagingFile" xml:space="preserve"><value>正在 Android 裝置上暫存檔案…</value></data>
+  <data name="Devices.Progress.SynchronizationComplete" xml:space="preserve"><value>Android 同步已完成。</value></data>
+  <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>正在將檔案傳輸到 Android 裝置…</value></data>
+  <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>正在驗證已儲存同步計畫中的受影響路徑…</value></data>
+  <data name="Devices.Selection.Manual" xml:space="preserve"><value>自動選取或輸入序號</value></data>
   <data name="Devices.Selection.ManualDetails" xml:space="preserve"><value>序號留白即可使用唯一就緒的裝置。</value></data>
-  <data name="Devices.Selection.PreviouslySelected" xml:space="preserve"><value>上一個 已選取 裝置</value></data>
+  <data name="Devices.Selection.PreviouslySelected" xml:space="preserve"><value>先前選取的裝置</value></data>
   <data name="Devices.Selection.ReadyDetails" xml:space="preserve"><value>{0} · {1}</value></data>
-  <data name="Devices.Selection.RememberedDetails" xml:space="preserve"><value>{0} · 不 目前 報告 依 ADB</value></data>
+  <data name="Devices.Selection.RememberedDetails" xml:space="preserve"><value>{0} · ADB 目前未回報</value></data>
   <data name="Devices.Selection.RememberedName" xml:space="preserve"><value>{0} ({1})</value></data>
   <data name="Devices.Selection.State.Manual" xml:space="preserve"><value>手動</value></data>
-  <data name="Devices.Selection.State.NoPermissions" xml:space="preserve"><value>否 權限</value></data>
-  <data name="Devices.Selection.State.NotConnected" xml:space="preserve"><value>不 已連線</value></data>
+  <data name="Devices.Selection.State.NoPermissions" xml:space="preserve"><value>沒有權限</value></data>
+  <data name="Devices.Selection.State.NotConnected" xml:space="preserve"><value>未連線</value></data>
   <data name="Devices.Selection.State.Offline" xml:space="preserve"><value>離線</value></data>
   <data name="Devices.Selection.State.Ready" xml:space="preserve"><value>就緒</value></data>
   <data name="Devices.Selection.State.Unauthorized" xml:space="preserve"><value>未授權</value></data>
   <data name="Devices.Selection.State.Unavailable" xml:space="preserve"><value>無法使用</value></data>
   <data name="Devices.Selection.UnavailableDetails" xml:space="preserve"><value>{0} · {1}</value></data>
-  <data name="Devices.Status.ApplyComplete" xml:space="preserve"><value>檔案 已複製: {0:N0}; 路徑 已隔離: {1:N0}; 位元組 已傳輸: {2:N0}.</value></data>
-  <data name="Devices.Status.ApplyCompleteWithRecovery" xml:space="preserve"><value>檔案 已複製: {0:N0}; 路徑 已隔離: {1:N0}; 位元組 已傳輸: {2:N0}. 復原 執行: {3}.</value></data>
-  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>操作 已取消. 該 原生 伺服器 將 發行版 該 目的地 鎖定.</value></data>
-  <data name="Devices.Status.Failed" xml:space="preserve"><value>該 Android 裝置 操作 失敗.</value></data>
-  <data name="Devices.Status.Initialized" xml:space="preserve"><value>Android 目的地 已初始化.</value></data>
-  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>該 同步 預覽 是 已封鎖. 已規劃 動作: {0:N0}; 移除: {1:N0}; 傳輸 位元組: {2:N0}.</value></data>
-  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>檢閱 該 同步 預覽. 已規劃 動作: {0:N0}; 移除: {1:N0}; 傳輸 位元組: {2:N0}.</value></data>
-  <data name="Devices.Status.Ready" xml:space="preserve"><value>選擇 一個 本機來源 與 初始化 一個 已管理 Android 目的地 之前 正在預覽.</value></data>
-  <data name="Devices.Status.Restored" xml:space="preserve"><value>已還原 復原 執行 {0} 在 {1}.</value></data>
+  <data name="Devices.Status.ApplyComplete" xml:space="preserve"><value>已複製檔案：{0:N0}；已隔離路徑：{1:N0}；已傳輸位元組：{2:N0}。</value></data>
+  <data name="Devices.Status.ApplyCompleteWithRecovery" xml:space="preserve"><value>已複製檔案：{0:N0}；已隔離路徑：{1:N0}；已傳輸位元組：{2:N0}。復原作業：{3}。</value></data>
+  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>操作已取消。目的地鎖定將會解除。</value></data>
+  <data name="Devices.Status.Failed" xml:space="preserve"><value>Android 裝置操作失敗。</value></data>
+  <data name="Devices.Status.Initialized" xml:space="preserve"><value>Android 目的地已初始化。</value></data>
+  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>同步預覽已被封鎖。規劃的動作：{0:N0}；移除：{1:N0}；待傳輸位元組：{2:N0}。</value></data>
+  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>請檢閱同步預覽。規劃的動作：{0:N0}；移除：{1:N0}；待傳輸位元組：{2:N0}。</value></data>
+  <data name="Devices.Status.Ready" xml:space="preserve"><value>請先選擇本機來源並初始化受管理的 Android 目的地，然後再預覽。</value></data>
+  <data name="Devices.Status.Restored" xml:space="preserve"><value>已將復原作業 {0} 還原到 {1}。</value></data>
   <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>正在開始 擷取</value></data>
   <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>擷取 音樂</value></data>
   <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>正在搜尋 用於 擷取 日誌</value></data>

@@ -458,19 +458,19 @@
     <value>年</value>
   </data>
   <data name="Devices.Action.Initialize" xml:space="preserve">
-    <value>初期化</value>
+    <value>宛先を初期化</value>
   </data>
   <data name="Devices.Action.Restore" xml:space="preserve">
-    <value>復元</value>
+    <value>前回の同期を復元</value>
   </data>
   <data name="Devices.AdbOverride" xml:space="preserve">
-    <value>ADB 実行ファイルの上書き (任意)</value>
+    <value>ADB 実行ファイルのパス (任意)</value>
   </data>
   <data name="Devices.AdbOverrideAutomation" xml:space="preserve">
-    <value>ADB 実行ファイルの上書き</value>
+    <value>ADB 実行ファイルのパス</value>
   </data>
   <data name="Devices.AdbOverridePlaceholder" xml:space="preserve">
-    <value>自動検出 adb</value>
+    <value>adb を自動検出</value>
   </data>
   <data name="Devices.AdoptDescription" xml:space="preserve">
     <value>既存の保存先を採用すると、現在の内容を信頼し、最初の同期プレビューに含めます。</value>
@@ -491,10 +491,10 @@
     <value>出力先にだけ存在する項目を削除</value>
   </data>
   <data name="Devices.DeviceDiscoveryFailed" xml:space="preserve">
-    <value>デバイスの検出に失敗</value>
+    <value>デバイスの検出に失敗しました</value>
   </data>
   <data name="Devices.DeviceSerial" xml:space="preserve">
-    <value>デバイス シリアル</value>
+    <value>デバイスのシリアル番号</value>
   </data>
   <data name="Devices.DeviceSerialOptional" xml:space="preserve">
     <value>デバイスのシリアル番号 (任意)</value>
@@ -503,7 +503,7 @@
     <value>準備ができている唯一のデバイスを自動選択</value>
   </data>
   <data name="Devices.DirectTransfer" xml:space="preserve">
-    <value>直接転送 (詳細設定。ステージングおよび復旧なし)</value>
+    <value>直接転送 (ステージングおよび復旧なし)</value>
   </data>
   <data name="Devices.DirectTransferDescription" xml:space="preserve">
     <value>直接転送は高速ですが、復元できません。プレビューと最終確認を慎重に確認してください。</value>
@@ -521,13 +521,13 @@
     <value>「music」エイリアスは、リムーバブル SD ストレージのみを選択します。内部共有ストレージには /sdcard/Music を使用してください。</value>
   </data>
   <data name="Devices.ExclusionGlobs" xml:space="preserve">
-    <value>除外グロブ (1 行に 1 つ)</value>
+    <value>除外するパスパターン (glob 構文、1 行に 1 つ)</value>
   </data>
   <data name="Devices.ExclusionGlobsAutomation" xml:space="preserve">
-    <value>除外 グロブパターン</value>
+    <value>除外するパスパターン</value>
   </data>
   <data name="Devices.ExistingDestination" xml:space="preserve">
-    <value>既存 宛先</value>
+    <value>既存の宛先</value>
   </data>
   <data name="Devices.InformationAutomation" xml:space="preserve">
     <value>情報</value>
@@ -536,25 +536,25 @@
     <value>ローカルソース</value>
   </data>
   <data name="Devices.LocalSourceAutomation" xml:space="preserve">
-    <value>ローカル音楽ソースフォルダー</value>
+    <value>ローカルの音楽ソースフォルダー</value>
   </data>
   <data name="Devices.LocalSourcePlaceholder" xml:space="preserve">
-    <value>ローカル音楽フォルダー</value>
+    <value>ローカルの音楽フォルダー</value>
   </data>
   <data name="Devices.MaximumRemovals" xml:space="preserve">
-    <value>最大 削除</value>
+    <value>最大削除数</value>
   </data>
   <data name="Devices.MaximumRemovalsDescription" xml:space="preserve">
     <value>空欄の場合は削除数に制限がなく、0 の場合は削除できません。</value>
   </data>
   <data name="Devices.MirrorProfile" xml:space="preserve">
-    <value>ミラー プロファイル</value>
+    <value>同期プロファイル</value>
   </data>
   <data name="Devices.MtimeTolerance" xml:space="preserve">
-    <value>変更時刻の許容範囲 (秒)</value>
+    <value>更新日時の許容範囲 (秒)</value>
   </data>
   <data name="Devices.MtimeToleranceAutomation" xml:space="preserve">
-    <value>変更時刻の許容範囲 (秒)</value>
+    <value>更新日時の許容範囲 (秒)</value>
   </data>
   <data name="Devices.MultipleReady" xml:space="preserve">
     <value>使用可能なデバイスが複数接続されています。同期する前に上から選択するか、シリアル番号を入力してください。</value>
@@ -569,7 +569,7 @@
     <value>ADB で Android デバイスが見つかりませんでした。デバイスを接続するか、シリアル番号を手動で入力してください。</value>
   </data>
   <data name="Devices.Policy" xml:space="preserve">
-    <value>ポリシー</value>
+    <value>同期ポリシー</value>
   </data>
   <data name="Devices.RefreshAutomation" xml:space="preserve">
     <value>Android デバイスを更新</value>
@@ -4723,103 +4723,103 @@
   <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} の類似アーティスト クラスターがしきい値 {1:0.00} で見つかりました。バリアントを確認し、アクティブな修復を適用します。</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} 個の類似アーティスト クラスターがしきい値 {1:0.00} で見つかりました。バリアントを確認し、アクティブな修復を適用します。</value></data>
   <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>しきい値 {0:0.00} に類似したアーティスト名は見つかりませんでした。</value></data>
-  <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>追加 ファイル</value></data>
-  <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>作成 フォルダー</value></data>
-  <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>削除 フォルダー</value></data>
-  <data name="Devices.ActionKind.DeleteFile" xml:space="preserve"><value>削除 ファイル</value></data>
-  <data name="Devices.ActionKind.DeleteOther" xml:space="preserve"><value>削除 項目</value></data>
-  <data name="Devices.ActionKind.ReplaceWithDirectory" xml:space="preserve"><value>フォルダに置き換える</value></data>
-  <data name="Devices.ActionKind.ReplaceWithFile" xml:space="preserve"><value>ファイルに置き換える</value></data>
-  <data name="Devices.ActionKind.UpdateFile" xml:space="preserve"><value>更新 ファイル</value></data>
+  <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>ファイルを追加</value></data>
+  <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>フォルダーを作成</value></data>
+  <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>フォルダーを削除</value></data>
+  <data name="Devices.ActionKind.DeleteFile" xml:space="preserve"><value>ファイルを削除</value></data>
+  <data name="Devices.ActionKind.DeleteOther" xml:space="preserve"><value>項目を削除</value></data>
+  <data name="Devices.ActionKind.ReplaceWithDirectory" xml:space="preserve"><value>フォルダーで置換</value></data>
+  <data name="Devices.ActionKind.ReplaceWithFile" xml:space="preserve"><value>ファイルで置換</value></data>
+  <data name="Devices.ActionKind.UpdateFile" xml:space="preserve"><value>ファイルを更新</value></data>
   <data name="Devices.ActionReason.AddFile" xml:space="preserve"><value>Android 宛先にファイルがありません。</value></data>
   <data name="Devices.ActionReason.CreateDirectory" xml:space="preserve"><value>Android 宛先にフォルダーがありません。</value></data>
   <data name="Devices.ActionReason.DeleteDirectory" xml:space="preserve"><value>宛先フォルダーがソースに存在しません。</value></data>
   <data name="Devices.ActionReason.DeleteFile" xml:space="preserve"><value>宛先ファイルがソースに存在しません。</value></data>
   <data name="Devices.ActionReason.DeleteOther" xml:space="preserve"><value>宛先項目がソースに存在しません。</value></data>
-  <data name="Devices.ActionReason.ReplaceWithDirectory" xml:space="preserve"><value>互換性のない宛先アイテムはフォルダーで置き換える必要があります。</value></data>
-  <data name="Devices.ActionReason.ReplaceWithFile" xml:space="preserve"><value>ファイルは、互換性のない宛先アイテムを置き換える必要があります。</value></data>
-  <data name="Devices.ActionReason.UpdateFile" xml:space="preserve"><value>ソース ファイルは宛先ファイルとは異なります。</value></data>
+  <data name="Devices.ActionReason.ReplaceWithDirectory" xml:space="preserve"><value>互換性のない宛先項目をフォルダーで置き換える必要があります。</value></data>
+  <data name="Devices.ActionReason.ReplaceWithFile" xml:space="preserve"><value>互換性のない宛先項目をファイルで置き換える必要があります。</value></data>
+  <data name="Devices.ActionReason.UpdateFile" xml:space="preserve"><value>ソースファイルが宛先ファイルと異なります。</value></data>
   <data name="Devices.ActionStatus.Complete" xml:space="preserve"><value>完了</value></data>
   <data name="Devices.ActionStatus.Failed" xml:space="preserve"><value>失敗</value></data>
   <data name="Devices.ActionStatus.InProgress" xml:space="preserve"><value>進行中</value></data>
-  <data name="Devices.Activity.Apply.Title" xml:space="preserve"><value>Android デバイスを同期する</value></data>
-  <data name="Devices.Activity.Initialize.Title" xml:space="preserve"><value>Android 宛先を初期化します</value></data>
-  <data name="Devices.Activity.Preview.Title" xml:space="preserve"><value>Android 同期のプレビュー</value></data>
-  <data name="Devices.Activity.Restore.Title" xml:space="preserve"><value>Android 同期を復元する</value></data>
+  <data name="Devices.Activity.Apply.Title" xml:space="preserve"><value>Android デバイスを同期</value></data>
+  <data name="Devices.Activity.Initialize.Title" xml:space="preserve"><value>Android 宛先を初期化</value></data>
+  <data name="Devices.Activity.Preview.Title" xml:space="preserve"><value>Android 同期をプレビュー</value></data>
+  <data name="Devices.Activity.Restore.Title" xml:space="preserve"><value>Android 同期を復元</value></data>
   <data name="Devices.Activity.Starting" xml:space="preserve"><value>開始中…</value></data>
   <data name="Devices.Dialog.Apply.DirectMessage" xml:space="preserve"><value>{1:N0} の削除を含む {0:N0} の計画されたアクションを適用し、{2:N0} バイトを転送しますか?直接転送はステージングをバイパスするため、リカバリは利用できません。</value></data>
-  <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>回復せずに適用する</value></data>
+  <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>復旧なしで適用</value></data>
   <data name="Devices.Dialog.Apply.Message" xml:space="preserve"><value>{1:N0} の削除を含む {0:N0} の計画されたアクションを適用し、{2:N0} バイトを転送しますか?リカバリが可能です。交換および削除された宛先アイテムは、リカバリの実行で隔離されます。</value></data>
   <data name="Devices.Dialog.Apply.Primary" xml:space="preserve"><value>同期</value></data>
-  <data name="Devices.Dialog.Apply.Title" xml:space="preserve"><value>Android 同期を適用する</value></data>
-  <data name="Devices.Dialog.ChooseAdb" xml:space="preserve"><value>adb 実行可能ファイルを選択する</value></data>
-  <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>ミラーリングするローカルフォルダーを選択してください</value></data>
+  <data name="Devices.Dialog.Apply.Title" xml:space="preserve"><value>Android 同期を適用</value></data>
+  <data name="Devices.Dialog.ChooseAdb" xml:space="preserve"><value>adb 実行ファイルを選択</value></data>
+  <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>ミラーリングするローカルフォルダーを選択</value></data>
   <data name="Devices.Dialog.Failure.Message" xml:space="preserve"><value>{0} を完了できませんでした。原因となったエラーは診断の詳細で確認してください。</value></data>
-  <data name="Devices.Dialog.Failure.Title" xml:space="preserve"><value>{0} 失敗</value></data>
+  <data name="Devices.Dialog.Failure.Title" xml:space="preserve"><value>{0} に失敗しました</value></data>
   <data name="Devices.Dialog.Initialize.Adopt" xml:space="preserve"><value>採用</value></data>
-  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>「{0}」を管理対象の同期先として採用しますか？ 既存の内容は最初のプレビューに含まれ、適用が許可された場合は隔離されることがあります。</value></data>
+  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>「{0}」を管理対象の同期先として採用しますか？ 既存の内容は最初のプレビューに表示され、同期を適用すると隔離される場合があります。</value></data>
   <data name="Devices.Dialog.Initialize.AdoptTitle" xml:space="preserve"><value>Android 宛先を採用</value></data>
   <data name="Devices.Dialog.Initialize.Create" xml:space="preserve"><value>初期化</value></data>
-  <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>「{0}」を管理対象同期先として初期化しますか?フォルダーは新しいか空である必要があります。</value></data>
-  <data name="Devices.Dialog.Initialize.Title" xml:space="preserve"><value>Android 宛先を初期化します</value></data>
+  <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>「{0}」を管理対象の同期先として初期化しますか？ フォルダーは新規または空である必要があります。</value></data>
+  <data name="Devices.Dialog.Initialize.Title" xml:space="preserve"><value>Android 宛先を初期化</value></data>
   <data name="Devices.Dialog.Restore.Message" xml:space="preserve"><value>「{1}」にある復旧実行「{0}」を復元しますか？ 同期済みファイルは削除され、隔離された元ファイルは復元されます。置き換えられた現在の内容は復旧実行内に保持されます。</value></data>
   <data name="Devices.Dialog.Restore.Primary" xml:space="preserve"><value>復元</value></data>
-  <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>以前の Android 同期を復元する</value></data>
-  <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB は Android デバイスを列挙できませんでした。シリアルを手動で入力することもできます。</value></data>
-  <data name="Devices.Error.NoRecovery" xml:space="preserve"><value>回復実行は使用できません。</value></data>
-  <data name="Devices.Error.NoRecoveryDestination" xml:space="preserve"><value>利用可能な回復先がありません。</value></data>
-  <data name="Devices.Error.PreviewRequired" xml:space="preserve"><value>同期を適用する前に、同期をプレビューします。</value></data>
+  <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>前回の Android 同期を復元</value></data>
+  <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB で Android デバイスを列挙できませんでした。シリアル番号を手動で入力することもできます。</value></data>
+  <data name="Devices.Error.NoRecovery" xml:space="preserve"><value>利用可能な復旧実行がありません。</value></data>
+  <data name="Devices.Error.NoRecoveryDestination" xml:space="preserve"><value>利用可能な復旧先がありません。</value></data>
+  <data name="Devices.Error.PreviewRequired" xml:space="preserve"><value>同期を適用する前にプレビューしてください。</value></data>
   <data name="Devices.Issue.DirectMode" xml:space="preserve"><value>直接モードが有効です。置換や削除の復元情報は保存されません。</value></data>
   <data name="Devices.Issue.GenericBlocker" xml:space="preserve"><value>このプランを適用する前に、処理を妨げている問題を解決してください。</value></data>
-  <data name="Devices.Issue.GenericInformation" xml:space="preserve"><value>この同期に関するメモを確認してください。</value></data>
+  <data name="Devices.Issue.GenericInformation" xml:space="preserve"><value>この同期に関する注意事項を確認してください。</value></data>
   <data name="Devices.Issue.GenericWarning" xml:space="preserve"><value>プランを適用する前に、この同期に関する警告を確認してください。</value></data>
-  <data name="Devices.Issue.RemovalLimit" xml:space="preserve"><value>計画された削除は、設定された安全制限を超えています。</value></data>
+  <data name="Devices.Issue.RemovalLimit" xml:space="preserve"><value>予定されている削除数が、設定された安全上限を超えています。</value></data>
   <data name="Devices.Progress.ApplyingChanges" xml:space="preserve"><value>同期の変更を適用しています…</value></data>
   <data name="Devices.Progress.ChangeComplete" xml:space="preserve"><value>同期の変更が完了しました。</value></data>
   <data name="Devices.Progress.ChangeFailed" xml:space="preserve"><value>同期の変更に失敗しました。</value></data>
-  <data name="Devices.Progress.Initializing" xml:space="preserve"><value>管理対象 Android 宛先を初期化しています…</value></data>
+  <data name="Devices.Progress.Initializing" xml:space="preserve"><value>管理対象の Android 宛先を初期化しています…</value></data>
   <data name="Devices.Progress.Phase.Applying" xml:space="preserve"><value>同期を適用しています…</value></data>
   <data name="Devices.Progress.Phase.Completed" xml:space="preserve"><value>操作が完了しました。</value></data>
-  <data name="Devices.Progress.Phase.IndexingSources" xml:space="preserve"><value>ソースをスキャン中…</value></data>
-  <data name="Devices.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>宛先をスキャン中…</value></data>
-  <data name="Devices.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>読み込み中 構成…</value></data>
-  <data name="Devices.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>ライブラリをロード中…</value></data>
+  <data name="Devices.Progress.Phase.IndexingSources" xml:space="preserve"><value>ソースをスキャンしています…</value></data>
+  <data name="Devices.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>宛先をスキャンしています…</value></data>
+  <data name="Devices.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>構成を読み込んでいます…</value></data>
+  <data name="Devices.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>ライブラリを読み込んでいます…</value></data>
   <data name="Devices.Progress.Phase.Planning" xml:space="preserve"><value>同期の変更を計画しています…</value></data>
   <data name="Devices.Progress.Phase.RollingBack" xml:space="preserve"><value>変更をロールバックしています…</value></data>
   <data name="Devices.Progress.Phase.Validating" xml:space="preserve"><value>操作を検証しています…</value></data>
-  <data name="Devices.Progress.RestoreComplete" xml:space="preserve"><value>Android 同期が復元されました。</value></data>
-  <data name="Devices.Progress.Restoring" xml:space="preserve"><value>以前の Android 同期を復元しています…</value></data>
+  <data name="Devices.Progress.RestoreComplete" xml:space="preserve"><value>Android 同期を復元しました。</value></data>
+  <data name="Devices.Progress.Restoring" xml:space="preserve"><value>前回の Android 同期を復元しています…</value></data>
   <data name="Devices.Progress.ScanningBoth" xml:space="preserve"><value>ソースと管理対象の Android 保存先をスキャンしています…</value></data>
   <data name="Devices.Progress.ScanningDestination" xml:space="preserve"><value>管理対象の Android 宛先をスキャンしています…</value></data>
   <data name="Devices.Progress.ScanningSource" xml:space="preserve"><value>同期ソースをスキャンしています…</value></data>
   <data name="Devices.Progress.SelectingChanges" xml:space="preserve"><value>同期の変更を選択しています…</value></data>
-  <data name="Devices.Progress.StagingFile" xml:space="preserve"><value>Android デバイス上にファイルをステージングしています…</value></data>
+  <data name="Devices.Progress.StagingFile" xml:space="preserve"><value>Android デバイスにファイルをステージングしています…</value></data>
   <data name="Devices.Progress.SynchronizationComplete" xml:space="preserve"><value>Android 同期が完了しました。</value></data>
-  <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>ファイルを Android デバイスに転送しています…</value></data>
-  <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>保存された同期計画から影響を受けるパスを検証しています…</value></data>
-  <data name="Devices.Selection.Manual" xml:space="preserve"><value>自動または手動シリアル</value></data>
+  <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>Android デバイスにファイルを転送しています…</value></data>
+  <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>保存済みの同期プランから影響を受けるパスを検証しています…</value></data>
+  <data name="Devices.Selection.Manual" xml:space="preserve"><value>自動選択またはシリアル番号を入力</value></data>
   <data name="Devices.Selection.ManualDetails" xml:space="preserve"><value>シリアル番号を空欄にすると、唯一の使用可能なデバイスが選択されます。</value></data>
   <data name="Devices.Selection.PreviouslySelected" xml:space="preserve"><value>以前に選択したデバイス</value></data>
   <data name="Devices.Selection.ReadyDetails" xml:space="preserve"><value>{0} · {1}</value></data>
-  <data name="Devices.Selection.RememberedDetails" xml:space="preserve"><value>{0} · 現在、ADB によって報告されていません</value></data>
+  <data name="Devices.Selection.RememberedDetails" xml:space="preserve"><value>{0} · 現在 ADB から報告されていません</value></data>
   <data name="Devices.Selection.RememberedName" xml:space="preserve"><value>{0} ({1})</value></data>
   <data name="Devices.Selection.State.Manual" xml:space="preserve"><value>手動</value></data>
-  <data name="Devices.Selection.State.NoPermissions" xml:space="preserve"><value>いいえ アクセス許可</value></data>
-  <data name="Devices.Selection.State.NotConnected" xml:space="preserve"><value>ではない 接続済み</value></data>
+  <data name="Devices.Selection.State.NoPermissions" xml:space="preserve"><value>権限なし</value></data>
+  <data name="Devices.Selection.State.NotConnected" xml:space="preserve"><value>未接続</value></data>
   <data name="Devices.Selection.State.Offline" xml:space="preserve"><value>オフライン</value></data>
   <data name="Devices.Selection.State.Ready" xml:space="preserve"><value>準備完了</value></data>
   <data name="Devices.Selection.State.Unauthorized" xml:space="preserve"><value>未承認</value></data>
   <data name="Devices.Selection.State.Unavailable" xml:space="preserve"><value>利用不可</value></data>
   <data name="Devices.Selection.UnavailableDetails" xml:space="preserve"><value>{0} · {1}</value></data>
-  <data name="Devices.Status.ApplyComplete" xml:space="preserve"><value>コピーされたファイル: {0:N0};隔離されたパス: {1:N0};転送されたバイト数: {2:N0}。</value></data>
-  <data name="Devices.Status.ApplyCompleteWithRecovery" xml:space="preserve"><value>コピーされたファイル: {0:N0};隔離されたパス: {1:N0};転送されたバイト数: {2:N0}。リカバリ実行: {3}。</value></data>
-  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>操作はキャンセルされました。ネイティブ サーバーは宛先ロックを解放します。</value></data>
-  <data name="Devices.Status.Failed" xml:space="preserve"><value>Android デバイスの操作が失敗しました。</value></data>
-  <data name="Devices.Status.Initialized" xml:space="preserve"><value>Android 宛先が初期化されました。</value></data>
-  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>同期プレビューはブロックされています。計画されたアクション: {0:N0};削除: {1:N0};転送バイト: {2:N0}。</value></data>
-  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>同期のプレビューを確認します。計画されたアクション: {0:N0};削除: {1:N0};転送バイト: {2:N0}。</value></data>
-  <data name="Devices.Status.Ready" xml:space="preserve"><value>プレビューする前に、ローカル ソースを選択し、管理された Android 宛先を初期化します。</value></data>
-  <data name="Devices.Status.Restored" xml:space="preserve"><value>復元されたリカバリは {1} で {0} を実行します。</value></data>
+  <data name="Devices.Status.ApplyComplete" xml:space="preserve"><value>コピーしたファイル: {0:N0}; 隔離したパス: {1:N0}; 転送したバイト数: {2:N0}。</value></data>
+  <data name="Devices.Status.ApplyCompleteWithRecovery" xml:space="preserve"><value>コピーしたファイル: {0:N0}; 隔離したパス: {1:N0}; 転送したバイト数: {2:N0}。復旧実行: {3}。</value></data>
+  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>操作をキャンセルしました。宛先のロックは解除されます。</value></data>
+  <data name="Devices.Status.Failed" xml:space="preserve"><value>Android デバイスの操作に失敗しました。</value></data>
+  <data name="Devices.Status.Initialized" xml:space="preserve"><value>Android 宛先を初期化しました。</value></data>
+  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>同期プレビューはブロックされています。予定されている操作: {0:N0}; 削除: {1:N0}; 転送するバイト数: {2:N0}。</value></data>
+  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>同期プレビューを確認してください。予定されている操作: {0:N0}; 削除: {1:N0}; 転送するバイト数: {2:N0}。</value></data>
+  <data name="Devices.Status.Ready" xml:space="preserve"><value>プレビューする前に、ローカルソースを選択して管理対象の Android 宛先を初期化してください。</value></data>
+  <data name="Devices.Status.Restored" xml:space="preserve"><value>復旧実行 {0} を {1} に復元しました。</value></data>
   <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>開始中 取り込み</value></data>
   <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>取り込み 音楽</value></data>
   <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>インジェストジャーナルの検索</value></data>

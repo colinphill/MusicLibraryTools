@@ -458,16 +458,16 @@
     <value>Year</value>
   </data>
   <data name="Devices.Action.Initialize" xml:space="preserve">
-    <value>Initialize</value>
+    <value>Initialize destination</value>
   </data>
   <data name="Devices.Action.Restore" xml:space="preserve">
-    <value>Restore</value>
+    <value>Restore previous sync</value>
   </data>
   <data name="Devices.AdbOverride" xml:space="preserve">
-    <value>ADB executable override (optional)</value>
+    <value>ADB executable path (optional)</value>
   </data>
   <data name="Devices.AdbOverrideAutomation" xml:space="preserve">
-    <value>ADB executable override</value>
+    <value>ADB executable path</value>
   </data>
   <data name="Devices.AdbOverridePlaceholder" xml:space="preserve">
     <value>Auto-detect adb</value>
@@ -503,7 +503,7 @@
     <value>Auto-select the only ready device</value>
   </data>
   <data name="Devices.DirectTransfer" xml:space="preserve">
-    <value>Direct transfer (advanced; no staging or recovery)</value>
+    <value>Direct transfer (no staging or recovery)</value>
   </data>
   <data name="Devices.DirectTransferDescription" xml:space="preserve">
     <value>Direct transfer is faster but cannot be restored. Preview and review the final confirmation carefully.</value>
@@ -521,10 +521,10 @@
     <value>The ‘music’ alias selects removable SD storage only. Use /sdcard/Music for internal shared storage.</value>
   </data>
   <data name="Devices.ExclusionGlobs" xml:space="preserve">
-    <value>Exclusion globs (one per line)</value>
+    <value>Excluded path patterns (glob syntax, one per line)</value>
   </data>
   <data name="Devices.ExclusionGlobsAutomation" xml:space="preserve">
-    <value>Exclusion globs</value>
+    <value>Excluded path patterns</value>
   </data>
   <data name="Devices.ExistingDestination" xml:space="preserve">
     <value>Existing destination</value>
@@ -548,10 +548,10 @@
     <value>Blank allows any number; 0 allows none.</value>
   </data>
   <data name="Devices.MirrorProfile" xml:space="preserve">
-    <value>Mirror profile</value>
+    <value>Synchronization profile</value>
   </data>
   <data name="Devices.MtimeTolerance" xml:space="preserve">
-    <value>Mtime tolerance (sec)</value>
+    <value>Modification time tolerance (seconds)</value>
   </data>
   <data name="Devices.MtimeToleranceAutomation" xml:space="preserve">
     <value>Modification time tolerance in seconds</value>
@@ -569,7 +569,7 @@
     <value>No Android devices were reported by ADB. Connect a device or enter its serial manually.</value>
   </data>
   <data name="Devices.Policy" xml:space="preserve">
-    <value>Policy</value>
+    <value>Synchronization policy</value>
   </data>
   <data name="Devices.RefreshAutomation" xml:space="preserve">
     <value>Refresh Android devices</value>
@@ -4757,7 +4757,7 @@
   <data name="Devices.Dialog.Failure.Message" xml:space="preserve"><value>{0} could not be completed. Open the diagnostic details for the underlying error.</value></data>
   <data name="Devices.Dialog.Failure.Title" xml:space="preserve"><value>{0} failed</value></data>
   <data name="Devices.Dialog.Initialize.Adopt" xml:space="preserve"><value>Adopt</value></data>
-  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>Adopt “{0}” as a managed sync destination? Existing contents will be included in the first preview and may be quarantined when Apply is allowed.</value></data>
+  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>Adopt “{0}” as a managed sync destination? Existing contents will appear in the first preview and may be quarantined when you apply the synchronization.</value></data>
   <data name="Devices.Dialog.Initialize.AdoptTitle" xml:space="preserve"><value>Adopt Android destination</value></data>
   <data name="Devices.Dialog.Initialize.Create" xml:space="preserve"><value>Initialize</value></data>
   <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>Initialize “{0}” as a managed sync destination? The folder must be new or empty.</value></data>
@@ -4797,7 +4797,7 @@
   <data name="Devices.Progress.SynchronizationComplete" xml:space="preserve"><value>Android synchronization complete.</value></data>
   <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>Transferring a file to the Android device…</value></data>
   <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>Validating affected paths from the saved synchronization plan…</value></data>
-  <data name="Devices.Selection.Manual" xml:space="preserve"><value>Automatic or manual serial</value></data>
+  <data name="Devices.Selection.Manual" xml:space="preserve"><value>Auto-select or enter a serial</value></data>
   <data name="Devices.Selection.ManualDetails" xml:space="preserve"><value>Leave the serial blank to use the only ready device.</value></data>
   <data name="Devices.Selection.PreviouslySelected" xml:space="preserve"><value>Previously selected device</value></data>
   <data name="Devices.Selection.ReadyDetails" xml:space="preserve"><value>{0} · {1}</value></data>
@@ -4813,11 +4813,11 @@
   <data name="Devices.Selection.UnavailableDetails" xml:space="preserve"><value>{0} · {1}</value></data>
   <data name="Devices.Status.ApplyComplete" xml:space="preserve"><value>Files copied: {0:N0}; paths quarantined: {1:N0}; bytes transferred: {2:N0}.</value></data>
   <data name="Devices.Status.ApplyCompleteWithRecovery" xml:space="preserve"><value>Files copied: {0:N0}; paths quarantined: {1:N0}; bytes transferred: {2:N0}. Recovery run: {3}.</value></data>
-  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>Operation cancelled. The native server will release the destination lock.</value></data>
+  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>Operation cancelled. The destination lock will be released.</value></data>
   <data name="Devices.Status.Failed" xml:space="preserve"><value>The Android device operation failed.</value></data>
   <data name="Devices.Status.Initialized" xml:space="preserve"><value>Android destination initialized.</value></data>
-  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>The synchronization preview is blocked. Planned actions: {0:N0}; removals: {1:N0}; transfer bytes: {2:N0}.</value></data>
-  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>Review the synchronization preview. Planned actions: {0:N0}; removals: {1:N0}; transfer bytes: {2:N0}.</value></data>
+  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>The synchronization preview is blocked. Planned actions: {0:N0}; removals: {1:N0}; bytes to transfer: {2:N0}.</value></data>
+  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>Review the synchronization preview. Planned actions: {0:N0}; removals: {1:N0}; bytes to transfer: {2:N0}.</value></data>
   <data name="Devices.Status.Ready" xml:space="preserve"><value>Choose a local source and initialize a managed Android destination before previewing.</value></data>
   <data name="Devices.Status.Restored" xml:space="preserve"><value>Restored recovery run {0} on {1}.</value></data>
   <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>Starting ingest</value></data>

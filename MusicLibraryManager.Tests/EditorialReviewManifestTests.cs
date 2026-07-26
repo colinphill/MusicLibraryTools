@@ -21,7 +21,7 @@ public sealed class EditorialReviewManifestTests
 
         Assert.Equal(3_544, manifest.Records.Count);
         Assert.Equal(
-            2_200,
+            2_075,
             Count(
                 manifest,
                 EditorialReviewStatus.Pending));
@@ -36,7 +36,7 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            1_185,
+            1_310,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -443,7 +443,7 @@ public sealed class EditorialReviewManifestTests
                     requireComplete: true));
 
         Assert.Equal(
-            "Strict editorial review failed: 2,200 resources remain Pending.",
+            "Strict editorial review failed: 2,075 resources remain Pending.",
             exception.Message);
         EditorialReviewManifest unchanged =
             EditorialReviewInfrastructure.LoadAndValidate(
@@ -452,7 +452,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
         Assert.Equal(
-            2_200,
+            2_075,
             Count(
                 unchanged,
                 EditorialReviewStatus.Pending));
@@ -513,7 +513,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                1_185,
+                1_310,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));
@@ -523,7 +523,7 @@ public sealed class EditorialReviewManifestTests
                     refreshed,
                     EditorialReviewStatus.InvariantApproved));
             Assert.Equal(
-                2_200,
+                2_075,
                 Count(
                     refreshed,
                     EditorialReviewStatus.Pending));
@@ -685,6 +685,56 @@ public sealed class EditorialReviewManifestTests
                     "Operations.",
                     record.Key,
                     StringComparison.Ordinal);
+                Assert.Equal(
+                    "Codex focused editorial review",
+                    record.Reviewer);
+                Assert.Equal("2026-07-25", record.Date);
+                Assert.StartsWith(
+                    "packet:v1:",
+                    record.Disposition,
+                    StringComparison.Ordinal);
+            });
+    }
+
+    [Fact]
+    public void Devices_review_batch_contains_the_exact_focused_domain()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: false);
+        const string batch =
+            "gui-usability-devices-editorial-2026-07-25";
+        EditorialReviewRecord[] records =
+            manifest.Records.Values
+                .Where(record =>
+                    string.Equals(
+                        record.Batch,
+                        batch,
+                        StringComparison.Ordinal))
+                .OrderBy(
+                    record => record.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        Assert.Equal(125, records.Length);
+        Assert.All(
+            records,
+            record =>
+            {
+                Assert.StartsWith(
+                    "Devices.",
+                    record.Key,
+                    StringComparison.Ordinal);
+                Assert.Equal(
+                    EditorialReviewStatus.EditorialReviewed,
+                    record.Status);
+                Assert.Equal(
+                    CatalogTranslationRoute.EditorialOverride,
+                    record.Route);
                 Assert.Equal(
                     "Codex focused editorial review",
                     record.Reviewer);

@@ -79,7 +79,7 @@ public sealed class LocalizationCatalogGeneratorCommandLineTests
 
         Assert.NotEqual(0, result.ExitCode);
         Assert.Contains(
-            "Strict editorial review failed: 2,200 resources remain Pending.",
+            "Strict editorial review failed: 2,075 resources remain Pending.",
             result.StandardError,
             StringComparison.Ordinal);
     }

@@ -458,19 +458,19 @@
     <value>Jahr</value>
   </data>
   <data name="Devices.Action.Initialize" xml:space="preserve">
-    <value>Initialisieren</value>
+    <value>Ziel initialisieren</value>
   </data>
   <data name="Devices.Action.Restore" xml:space="preserve">
-    <value>wiederherstellen</value>
+    <value>Vorherige Synchronisierung wiederherstellen</value>
   </data>
   <data name="Devices.AdbOverride" xml:space="preserve">
-    <value>ADB Programmdatei Überschreiben (optional)</value>
+    <value>Pfad zur ADB-Programmdatei (optional)</value>
   </data>
   <data name="Devices.AdbOverrideAutomation" xml:space="preserve">
-    <value>ADB Programmdatei Überschreiben</value>
+    <value>Pfad zur ADB-Programmdatei</value>
   </data>
   <data name="Devices.AdbOverridePlaceholder" xml:space="preserve">
-    <value>Automatisch erkennen adb</value>
+    <value>adb automatisch erkennen</value>
   </data>
   <data name="Devices.AdoptDescription" xml:space="preserve">
     <value>Beim Übernehmen wird dem aktuellen Inhalt des Ziels vertraut und er wird in die erste Synchronisierungsvorschau aufgenommen.</value>
@@ -479,31 +479,31 @@
     <value>Vorhandenes, nicht leeres Ziel übernehmen</value>
   </data>
   <data name="Devices.AndroidDestination" xml:space="preserve">
-    <value>Android Ziel</value>
+    <value>Android-Ziel</value>
   </data>
   <data name="Devices.AndroidDevice" xml:space="preserve">
-    <value>Android Gerät</value>
+    <value>Android-Gerät</value>
   </data>
   <data name="Devices.DeletionRecovery" xml:space="preserve">
-    <value>Löschung und Wiederherstellung</value>
+    <value>Löschen und Wiederherstellen</value>
   </data>
   <data name="Devices.DeleteExtras" xml:space="preserve">
     <value>Nur im Ziel vorhandene Einträge löschen</value>
   </data>
   <data name="Devices.DeviceDiscoveryFailed" xml:space="preserve">
-    <value>Gerät Erkennung fehlgeschlagen</value>
+    <value>Geräteerkennung fehlgeschlagen</value>
   </data>
   <data name="Devices.DeviceSerial" xml:space="preserve">
-    <value>Gerät Seriennummer</value>
+    <value>Geräteseriennummer</value>
   </data>
   <data name="Devices.DeviceSerialOptional" xml:space="preserve">
-    <value>Gerät Seriennummer (optional)</value>
+    <value>Geräteseriennummer (optional)</value>
   </data>
   <data name="Devices.DeviceSerialPlaceholder" xml:space="preserve">
     <value>Einziges bereites Gerät automatisch auswählen</value>
   </data>
   <data name="Devices.DirectTransfer" xml:space="preserve">
-    <value>Direkt Übertragen (Erweitert; Nein Bereitstellung oder Wiederherstellung)</value>
+    <value>Direkte Übertragung (ohne Bereitstellung oder Wiederherstellung)</value>
   </data>
   <data name="Devices.DirectTransferDescription" xml:space="preserve">
     <value>Direkte Übertragung ist schneller, kann aber nicht wiederhergestellt werden. Prüfen Sie Vorschau und Abschlussbestätigung sorgfältig.</value>
@@ -515,19 +515,19 @@
     <value>{0} Aktionen geplant</value>
   </data>
   <data name="Devices.DiscoveringAutomation" xml:space="preserve">
-    <value>Erkennung Android Geräte</value>
+    <value>Android-Geräte werden gesucht</value>
   </data>
   <data name="Devices.DestinationAliasDescription" xml:space="preserve">
     <value>Der Alias „music“ wählt nur Wechselspeicher auf der SD-Karte. Verwenden Sie /sdcard/Music für den internen freigegebenen Speicher.</value>
   </data>
   <data name="Devices.ExclusionGlobs" xml:space="preserve">
-    <value>Ausschluss Glob-Muster (eine pro Zeile)</value>
+    <value>Ausgeschlossene Pfadmuster (glob-Syntax, eines pro Zeile)</value>
   </data>
   <data name="Devices.ExclusionGlobsAutomation" xml:space="preserve">
-    <value>Ausschluss Glob-Muster</value>
+    <value>Ausgeschlossene Pfadmuster</value>
   </data>
   <data name="Devices.ExistingDestination" xml:space="preserve">
-    <value>Vorhanden Ziel</value>
+    <value>Vorhandenes Ziel</value>
   </data>
   <data name="Devices.InformationAutomation" xml:space="preserve">
     <value>Information</value>
@@ -536,25 +536,25 @@
     <value>Lokale Quelle</value>
   </data>
   <data name="Devices.LocalSourceAutomation" xml:space="preserve">
-    <value>lokal Musik Quelle Ordner</value>
+    <value>Lokaler Musikquellordner</value>
   </data>
   <data name="Devices.LocalSourcePlaceholder" xml:space="preserve">
-    <value>lokal Musik Ordner</value>
+    <value>Lokaler Musikordner</value>
   </data>
   <data name="Devices.MaximumRemovals" xml:space="preserve">
-    <value>Maximum Entfernungen</value>
+    <value>Maximale Anzahl von Entfernungen</value>
   </data>
   <data name="Devices.MaximumRemovalsDescription" xml:space="preserve">
     <value>Leer erlaubt beliebig viele Entfernungen; 0 erlaubt keine.</value>
   </data>
   <data name="Devices.MirrorProfile" xml:space="preserve">
-    <value>Spiegeln Profil</value>
+    <value>Synchronisierungsprofil</value>
   </data>
   <data name="Devices.MtimeTolerance" xml:space="preserve">
-    <value>Änderungszeit Toleranz (Sek.)</value>
+    <value>Toleranz der Änderungszeit (Sekunden)</value>
   </data>
   <data name="Devices.MtimeToleranceAutomation" xml:space="preserve">
-    <value>Änderung Zeit Toleranz in Sekunden</value>
+    <value>Toleranz der Änderungszeit in Sekunden</value>
   </data>
   <data name="Devices.MultipleReady" xml:space="preserve">
     <value>Mehrere bereite Geräte sind verbunden. Wählen Sie oben ein Gerät oder geben Sie vor der Synchronisierung eine Seriennummer ein.</value>
@@ -569,10 +569,10 @@
     <value>ADB hat keine Android-Geräte gemeldet. Verbinden Sie ein Gerät oder geben Sie seine Seriennummer manuell ein.</value>
   </data>
   <data name="Devices.Policy" xml:space="preserve">
-    <value>Richtlinie</value>
+    <value>Synchronisierungsrichtlinie</value>
   </data>
   <data name="Devices.RefreshAutomation" xml:space="preserve">
-    <value>aktualisieren Android Geräte</value>
+    <value>Android-Geräte aktualisieren</value>
   </data>
   <data name="Devices.Subtitle" xml:space="preserve">
     <value>Lokalen Musikordner über ADB in ein geprüftes, verwaltetes Android-Ziel spiegeln.</value>
@@ -4723,103 +4723,103 @@
   <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} ähnlich Künstler Cluster gefunden bei Schwellenwert {1:0.00}. prüfen die Varianten, dann anwenden die aktiv reparieren.</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} ähnlich Künstler Cluster gefunden bei Schwellenwert {1:0.00}. prüfen die Varianten, dann anwenden die aktiv Reparaturen.</value></data>
   <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>Beim Schwellenwert {0:0.00} wurden keine ähnlichen Künstlernamen gefunden.</value></data>
-  <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>hinzufügen Datei</value></data>
-  <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>erstellen Ordner</value></data>
-  <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>löschen Ordner</value></data>
-  <data name="Devices.ActionKind.DeleteFile" xml:space="preserve"><value>löschen Datei</value></data>
-  <data name="Devices.ActionKind.DeleteOther" xml:space="preserve"><value>löschen Element</value></data>
-  <data name="Devices.ActionKind.ReplaceWithDirectory" xml:space="preserve"><value>ersetzen mit Ordner</value></data>
-  <data name="Devices.ActionKind.ReplaceWithFile" xml:space="preserve"><value>ersetzen mit Datei</value></data>
-  <data name="Devices.ActionKind.UpdateFile" xml:space="preserve"><value>aktualisieren Datei</value></data>
-  <data name="Devices.ActionReason.AddFile" xml:space="preserve"><value>die Datei ist fehlend von die Android Ziel.</value></data>
-  <data name="Devices.ActionReason.CreateDirectory" xml:space="preserve"><value>die Ordner ist fehlend von die Android Ziel.</value></data>
-  <data name="Devices.ActionReason.DeleteDirectory" xml:space="preserve"><value>die Ziel Ordner ist nicht vorhanden in die Quelle.</value></data>
-  <data name="Devices.ActionReason.DeleteFile" xml:space="preserve"><value>die Ziel Datei ist nicht vorhanden in die Quelle.</value></data>
-  <data name="Devices.ActionReason.DeleteOther" xml:space="preserve"><value>die Ziel Element ist nicht vorhanden in die Quelle.</value></data>
-  <data name="Devices.ActionReason.ReplaceWithDirectory" xml:space="preserve"><value>ein Ordner muss ersetzen ein Inkompatibel Ziel Element.</value></data>
-  <data name="Devices.ActionReason.ReplaceWithFile" xml:space="preserve"><value>ein Datei muss ersetzen ein Inkompatibel Ziel Element.</value></data>
-  <data name="Devices.ActionReason.UpdateFile" xml:space="preserve"><value>die Quelle Datei Weicht ab von die Ziel Datei.</value></data>
-  <data name="Devices.ActionStatus.Complete" xml:space="preserve"><value>vollständig</value></data>
-  <data name="Devices.ActionStatus.Failed" xml:space="preserve"><value>fehlgeschlagen</value></data>
+  <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>Datei hinzufügen</value></data>
+  <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>Ordner erstellen</value></data>
+  <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>Ordner löschen</value></data>
+  <data name="Devices.ActionKind.DeleteFile" xml:space="preserve"><value>Datei löschen</value></data>
+  <data name="Devices.ActionKind.DeleteOther" xml:space="preserve"><value>Element löschen</value></data>
+  <data name="Devices.ActionKind.ReplaceWithDirectory" xml:space="preserve"><value>Durch Ordner ersetzen</value></data>
+  <data name="Devices.ActionKind.ReplaceWithFile" xml:space="preserve"><value>Durch Datei ersetzen</value></data>
+  <data name="Devices.ActionKind.UpdateFile" xml:space="preserve"><value>Datei aktualisieren</value></data>
+  <data name="Devices.ActionReason.AddFile" xml:space="preserve"><value>Die Datei fehlt am Android-Ziel.</value></data>
+  <data name="Devices.ActionReason.CreateDirectory" xml:space="preserve"><value>Der Ordner fehlt am Android-Ziel.</value></data>
+  <data name="Devices.ActionReason.DeleteDirectory" xml:space="preserve"><value>Der Zielordner ist in der Quelle nicht vorhanden.</value></data>
+  <data name="Devices.ActionReason.DeleteFile" xml:space="preserve"><value>Die Zieldatei ist in der Quelle nicht vorhanden.</value></data>
+  <data name="Devices.ActionReason.DeleteOther" xml:space="preserve"><value>Das Zielelement ist in der Quelle nicht vorhanden.</value></data>
+  <data name="Devices.ActionReason.ReplaceWithDirectory" xml:space="preserve"><value>Ein inkompatibles Zielelement muss durch einen Ordner ersetzt werden.</value></data>
+  <data name="Devices.ActionReason.ReplaceWithFile" xml:space="preserve"><value>Ein inkompatibles Zielelement muss durch eine Datei ersetzt werden.</value></data>
+  <data name="Devices.ActionReason.UpdateFile" xml:space="preserve"><value>Die Quelldatei unterscheidet sich von der Zieldatei.</value></data>
+  <data name="Devices.ActionStatus.Complete" xml:space="preserve"><value>Abgeschlossen</value></data>
+  <data name="Devices.ActionStatus.Failed" xml:space="preserve"><value>Fehlgeschlagen</value></data>
   <data name="Devices.ActionStatus.InProgress" xml:space="preserve"><value>In Bearbeitung</value></data>
-  <data name="Devices.Activity.Apply.Title" xml:space="preserve"><value>synchronisieren Android Gerät</value></data>
-  <data name="Devices.Activity.Initialize.Title" xml:space="preserve"><value>Initialisieren Android Ziel</value></data>
-  <data name="Devices.Activity.Preview.Title" xml:space="preserve"><value>Vorschau Android Synchronisierung</value></data>
-  <data name="Devices.Activity.Restore.Title" xml:space="preserve"><value>wiederherstellen Android Synchronisierung</value></data>
-  <data name="Devices.Activity.Starting" xml:space="preserve"><value>Startet…</value></data>
+  <data name="Devices.Activity.Apply.Title" xml:space="preserve"><value>Android-Gerät synchronisieren</value></data>
+  <data name="Devices.Activity.Initialize.Title" xml:space="preserve"><value>Android-Ziel initialisieren</value></data>
+  <data name="Devices.Activity.Preview.Title" xml:space="preserve"><value>Vorschau der Android-Synchronisierung</value></data>
+  <data name="Devices.Activity.Restore.Title" xml:space="preserve"><value>Android-Synchronisierung wiederherstellen</value></data>
+  <data name="Devices.Activity.Starting" xml:space="preserve"><value>Wird gestartet…</value></data>
   <data name="Devices.Dialog.Apply.DirectMessage" xml:space="preserve"><value>{0:N0} geplante Aktionen einschließlich {1:N0} Entfernungen anwenden und {2:N0} Bytes übertragen? Eine Wiederherstellung ist nicht möglich, da die direkte Übertragung die Bereitstellung umgeht.</value></data>
-  <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>anwenden ohne Wiederherstellung</value></data>
+  <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>Ohne Wiederherstellung anwenden</value></data>
   <data name="Devices.Dialog.Apply.Message" xml:space="preserve"><value>{0:N0} geplante Aktionen einschließlich {1:N0} Entfernungen anwenden und {2:N0} Bytes übertragen? Wiederherstellung ist verfügbar: Ersetzte und entfernte Zielelemente werden in einem Wiederherstellungslauf isoliert.</value></data>
-  <data name="Devices.Dialog.Apply.Primary" xml:space="preserve"><value>synchronisieren</value></data>
-  <data name="Devices.Dialog.Apply.Title" xml:space="preserve"><value>anwenden Android Synchronisierung</value></data>
-  <data name="Devices.Dialog.ChooseAdb" xml:space="preserve"><value>auswählen adb Programmdatei</value></data>
-  <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>auswählen die lokal Ordner zu Spiegeln</value></data>
+  <data name="Devices.Dialog.Apply.Primary" xml:space="preserve"><value>Synchronisieren</value></data>
+  <data name="Devices.Dialog.Apply.Title" xml:space="preserve"><value>Android-Synchronisierung anwenden</value></data>
+  <data name="Devices.Dialog.ChooseAdb" xml:space="preserve"><value>adb-Programmdatei auswählen</value></data>
+  <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>Lokalen Spiegelungsordner auswählen</value></data>
   <data name="Devices.Dialog.Failure.Message" xml:space="preserve"><value>{0} konnte nicht abgeschlossen werden. Öffnen Sie die Diagnosedetails zum zugrunde liegenden Fehler.</value></data>
   <data name="Devices.Dialog.Failure.Title" xml:space="preserve"><value>{0} fehlgeschlagen</value></data>
   <data name="Devices.Dialog.Initialize.Adopt" xml:space="preserve"><value>Übernehmen</value></data>
-  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>„{0}“ als verwaltetes Synchronisierungsziel übernehmen? Vorhandene Inhalte werden in die erste Vorschau aufgenommen und können isoliert werden, sobald das Anwenden zulässig ist.</value></data>
-  <data name="Devices.Dialog.Initialize.AdoptTitle" xml:space="preserve"><value>Übernehmen Android Ziel</value></data>
+  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>„{0}“ als verwaltetes Synchronisierungsziel übernehmen? Vorhandene Inhalte werden in der ersten Vorschau angezeigt und können beim Anwenden der Synchronisierung in Quarantäne verschoben werden.</value></data>
+  <data name="Devices.Dialog.Initialize.AdoptTitle" xml:space="preserve"><value>Android-Ziel übernehmen</value></data>
   <data name="Devices.Dialog.Initialize.Create" xml:space="preserve"><value>Initialisieren</value></data>
-  <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>Initialisieren “{0}” als ein Verwaltet Synchronisieren Ziel? die Ordner muss sein neu oder leer.</value></data>
-  <data name="Devices.Dialog.Initialize.Title" xml:space="preserve"><value>Initialisieren Android Ziel</value></data>
+  <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>„{0}“ als verwaltetes Synchronisierungsziel initialisieren? Der Ordner muss neu oder leer sein.</value></data>
+  <data name="Devices.Dialog.Initialize.Title" xml:space="preserve"><value>Android-Ziel initialisieren</value></data>
   <data name="Devices.Dialog.Restore.Message" xml:space="preserve"><value>Wiederherstellungslauf „{0}“ unter „{1}“ wiederherstellen? Synchronisierte Dateien werden entfernt, isolierte Originale wiederhergestellt und verdrängte aktuelle Inhalte bleiben im Wiederherstellungslauf erhalten.</value></data>
-  <data name="Devices.Dialog.Restore.Primary" xml:space="preserve"><value>wiederherstellen</value></data>
-  <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>wiederherstellen vorherig Android Synchronisierung</value></data>
-  <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB konnte nicht Auflisten Android Geräte. Sie kann Weiterhin eingeben ein Seriennummer Manuell.</value></data>
-  <data name="Devices.Error.NoRecovery" xml:space="preserve"><value>Nein Wiederherstellung ausführen ist verfügbar.</value></data>
-  <data name="Devices.Error.NoRecoveryDestination" xml:space="preserve"><value>Nein Wiederherstellung Ziel ist verfügbar.</value></data>
-  <data name="Devices.Error.PreviewRequired" xml:space="preserve"><value>Vorschau die Synchronisierung vorher wird angewendet es.</value></data>
+  <data name="Devices.Dialog.Restore.Primary" xml:space="preserve"><value>Wiederherstellen</value></data>
+  <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>Vorherige Android-Synchronisierung wiederherstellen</value></data>
+  <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB konnte die Android-Geräte nicht auflisten. Sie können weiterhin manuell eine Seriennummer eingeben.</value></data>
+  <data name="Devices.Error.NoRecovery" xml:space="preserve"><value>Es ist kein Wiederherstellungslauf verfügbar.</value></data>
+  <data name="Devices.Error.NoRecoveryDestination" xml:space="preserve"><value>Es ist kein Wiederherstellungsziel verfügbar.</value></data>
+  <data name="Devices.Error.PreviewRequired" xml:space="preserve"><value>Zeigen Sie vor dem Anwenden eine Vorschau der Synchronisierung an.</value></data>
   <data name="Devices.Issue.DirectMode" xml:space="preserve"><value>Der Direktmodus ist aktiviert. Für Ersetzungen und Löschungen stehen keine Wiederherstellungsdaten zur Verfügung.</value></data>
   <data name="Devices.Issue.GenericBlocker" xml:space="preserve"><value>Beheben Sie den blockierenden Fehler, bevor Sie diesen Plan anwenden.</value></data>
-  <data name="Devices.Issue.GenericInformation" xml:space="preserve"><value>prüfen dies Synchronisierung Hinweis.</value></data>
-  <data name="Devices.Issue.GenericWarning" xml:space="preserve"><value>prüfen dies Synchronisierung Warnung vorher wird angewendet die Plan.</value></data>
-  <data name="Devices.Issue.RemovalLimit" xml:space="preserve"><value>die geplant Entfernungen Überschreiten die Konfiguriert Sicherheit Grenzwert.</value></data>
-  <data name="Devices.Progress.ApplyingChanges" xml:space="preserve"><value>wird angewendet Synchronisierung Änderungen…</value></data>
-  <data name="Devices.Progress.ChangeComplete" xml:space="preserve"><value>Synchronisierung Änderung vollständig.</value></data>
-  <data name="Devices.Progress.ChangeFailed" xml:space="preserve"><value>ein Synchronisierung Änderung fehlgeschlagen.</value></data>
-  <data name="Devices.Progress.Initializing" xml:space="preserve"><value>Initialisieren die Verwaltet Android Ziel…</value></data>
-  <data name="Devices.Progress.Phase.Applying" xml:space="preserve"><value>wird angewendet die Synchronisierung…</value></data>
-  <data name="Devices.Progress.Phase.Completed" xml:space="preserve"><value>Vorgang vollständig.</value></data>
-  <data name="Devices.Progress.Phase.IndexingSources" xml:space="preserve"><value>wird gescannt die Quelle…</value></data>
-  <data name="Devices.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>wird gescannt die Ziel…</value></data>
-  <data name="Devices.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>wird geladen Konfiguration…</value></data>
-  <data name="Devices.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>wird geladen die Bibliothek…</value></data>
-  <data name="Devices.Progress.Phase.Planning" xml:space="preserve"><value>Planung Synchronisierung Änderungen…</value></data>
-  <data name="Devices.Progress.Phase.RollingBack" xml:space="preserve"><value>Zurücksetzen Rückseite Änderungen…</value></data>
-  <data name="Devices.Progress.Phase.Validating" xml:space="preserve"><value>überprüfen die Vorgang…</value></data>
-  <data name="Devices.Progress.RestoreComplete" xml:space="preserve"><value>Android Synchronisierung wiederhergestellt.</value></data>
-  <data name="Devices.Progress.Restoring" xml:space="preserve"><value>Wiederherstellung die vorherig Android Synchronisierung…</value></data>
+  <data name="Devices.Issue.GenericInformation" xml:space="preserve"><value>Überprüfen Sie diesen Hinweis zur Synchronisierung.</value></data>
+  <data name="Devices.Issue.GenericWarning" xml:space="preserve"><value>Überprüfen Sie diese Synchronisierungswarnung, bevor Sie den Plan anwenden.</value></data>
+  <data name="Devices.Issue.RemovalLimit" xml:space="preserve"><value>Die geplanten Entfernungen überschreiten den konfigurierten Sicherheitsgrenzwert.</value></data>
+  <data name="Devices.Progress.ApplyingChanges" xml:space="preserve"><value>Synchronisierungsänderungen werden angewendet…</value></data>
+  <data name="Devices.Progress.ChangeComplete" xml:space="preserve"><value>Synchronisierungsänderung abgeschlossen.</value></data>
+  <data name="Devices.Progress.ChangeFailed" xml:space="preserve"><value>Eine Synchronisierungsänderung ist fehlgeschlagen.</value></data>
+  <data name="Devices.Progress.Initializing" xml:space="preserve"><value>Das verwaltete Android-Ziel wird initialisiert…</value></data>
+  <data name="Devices.Progress.Phase.Applying" xml:space="preserve"><value>Die Synchronisierung wird angewendet…</value></data>
+  <data name="Devices.Progress.Phase.Completed" xml:space="preserve"><value>Vorgang abgeschlossen.</value></data>
+  <data name="Devices.Progress.Phase.IndexingSources" xml:space="preserve"><value>Die Quelle wird gescannt…</value></data>
+  <data name="Devices.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>Das Ziel wird gescannt…</value></data>
+  <data name="Devices.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>Konfiguration wird geladen…</value></data>
+  <data name="Devices.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>Bibliothek wird geladen…</value></data>
+  <data name="Devices.Progress.Phase.Planning" xml:space="preserve"><value>Synchronisierungsänderungen werden geplant…</value></data>
+  <data name="Devices.Progress.Phase.RollingBack" xml:space="preserve"><value>Änderungen werden zurückgesetzt…</value></data>
+  <data name="Devices.Progress.Phase.Validating" xml:space="preserve"><value>Vorgang wird überprüft…</value></data>
+  <data name="Devices.Progress.RestoreComplete" xml:space="preserve"><value>Android-Synchronisierung wiederhergestellt.</value></data>
+  <data name="Devices.Progress.Restoring" xml:space="preserve"><value>Die vorherige Android-Synchronisierung wird wiederhergestellt…</value></data>
   <data name="Devices.Progress.ScanningBoth" xml:space="preserve"><value>Quelle und verwaltetes Android-Ziel werden gescannt…</value></data>
-  <data name="Devices.Progress.ScanningDestination" xml:space="preserve"><value>wird gescannt die Verwaltet Android Ziel…</value></data>
-  <data name="Devices.Progress.ScanningSource" xml:space="preserve"><value>wird gescannt die Synchronisierung Quelle…</value></data>
-  <data name="Devices.Progress.SelectingChanges" xml:space="preserve"><value>auswählen Synchronisierung Änderungen…</value></data>
-  <data name="Devices.Progress.StagingFile" xml:space="preserve"><value>Bereitstellung ein Datei auf die Android Gerät…</value></data>
-  <data name="Devices.Progress.SynchronizationComplete" xml:space="preserve"><value>Android Synchronisierung vollständig.</value></data>
-  <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>Übertragung ein Datei zu die Android Gerät…</value></data>
-  <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>überprüfen Betroffen Pfade von die gespeichert Synchronisierung Plan…</value></data>
-  <data name="Devices.Selection.Manual" xml:space="preserve"><value>Automatisch oder Manuell Seriennummer</value></data>
+  <data name="Devices.Progress.ScanningDestination" xml:space="preserve"><value>Das verwaltete Android-Ziel wird gescannt…</value></data>
+  <data name="Devices.Progress.ScanningSource" xml:space="preserve"><value>Die Synchronisierungsquelle wird gescannt…</value></data>
+  <data name="Devices.Progress.SelectingChanges" xml:space="preserve"><value>Synchronisierungsänderungen werden ausgewählt…</value></data>
+  <data name="Devices.Progress.StagingFile" xml:space="preserve"><value>Eine Datei wird auf dem Android-Gerät bereitgestellt…</value></data>
+  <data name="Devices.Progress.SynchronizationComplete" xml:space="preserve"><value>Android-Synchronisierung abgeschlossen.</value></data>
+  <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>Eine Datei wird auf das Android-Gerät übertragen…</value></data>
+  <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>Betroffene Pfade aus dem gespeicherten Synchronisierungsplan werden überprüft…</value></data>
+  <data name="Devices.Selection.Manual" xml:space="preserve"><value>Automatisch auswählen oder Seriennummer eingeben</value></data>
   <data name="Devices.Selection.ManualDetails" xml:space="preserve"><value>Lassen Sie die Seriennummer leer, um das einzige bereite Gerät zu verwenden.</value></data>
-  <data name="Devices.Selection.PreviouslySelected" xml:space="preserve"><value>vorherig ausgewählt Gerät</value></data>
+  <data name="Devices.Selection.PreviouslySelected" xml:space="preserve"><value>Zuvor ausgewähltes Gerät</value></data>
   <data name="Devices.Selection.ReadyDetails" xml:space="preserve"><value>{0} · {1}</value></data>
-  <data name="Devices.Selection.RememberedDetails" xml:space="preserve"><value>{0} · nicht aktuell Bericht durch ADB</value></data>
+  <data name="Devices.Selection.RememberedDetails" xml:space="preserve"><value>{0} · derzeit nicht von ADB gemeldet</value></data>
   <data name="Devices.Selection.RememberedName" xml:space="preserve"><value>{0} ({1})</value></data>
   <data name="Devices.Selection.State.Manual" xml:space="preserve"><value>Manuell</value></data>
-  <data name="Devices.Selection.State.NoPermissions" xml:space="preserve"><value>Nein Berechtigungen</value></data>
-  <data name="Devices.Selection.State.NotConnected" xml:space="preserve"><value>nicht Verbunden</value></data>
-  <data name="Devices.Selection.State.Offline" xml:space="preserve"><value>offline</value></data>
-  <data name="Devices.Selection.State.Ready" xml:space="preserve"><value>bereit</value></data>
+  <data name="Devices.Selection.State.NoPermissions" xml:space="preserve"><value>Keine Berechtigung</value></data>
+  <data name="Devices.Selection.State.NotConnected" xml:space="preserve"><value>Nicht verbunden</value></data>
+  <data name="Devices.Selection.State.Offline" xml:space="preserve"><value>Offline</value></data>
+  <data name="Devices.Selection.State.Ready" xml:space="preserve"><value>Bereit</value></data>
   <data name="Devices.Selection.State.Unauthorized" xml:space="preserve"><value>Nicht autorisiert</value></data>
-  <data name="Devices.Selection.State.Unavailable" xml:space="preserve"><value>nicht verfügbar</value></data>
+  <data name="Devices.Selection.State.Unavailable" xml:space="preserve"><value>Nicht verfügbar</value></data>
   <data name="Devices.Selection.UnavailableDetails" xml:space="preserve"><value>{0} · {1}</value></data>
-  <data name="Devices.Status.ApplyComplete" xml:space="preserve"><value>Dateien kopiert: {0:N0}; Pfade in Quarantäne: {1:N0}; Bytes Übertragen: {2:N0}.</value></data>
-  <data name="Devices.Status.ApplyCompleteWithRecovery" xml:space="preserve"><value>Dateien kopiert: {0:N0}; Pfade in Quarantäne: {1:N0}; Bytes Übertragen: {2:N0}. Wiederherstellung ausführen: {3}.</value></data>
-  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>Vorgang abgebrochen. die Nativ Server wird Veröffentlichung die Ziel Sperre.</value></data>
-  <data name="Devices.Status.Failed" xml:space="preserve"><value>die Android Gerät Vorgang fehlgeschlagen.</value></data>
-  <data name="Devices.Status.Initialized" xml:space="preserve"><value>Android Ziel Initialisiert.</value></data>
-  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>die Synchronisierung Vorschau ist Blockiert. geplant Aktionen: {0:N0}; Entfernungen: {1:N0}; Übertragen Bytes: {2:N0}.</value></data>
-  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>prüfen die Synchronisierung Vorschau. geplant Aktionen: {0:N0}; Entfernungen: {1:N0}; Übertragen Bytes: {2:N0}.</value></data>
-  <data name="Devices.Status.Ready" xml:space="preserve"><value>auswählen ein Lokale Quelle und Initialisieren ein Verwaltet Android Ziel vorher Vorschau läuft.</value></data>
-  <data name="Devices.Status.Restored" xml:space="preserve"><value>wiederhergestellt Wiederherstellung ausführen {0} auf {1}.</value></data>
+  <data name="Devices.Status.ApplyComplete" xml:space="preserve"><value>Kopierte Dateien: {0:N0}; in Quarantäne verschobene Pfade: {1:N0}; übertragene Bytes: {2:N0}.</value></data>
+  <data name="Devices.Status.ApplyCompleteWithRecovery" xml:space="preserve"><value>Kopierte Dateien: {0:N0}; in Quarantäne verschobene Pfade: {1:N0}; übertragene Bytes: {2:N0}. Wiederherstellungslauf: {3}.</value></data>
+  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>Vorgang abgebrochen. Die Zielsperre wird freigegeben.</value></data>
+  <data name="Devices.Status.Failed" xml:space="preserve"><value>Der Android-Gerätevorgang ist fehlgeschlagen.</value></data>
+  <data name="Devices.Status.Initialized" xml:space="preserve"><value>Android-Ziel initialisiert.</value></data>
+  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>Die Synchronisierungsvorschau ist blockiert. Geplante Aktionen: {0:N0}; Entfernungen: {1:N0}; zu übertragende Bytes: {2:N0}.</value></data>
+  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>Überprüfen Sie die Synchronisierungsvorschau. Geplante Aktionen: {0:N0}; Entfernungen: {1:N0}; zu übertragende Bytes: {2:N0}.</value></data>
+  <data name="Devices.Status.Ready" xml:space="preserve"><value>Wählen Sie eine lokale Quelle aus und initialisieren Sie ein verwaltetes Android-Ziel, bevor Sie eine Vorschau anzeigen.</value></data>
+  <data name="Devices.Status.Restored" xml:space="preserve"><value>Wiederherstellungslauf {0} auf {1} wiederhergestellt.</value></data>
   <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>Startet Aufnahme</value></data>
   <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>Aufnahme Musik</value></data>
   <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>Suche läuft für Aufnahme Journal</value></data>

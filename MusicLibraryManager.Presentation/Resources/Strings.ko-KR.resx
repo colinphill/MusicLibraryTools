@@ -458,19 +458,19 @@
     <value>연도</value>
   </data>
   <data name="Devices.Action.Initialize" xml:space="preserve">
-    <value>초기화</value>
+    <value>대상 초기화</value>
   </data>
   <data name="Devices.Action.Restore" xml:space="preserve">
-    <value>복원</value>
+    <value>이전 동기화 복원</value>
   </data>
   <data name="Devices.AdbOverride" xml:space="preserve">
-    <value>ADB 실행 파일 재정의 (선택 사항)</value>
+    <value>ADB 실행 파일 경로 (선택 사항)</value>
   </data>
   <data name="Devices.AdbOverrideAutomation" xml:space="preserve">
-    <value>ADB 실행 파일 재정의</value>
+    <value>ADB 실행 파일 경로</value>
   </data>
   <data name="Devices.AdbOverridePlaceholder" xml:space="preserve">
-    <value>자동 감지 adb</value>
+    <value>adb 자동 감지</value>
   </data>
   <data name="Devices.AdoptDescription" xml:space="preserve">
     <value>기존 대상을 채택하면 현재 콘텐츠를 신뢰하고 첫 동기화 미리 보기에 포함합니다.</value>
@@ -503,7 +503,7 @@
     <value>준비된 유일한 장치 자동 선택</value>
   </data>
   <data name="Devices.DirectTransfer" xml:space="preserve">
-    <value>직접 전송 (고급; 아니요 준비 또는 복구)</value>
+    <value>직접 전송 (스테이징 및 복구 없음)</value>
   </data>
   <data name="Devices.DirectTransferDescription" xml:space="preserve">
     <value>직접 전송은 더 빠르지만 복원할 수 없습니다. 미리 보기와 최종 확인을 주의 깊게 검토하세요.</value>
@@ -515,16 +515,16 @@
     <value>{0}개 작업 계획됨</value>
   </data>
   <data name="Devices.DiscoveringAutomation" xml:space="preserve">
-    <value>검색 중 Android 기기</value>
+    <value>Android 기기 검색 중</value>
   </data>
   <data name="Devices.DestinationAliasDescription" xml:space="preserve">
     <value>“music” 별칭은 이동식 SD 저장소만 선택합니다. 내부 공유 저장소에는 /sdcard/Music 경로를 사용하세요.</value>
   </data>
   <data name="Devices.ExclusionGlobs" xml:space="preserve">
-    <value>제외 glob 패턴 (하나 당 줄)</value>
+    <value>제외할 경로 패턴 (glob 구문, 한 줄에 하나)</value>
   </data>
   <data name="Devices.ExclusionGlobsAutomation" xml:space="preserve">
-    <value>제외 glob 패턴</value>
+    <value>제외할 경로 패턴</value>
   </data>
   <data name="Devices.ExistingDestination" xml:space="preserve">
     <value>기존 대상</value>
@@ -542,19 +542,19 @@
     <value>로컬 음악 폴더</value>
   </data>
   <data name="Devices.MaximumRemovals" xml:space="preserve">
-    <value>최대 제거</value>
+    <value>최대 제거 수</value>
   </data>
   <data name="Devices.MaximumRemovalsDescription" xml:space="preserve">
     <value>비워 두면 제거 수에 제한이 없으며, 0은 제거를 허용하지 않습니다.</value>
   </data>
   <data name="Devices.MirrorProfile" xml:space="preserve">
-    <value>미러 프로필</value>
+    <value>동기화 프로필</value>
   </data>
   <data name="Devices.MtimeTolerance" xml:space="preserve">
     <value>수정 시간 허용 오차 (초)</value>
   </data>
   <data name="Devices.MtimeToleranceAutomation" xml:space="preserve">
-    <value>수정 시간 허용 오차 에서 초</value>
+    <value>수정 시간 허용 오차 (초)</value>
   </data>
   <data name="Devices.MultipleReady" xml:space="preserve">
     <value>준비된 장치가 여러 대 연결되어 있습니다. 동기화하기 전에 위에서 하나를 선택하거나 장치 일련 번호를 입력하세요.</value>
@@ -569,10 +569,10 @@
     <value>ADB가 Android 장치를 찾지 못했습니다. 장치를 연결하거나 일련 번호를 직접 입력하세요.</value>
   </data>
   <data name="Devices.Policy" xml:space="preserve">
-    <value>정책</value>
+    <value>동기화 정책</value>
   </data>
   <data name="Devices.RefreshAutomation" xml:space="preserve">
-    <value>새로 고침 Android 기기</value>
+    <value>Android 기기 새로 고침</value>
   </data>
   <data name="Devices.Subtitle" xml:space="preserve">
     <value>ADB를 통해 로컬 음악 폴더를 검증된 관리형 Android 대상으로 미러링합니다.</value>
@@ -4723,103 +4723,103 @@
   <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} 유사 아티스트 클러스터 찾음 에서 임계값 {1:0.00}. 검토 해당 변형, 그런 다음 적용 해당 활성 복구.</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} 유사 아티스트 클러스터 찾음 에서 임계값 {1:0.00}. 검토 해당 변형, 그런 다음 적용 해당 활성 복구 작업.</value></data>
   <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>임계값 {0:0.00}에서 비슷한 아티스트 이름을 찾지 못했습니다.</value></data>
-  <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>추가 파일</value></data>
-  <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>만들기 폴더</value></data>
-  <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>삭제 폴더</value></data>
-  <data name="Devices.ActionKind.DeleteFile" xml:space="preserve"><value>삭제 파일</value></data>
-  <data name="Devices.ActionKind.DeleteOther" xml:space="preserve"><value>삭제 항목</value></data>
-  <data name="Devices.ActionKind.ReplaceWithDirectory" xml:space="preserve"><value>바꾸기 포함 폴더</value></data>
-  <data name="Devices.ActionKind.ReplaceWithFile" xml:space="preserve"><value>바꾸기 포함 파일</value></data>
-  <data name="Devices.ActionKind.UpdateFile" xml:space="preserve"><value>업데이트 파일</value></data>
-  <data name="Devices.ActionReason.AddFile" xml:space="preserve"><value>해당 파일 입니다 누락 에서 해당 Android 대상.</value></data>
-  <data name="Devices.ActionReason.CreateDirectory" xml:space="preserve"><value>해당 폴더 입니다 누락 에서 해당 Android 대상.</value></data>
-  <data name="Devices.ActionReason.DeleteDirectory" xml:space="preserve"><value>해당 대상 폴더 입니다 아님 있음 에서 해당 원본.</value></data>
-  <data name="Devices.ActionReason.DeleteFile" xml:space="preserve"><value>해당 대상 파일 입니다 아님 있음 에서 해당 원본.</value></data>
-  <data name="Devices.ActionReason.DeleteOther" xml:space="preserve"><value>해당 대상 항목 입니다 아님 있음 에서 해당 원본.</value></data>
-  <data name="Devices.ActionReason.ReplaceWithDirectory" xml:space="preserve"><value>하나의 폴더 해야 함 바꾸기 하나의 호환되지 않음 대상 항목.</value></data>
-  <data name="Devices.ActionReason.ReplaceWithFile" xml:space="preserve"><value>하나의 파일 해야 함 바꾸기 하나의 호환되지 않음 대상 항목.</value></data>
-  <data name="Devices.ActionReason.UpdateFile" xml:space="preserve"><value>해당 원본 파일 다름 에서 해당 대상 파일.</value></data>
+  <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>파일 추가</value></data>
+  <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>폴더 만들기</value></data>
+  <data name="Devices.ActionKind.DeleteDirectory" xml:space="preserve"><value>폴더 삭제</value></data>
+  <data name="Devices.ActionKind.DeleteFile" xml:space="preserve"><value>파일 삭제</value></data>
+  <data name="Devices.ActionKind.DeleteOther" xml:space="preserve"><value>항목 삭제</value></data>
+  <data name="Devices.ActionKind.ReplaceWithDirectory" xml:space="preserve"><value>폴더로 바꾸기</value></data>
+  <data name="Devices.ActionKind.ReplaceWithFile" xml:space="preserve"><value>파일로 바꾸기</value></data>
+  <data name="Devices.ActionKind.UpdateFile" xml:space="preserve"><value>파일 업데이트</value></data>
+  <data name="Devices.ActionReason.AddFile" xml:space="preserve"><value>Android 대상에 파일이 없습니다.</value></data>
+  <data name="Devices.ActionReason.CreateDirectory" xml:space="preserve"><value>Android 대상에 폴더가 없습니다.</value></data>
+  <data name="Devices.ActionReason.DeleteDirectory" xml:space="preserve"><value>대상 폴더가 원본에 없습니다.</value></data>
+  <data name="Devices.ActionReason.DeleteFile" xml:space="preserve"><value>대상 파일이 원본에 없습니다.</value></data>
+  <data name="Devices.ActionReason.DeleteOther" xml:space="preserve"><value>대상 항목이 원본에 없습니다.</value></data>
+  <data name="Devices.ActionReason.ReplaceWithDirectory" xml:space="preserve"><value>호환되지 않는 대상 항목을 폴더로 바꿔야 합니다.</value></data>
+  <data name="Devices.ActionReason.ReplaceWithFile" xml:space="preserve"><value>호환되지 않는 대상 항목을 파일로 바꿔야 합니다.</value></data>
+  <data name="Devices.ActionReason.UpdateFile" xml:space="preserve"><value>원본 파일이 대상 파일과 다릅니다.</value></data>
   <data name="Devices.ActionStatus.Complete" xml:space="preserve"><value>완료</value></data>
   <data name="Devices.ActionStatus.Failed" xml:space="preserve"><value>실패</value></data>
   <data name="Devices.ActionStatus.InProgress" xml:space="preserve"><value>진행 중</value></data>
-  <data name="Devices.Activity.Apply.Title" xml:space="preserve"><value>동기화 Android 기기</value></data>
-  <data name="Devices.Activity.Initialize.Title" xml:space="preserve"><value>초기화 Android 대상</value></data>
-  <data name="Devices.Activity.Preview.Title" xml:space="preserve"><value>미리 보기 Android 동기화</value></data>
-  <data name="Devices.Activity.Restore.Title" xml:space="preserve"><value>복원 Android 동기화</value></data>
+  <data name="Devices.Activity.Apply.Title" xml:space="preserve"><value>Android 기기 동기화</value></data>
+  <data name="Devices.Activity.Initialize.Title" xml:space="preserve"><value>Android 대상 초기화</value></data>
+  <data name="Devices.Activity.Preview.Title" xml:space="preserve"><value>Android 동기화 미리 보기</value></data>
+  <data name="Devices.Activity.Restore.Title" xml:space="preserve"><value>Android 동기화 복원</value></data>
   <data name="Devices.Activity.Starting" xml:space="preserve"><value>시작 중…</value></data>
   <data name="Devices.Dialog.Apply.DirectMessage" xml:space="preserve"><value>제거 {1:N0}건을 포함하여 계획된 작업 {0:N0}건을 적용하고 {2:N0}바이트를 전송하시겠습니까? 직접 전송은 스테이징을 사용하지 않으므로 복구할 수 없습니다.</value></data>
-  <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>적용 없이 복구</value></data>
+  <data name="Devices.Dialog.Apply.DirectPrimary" xml:space="preserve"><value>복구 없이 적용</value></data>
   <data name="Devices.Dialog.Apply.Message" xml:space="preserve"><value>제거 {1:N0}건을 포함하여 계획된 작업 {0:N0}건을 적용하고 {2:N0}바이트를 전송하시겠습니까? 복구를 사용할 수 있습니다. 대체되거나 제거된 대상 항목은 복구 실행에 격리됩니다.</value></data>
   <data name="Devices.Dialog.Apply.Primary" xml:space="preserve"><value>동기화</value></data>
-  <data name="Devices.Dialog.Apply.Title" xml:space="preserve"><value>적용 Android 동기화</value></data>
-  <data name="Devices.Dialog.ChooseAdb" xml:space="preserve"><value>선택 adb 실행 파일</value></data>
-  <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>선택 해당 로컬 폴더 로 미러</value></data>
+  <data name="Devices.Dialog.Apply.Title" xml:space="preserve"><value>Android 동기화 적용</value></data>
+  <data name="Devices.Dialog.ChooseAdb" xml:space="preserve"><value>adb 실행 파일 선택</value></data>
+  <data name="Devices.Dialog.ChooseSource" xml:space="preserve"><value>미러링할 로컬 폴더 선택</value></data>
   <data name="Devices.Dialog.Failure.Message" xml:space="preserve"><value>{0}을(를) 완료하지 못했습니다. 원인이 된 오류는 진단 세부 정보에서 확인하세요.</value></data>
   <data name="Devices.Dialog.Failure.Title" xml:space="preserve"><value>{0} 실패</value></data>
   <data name="Devices.Dialog.Initialize.Adopt" xml:space="preserve"><value>채택</value></data>
-  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>“{0}”을 관리되는 동기화 대상으로 채택하시겠습니까? 기존 콘텐츠는 첫 미리 보기에 포함되며 적용이 허용되면 격리될 수 있습니다.</value></data>
-  <data name="Devices.Dialog.Initialize.AdoptTitle" xml:space="preserve"><value>채택 Android 대상</value></data>
+  <data name="Devices.Dialog.Initialize.AdoptMessage" xml:space="preserve"><value>“{0}”을 관리되는 동기화 대상으로 채택하시겠습니까? 기존 콘텐츠는 첫 미리 보기에 표시되며 동기화를 적용할 때 격리될 수 있습니다.</value></data>
+  <data name="Devices.Dialog.Initialize.AdoptTitle" xml:space="preserve"><value>Android 대상 채택</value></data>
   <data name="Devices.Dialog.Initialize.Create" xml:space="preserve"><value>초기화</value></data>
-  <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>초기화 “{0}” 으로 하나의 관리됨 동기화 대상? 해당 폴더 해야 함 됨 새로 만들기 또는 비어 있음.</value></data>
-  <data name="Devices.Dialog.Initialize.Title" xml:space="preserve"><value>초기화 Android 대상</value></data>
+  <data name="Devices.Dialog.Initialize.Message" xml:space="preserve"><value>“{0}”을 관리되는 동기화 대상으로 초기화하시겠습니까? 폴더는 새 폴더이거나 비어 있어야 합니다.</value></data>
+  <data name="Devices.Dialog.Initialize.Title" xml:space="preserve"><value>Android 대상 초기화</value></data>
   <data name="Devices.Dialog.Restore.Message" xml:space="preserve"><value>“{1}”의 복구 실행 “{0}”을 복원하시겠습니까? 동기화된 파일은 제거되고 격리된 원본은 복원됩니다. 대체된 현재 콘텐츠는 복구 실행에 보존됩니다.</value></data>
   <data name="Devices.Dialog.Restore.Primary" xml:space="preserve"><value>복원</value></data>
-  <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>복원 이전 Android 동기화</value></data>
-  <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB 가능 아님 열거 Android 기기. 사용자 가능 아직 입력 하나의 일련번호 수동.</value></data>
-  <data name="Devices.Error.NoRecovery" xml:space="preserve"><value>아니요 복구 실행 입니다 사용 가능.</value></data>
-  <data name="Devices.Error.NoRecoveryDestination" xml:space="preserve"><value>아니요 복구 대상 입니다 사용 가능.</value></data>
-  <data name="Devices.Error.PreviewRequired" xml:space="preserve"><value>미리 보기 해당 동기화 이전 적용 중 해당 항목.</value></data>
+  <data name="Devices.Dialog.Restore.Title" xml:space="preserve"><value>이전 Android 동기화 복원</value></data>
+  <data name="Devices.Enumeration.Failed" xml:space="preserve"><value>ADB에서 Android 기기를 열거하지 못했습니다. 일련번호를 직접 입력할 수도 있습니다.</value></data>
+  <data name="Devices.Error.NoRecovery" xml:space="preserve"><value>사용 가능한 복구 실행이 없습니다.</value></data>
+  <data name="Devices.Error.NoRecoveryDestination" xml:space="preserve"><value>사용 가능한 복구 대상이 없습니다.</value></data>
+  <data name="Devices.Error.PreviewRequired" xml:space="preserve"><value>동기화를 적용하기 전에 미리 보세요.</value></data>
   <data name="Devices.Issue.DirectMode" xml:space="preserve"><value>직접 모드가 활성화되어 있습니다. 교체 및 삭제에 대한 복구 정보가 저장되지 않습니다.</value></data>
   <data name="Devices.Issue.GenericBlocker" xml:space="preserve"><value>이 계획을 적용하기 전에 차단 문제를 해결하세요.</value></data>
-  <data name="Devices.Issue.GenericInformation" xml:space="preserve"><value>검토 이 동기화 참고.</value></data>
-  <data name="Devices.Issue.GenericWarning" xml:space="preserve"><value>검토 이 동기화 경고 이전 적용 중 해당 계획.</value></data>
-  <data name="Devices.Issue.RemovalLimit" xml:space="preserve"><value>해당 계획됨 제거 초과 해당 구성됨 안전 제한.</value></data>
-  <data name="Devices.Progress.ApplyingChanges" xml:space="preserve"><value>적용 중 동기화 변경 사항…</value></data>
-  <data name="Devices.Progress.ChangeComplete" xml:space="preserve"><value>동기화 변경 완료.</value></data>
-  <data name="Devices.Progress.ChangeFailed" xml:space="preserve"><value>하나의 동기화 변경 실패.</value></data>
-  <data name="Devices.Progress.Initializing" xml:space="preserve"><value>초기화 해당 관리됨 Android 대상…</value></data>
-  <data name="Devices.Progress.Phase.Applying" xml:space="preserve"><value>적용 중 해당 동기화…</value></data>
-  <data name="Devices.Progress.Phase.Completed" xml:space="preserve"><value>작업 완료.</value></data>
-  <data name="Devices.Progress.Phase.IndexingSources" xml:space="preserve"><value>스캔 중 해당 원본…</value></data>
-  <data name="Devices.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>스캔 중 해당 대상…</value></data>
-  <data name="Devices.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>불러오는 중 구성…</value></data>
-  <data name="Devices.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>불러오는 중 해당 라이브러리…</value></data>
-  <data name="Devices.Progress.Phase.Planning" xml:space="preserve"><value>계획 중 동기화 변경 사항…</value></data>
-  <data name="Devices.Progress.Phase.RollingBack" xml:space="preserve"><value>롤백 중 뒷면 변경 사항…</value></data>
-  <data name="Devices.Progress.Phase.Validating" xml:space="preserve"><value>검증 해당 작업…</value></data>
-  <data name="Devices.Progress.RestoreComplete" xml:space="preserve"><value>Android 동기화 복원됨.</value></data>
-  <data name="Devices.Progress.Restoring" xml:space="preserve"><value>복원 중 해당 이전 Android 동기화…</value></data>
+  <data name="Devices.Issue.GenericInformation" xml:space="preserve"><value>이 동기화 참고 사항을 검토하세요.</value></data>
+  <data name="Devices.Issue.GenericWarning" xml:space="preserve"><value>계획을 적용하기 전에 이 동기화 경고를 검토하세요.</value></data>
+  <data name="Devices.Issue.RemovalLimit" xml:space="preserve"><value>계획된 제거 수가 구성된 안전 제한을 초과합니다.</value></data>
+  <data name="Devices.Progress.ApplyingChanges" xml:space="preserve"><value>동기화 변경 사항을 적용하는 중…</value></data>
+  <data name="Devices.Progress.ChangeComplete" xml:space="preserve"><value>동기화 변경이 완료되었습니다.</value></data>
+  <data name="Devices.Progress.ChangeFailed" xml:space="preserve"><value>동기화 변경에 실패했습니다.</value></data>
+  <data name="Devices.Progress.Initializing" xml:space="preserve"><value>관리되는 Android 대상을 초기화하는 중…</value></data>
+  <data name="Devices.Progress.Phase.Applying" xml:space="preserve"><value>동기화를 적용하는 중…</value></data>
+  <data name="Devices.Progress.Phase.Completed" xml:space="preserve"><value>작업이 완료되었습니다.</value></data>
+  <data name="Devices.Progress.Phase.IndexingSources" xml:space="preserve"><value>원본을 스캔하는 중…</value></data>
+  <data name="Devices.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>대상을 스캔하는 중…</value></data>
+  <data name="Devices.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>구성을 불러오는 중…</value></data>
+  <data name="Devices.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>라이브러리를 불러오는 중…</value></data>
+  <data name="Devices.Progress.Phase.Planning" xml:space="preserve"><value>동기화 변경 사항을 계획하는 중…</value></data>
+  <data name="Devices.Progress.Phase.RollingBack" xml:space="preserve"><value>변경 사항을 롤백하는 중…</value></data>
+  <data name="Devices.Progress.Phase.Validating" xml:space="preserve"><value>작업을 검증하는 중…</value></data>
+  <data name="Devices.Progress.RestoreComplete" xml:space="preserve"><value>Android 동기화가 복원되었습니다.</value></data>
+  <data name="Devices.Progress.Restoring" xml:space="preserve"><value>이전 Android 동기화를 복원하는 중…</value></data>
   <data name="Devices.Progress.ScanningBoth" xml:space="preserve"><value>원본과 관리형 Android 대상을 검사하는 중…</value></data>
-  <data name="Devices.Progress.ScanningDestination" xml:space="preserve"><value>스캔 중 해당 관리됨 Android 대상…</value></data>
-  <data name="Devices.Progress.ScanningSource" xml:space="preserve"><value>스캔 중 해당 동기화 원본…</value></data>
-  <data name="Devices.Progress.SelectingChanges" xml:space="preserve"><value>선택 동기화 변경 사항…</value></data>
-  <data name="Devices.Progress.StagingFile" xml:space="preserve"><value>준비 하나의 파일 에서 해당 Android 기기…</value></data>
-  <data name="Devices.Progress.SynchronizationComplete" xml:space="preserve"><value>Android 동기화 완료.</value></data>
-  <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>전송 중 하나의 파일 로 해당 Android 기기…</value></data>
-  <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>검증 영향받음 경로 에서 해당 저장됨 동기화 계획…</value></data>
-  <data name="Devices.Selection.Manual" xml:space="preserve"><value>자동 또는 수동 일련번호</value></data>
+  <data name="Devices.Progress.ScanningDestination" xml:space="preserve"><value>관리되는 Android 대상을 스캔하는 중…</value></data>
+  <data name="Devices.Progress.ScanningSource" xml:space="preserve"><value>동기화 원본을 스캔하는 중…</value></data>
+  <data name="Devices.Progress.SelectingChanges" xml:space="preserve"><value>동기화 변경 사항을 선택하는 중…</value></data>
+  <data name="Devices.Progress.StagingFile" xml:space="preserve"><value>Android 기기에 파일을 스테이징하는 중…</value></data>
+  <data name="Devices.Progress.SynchronizationComplete" xml:space="preserve"><value>Android 동기화가 완료되었습니다.</value></data>
+  <data name="Devices.Progress.TransferringFile" xml:space="preserve"><value>Android 기기로 파일을 전송하는 중…</value></data>
+  <data name="Devices.Progress.ValidatingPlan" xml:space="preserve"><value>저장된 동기화 계획에서 영향을 받는 경로를 검증하는 중…</value></data>
+  <data name="Devices.Selection.Manual" xml:space="preserve"><value>자동 선택 또는 일련번호 입력</value></data>
   <data name="Devices.Selection.ManualDetails" xml:space="preserve"><value>일련 번호를 비워 두면 준비된 유일한 장치를 사용합니다.</value></data>
-  <data name="Devices.Selection.PreviouslySelected" xml:space="preserve"><value>이전 선택됨 기기</value></data>
+  <data name="Devices.Selection.PreviouslySelected" xml:space="preserve"><value>이전에 선택한 기기</value></data>
   <data name="Devices.Selection.ReadyDetails" xml:space="preserve"><value>{0} · {1}</value></data>
-  <data name="Devices.Selection.RememberedDetails" xml:space="preserve"><value>{0} · 아님 현재 보고서 기준 ADB</value></data>
+  <data name="Devices.Selection.RememberedDetails" xml:space="preserve"><value>{0} · 현재 ADB에서 보고되지 않음</value></data>
   <data name="Devices.Selection.RememberedName" xml:space="preserve"><value>{0} ({1})</value></data>
   <data name="Devices.Selection.State.Manual" xml:space="preserve"><value>수동</value></data>
-  <data name="Devices.Selection.State.NoPermissions" xml:space="preserve"><value>아니요 권한</value></data>
-  <data name="Devices.Selection.State.NotConnected" xml:space="preserve"><value>아님 연결됨</value></data>
+  <data name="Devices.Selection.State.NoPermissions" xml:space="preserve"><value>권한 없음</value></data>
+  <data name="Devices.Selection.State.NotConnected" xml:space="preserve"><value>연결되지 않음</value></data>
   <data name="Devices.Selection.State.Offline" xml:space="preserve"><value>오프라인</value></data>
   <data name="Devices.Selection.State.Ready" xml:space="preserve"><value>준비됨</value></data>
-  <data name="Devices.Selection.State.Unauthorized" xml:space="preserve"><value>권한 없음</value></data>
-  <data name="Devices.Selection.State.Unavailable" xml:space="preserve"><value>사용 불가</value></data>
+  <data name="Devices.Selection.State.Unauthorized" xml:space="preserve"><value>승인되지 않음</value></data>
+  <data name="Devices.Selection.State.Unavailable" xml:space="preserve"><value>사용할 수 없음</value></data>
   <data name="Devices.Selection.UnavailableDetails" xml:space="preserve"><value>{0} · {1}</value></data>
-  <data name="Devices.Status.ApplyComplete" xml:space="preserve"><value>파일 복사됨: {0:N0}; 경로 격리됨: {1:N0}; 바이트 전송됨: {2:N0}.</value></data>
-  <data name="Devices.Status.ApplyCompleteWithRecovery" xml:space="preserve"><value>파일 복사됨: {0:N0}; 경로 격리됨: {1:N0}; 바이트 전송됨: {2:N0}. 복구 실행: {3}.</value></data>
-  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>작업 취소됨. 해당 기본 서버 예정 릴리스 해당 대상 잠금.</value></data>
-  <data name="Devices.Status.Failed" xml:space="preserve"><value>해당 Android 기기 작업 실패.</value></data>
-  <data name="Devices.Status.Initialized" xml:space="preserve"><value>Android 대상 초기화됨.</value></data>
-  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>해당 동기화 미리 보기 입니다 차단됨. 계획됨 작업: {0:N0}; 제거: {1:N0}; 전송 바이트: {2:N0}.</value></data>
-  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>검토 해당 동기화 미리 보기. 계획됨 작업: {0:N0}; 제거: {1:N0}; 전송 바이트: {2:N0}.</value></data>
-  <data name="Devices.Status.Ready" xml:space="preserve"><value>선택 하나의 로컬 원본 및 초기화 하나의 관리됨 Android 대상 이전 미리 보는 중.</value></data>
-  <data name="Devices.Status.Restored" xml:space="preserve"><value>복원됨 복구 실행 {0} 에서 {1}.</value></data>
+  <data name="Devices.Status.ApplyComplete" xml:space="preserve"><value>복사된 파일: {0:N0}; 격리된 경로: {1:N0}; 전송된 바이트: {2:N0}.</value></data>
+  <data name="Devices.Status.ApplyCompleteWithRecovery" xml:space="preserve"><value>복사된 파일: {0:N0}; 격리된 경로: {1:N0}; 전송된 바이트: {2:N0}. 복구 실행: {3}.</value></data>
+  <data name="Devices.Status.Cancelled" xml:space="preserve"><value>작업이 취소되었습니다. 대상 잠금이 해제됩니다.</value></data>
+  <data name="Devices.Status.Failed" xml:space="preserve"><value>Android 기기 작업에 실패했습니다.</value></data>
+  <data name="Devices.Status.Initialized" xml:space="preserve"><value>Android 대상이 초기화되었습니다.</value></data>
+  <data name="Devices.Status.PreviewBlocked" xml:space="preserve"><value>동기화 미리 보기가 차단되었습니다. 계획된 작업: {0:N0}; 제거: {1:N0}; 전송할 바이트: {2:N0}.</value></data>
+  <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>동기화 미리 보기를 검토하세요. 계획된 작업: {0:N0}; 제거: {1:N0}; 전송할 바이트: {2:N0}.</value></data>
+  <data name="Devices.Status.Ready" xml:space="preserve"><value>미리 보기 전에 로컬 원본을 선택하고 관리되는 Android 대상을 초기화하세요.</value></data>
+  <data name="Devices.Status.Restored" xml:space="preserve"><value>복구 실행 {0}을(를) {1}에 복원했습니다.</value></data>
   <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>시작 중 수집</value></data>
   <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>수집 음악</value></data>
   <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>검색 중 용 수집 저널</value></data>
