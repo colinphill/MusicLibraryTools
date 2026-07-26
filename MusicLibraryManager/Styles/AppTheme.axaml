@@ -341,6 +341,13 @@
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
+  <Style Selector="Button.app /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
   <Style Selector="SplitButton.app">
     <Setter Property="MinHeight" Value="{DynamicResource AppControlHeight}" />
     <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
@@ -388,6 +395,10 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
+  <Style Selector="Button.app.quiet /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
   <Style Selector="Button.app.quiet:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
@@ -395,6 +406,10 @@
   <Style Selector="Button.app.quiet:pressed /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AppSelectionBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="Button.app.quiet:focus-visible /template/ ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
   </Style>
   <Style Selector="Button.app.icon">
     <Setter Property="Width" Value="{DynamicResource AppIconButtonSize}" />
@@ -424,6 +439,11 @@
     <Setter Property="Foreground" Value="{DynamicResource AppAccentInkBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
   </Style>
+  <Style Selector="Button.app.primary /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentInkBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
   <Style Selector="SplitButton.app.primary">
     <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppAccentInkBrush}" />
@@ -449,8 +469,18 @@
     <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
   </Style>
+  <Style Selector="Button.app.danger /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
+  </Style>
   <Style Selector="Button.app.danger:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AppDangerSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
+  </Style>
+  <Style Selector="Button.app.danger:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppDangerBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppDangerInkBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
   </Style>
   <Style Selector="Button.app.danger:focus-visible">
@@ -460,6 +490,11 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
   </Style>
   <Style Selector="Button.app.primary.danger">
+    <Setter Property="Background" Value="{DynamicResource AppDangerBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppDangerInkBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
+  </Style>
+  <Style Selector="Button.app.primary.danger /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AppDangerBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppDangerInkBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />

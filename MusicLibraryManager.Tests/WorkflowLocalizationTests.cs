@@ -109,6 +109,43 @@ public sealed class WorkflowLocalizationTests
     }
 
     [Fact]
+    public void Ingest_configuration_diagnostic_refreshes_when_the_ui_culture_changes()
+    {
+        var localization =
+            new SwitchingLocalizationService();
+        var viewModel = new IngestViewModel(
+            new StubIngest(),
+            new StubIngestFiles(),
+            new StubIngestDialogs(),
+            new FakeSettings(),
+            new FakeLibrary([]),
+            localization: localization);
+        var changed =
+            new List<string?>();
+        viewModel.PropertyChanged +=
+            (_, e) =>
+                changed.Add(
+                    e.PropertyName);
+
+        Assert.Equal(
+            "en-US:Ingest.Configuration.Diagnostic.NotLoaded",
+            viewModel
+                .ConfigurationDiagnosticDetail);
+
+        localization.SetCulture("fr-FR");
+
+        Assert.Contains(
+            nameof(
+                IngestViewModel
+                    .ConfigurationDiagnosticDetail),
+            changed);
+        Assert.Equal(
+            "fr-FR:Ingest.Configuration.Diagnostic.NotLoaded",
+            viewModel
+                .ConfigurationDiagnosticDetail);
+    }
+
+    [Fact]
     public void Count_variants_and_device_identity_remain_semantic()
     {
         var localization =

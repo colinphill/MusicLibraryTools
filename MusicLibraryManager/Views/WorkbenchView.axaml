@@ -186,6 +186,7 @@
                                  IsVisible="{Binding HasGroupHeader}" />
                       <TextBlock Grid.Row="1"
                                  VerticalAlignment="Center"
+                                 TextWrapping="Wrap"
                                  Text="{Binding Label}" />
                     </Grid>
                   </DataTemplate>

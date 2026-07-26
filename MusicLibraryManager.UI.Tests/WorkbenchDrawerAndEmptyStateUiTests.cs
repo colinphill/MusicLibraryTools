@@ -607,6 +607,248 @@ public sealed class
     }
 
     [AvaloniaFact]
+    public void External_tools_keeps_configuration_scrollable_and_review_surfaces_separate_at_expanded_minimum_size()
+    {
+        using ServiceProvider services =
+            BuildServices(
+                pseudoExpanded: true,
+                externalTools:
+                    new ManyInvocationExternalToolService());
+        App.UseServicesForTests(services);
+        WorkbenchViewModel model =
+            services.GetRequiredService<
+                WorkbenchViewModel>();
+        WorkbenchTrackViewModel track =
+            Track("tools-minimum.flac");
+        model.Files.Add(track);
+        model.SelectedFile = track;
+        model.SetSelectedFiles([track]);
+        MainWindow window =
+            services.GetRequiredService<
+                MainWindow>();
+        window.FontSize = 18;
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(
+                    window,
+                    services,
+                    900,
+                    600);
+            model.SelectedSection =
+                WorkbenchSection.Tools;
+            Render();
+
+            WorkbenchToolsSectionView tools =
+                view.FindControl<
+                    WorkbenchToolsSectionView>(
+                    "WorkbenchToolsSection")!;
+            Grid layout =
+                tools.FindControl<Grid>(
+                    "SectionLayout")!;
+            ScrollViewer editor =
+                tools.FindControl<ScrollViewer>(
+                    "EditorScroll")!;
+            Grid reviewed =
+                tools.FindControl<Grid>(
+                    "ReviewedPanel")!;
+            Border empty =
+                tools.FindControl<Border>(
+                    "ExternalToolPreviewEmptyState")!;
+            TextBlock description =
+                tools.FindControl<TextBlock>(
+                    "ExternalToolPreviewEmptyDescription")!;
+            TextBlock emptyTitle =
+                tools.FindControl<TextBlock>(
+                    "ExternalToolPreviewEmptyTitle")!;
+            Border status =
+                tools.FindControl<Border>(
+                    "ToolsStatusBanner")!;
+            Border footer =
+                tools.FindControl<Border>(
+                    "ToolsStickyFooter")!;
+
+            Assert.True(
+                empty
+                    .IsEffectivelyVisible);
+            Assert.True(
+                emptyTitle
+                    .IsEffectivelyVisible);
+            Assert.False(
+                description
+                    .IsEffectivelyVisible);
+            Assert.True(
+                editor.Bounds.Height >= 170,
+                $"The configuration viewport collapsed to {editor.Bounds.Height:0.#} px. " +
+                $"Layout={layout.Bounds.Height:0.#}; review={reviewed.Bounds.Height:0.#}; " +
+                $"empty={empty.Bounds.Height:0.#}; status={status.Bounds.Height:0.#}; " +
+                $"footer={footer.Bounds.Height:0.#}.");
+            AssertBefore(
+                editor,
+                reviewed,
+                layout,
+                "External tools editor/review");
+            AssertBefore(
+                status,
+                footer,
+                reviewed,
+                "External tools status/footer");
+
+            TextBox arguments =
+                tools.FindControl<TextBox>(
+                    "ExternalToolArgumentsInput")!;
+            Assert.True(
+                editor.Extent.Height >
+                editor.Viewport.Height,
+                "The compact editor did not expose its required fields through a scroll owner.");
+            arguments.BringIntoView();
+            Render();
+            Point argumentsTop =
+                arguments.TranslatePoint(
+                    default,
+                    editor) ??
+                throw new InvalidOperationException(
+                    "The arguments field was detached.");
+            Assert.InRange(
+                argumentsTop.Y,
+                -1,
+                editor.Bounds.Height + 1);
+            Assert.InRange(
+                argumentsTop.Y +
+                arguments.Bounds.Height,
+                -1,
+                editor.Bounds.Height + 1);
+
+            model.ExternalToolEditor
+                .Executable =
+                "fixture-tool.exe";
+            Assert.True(
+                model.PreviewExternalToolCommand
+                    .CanExecute(null));
+            model.PreviewExternalToolCommand
+                .Execute(null);
+            Render();
+
+            AppDataGrid invocationGrid =
+                tools.FindControl<
+                    AppDataGrid>(
+                    "ExternalToolInvocationGrid")!;
+            Button run =
+                tools.FindControl<Button>(
+                    "RunExternalToolButton")!;
+            Assert.False(
+                empty
+                    .IsEffectivelyVisible);
+            Assert.Equal(
+                ManyInvocationExternalToolService
+                    .InvocationCount,
+                model.ExternalToolInvocations
+                    .Count);
+            Assert.True(
+                run.IsEffectivelyVisible);
+            Assert.True(
+                run.IsEffectivelyEnabled);
+            Assert.True(
+                invocationGrid.Bounds.Height + 1 >=
+                invocationGrid
+                    .ColumnHeaderHeight +
+                invocationGrid.RowHeight,
+                $"The populated compact preview retained only {invocationGrid.Bounds.Height:0.#} px.");
+            DataGridRow[] realizedRows =
+            [
+                .. invocationGrid
+                    .GetVisualDescendants()
+                    .OfType<DataGridRow>(),
+            ];
+            Assert.NotEmpty(
+                realizedRows);
+            Assert.True(
+                realizedRows.Length <
+                ManyInvocationExternalToolService
+                    .InvocationCount,
+                "The populated preview did not virtualize its many rows.");
+            Assert.All(
+                realizedRows,
+                row =>
+                {
+                    Point rowTop =
+                        row.TranslatePoint(
+                            default,
+                            invocationGrid) ??
+                        throw new InvalidOperationException(
+                            "A realized invocation row was detached.");
+                    Assert.True(
+                        rowTop.Y +
+                        row.Bounds.Height <=
+                        invocationGrid
+                            .Bounds.Height + 1,
+                        $"A realized invocation row was clipped at {rowTop.Y:0.#}+{row.Bounds.Height:0.#}/{invocationGrid.Bounds.Height:0.#} px.");
+                });
+            AssertInside(
+                footer,
+                reviewed,
+                "External tools footer");
+            AssertInside(
+                run,
+                reviewed,
+                "External tools Run action");
+            Assert.True(
+                editor.Bounds.Height >= 130,
+                $"The populated preview reduced the editor to {editor.Bounds.Height:0.#} px.");
+        }
+        finally
+        {
+            window.Hide();
+        }
+
+        static void AssertBefore(
+            Control first,
+            Control second,
+            Control viewport,
+            string description)
+        {
+            Point firstTop =
+                first.TranslatePoint(
+                    default,
+                    viewport) ??
+                throw new InvalidOperationException(
+                    $"{description}: first control was detached.");
+            Point secondTop =
+                second.TranslatePoint(
+                    default,
+                    viewport) ??
+                throw new InvalidOperationException(
+                    $"{description}: second control was detached.");
+            Assert.True(
+                firstTop.Y +
+                first.Bounds.Height <=
+                secondTop.Y + 1,
+                $"{description} overlapped: " +
+                $"{firstTop.Y + first.Bounds.Height:0.#} > " +
+                $"{secondTop.Y:0.#}.");
+        }
+
+        static void AssertInside(
+            Control control,
+            Control viewport,
+            string description)
+        {
+            Point top =
+                control.TranslatePoint(
+                    default,
+                    viewport) ??
+                throw new InvalidOperationException(
+                    $"{description} was detached.");
+            Assert.True(
+                top.Y >= -1 &&
+                top.Y +
+                control.Bounds.Height <=
+                viewport.Bounds.Height + 1,
+                $"{description} escaped its viewport: {top.Y:0.#}+{control.Bounds.Height:0.#}/{viewport.Bounds.Height:0.#} px.");
+        }
+    }
+
+    [AvaloniaFact]
     public void Report_and_playlist_empty_previews_collapse_until_reviewed_outputs_exist()
     {
         using ServiceProvider services =
@@ -1059,7 +1301,10 @@ public sealed class
 
     private static ServiceProvider
         BuildServices(
-            TestSettings? settings = null)
+            TestSettings? settings = null,
+            bool pseudoExpanded = false,
+            IExternalToolService?
+                externalTools = null)
     {
         settings ??=
             new TestSettings();
@@ -1067,17 +1312,66 @@ public sealed class
             AppearancePreferences
                 .ShellRailExpandedPreference,
             bool.FalseString);
+        var neutral =
+            new ResourceLocalizationService(
+                settings);
+        ILocalizationService localization =
+            pseudoExpanded
+                ? new TestPseudoLocalizationService(
+                    neutral)
+                : neutral;
         return Composition.BuildServices(
             services =>
             {
                 services.AddSingleton<
                     IAppSettings>(
-                    settings);
+                        settings);
                 services.AddSingleton<
                     ILocalizationService>(
-                    new ResourceLocalizationService(
-                        settings));
+                    localization);
+                if (externalTools is not null)
+                {
+                    services.AddSingleton<
+                        IExternalToolService>(
+                        externalTools);
+                }
             });
+    }
+
+    private sealed class
+        ManyInvocationExternalToolService :
+        IExternalToolService
+    {
+        public const int InvocationCount = 24;
+
+        public ExternalToolPlan Preview(
+            ExternalToolDefinition definition,
+            IReadOnlyList<string> paths) =>
+            new(
+                definition,
+                Enumerable.Range(
+                        1,
+                        InvocationCount)
+                    .Select(index =>
+                        new ExternalToolInvocation(
+                            definition.Executable,
+                            [$"--fixture={index}"],
+                            null,
+                            paths))
+                    .ToArray(),
+                [],
+                DateTimeOffset.UtcNow);
+
+        public Task<ExternalToolRunResult>
+            RunAsync(
+                ExternalToolPlan plan,
+                IProgress<OperationProgress>?
+                    progress = null,
+                CancellationToken ct =
+                    default) =>
+            Task.FromResult(
+                new ExternalToolRunResult(
+                    []));
     }
 
     private static void Render()

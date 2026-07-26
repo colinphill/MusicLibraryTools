@@ -1,7 +1,11 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
@@ -41,8 +45,8 @@ public sealed class DevicesLifecycleUiTests
                 devices.DataContext);
         var window = new Window
         {
-            Width = 1_200,
-            Height = 700,
+            Width = 900,
+            Height = 600,
             Content = devices,
         };
         try
@@ -50,6 +54,16 @@ public sealed class DevicesLifecycleUiTests
             window.Show();
             Render();
 
+            model.DestinationPath = "";
+            Render();
+            Assert.DoesNotContain(
+                LifecycleButtons(),
+                button =>
+                    button
+                        .IsEffectivelyVisible);
+            model.DestinationPath =
+                "music";
+            Render();
             AssertPrimary(
                 "InitializeButton");
             Assert.False(
@@ -118,6 +132,18 @@ public sealed class DevicesLifecycleUiTests
             Button more =
                 devices.FindControl<Button>(
                     "DeviceMoreButton")!;
+            ISolidColorBrush quietBackground =
+                Assert.IsAssignableFrom<
+                    ISolidColorBrush>(
+                    Assert.Single(
+                            more
+                                .GetVisualDescendants()
+                                .OfType<
+                                    ContentPresenter>())
+                        .Background);
+            Assert.Equal(
+                0,
+                quietBackground.Color.A);
             MenuFlyout flyout =
                 Assert.IsType<MenuFlyout>(
                     more.Flyout);
@@ -153,18 +179,9 @@ public sealed class DevicesLifecycleUiTests
         void AssertPrimary(
             string expectedName)
         {
-            Button[] lifecycle =
-            [
-                devices.FindControl<Button>(
-                    "InitializeButton")!,
-                devices.FindControl<Button>(
-                    "PreviewButton")!,
-                devices.FindControl<Button>(
-                    "ApplyButton")!,
-            ];
             Button visible =
                 Assert.Single(
-                    lifecycle,
+                    LifecycleButtons(),
                     button =>
                         button
                             .IsEffectivelyVisible);
@@ -175,7 +192,36 @@ public sealed class DevicesLifecycleUiTests
                 "primary",
                 visible.Classes);
             Assert.True(visible.IsEnabled);
+            Assert.False(
+                visible.IsPointerOver,
+                $"{visible.Name} unexpectedly retained pointer-over state.");
+            Assert.True(
+                Application.Current!
+                    .TryGetResource(
+                        "AppAccentBrush",
+                        window.ActualThemeVariant,
+                        out object? accent));
+            ContentPresenter presenter =
+                Assert.Single(
+                    visible
+                        .GetVisualDescendants()
+                        .OfType<
+                            ContentPresenter>());
+            Assert.Equal(
+                accent?.ToString(),
+                presenter.Background?
+                    .ToString());
         }
+
+        Button[] LifecycleButtons() =>
+        [
+            devices.FindControl<Button>(
+                "InitializeButton")!,
+            devices.FindControl<Button>(
+                "PreviewButton")!,
+            devices.FindControl<Button>(
+                "ApplyButton")!,
+        ];
     }
 
     private static void Render()

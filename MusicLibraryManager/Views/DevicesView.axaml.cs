@@ -10,7 +10,12 @@ namespace MusicLibraryManager.Views;
 public partial class DevicesView : UserControl
 {
     private bool _startedDeviceDiscovery;
+    private Task _initialDeviceDiscovery =
+        Task.CompletedTask;
     private readonly DevicesViewModel _viewModel;
+
+    internal Task InitialDeviceDiscovery =>
+        _initialDeviceDiscovery;
 
     public DevicesView()
     {
@@ -54,7 +59,12 @@ public partial class DevicesView : UserControl
             return;
         _startedDeviceDiscovery = true;
         if (viewModel.RefreshDevicesCommand.CanExecute(null))
-            await viewModel.RefreshDevicesCommand.ExecuteAsync(null);
+        {
+            _initialDeviceDiscovery =
+                viewModel.RefreshDevicesCommand
+                    .ExecuteAsync(null);
+            await _initialDeviceDiscovery;
+        }
     }
 
     private void OnViewModelPropertyChanged(

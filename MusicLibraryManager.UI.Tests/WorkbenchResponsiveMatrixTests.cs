@@ -381,6 +381,53 @@ public sealed class WorkbenchResponsiveMatrixTests
                 WorkbenchView
                     .MinimumSectionTaskWidth,
                 $"The section rail left less than {WorkbenchView.MinimumSectionTaskWidth:0}px for the Workbench task at window width {windowWidth}.");
+            ListBox navigation =
+                view.FindControl<ListBox>(
+                    "WorkbenchSectionNavigation")!;
+            foreach (TextBlock label in
+                     navigation
+                         .GetVisualDescendants()
+                         .OfType<TextBlock>()
+                         .Where(text =>
+                             text.IsEffectivelyVisible &&
+                             !string.IsNullOrEmpty(
+                                 text.Text)))
+            {
+                var unconstrained =
+                    new TextBlock
+                    {
+                        Text = label.Text,
+                        FontFamily =
+                            label.FontFamily,
+                        FontSize =
+                            label.FontSize,
+                        FontStyle =
+                            label.FontStyle,
+                        FontWeight =
+                            label.FontWeight,
+                        FontStretch =
+                            label.FontStretch,
+                        LetterSpacing =
+                            label.LetterSpacing,
+                        TextWrapping =
+                            label.TextWrapping,
+                        MaxLines = 0,
+                    };
+                unconstrained.Measure(
+                    new Size(
+                        label.Bounds.Width,
+                        double.PositiveInfinity));
+                Assert.True(
+                    unconstrained
+                        .DesiredSize.Width <=
+                    label.Bounds.Width + 1 &&
+                    unconstrained
+                        .DesiredSize.Height <=
+                    label.Bounds.Height + 1,
+                    $"The Workbench rail clipped '{label.Text}' at {windowWidth}px: " +
+                    $"{unconstrained.DesiredSize.Width:0.#}x{unconstrained.DesiredSize.Height:0.#}/" +
+                    $"{label.Bounds.Width:0.#}x{label.Bounds.Height:0.#} px.");
+            }
         }
     }
 
@@ -652,6 +699,11 @@ public sealed class WorkbenchResponsiveMatrixTests
         int height,
         WorkbenchSection section)
     {
+        // A section switch can invalidate templates during the render tick
+        // that follows the logical SelectedIndex update. Flush one additional
+        // cycle so the bitmap cannot retain the previous viewport's final
+        // section (Shortcuts) while the tree already reports Session.
+        Render();
         using var frame =
             window.GetLastRenderedFrame();
         Assert.NotNull(frame);
@@ -682,6 +734,7 @@ public sealed class WorkbenchResponsiveMatrixTests
         string themeName,
         WorkbenchSection section)
     {
+        Render();
         using var frame = window.GetLastRenderedFrame();
         Assert.NotNull(frame);
         Assert.Equal(900, frame.PixelSize.Width);

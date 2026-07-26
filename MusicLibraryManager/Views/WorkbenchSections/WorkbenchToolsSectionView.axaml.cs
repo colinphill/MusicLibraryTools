@@ -10,6 +10,8 @@ public partial class WorkbenchToolsSectionView : UserControl
 {
     private readonly ILocalizationService _localization;
     private readonly WorkbenchViewModel _viewModel;
+    private bool _compactHeight;
+    private bool _narrow;
 
     public WorkbenchToolsSectionView()
     {
@@ -23,6 +25,7 @@ public partial class WorkbenchToolsSectionView : UserControl
             _viewModel.ExternalToolInvocations.CollectionChanged +=
                 OnExternalToolInvocationsChanged;
             ApplyPreviewVisibility();
+            ApplyResponsiveLayout();
         };
         DetachedFromVisualTree += (_, _) =>
         {
@@ -67,6 +70,8 @@ public partial class WorkbenchToolsSectionView : UserControl
             hasPreview;
         ExternalToolPreviewEmptyState.IsVisible =
             !hasPreview;
+        ApplyCompactRowAllocation(
+            hasPreview);
     }
 
     private void ApplyResponsiveLayout()
@@ -75,6 +80,8 @@ public partial class WorkbenchToolsSectionView : UserControl
             Bounds.Width < 880;
         bool compactHeight = Bounds.Height > 0 &&
             Bounds.Height < 430;
+        _compactHeight = compactHeight;
+        _narrow = narrow;
         PlaceholderHelp.IsVisible = !compactHeight;
         SafetyNote.IsVisible = !compactHeight;
         SectionLayout.ColumnDefinitions.Clear();
@@ -93,12 +100,25 @@ public partial class WorkbenchToolsSectionView : UserControl
                     new GridLength(
                         1,
                         GridUnitType.Star)));
+            if (compactHeight)
+            {
+                SectionLayout.RowDefinitions[0].Height =
+                    new GridLength(
+                        1,
+                        GridUnitType.Star);
+                SectionLayout.RowDefinitions[2].Height =
+                    new GridLength(
+                        1,
+                        GridUnitType.Star);
+            }
             Grid.SetColumn(ReviewedPanel, 0);
             Grid.SetRow(ReviewedPanel, 2);
             EditorScroll.MaxHeight =
-                compactHeight ? 110 : 280;
+                compactHeight
+                    ? double.PositiveInfinity
+                    : 280;
             ExternalToolInvocationGrid.MinHeight =
-                compactHeight ? 80 : 150;
+                compactHeight ? 40 : 150;
             ExternalToolInvocationGrid.Height =
                 double.NaN;
         }
@@ -128,5 +148,37 @@ public partial class WorkbenchToolsSectionView : UserControl
             ExternalToolInvocationGrid.MinHeight = 150;
             ExternalToolInvocationGrid.Height = double.NaN;
         }
+        ExternalToolPreviewEmptyDescription.IsVisible =
+            !compactHeight;
+        ReviewedPanel.RowSpacing =
+            compactHeight ? 4 : 8;
+        ToolsStatusText.MaxLines =
+            compactHeight ? 1 : 0;
+        ApplyPreviewVisibility();
+    }
+
+    private void ApplyCompactRowAllocation(
+        bool hasPreview)
+    {
+        if (!_compactHeight ||
+            !_narrow ||
+            SectionLayout
+                .RowDefinitions.Count != 3)
+        {
+            return;
+        }
+
+        SectionLayout
+            .RowDefinitions[0]
+            .Height =
+            new GridLength(
+                hasPreview ? 0.4 : 1,
+                GridUnitType.Star);
+        SectionLayout
+            .RowDefinitions[2]
+            .Height =
+            new GridLength(
+                hasPreview ? 0.6 : 1,
+                GridUnitType.Star);
     }
 }

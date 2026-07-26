@@ -1010,6 +1010,7 @@ public partial class IngestViewModel :
             item.RefreshLocalization();
         OnPropertyChanged(nameof(ExplicitSourceSummary));
         OnPropertyChanged(nameof(ConfigurationReadinessText));
+        OnPropertyChanged(nameof(ConfigurationDiagnosticDetail));
     }
 
     private void NotifyCommands()

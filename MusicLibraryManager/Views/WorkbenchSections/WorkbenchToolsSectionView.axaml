@@ -49,7 +49,8 @@
           <StackPanel Classes="field">
             <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Tools.NamePlaceholder}" />
-            <TextBox Classes="app"
+            <TextBox x:Name="ExternalToolNameInput"
+                     Classes="app"
                      Text="{Binding ExternalToolEditor.Name, Mode=TwoWay}"
                      PlaceholderText="{DynamicResource Loc.Workbench.Tools.NamePlaceholder}"
                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Tools.NamePlaceholder}" />
@@ -70,7 +71,8 @@
           <TextBlock Classes="field-label"
                      Text="{DynamicResource Loc.Workbench.Tools.ExecutablePlaceholder}" />
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <TextBox Classes="app"
+            <TextBox x:Name="ExternalToolExecutableInput"
+                     Classes="app"
                      Text="{Binding ExternalToolEditor.Executable, Mode=TwoWay}"
                      PlaceholderText="{DynamicResource Loc.Workbench.Tools.ExecutablePlaceholder}"
                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Tools.ExecutablePlaceholder}" />
@@ -85,7 +87,8 @@
           <TextBlock Classes="field-label"
                      Text="{DynamicResource Loc.Workbench.Tools.WorkingDirectoryPlaceholder}" />
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <TextBox Classes="app"
+            <TextBox x:Name="ExternalToolWorkingDirectoryInput"
+                     Classes="app"
                      Text="{Binding ExternalToolEditor.WorkingDirectory, Mode=TwoWay}"
                      PlaceholderText="{DynamicResource Loc.Workbench.Tools.WorkingDirectoryPlaceholder}"
                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Tools.WorkingDirectoryPlaceholder}" />
@@ -98,7 +101,8 @@
         <StackPanel Classes="field">
           <TextBlock Classes="field-label"
                      Text="{DynamicResource Loc.Workbench.Tools.ArgumentsLabel}" />
-          <TextBox Classes="app"
+          <TextBox x:Name="ExternalToolArgumentsInput"
+                   Classes="app"
                    MinHeight="105"
                    AcceptsReturn="True"
                    TextWrapping="NoWrap"
@@ -134,24 +138,34 @@
       <Border x:Name="ExternalToolPreviewEmptyState"
               Grid.Row="1"
               Classes="empty-state"
+              ClipToBounds="True"
+              Padding="{DynamicResource AppPaddingSmall}"
               IsVisible="{Binding !ExternalToolInvocations.Count}">
         <StackPanel HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     MaxWidth="360"
                     Spacing="8">
-          <TextBlock FontWeight="SemiBold"
+          <TextBlock x:Name="ExternalToolPreviewEmptyTitle"
+                     FontWeight="SemiBold"
                      TextAlignment="Center"
                      Text="{DynamicResource Loc.Workbench.Tools.EmptyPreviewTitle}" />
-          <TextBlock Classes="muted"
+          <TextBlock x:Name="ExternalToolPreviewEmptyDescription"
+                     Classes="muted"
                      TextAlignment="Center"
                      TextWrapping="Wrap"
                      Text="{DynamicResource Loc.Workbench.Tools.EmptyPreviewDescription}" />
         </StackPanel>
       </Border>
-      <Border Grid.Row="2" Classes="status-banner info">
+      <Border x:Name="ToolsStatusBanner"
+              Grid.Row="2"
+              Classes="status-banner info">
         <StackPanel Spacing="4">
-          <TextBlock Text="{Binding StatusText}"
-                     TextWrapping="Wrap" />
+          <TextBlock x:Name="ToolsStatusText"
+                     Text="{Binding StatusText}"
+                     TextWrapping="Wrap"
+                     TextTrimming="CharacterEllipsis"
+                     ToolTip.Tip="{Binding StatusText}"
+                     AutomationProperties.HelpText="{Binding StatusText}" />
           <controls:LocalizedFormatTextBlock
               Classes="muted"
               FontSize="{DynamicResource AppFontSizeCaption}"
@@ -170,7 +184,8 @@
                   Classes.primary="{Binding !ExternalToolInvocations.Count}"
                   Content="{DynamicResource Loc.Workbench.Tools.Preview}"
                   Command="{Binding PreviewExternalToolCommand}" />
-          <Button Classes="app primary"
+          <Button x:Name="RunExternalToolButton"
+                  Classes="app primary"
                   IsVisible="{Binding ExternalToolInvocations.Count}"
                   Content="{DynamicResource Loc.Workbench.Tools.Run}"
                   Command="{Binding RunExternalToolCommand}" />

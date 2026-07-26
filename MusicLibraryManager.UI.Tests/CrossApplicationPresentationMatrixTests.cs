@@ -1,6 +1,7 @@
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media.Imaging;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
+using MusicLibraryManager.Views;
 using MusicLibraryTools;
 using Xunit;
 
@@ -63,7 +65,7 @@ public sealed class
     ];
 
     [AvaloniaFact]
-    public void
+    public async Task
         Every_shell_destination_satisfies_the_complete_presentation_matrix()
     {
         var settings = new MatrixSettings();
@@ -242,6 +244,93 @@ public sealed class
                                     navigation.Navigate(
                                         destination);
                                     Render();
+                                    if (contentHost.Content is
+                                        DevicesView devices)
+                                    {
+                                        await devices
+                                            .InitialDeviceDiscovery;
+                                        Render();
+                                        DevicesViewModel deviceModel =
+                                            Assert.IsType<
+                                                DevicesViewModel>(
+                                                devices
+                                                    .DataContext);
+                                        Button[] visibleLifecycle =
+                                        [
+                                            .. new[]
+                                            {
+                                                "InitializeButton",
+                                                "PreviewButton",
+                                                "ApplyButton",
+                                            }
+                                            .Select(name =>
+                                                devices
+                                                    .FindControl<
+                                                        Button>(
+                                                        name)!)
+                                            .Where(button =>
+                                                button
+                                                    .IsEffectivelyVisible),
+                                        ];
+                                        string? expectedLifecycle =
+                                            deviceModel.ApplyCommand
+                                                .CanExecute(null)
+                                                ? "ApplyButton"
+                                                : deviceModel
+                                                    .PreviewCommand
+                                                    .CanExecute(null)
+                                                    ? "PreviewButton"
+                                                    : deviceModel
+                                                        .InitializeCommand
+                                                        .CanExecute(null)
+                                                        ? "InitializeButton"
+                                                        : null;
+                                        if (expectedLifecycle is null)
+                                        {
+                                            Assert.Empty(
+                                                visibleLifecycle);
+                                        }
+                                        else
+                                        {
+                                            Button button =
+                                                Assert.Single(
+                                                    visibleLifecycle);
+                                            Assert.Equal(
+                                                expectedLifecycle,
+                                                button.Name);
+                                            Assert.True(
+                                                button
+                                                    .IsEffectivelyEnabled,
+                                                $"Devices exposed disabled lifecycle primary {button.Name}; " +
+                                                $"loading={deviceModel.IsLoadingDevices}, " +
+                                                $"initialize={deviceModel.InitializeCommand.CanExecute(null)}, " +
+                                                $"preview={deviceModel.PreviewCommand.CanExecute(null)}, " +
+                                                $"apply={deviceModel.ApplyCommand.CanExecute(null)}.");
+                                            Assert.Contains(
+                                                "primary",
+                                                button
+                                                    .Classes);
+                                            Assert.True(
+                                                Application
+                                                    .Current!
+                                                    .TryGetResource(
+                                                        "AppAccentBrush",
+                                                        theme,
+                                                        out object?
+                                                            accent));
+                                            Assert.Equal(
+                                                accent?
+                                                    .ToString(),
+                                                Assert
+                                                    .Single(
+                                                        button
+                                                            .GetVisualDescendants()
+                                                            .OfType<
+                                                                ContentPresenter>())
+                                                    .Background?
+                                                    .ToString());
+                                        }
+                                    }
                                     presentationCount++;
 
                                     string context =
@@ -1391,6 +1480,11 @@ public sealed class
             $"The matrix produced the duplicate capture name '{fileName}'.");
         Directory.CreateDirectory(
             captureDirectory);
+        // The first destination in a new viewport follows About from the
+        // preceding viewport. Flush the render invalidations once more so a
+        // logically active Home view cannot be saved with About's prior
+        // framebuffer.
+        Render();
         using var frame =
             window.GetLastRenderedFrame();
         Assert.NotNull(frame);
@@ -1407,11 +1501,16 @@ public sealed class
             PngBitmapEncoderOptions.Default);
     }
 
-    private static void Render()
+    private static void Render() =>
+        RenderTicks(2);
+
+    private static void RenderTicks(
+        int timerTicks)
     {
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform
-            .ForceRenderTimerTick(2);
+            .ForceRenderTimerTick(
+                timerTicks);
         Dispatcher.UIThread.RunJobs();
     }
 
