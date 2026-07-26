@@ -1801,10 +1801,10 @@
     <value>적용</value>
   </data>
   <data name="Operations.Action.ApplyRestore" xml:space="preserve">
-    <value>적용 검토됨 복원</value>
+    <value>선택한 항목 복원</value>
   </data>
   <data name="Operations.Action.ClearSelection" xml:space="preserve">
-    <value>지우기 선택</value>
+    <value>선택 해제</value>
   </data>
   <data name="Operations.Action.Maintenance" xml:space="preserve">
     <value>유지 관리…</value>
@@ -1813,13 +1813,13 @@
     <value>복구 유지 관리 작업</value>
   </data>
   <data name="Operations.Action.OpenRun" xml:space="preserve">
-    <value>열기 실행</value>
+    <value>실행 열기</value>
   </data>
   <data name="Operations.Action.PreviewRestore" xml:space="preserve">
-    <value>미리 보기 복원</value>
+    <value>복원 미리 보기</value>
   </data>
   <data name="Operations.Action.SelectRestorable" xml:space="preserve">
-    <value>선택 복원 가능</value>
+    <value>복원 가능한 항목 선택</value>
   </data>
   <data name="Operations.Destination" xml:space="preserve">
     <value>대상</value>
@@ -1834,13 +1834,13 @@
     <value>작업 출력</value>
   </data>
   <data name="Operations.MaximumRemovals" xml:space="preserve">
-    <value>최대 제거</value>
+    <value>제거할 최대 파일 수</value>
   </data>
   <data name="Operations.PlaylistName" xml:space="preserve">
     <value>재생 목록 이름</value>
   </data>
   <data name="Operations.PurgeReviewed" xml:space="preserve">
-    <value>완전 삭제 검토됨 복구 기록</value>
+    <value>대상 복구 기록 영구 삭제</value>
   </data>
   <data name="Operations.Rebalance" xml:space="preserve">
     <value>재조정</value>
@@ -1852,13 +1852,13 @@
     <value>복구 실행을 찾을 수 없습니다</value>
   </data>
   <data name="Operations.Recovery.Retention" xml:space="preserve">
-    <value>복구 보존 (일)</value>
+    <value>복구 보존 기간(일)</value>
   </data>
   <data name="Operations.Recovery.RetentionAutomation" xml:space="preserve">
-    <value>복구 보존 에서 일</value>
+    <value>복구 보존 기간(일)</value>
   </data>
   <data name="Operations.Recovery.SearchRoot" xml:space="preserve">
-    <value>검색 루트</value>
+    <value>복구 검색 루트</value>
   </data>
   <data name="Operations.Recovery.SearchRootAutomation" xml:space="preserve">
     <value>복구 검색 루트</value>
@@ -1873,7 +1873,7 @@
     <value>통합 작업을 실행하고 기록을 검토하며 저널에 기록된 변경 내용을 복구합니다.</value>
   </data>
   <data name="Operations.Tab.History" xml:space="preserve">
-    <value>작업 기록</value>
+    <value>기록</value>
   </data>
   <data name="Operations.Tab.Jobs" xml:space="preserve">
     <value>작업</value>
@@ -1885,13 +1885,13 @@
     <value>작업</value>
   </data>
   <data name="Operations.ValidationPath" xml:space="preserve">
-    <value>검증 경로</value>
+    <value>iTunes Library.itl 파일</value>
   </data>
   <data name="Operations.FixErrors" xml:space="preserve">
-    <value>수정 오류</value>
+    <value>오류 수정</value>
   </data>
   <data name="Operations.PreviewRetentionPurge" xml:space="preserve">
-    <value>미리 보기 보존 완전 삭제</value>
+    <value>복구 기록 영구 삭제 미리 보기</value>
   </data>
   <data name="ReviewedFileOperation.Apply" xml:space="preserve">
     <value>검토한 계획 적용</value>
@@ -5693,33 +5693,33 @@
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>작업 디렉터리</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
   <data name="Workbench.Value.SampleRate" xml:space="preserve"><value>{0:N0} Hz</value></data>
-  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>시작 중 적용</value></data>
-  <data name="Operations.Activity.Apply.Title" xml:space="preserve"><value>적용 {0}</value></data>
-  <data name="Operations.Activity.Discovery.Starting.One" xml:space="preserve"><value>스캔 중 {0:N0} 루트</value></data>
-  <data name="Operations.Activity.Discovery.Starting.Other" xml:space="preserve"><value>스캔 중 {0:N0} 루트</value></data>
-  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>스캔 복구 작업</value></data>
-  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>열기 해당 {0} 작업</value></data>
-  <data name="Operations.Activity.OpenRun.Title" xml:space="preserve"><value>열기 복구 실행</value></data>
-  <data name="Operations.Activity.Preview.Starting" xml:space="preserve"><value>시작 중 미리 보기</value></data>
-  <data name="Operations.Activity.Preview.Title" xml:space="preserve"><value>미리 보기 {0}</value></data>
-  <data name="Operations.Activity.Purge.Starting.One" xml:space="preserve"><value>완전 삭제 중 {0:N0} 실행</value></data>
-  <data name="Operations.Activity.Purge.Starting.Other" xml:space="preserve"><value>완전 삭제 중 {0:N0} 실행</value></data>
-  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>완전 삭제 작업 기록</value></data>
-  <data name="Operations.Activity.PurgePreview.Starting.One" xml:space="preserve"><value>검토 중 실행 이전 보다 {0:N0} 일</value></data>
-  <data name="Operations.Activity.PurgePreview.Starting.Other" xml:space="preserve"><value>검토 중 실행 이전 보다 {0:N0} 일</value></data>
-  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>미리 보기 복구 완전 삭제</value></data>
-  <data name="Operations.Activity.Restore.Starting.One" xml:space="preserve"><value>복원 중 {0:N0} 항목</value></data>
-  <data name="Operations.Activity.Restore.Starting.Other" xml:space="preserve"><value>복원 중 {0:N0} 항목</value></data>
-  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>복원 작업 항목</value></data>
-  <data name="Operations.Activity.RestorePreview.Starting.One" xml:space="preserve"><value>검토 중 {0:N0} 선택됨 항목</value></data>
-  <data name="Operations.Activity.RestorePreview.Starting.Other" xml:space="preserve"><value>검토 중 {0:N0} 선택한 항목</value></data>
-  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>미리 보기 복구 복원</value></data>
+  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>변경 사항을 적용할 준비 중</value></data>
+  <data name="Operations.Activity.Apply.Title" xml:space="preserve"><value>{0} 적용</value></data>
+  <data name="Operations.Activity.Discovery.Starting.One" xml:space="preserve"><value>루트 {0:N0}개 검사 중</value></data>
+  <data name="Operations.Activity.Discovery.Starting.Other" xml:space="preserve"><value>루트 {0:N0}개 검사 중</value></data>
+  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>복구 작업 검색</value></data>
+  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>복구 실행 ‘{0}’ 여는 중</value></data>
+  <data name="Operations.Activity.OpenRun.Title" xml:space="preserve"><value>복구 실행 열기</value></data>
+  <data name="Operations.Activity.Preview.Starting" xml:space="preserve"><value>미리 보기 시작 중</value></data>
+  <data name="Operations.Activity.Preview.Title" xml:space="preserve"><value>{0} 미리 보기</value></data>
+  <data name="Operations.Activity.Purge.Starting.One" xml:space="preserve"><value>실행 {0:N0}개 영구 삭제 중</value></data>
+  <data name="Operations.Activity.Purge.Starting.Other" xml:space="preserve"><value>실행 {0:N0}개 영구 삭제 중</value></data>
+  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>복구 기록 영구 삭제</value></data>
+  <data name="Operations.Activity.PurgePreview.Starting.One" xml:space="preserve"><value>{0:N0}일보다 오래된 실행 검토 중</value></data>
+  <data name="Operations.Activity.PurgePreview.Starting.Other" xml:space="preserve"><value>{0:N0}일보다 오래된 실행 검토 중</value></data>
+  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>복구 기록 영구 삭제 미리 보기</value></data>
+  <data name="Operations.Activity.Restore.Starting.One" xml:space="preserve"><value>항목 {0:N0}개 복원 중</value></data>
+  <data name="Operations.Activity.Restore.Starting.Other" xml:space="preserve"><value>항목 {0:N0}개 복원 중</value></data>
+  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>선택한 항목 복원</value></data>
+  <data name="Operations.Activity.RestorePreview.Starting.One" xml:space="preserve"><value>선택한 항목 {0:N0}개 검토 중</value></data>
+  <data name="Operations.Activity.RestorePreview.Starting.Other" xml:space="preserve"><value>선택한 항목 {0:N0}개 검토 중</value></data>
+  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>복원 미리 보기</value></data>
   <data name="Operations.Choice.FileMutationKind.Copy" xml:space="preserve"><value>복사</value></data>
   <data name="Operations.Choice.FileMutationKind.Delete" xml:space="preserve"><value>삭제</value></data>
   <data name="Operations.Choice.FileMutationKind.Move" xml:space="preserve"><value>이동</value></data>
   <data name="Operations.Choice.FileMutationKind.Quarantine" xml:space="preserve"><value>격리</value></data>
   <data name="Operations.Choice.FileMutationKind.Replace" xml:space="preserve"><value>바꾸기</value></data>
-  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>바꾸기 생성 파일</value></data>
+  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>생성된 파일로 교체</value></data>
   <data name="Operations.Choice.FileMutationKind.Write" xml:space="preserve"><value>쓰기</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Error" xml:space="preserve"><value>오류</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Info" xml:space="preserve"><value>정보</value></data>
@@ -5729,173 +5729,173 @@
   <data name="Operations.Choice.OperationIssueSeverity.Warning" xml:space="preserve"><value>경고</value></data>
   <data name="Operations.Choice.OperationJournalKind.Device" xml:space="preserve"><value>기기</value></data>
   <data name="Operations.Choice.OperationJournalKind.Ingest" xml:space="preserve"><value>수집</value></data>
-  <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>구성</value></data>
+  <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>정리</value></data>
   <data name="Operations.Choice.OperationJournalKind.OtherKind" xml:space="preserve"><value>기타</value></data>
   <data name="Operations.Choice.OperationJournalKind.ReviewedChange" xml:space="preserve"><value>검토된 변경 사항</value></data>
   <data name="Operations.Choice.OperationJournalKind.Sync" xml:space="preserve"><value>동기화</value></data>
   <data name="Operations.Choice.OperationJournalState.Completed" xml:space="preserve"><value>완료됨</value></data>
   <data name="Operations.Choice.OperationJournalState.Interrupted" xml:space="preserve"><value>중단됨 — 복구가 필요할 수 있음</value></data>
-  <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>롤백됨 뒷면</value></data>
+  <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>롤백됨</value></data>
   <data name="Operations.Choice.OperationJournalState.Unknown" xml:space="preserve"><value>격리 항목 있음 — 최종 상태가 기록되지 않음</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>적용 {1} 포함 {0:N0} 계획됨 파일 변경?
+  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>‘{1}’을(를) 계획된 파일 변경 {0:N0}건과 함께 적용하시겠습니까?
 
 {2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>적용 {1} 포함 {0:N0} 계획됨 파일 변경?
+  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>‘{1}’을(를) 계획된 파일 변경 {0:N0}건과 함께 적용하시겠습니까?
 
 {2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>복구 입니다 사용 가능: 변경됨 파일 예정 됨 저널.</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>복구 입니다 사용 가능: 변경됨 파일 예정 됨 저널 아래 “{0}”.</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>복구 입니다 사용할 수 없음 용 이 적용.</value></data>
-  <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>적용 {0}</value></data>
-  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>선택 해당 iTunes 라이브러리 로 검증</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>복구를 사용할 수 있습니다. 변경된 파일의 원본이 복구 저널에 보관됩니다.</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>복구를 사용할 수 있습니다. 변경된 파일의 원본이 ‘{0}’에 보관됩니다.</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>이 적용 작업에는 복구를 사용할 수 없습니다.</value></data>
+  <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>{0} 적용</value></data>
+  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>검증할 iTunes Library.itl 파일 선택</value></data>
   <data name="Operations.Dialog.SelectRecoveryRoot" xml:space="preserve"><value>검사할 원본, 동기화 또는 장치 루트 선택</value></data>
-  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>선택 해당 스마트-저장소 대상</value></data>
+  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>스마트 저장소 대상 선택</value></data>
   <data name="Operations.Diagnostic.NoApplyService" xml:space="preserve"><value>“{0}” 작업에 사용할 수 있는 형식화된 적용 서비스가 없습니다.</value></data>
   <data name="Operations.Diagnostic.NoPreviewService" xml:space="preserve"><value>“{0}” 작업에 사용할 수 있는 형식화된 미리 보기 서비스가 없습니다.</value></data>
   <data name="Operations.Entry.State.Created" xml:space="preserve"><value>만들어짐</value></data>
-  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>만들어짐 항목 누락</value></data>
+  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>생성된 항목이 더 이상 존재하지 않음</value></data>
   <data name="Operations.Entry.State.Deleted" xml:space="preserve"><value>삭제됨</value></data>
   <data name="Operations.Entry.State.Moved" xml:space="preserve"><value>이동됨</value></data>
-  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>이동 대상 누락</value></data>
-  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>계획됨; 완료 아님 기록됨</value></data>
+  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>이동된 항목이 대상 위치에 더 이상 존재하지 않음</value></data>
+  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>계획됨. 완료가 기록되지 않음</value></data>
   <data name="Operations.Entry.State.Quarantined" xml:space="preserve"><value>격리됨</value></data>
-  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>격리 복사 누락</value></data>
-  <data name="Operations.Entry.State.Unknown" xml:space="preserve"><value>알 수 없음 작업</value></data>
-  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes 라이브러리</value></data>
+  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>격리된 항목이 더 이상 존재하지 않음</value></data>
+  <data name="Operations.Entry.State.Unknown" xml:space="preserve"><value>알 수 없는 작업</value></data>
+  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes Library.itl 파일</value></data>
   <data name="Operations.History.Elapsed" xml:space="preserve"><value>{0:0.##} s</value></data>
   <data name="Operations.History.State.Applied" xml:space="preserve"><value>적용됨</value></data>
   <data name="Operations.History.State.ApplyFailed" xml:space="preserve"><value>적용 실패</value></data>
   <data name="Operations.History.State.PreviewFailed" xml:space="preserve"><value>미리 보기 실패</value></data>
   <data name="Operations.History.State.PreviewPassed" xml:space="preserve"><value>미리 보기 통과</value></data>
-  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>정규화 포함됨 아트워크 용 트랙 제공됨 기준 해당 구성됨 카탈로그.</value></data>
+  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>구성된 카탈로그의 트랙에 포함된 아트워크를 정규화합니다.</value></data>
   <data name="Operations.Job.ArtworkNormalization.Name" xml:space="preserve"><value>아트워크 정규화</value></data>
-  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>프로젝트 해당 인덱싱됨 라이브러리 로 하나의 균형 이동식-미디어 내보내기.</value></data>
-  <data name="Operations.Job.CarCard.Name" xml:space="preserve"><value>차량 카드</value></data>
-  <data name="Operations.Job.ConfiguredExport.Description" xml:space="preserve"><value>미리 보기 및 적용 해당 구성됨 선택, 이름 지정, 전송, 및 조정 정책.</value></data>
+  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>이동식 미디어용 균형 잡힌 라이브러리 내보내기를 만듭니다.</value></data>
+  <data name="Operations.Job.CarCard.Name" xml:space="preserve"><value>차량용 카드</value></data>
+  <data name="Operations.Job.ConfiguredExport.Description" xml:space="preserve"><value>구성된 선택, 명명, 전송 및 조정 정책을 미리 보고 적용합니다.</value></data>
   <data name="Operations.Job.ConfiguredExport.Name" xml:space="preserve"><value>내보내기: {0}</value></data>
-  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>동기화 구성됨 재생 목록 로 해당 라이브러리 대상.</value></data>
-  <data name="Operations.Job.CrossLibrarySync.Name" xml:space="preserve"><value>교차-라이브러리 동기화</value></data>
-  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>검증 구조적 및 참조 불변값 에서 하나의 ITL 파일.</value></data>
+  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>구성된 재생 목록을 대상 라이브러리와 동기화합니다.</value></data>
+  <data name="Operations.Job.CrossLibrarySync.Name" xml:space="preserve"><value>라이브러리 간 동기화</value></data>
+  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>ITL 파일의 구조 및 참조 오류를 확인합니다.</value></data>
   <data name="Operations.Job.ItunesValidation.Name" xml:space="preserve"><value>iTunes 라이브러리 검증</value></data>
-  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>동기화 모든 재생 목록 내보내기 대상 에서 해당 활성 라이브러리 구성.</value></data>
+  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>활성 라이브러리 구성에 정의된 모든 재생 목록 내보내기 대상을 동기화합니다.</value></data>
   <data name="Operations.Job.PlaylistSync.Name" xml:space="preserve"><value>재생 목록 동기화</value></data>
-  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>보고서 가능성 있음 중복 트랙 에서 해당 구성됨 카탈로그 통합.</value></data>
-  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>중복성 보고서</value></data>
-  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>프로젝트 해당 구성됨 카탈로그 로 하나의 그룹화됨 휴대용-저장소 내보내기.</value></data>
+  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>구성된 카탈로그에서 중복 가능성이 있는 트랙을 찾습니다.</value></data>
+  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>중복 트랙 보고서</value></data>
+  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>구성된 카탈로그를 그룹화된 폴더를 사용하여 휴대용 저장소로 내보냅니다.</value></data>
   <data name="Operations.Job.SmartStorage.Name" xml:space="preserve"><value>스마트 저장소</value></data>
   <data name="Operations.Job.Status.ApplyCancelled" xml:space="preserve"><value>작업 적용이 취소되었습니다. 작업 페이지에서 복구 저널을 확인하세요.</value></data>
-  <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>{0} 적용됨 성공적으로.</value></data>
-  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>적용 종료됨 포함 코드 {0}. 검토 해당 출력 및 작업 저널.</value></data>
-  <data name="Operations.Job.Status.ApplyFailed" xml:space="preserve"><value>작업 적용 실패.</value></data>
-  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>작업 미리 보기 취소됨.</value></data>
-  <data name="Operations.Job.Status.PreviewCompleted" xml:space="preserve"><value>미리 보기 완료됨. 검토 해당 출력 이전 적용 중.</value></data>
-  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>미리 보기 종료됨 포함 코드 {0}.</value></data>
-  <data name="Operations.Job.Status.PreviewFailed" xml:space="preserve"><value>작업 미리 보기 실패.</value></data>
+  <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>{0} 적용을 완료했습니다.</value></data>
+  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>적용이 종료 코드 {0}(으)로 완료되었습니다. 출력과 작업 저널을 검토하세요.</value></data>
+  <data name="Operations.Job.Status.ApplyFailed" xml:space="preserve"><value>작업 적용에 실패했습니다.</value></data>
+  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>작업 미리 보기가 취소되었습니다.</value></data>
+  <data name="Operations.Job.Status.PreviewCompleted" xml:space="preserve"><value>미리 보기가 완료되었습니다. 적용하기 전에 출력을 검토하세요.</value></data>
+  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>미리 보기가 종료 코드 {0}(으)로 완료되었습니다.</value></data>
+  <data name="Operations.Job.Status.PreviewFailed" xml:space="preserve"><value>작업 미리 보기에 실패했습니다.</value></data>
   <data name="Operations.Job.Status.Previewing" xml:space="preserve"><value>미리 보는 중 {0}…</value></data>
-  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>선택 하나의 작업, 제공 모두 필수 인수, 그런 다음 미리 보기.</value></data>
+  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>작업을 선택하고 필수 필드를 입력한 다음 미리 보기를 선택하세요.</value></data>
   <data name="Operations.Progress.Determinate" xml:space="preserve"><value>{0}: {1:N0}/{2:N0}</value></data>
   <data name="Operations.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
-  <data name="Operations.Progress.Phase.Applying" xml:space="preserve"><value>적용 중 변경 사항</value></data>
+  <data name="Operations.Progress.Phase.Applying" xml:space="preserve"><value>변경 사항 적용 중</value></data>
   <data name="Operations.Progress.Phase.Completed" xml:space="preserve"><value>작업 완료</value></data>
-  <data name="Operations.Progress.Phase.IndexingSources" xml:space="preserve"><value>스캔 중 원본</value></data>
-  <data name="Operations.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>스캔 중 해당 대상</value></data>
-  <data name="Operations.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>불러오는 중 구성</value></data>
-  <data name="Operations.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>불러오는 중 해당 라이브러리</value></data>
-  <data name="Operations.Progress.Phase.Planning" xml:space="preserve"><value>계획 중 변경 사항</value></data>
-  <data name="Operations.Progress.Phase.RollingBack" xml:space="preserve"><value>롤백 중 뒷면 변경 사항</value></data>
-  <data name="Operations.Progress.Phase.Validating" xml:space="preserve"><value>검증 해당 작업</value></data>
-  <data name="Operations.Run.AffectedItems.One" xml:space="preserve"><value>{0:N0} 기록됨 항목</value></data>
-  <data name="Operations.Run.AffectedItems.Other" xml:space="preserve"><value>{0:N0} 기록됨 항목</value></data>
-  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>항목 개수 사용 가능 때 해당 실행 입니다 열기</value></data>
-  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>아니요 저널 (폴더-전용 격리)</value></data>
-  <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>설정 해당 iTunes 라이브러리 경로 에서 해당 활성 라이브러리 구성.</value></data>
-  <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>하나의 iTunes 라이브러리.itl 경로 입니다 필수.</value></data>
+  <data name="Operations.Progress.Phase.IndexingSources" xml:space="preserve"><value>원본 검사 중</value></data>
+  <data name="Operations.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>대상 검사 중</value></data>
+  <data name="Operations.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>구성 불러오는 중</value></data>
+  <data name="Operations.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>라이브러리 불러오는 중</value></data>
+  <data name="Operations.Progress.Phase.Planning" xml:space="preserve"><value>변경 사항 계획 중</value></data>
+  <data name="Operations.Progress.Phase.RollingBack" xml:space="preserve"><value>변경 사항 롤백 중</value></data>
+  <data name="Operations.Progress.Phase.Validating" xml:space="preserve"><value>작업 검증 중</value></data>
+  <data name="Operations.Run.AffectedItems.One" xml:space="preserve"><value>기록된 항목 {0:N0}개</value></data>
+  <data name="Operations.Run.AffectedItems.Other" xml:space="preserve"><value>기록된 항목 {0:N0}개</value></data>
+  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>항목 수를 확인하려면 실행을 여세요</value></data>
+  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>저널 없음(격리 폴더만 있음)</value></data>
+  <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>활성 라이브러리 구성에서 iTunes 라이브러리 경로를 설정하세요.</value></data>
+  <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>iTunes Library.itl 경로가 필요합니다.</value></data>
   <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>iTunes 재생 목록 이름을 입력해야 합니다.</value></data>
-  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>하나의 스마트-저장소 대상 입니다 필수.</value></data>
+  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>스마트 저장소 대상이 필요합니다.</value></data>
   <data name="Operations.Count.Errors.One" xml:space="preserve"><value>{0:N0} 오류</value></data>
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} 오류</value></data>
   <data name="Operations.Count.Warnings.One" xml:space="preserve"><value>{0:N0} 경고</value></data>
   <data name="Operations.Count.Warnings.Other" xml:space="preserve"><value>{0:N0} 경고</value></data>
   <data name="Operations.Output.ArtworkNormalization.Item" xml:space="preserve"><value>{0} {1}: {2}, {3}×{4}, {5:N0} 바이트 → image/jpeg, {6}×{7}, {8:N0} 바이트</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>계획: {0:N0} 트랙 검사, {1:N0} 이미 유효, {2:N0} 미디어 파일 로 바꾸기.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>계획: {0:N0} 트랙 검사, {1:N0} 이미 유효, {2:N0} 미디어 파일 로 바꾸기.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>적용됨: {0:N0} 미디어 파일 및 {1:N0} ITL 트랙 캐시 업데이트됨.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>적용됨: {0:N0} 미디어 파일 및 {1:N0} ITL 트랙 캐시 업데이트됨.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>계획: 검사한 트랙: {0:N0}, 이미 유효함: {1:N0}, 바꿀 미디어 파일: {2:N0}.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>계획: 검사한 트랙: {0:N0}, 이미 유효함: {1:N0}, 바꿀 미디어 파일: {2:N0}.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>적용됨: 업데이트된 미디어 파일: {0:N0}, 업데이트된 ITL 트랙 캐시: {1:N0}.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>적용됨: 업데이트된 미디어 파일: {0:N0}, 업데이트된 ITL 트랙 캐시: {1:N0}.</value></data>
   <data name="Operations.Output.CacheWarning" xml:space="preserve"><value>캐시 경고: {0}</value></data>
-  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>계획: {0:N0} 트랙, {1:N0} 설치, {2:N0} 변경 안 됨, {3:N0} 제거, {4:N0} 재생 목록.</value></data>
-  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>계획: {0:N0} 트랙, {1:N0} 설치, {2:N0} 변경 안 됨, {3:N0} 제거, {4:N0} 재생 목록.</value></data>
-  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>적용됨 {0:N0} 트랙 및 {1:N0} 재생 목록: {2:N0} 만들어짐, {3:N0} 바뀜, {4:N0} 격리됨.</value></data>
-  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>적용됨 {0:N0} 트랙 및 {1:N0} 재생 목록: {2:N0} 만들어짐, {3:N0} 바뀜, {4:N0} 격리됨.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>계획: {0:N0} 원하는 파일, {1:N0} 변경 안 됨, {2:N0} 추가, {3:N0} 변경.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>계획: {0:N0} 원하는 파일, {1:N0} 변경 안 됨, {2:N0} 추가, {3:N0} 변경.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>적용됨 내보내기 “{1}”: {0:N0} 복사됨, {2:N0} 바뀜, {3:N0} 격리됨, {4:N0} 삭제됨, {5:N0} 변경 안 됨.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>적용됨 내보내기 “{1}”: {0:N0} 복사됨, {2:N0} 바뀜, {3:N0} 격리됨, {4:N0} 삭제됨, {5:N0} 변경 안 됨.</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>계획: {0:N0} 원하는 파일, {1:N0} 변경 안 됨, {2:N0} 오래됨, {3:N0} 변경.</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>계획: {0:N0} 원하는 파일, {1:N0} 변경 안 됨, {2:N0} 오래됨, {3:N0} 변경.</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>적용됨: {0:N0} 복사됨, {1:N0} 바뀜, {2:N0} 격리됨, {3:N0} 삭제됨, {4:N0} 변경 안 됨.</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>적용됨: {0:N0} 복사됨, {1:N0} 바뀜, {2:N0} 격리됨, {3:N0} 삭제됨, {4:N0} 변경 안 됨.</value></data>
+  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>계획: 라이브러리 트랙: {0:N0}, 설치: {1:N0}, 변경 없음: {2:N0}, 제거: {3:N0}, 재생 목록: {4:N0}.</value></data>
+  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>계획: 라이브러리 트랙: {0:N0}, 설치: {1:N0}, 변경 없음: {2:N0}, 제거: {3:N0}, 재생 목록: {4:N0}.</value></data>
+  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>적용됨: 트랙: {0:N0}, 재생 목록: {1:N0}, 생성: {2:N0}, 교체: {3:N0}, 격리: {4:N0}.</value></data>
+  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>적용됨: 트랙: {0:N0}, 재생 목록: {1:N0}, 생성: {2:N0}, 교체: {3:N0}, 격리: {4:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>계획: 대상 파일: {0:N0}, 변경 없음: {1:N0}, 추가 파일: {2:N0}, 파일 작업: {3:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>계획: 대상 파일: {0:N0}, 변경 없음: {1:N0}, 추가 파일: {2:N0}, 파일 작업: {3:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>내보내기 “{1}” 적용됨: 복사: {0:N0}, 교체: {2:N0}, 격리: {3:N0}, 삭제: {4:N0}, 변경 없음: {5:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>내보내기 “{1}” 적용됨: 복사: {0:N0}, 교체: {2:N0}, 격리: {3:N0}, 삭제: {4:N0}, 변경 없음: {5:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>계획: 대상 파일: {0:N0}, 변경 없음: {1:N0}, 오래된 파일: {2:N0}, 파일 작업: {3:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>계획: 대상 파일: {0:N0}, 변경 없음: {1:N0}, 오래된 파일: {2:N0}, 파일 작업: {3:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>적용됨: 복사: {0:N0}, 교체: {1:N0}, 격리: {2:N0}, 삭제: {3:N0}, 변경 없음: {4:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>적용됨: 복사: {0:N0}, 교체: {1:N0}, 격리: {2:N0}, 삭제: {3:N0}, 변경 없음: {4:N0}.</value></data>
   <data name="Operations.Output.Issue" xml:space="preserve"><value>{0} {1}: {2}{3}</value></data>
   <data name="Operations.Output.Mutation.Destination" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.Source" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.SourceDestination" xml:space="preserve"><value>{0} {1} → {2}</value></data>
   <data name="Operations.Output.PathSuffix" xml:space="preserve"><value> [{0}]</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>적용됨 {0:N0} 재생 목록: {1:N0} 만들어짐, {2:N0} 바뀜, {3:N0} 격리됨, {4:N0} 삭제됨.</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>적용됨 {0:N0} 재생 목록: {1:N0} 만들어짐, {2:N0} 바뀜, {3:N0} 격리됨, {4:N0} 삭제됨.</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>대상 {1}: {0:N0} 재생 목록, {2:N0} 누락 매핑.</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>대상 {1}: {0:N0} 재생 목록, {2:N0} 누락 매핑.</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>적용됨: 재생 목록: {0:N0}, 생성: {1:N0}, 교체: {2:N0}, 격리: {3:N0}, 삭제: {4:N0}.</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>적용됨: 재생 목록: {0:N0}, 생성: {1:N0}, 교체: {2:N0}, 격리: {3:N0}, 삭제: {4:N0}.</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>대상 {1}: 재생 목록: {0:N0}, 누락된 매핑: {2:N0}.</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>대상 {1}: 재생 목록: {0:N0}, 누락된 매핑: {2:N0}.</value></data>
   <data name="Operations.Output.RecoveryJournal" xml:space="preserve"><value>복구 저널: {0}</value></data>
-  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>{0:N0} 중복성 그룹 중 {1:N0} 로컬 트랙.</value></data>
-  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>{0:N0} 중복성 그룹 중 {1:N0} 로컬 트랙.</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>계획: {0:N0} 트랙, {1:N0} 설치, {2:N0} 변경 안 됨, {3:N0} 오래됨, {4:N0} 재생 목록, {5:N0} 아트워크 항목.</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>계획: {0:N0} 트랙, {1:N0} 설치, {2:N0} 변경 안 됨, {3:N0} 오래됨, {4:N0} 재생 목록, {5:N0} 아트워크 항목.</value></data>
-  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>적용됨 {0:N0} 트랙, {1:N0} 재생 목록, 및 {2:N0} 아트워크 항목: {3:N0} 만들어짐, {4:N0} 바뀜, {5:N0} 격리됨.</value></data>
-  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>적용됨 {0:N0} 트랙, {1:N0} 재생 목록, 및 {2:N0} 아트워크 항목: {3:N0} 만들어짐, {4:N0} 바뀜, {5:N0} 격리됨.</value></data>
+  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>중복 가능성이 있는 그룹: {0:N0}, 검사한 로컬 트랙: {1:N0}.</value></data>
+  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>중복 가능성이 있는 그룹: {0:N0}, 검사한 로컬 트랙: {1:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>계획: 라이브러리 트랙: {0:N0}, 설치: {1:N0}, 변경 없음: {2:N0}, 오래된 트랙: {3:N0}, 재생 목록: {4:N0}, 아트워크 항목: {5:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>계획: 라이브러리 트랙: {0:N0}, 설치: {1:N0}, 변경 없음: {2:N0}, 오래된 트랙: {3:N0}, 재생 목록: {4:N0}, 아트워크 항목: {5:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>적용됨: 트랙: {0:N0}, 재생 목록: {1:N0}, 아트워크 항목: {2:N0}, 생성: {3:N0}, 교체: {4:N0}, 격리: {5:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>적용됨: 트랙: {0:N0}, 재생 목록: {1:N0}, 아트워크 항목: {2:N0}, 생성: {3:N0}, 교체: {4:N0}, 격리: {5:N0}.</value></data>
   <data name="Operations.Output.Unchanged" xml:space="preserve"><value>변경 안 됨</value></data>
   <data name="Operations.Output.Validation.Issue" xml:space="preserve"><value>{0} {1} {2}</value></data>
   <data name="Operations.Output.Validation.Summary" xml:space="preserve"><value>검증: {0}, {1}</value></data>
-  <data name="Operations.PurgePreview.Backups.One" xml:space="preserve"><value>, 포함 {0:N0} 복원-충돌 백업 파일</value></data>
-  <data name="Operations.PurgePreview.Backups.Other" xml:space="preserve"><value>, 포함 {0:N0} 복원-충돌 백업 파일</value></data>
-  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>완전 삭제 미리 보기: {0:N0} 실행, {1:N0} 파일, {2}</value></data>
-  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>완전 삭제 미리 보기: {0:N0} 실행, {1:N0} 파일, {2}</value></data>
-  <data name="Operations.PurgePreview.NoneEligible" xml:space="preserve"><value>완전 삭제 미리 보기: 아니요 실행 입니다 이전 충분 로 완전 삭제</value></data>
-  <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}. 보호됨 중단됨 실행: {2:N0}; 실행 이내 보존: {3:N0}{4}.</value></data>
-  <data name="Operations.PurgePreview.UnsafeRoots.One" xml:space="preserve"><value>; {0:N0} 안전하지 않음 실행 루트 이었음 제외</value></data>
-  <data name="Operations.PurgePreview.UnsafeRoots.Other" xml:space="preserve"><value>; {0:N0} 안전하지 않음 실행 루트 이었음 제외</value></data>
+  <data name="Operations.PurgePreview.Backups.One" xml:space="preserve"><value>, 복원 충돌 백업 파일 {0:N0}개 포함</value></data>
+  <data name="Operations.PurgePreview.Backups.Other" xml:space="preserve"><value>, 복원 충돌 백업 파일 {0:N0}개 포함</value></data>
+  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>영구 삭제 미리 보기: 실행: {0:N0}, 파일: {1:N0}, 크기: {2}</value></data>
+  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>영구 삭제 미리 보기: 실행: {0:N0}, 파일: {1:N0}, 크기: {2}</value></data>
+  <data name="Operations.PurgePreview.NoneEligible" xml:space="preserve"><value>영구 삭제 미리 보기: 영구 삭제할 만큼 오래된 실행이 없습니다</value></data>
+  <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}. 보호된 중단 실행: {2:N0}, 보존 기간 내 실행: {3:N0}{4}.</value></data>
+  <data name="Operations.PurgePreview.UnsafeRoots.One" xml:space="preserve"><value>; 안전하지 않은 실행 루트 {0:N0}개 제외</value></data>
+  <data name="Operations.PurgePreview.UnsafeRoots.Other" xml:space="preserve"><value>; 안전하지 않은 실행 루트 {0:N0}개 제외</value></data>
   <data name="Operations.RestorePreview.None" xml:space="preserve"><value>선택한 항목 중 복원할 수 있는 항목이 없습니다.</value></data>
-  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>복원 미리 보기: {0:N0} 항목, {1:N0} 대상 충돌, {2:N0} 건너뜀.</value></data>
-  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>복원 미리 보기: {0:N0} 항목, {1:N0} 대상 충돌, {2:N0} 건너뜀.</value></data>
-  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>작업 검색 취소됨.</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>찾음 {0:N0} 작업 실행; 중단됨: {1:N0}; 루트 아님 스캔됨: {2:N0}.</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>찾음 {0:N0} 작업 실행; 중단됨: {1:N0}; 루트 아님 스캔됨: {2:N0}.</value></data>
-  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>작업 검색 실패.</value></data>
-  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>인벤토리 작성 중 작업 실행 이전 보다 {0:N0} 일…</value></data>
-  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>인벤토리 작성 중 작업 실행 이전 보다 {0:N0} 일…</value></data>
+  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>복원 미리 보기: 항목: {0:N0}, 대상 충돌: {1:N0}, 건너뜀: {2:N0}.</value></data>
+  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>복원 미리 보기: 항목: {0:N0}, 대상 충돌: {1:N0}, 건너뜀: {2:N0}.</value></data>
+  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>복구 검색이 취소되었습니다.</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>찾은 복구 실행: {0:N0}, 중단됨: {1:N0}, 검사하지 않은 루트: {2:N0}.</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>찾은 복구 실행: {0:N0}, 중단됨: {1:N0}, 검사하지 않은 루트: {2:N0}.</value></data>
+  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>복구 검색에 실패했습니다.</value></data>
+  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>{0:N0}일보다 오래된 복구 실행 검토 중…</value></data>
+  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>{0:N0}일보다 오래된 복구 실행 검토 중…</value></data>
   <data name="Operations.Status.NoSearchRoots" xml:space="preserve"><value>복구를 검색할 루트를 하나 이상 선택하세요.</value></data>
-  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>열기 해당 {0} 작업…</value></data>
-  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>열기 해당 작업 이었음 취소됨.</value></data>
-  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>해당 작업 가능 아님 됨 열기.</value></data>
-  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>완전 삭제 취소됨. 실행 아님 아직 되돌릴 수 없게 삭제됨 가능 유지 에서 완전 삭제 준비.</value></data>
-  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>완전 삭제 {0:N0} 실행, {1:N0} 파일, 및 {2}.</value></data>
-  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>완전 삭제 {0:N0} 실행, {1:N0} 파일, 및 {2}.</value></data>
-  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>완전 삭제 중지됨.</value></data>
-  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>완전 삭제 미리 보기 취소됨.</value></data>
-  <data name="Operations.Status.PurgePreviewFailed" xml:space="preserve"><value>완전 삭제 미리 보기 실패.</value></data>
-  <data name="Operations.Status.Purging.One" xml:space="preserve"><value>완전 삭제 중… {1:N0}/{0:N0} 실행</value></data>
-  <data name="Operations.Status.Purging.Other" xml:space="preserve"><value>완전 삭제 중… {1:N0}/{0:N0} 실행</value></data>
-  <data name="Operations.Status.Ready" xml:space="preserve"><value>스캔 구성됨 루트 또는 선택 하나의 기기 또는 폴더 로 검색 복구 작업.</value></data>
-  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>복원 취소됨 및 완료됨 작업 이었음 롤백됨 뒷면.</value></data>
-  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>복원됨 {0:N0} 항목; 유지됨 {1:N0} 충돌.</value></data>
-  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>복원됨 {0:N0} 항목; 유지됨 {1:N0} 충돌.</value></data>
-  <data name="Operations.Status.RestoreFailed" xml:space="preserve"><value>복원 실패 및 완료됨 작업 이었음 롤백됨 뒷면.</value></data>
-  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>복원 미리 보기 취소됨.</value></data>
-  <data name="Operations.Status.RestorePreviewFailed" xml:space="preserve"><value>복원 미리 보기 실패.</value></data>
+  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>복구 실행 ‘{0}’ 여는 중…</value></data>
+  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>복구 실행 열기가 취소되었습니다.</value></data>
+  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>복구 실행을 열 수 없습니다.</value></data>
+  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>영구 삭제가 취소되었습니다. 아직 완전히 삭제되지 않은 실행이 영구 삭제 준비 영역에 남아 있을 수 있습니다.</value></data>
+  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>영구 삭제 완료: 실행: {0:N0}, 파일: {1:N0}, 크기: {2}.</value></data>
+  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>영구 삭제 완료: 실행: {0:N0}, 파일: {1:N0}, 크기: {2}.</value></data>
+  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>영구 삭제에 실패했습니다.</value></data>
+  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>영구 삭제 미리 보기가 취소되었습니다.</value></data>
+  <data name="Operations.Status.PurgePreviewFailed" xml:space="preserve"><value>영구 삭제 미리 보기에 실패했습니다.</value></data>
+  <data name="Operations.Status.Purging.One" xml:space="preserve"><value>영구 삭제 중… {1:N0}/{0:N0}개 실행</value></data>
+  <data name="Operations.Status.Purging.Other" xml:space="preserve"><value>영구 삭제 중… {1:N0}/{0:N0}개 실행</value></data>
+  <data name="Operations.Status.Ready" xml:space="preserve"><value>구성된 루트를 검사하거나 장치 또는 폴더를 선택하여 복구 작업을 찾으세요.</value></data>
+  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>복원이 취소되었으며 완료된 작업이 롤백되었습니다.</value></data>
+  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>복원 완료: 항목: {0:N0}, 보존된 충돌: {1:N0}.</value></data>
+  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>복원 완료: 항목: {0:N0}, 보존된 충돌: {1:N0}.</value></data>
+  <data name="Operations.Status.RestoreFailed" xml:space="preserve"><value>복원에 실패했으며 완료된 작업이 롤백되었습니다.</value></data>
+  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>복원 미리 보기가 취소되었습니다.</value></data>
+  <data name="Operations.Status.RestorePreviewFailed" xml:space="preserve"><value>복원 미리 보기에 실패했습니다.</value></data>
   <data name="Operations.Status.Restoring" xml:space="preserve"><value>복원 중… {0:N0}/{1:N0}</value></data>
-  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>{0:N0} 작업 항목 에서 해당 원본 계층; 항목 아님 읽기: {1:N0}.</value></data>
-  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>{0:N0} 작업 항목 에서 해당 원본 계층; 항목 아님 읽기: {1:N0}.</value></data>
-  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>스캔 중 {0:N0} 루트 용 작업 저널…</value></data>
-  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>스캔 중 {0:N0} 루트 용 작업 저널…</value></data>
-  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>표시 {0:N0} 검색 작업 실행.</value></data>
-  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>표시 {0:N0} 검색 작업 실행.</value></data>
+  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>원래 계층의 복구 항목: {0:N0}, 읽지 못한 항목: {1:N0}.</value></data>
+  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>원래 계층의 복구 항목: {0:N0}, 읽지 못한 항목: {1:N0}.</value></data>
+  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>루트 {0:N0}개에서 복구 저널 검사 중…</value></data>
+  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>루트 {0:N0}개에서 복구 저널 검사 중…</value></data>
+  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>표시된 복구 실행: {0:N0}.</value></data>
+  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>표시된 복구 실행: {0:N0}.</value></data>
   <data name="Common.No" xml:space="preserve"><value>아니요</value></data>
   <data name="Common.Yes" xml:space="preserve"><value>예</value></data>
   <data name="Fields.Action.ApplyChanges" xml:space="preserve"><value>변경 사항 적용</value></data>
@@ -6253,8 +6253,8 @@
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>일부 메타데이터를 출력 형식으로 표현할 수 없습니다.</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>일부 아트워크를 출력 형식으로 표현할 수 없습니다.</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>삭제</value></data>
-  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} 볼륨 · {1:N0} 커밋됨</value></data>
-  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} 볼륨 · {1:N0} 커밋됨</value></data>
+  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>볼륨 {0:N0}개 · {1:N0}개 커밋됨</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>볼륨 {0:N0}개 · {1:N0}개 커밋됨</value></data>
   <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
   <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC 실행 파일</value></data>
   <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>선택 Monkey's Audio MAC 실행 파일</value></data>

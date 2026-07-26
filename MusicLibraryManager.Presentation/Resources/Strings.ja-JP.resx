@@ -1801,10 +1801,10 @@
     <value>適用</value>
   </data>
   <data name="Operations.Action.ApplyRestore" xml:space="preserve">
-    <value>確認済みの復元を適用</value>
+    <value>選択した項目を復元</value>
   </data>
   <data name="Operations.Action.ClearSelection" xml:space="preserve">
-    <value>クリア 選択</value>
+    <value>選択を解除</value>
   </data>
   <data name="Operations.Action.Maintenance" xml:space="preserve">
     <value>メンテナンス…</value>
@@ -1813,13 +1813,13 @@
     <value>復元データのメンテナンス操作</value>
   </data>
   <data name="Operations.Action.OpenRun" xml:space="preserve">
-    <value>開く 実行</value>
+    <value>実行を開く</value>
   </data>
   <data name="Operations.Action.PreviewRestore" xml:space="preserve">
-    <value>プレビュー 復元</value>
+    <value>復元をプレビュー</value>
   </data>
   <data name="Operations.Action.SelectRestorable" xml:space="preserve">
-    <value>選択 復元可能</value>
+    <value>復元可能な項目を選択</value>
   </data>
   <data name="Operations.Destination" xml:space="preserve">
     <value>宛先</value>
@@ -1828,19 +1828,19 @@
     <value>初期化</value>
   </data>
   <data name="Operations.JobDestinationAutomation" xml:space="preserve">
-    <value>ジョブ 宛先</value>
+    <value>ジョブの保存先</value>
   </data>
   <data name="Operations.JobOutputAutomation" xml:space="preserve">
-    <value>ジョブ 出力</value>
+    <value>ジョブの出力</value>
   </data>
   <data name="Operations.MaximumRemovals" xml:space="preserve">
-    <value>最大 削除</value>
+    <value>削除するファイルの最大数</value>
   </data>
   <data name="Operations.PlaylistName" xml:space="preserve">
     <value>プレイリスト名</value>
   </data>
   <data name="Operations.PurgeReviewed" xml:space="preserve">
-    <value>確認済みの復旧履歴を消去</value>
+    <value>対象の復旧履歴を完全に削除</value>
   </data>
   <data name="Operations.Rebalance" xml:space="preserve">
     <value>再調整</value>
@@ -1852,16 +1852,16 @@
     <value>復元可能な実行履歴がありません</value>
   </data>
   <data name="Operations.Recovery.Retention" xml:space="preserve">
-    <value>復旧データの保持期間 (日)</value>
+    <value>復旧データの保持期間（日）</value>
   </data>
   <data name="Operations.Recovery.RetentionAutomation" xml:space="preserve">
     <value>復旧データの保持日数</value>
   </data>
   <data name="Operations.Recovery.SearchRoot" xml:space="preserve">
-    <value>検索 ルート</value>
+    <value>復旧検索ルート</value>
   </data>
   <data name="Operations.Recovery.SearchRootAutomation" xml:space="preserve">
-    <value>復旧を検索するルート</value>
+    <value>復旧検索ルート</value>
   </data>
   <data name="Operations.Entry.Recovery.Compact" xml:space="preserve">
     <value>コンパクト復元 · 保持 {0:N0} バイト · 節約 {1:N0} バイト</value>
@@ -1873,7 +1873,7 @@
     <value>統合ジョブの実行、履歴の確認、記録済み変更の復元を行います。</value>
   </data>
   <data name="Operations.Tab.History" xml:space="preserve">
-    <value>ジョブ 履歴</value>
+    <value>履歴</value>
   </data>
   <data name="Operations.Tab.Jobs" xml:space="preserve">
     <value>ジョブ</value>
@@ -1885,13 +1885,13 @@
     <value>操作</value>
   </data>
   <data name="Operations.ValidationPath" xml:space="preserve">
-    <value>検証 パス</value>
+    <value>iTunes Library.itl ファイル</value>
   </data>
   <data name="Operations.FixErrors" xml:space="preserve">
-    <value>修正 エラー</value>
+    <value>エラーを修正</value>
   </data>
   <data name="Operations.PreviewRetentionPurge" xml:space="preserve">
-    <value>保持データの消去をプレビュー</value>
+    <value>復旧履歴の完全削除をプレビュー</value>
   </data>
   <data name="ReviewedFileOperation.Apply" xml:space="preserve">
     <value>確認済みプランを適用</value>
@@ -5693,38 +5693,38 @@
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>作業ディレクトリ</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
   <data name="Workbench.Value.SampleRate" xml:space="preserve"><value>{0:N0} Hz</value></data>
-  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>開始中 適用</value></data>
-  <data name="Operations.Activity.Apply.Title" xml:space="preserve"><value>適用 {0}</value></data>
-  <data name="Operations.Activity.Discovery.Starting.One" xml:space="preserve"><value>{0:N0} ルートをスキャンしています</value></data>
-  <data name="Operations.Activity.Discovery.Starting.Other" xml:space="preserve"><value>{0:N0} ルートをスキャンしています</value></data>
-  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>スキャン回復操作</value></data>
-  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>{0} オペレーションを開始する</value></data>
-  <data name="Operations.Activity.OpenRun.Title" xml:space="preserve"><value>オープンリカバリ実行</value></data>
-  <data name="Operations.Activity.Preview.Starting" xml:space="preserve"><value>開始中 プレビュー</value></data>
-  <data name="Operations.Activity.Preview.Title" xml:space="preserve"><value>プレビュー {0}</value></data>
-  <data name="Operations.Activity.Purge.Starting.One" xml:space="preserve"><value>{0:N0} 実行をパージしています</value></data>
-  <data name="Operations.Activity.Purge.Starting.Other" xml:space="preserve"><value>{0:N0} 実行をパージしています</value></data>
-  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>操作履歴のパージ</value></data>
-  <data name="Operations.Activity.PurgePreview.Starting.One" xml:space="preserve"><value>{0:N0} 日より古い実行のレビュー</value></data>
-  <data name="Operations.Activity.PurgePreview.Starting.Other" xml:space="preserve"><value>{0:N0} 日より古い実行のレビュー</value></data>
-  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>回復パージのプレビュー</value></data>
-  <data name="Operations.Activity.Restore.Starting.One" xml:space="preserve"><value>{0:N0} アイテムを復元しています</value></data>
-  <data name="Operations.Activity.Restore.Starting.Other" xml:space="preserve"><value>{0:N0} アイテムを復元しています</value></data>
-  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>復元操作項目</value></data>
-  <data name="Operations.Activity.RestorePreview.Starting.One" xml:space="preserve"><value>選択した {0:N0} アイテムを確認しています</value></data>
-  <data name="Operations.Activity.RestorePreview.Starting.Other" xml:space="preserve"><value>{0:N0} 選択されたアイテムを確認しています</value></data>
-  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>リカバリー復元のプレビュー</value></data>
+  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>変更を適用する準備をしています</value></data>
+  <data name="Operations.Activity.Apply.Title" xml:space="preserve"><value>{0}を適用</value></data>
+  <data name="Operations.Activity.Discovery.Starting.One" xml:space="preserve"><value>{0:N0} 個のルートをスキャンしています</value></data>
+  <data name="Operations.Activity.Discovery.Starting.Other" xml:space="preserve"><value>{0:N0} 個のルートをスキャンしています</value></data>
+  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>復旧操作をスキャン</value></data>
+  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>復旧実行「{0}」を開いています</value></data>
+  <data name="Operations.Activity.OpenRun.Title" xml:space="preserve"><value>復旧実行を開く</value></data>
+  <data name="Operations.Activity.Preview.Starting" xml:space="preserve"><value>プレビューを開始しています</value></data>
+  <data name="Operations.Activity.Preview.Title" xml:space="preserve"><value>{0}をプレビュー</value></data>
+  <data name="Operations.Activity.Purge.Starting.One" xml:space="preserve"><value>{0:N0} 件の実行を完全に削除しています</value></data>
+  <data name="Operations.Activity.Purge.Starting.Other" xml:space="preserve"><value>{0:N0} 件の実行を完全に削除しています</value></data>
+  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>復旧履歴を完全に削除</value></data>
+  <data name="Operations.Activity.PurgePreview.Starting.One" xml:space="preserve"><value>{0:N0} 日より古い実行を確認しています</value></data>
+  <data name="Operations.Activity.PurgePreview.Starting.Other" xml:space="preserve"><value>{0:N0} 日より古い実行を確認しています</value></data>
+  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>復旧履歴の完全削除をプレビュー</value></data>
+  <data name="Operations.Activity.Restore.Starting.One" xml:space="preserve"><value>{0:N0} 件の項目を復元しています</value></data>
+  <data name="Operations.Activity.Restore.Starting.Other" xml:space="preserve"><value>{0:N0} 件の項目を復元しています</value></data>
+  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>選択した項目を復元</value></data>
+  <data name="Operations.Activity.RestorePreview.Starting.One" xml:space="preserve"><value>選択した {0:N0} 件の項目を確認しています</value></data>
+  <data name="Operations.Activity.RestorePreview.Starting.Other" xml:space="preserve"><value>選択した {0:N0} 件の項目を確認しています</value></data>
+  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>復元をプレビュー</value></data>
   <data name="Operations.Choice.FileMutationKind.Copy" xml:space="preserve"><value>コピー</value></data>
   <data name="Operations.Choice.FileMutationKind.Delete" xml:space="preserve"><value>削除</value></data>
   <data name="Operations.Choice.FileMutationKind.Move" xml:space="preserve"><value>移動</value></data>
   <data name="Operations.Choice.FileMutationKind.Quarantine" xml:space="preserve"><value>隔離</value></data>
   <data name="Operations.Choice.FileMutationKind.Replace" xml:space="preserve"><value>置換</value></data>
-  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>生成されたファイルを置き換える</value></data>
+  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>生成したファイルで置換</value></data>
   <data name="Operations.Choice.FileMutationKind.Write" xml:space="preserve"><value>書き込む</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Error" xml:space="preserve"><value>エラー</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Info" xml:space="preserve"><value>情報</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Warning" xml:space="preserve"><value>警告</value></data>
-  <data name="Operations.Choice.OperationIssueSeverity.Blocker" xml:space="preserve"><value>ブロック中 問題</value></data>
+  <data name="Operations.Choice.OperationIssueSeverity.Blocker" xml:space="preserve"><value>続行を妨げる問題</value></data>
   <data name="Operations.Choice.OperationIssueSeverity.Information" xml:space="preserve"><value>情報</value></data>
   <data name="Operations.Choice.OperationIssueSeverity.Warning" xml:space="preserve"><value>警告</value></data>
   <data name="Operations.Choice.OperationJournalKind.Device" xml:space="preserve"><value>デバイス</value></data>
@@ -5735,167 +5735,167 @@
   <data name="Operations.Choice.OperationJournalKind.Sync" xml:space="preserve"><value>同期</value></data>
   <data name="Operations.Choice.OperationJournalState.Completed" xml:space="preserve"><value>完了</value></data>
   <data name="Operations.Choice.OperationJournalState.Interrupted" xml:space="preserve"><value>中断 — 復元が必要な可能性があります</value></data>
-  <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>ロールバック済み 背面</value></data>
+  <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>ロールバック済み</value></data>
   <data name="Operations.Choice.OperationJournalState.Unknown" xml:space="preserve"><value>隔離データあり — 最終状態は記録されていません</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>{1} を適用し、予定されているファイル変更 {0:N0} 件を実行しますか？
+  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>「{1}」を、予定されている {0:N0} 件のファイル変更とともに適用しますか？
 
 {2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>{1} を適用し、予定されているファイル変更 {0:N0} 件を実行しますか？
+  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>「{1}」を、予定されている {0:N0} 件のファイル変更とともに適用しますか？
 
 {2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>リカバリが可能です。変更されたファイルはジャーナルに記録されます。</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>リカバリが可能です。変更されたファイルは「{0}」の下にジャーナルに記録されます。</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>この適用では回復は利用できません。</value></data>
-  <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>適用 {0}</value></data>
-  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>検証する iTunes ライブラリを選択します</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>復旧を利用できます。変更したファイルの原本は復旧ジャーナルに保持されます。</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>復旧を利用できます。変更したファイルの原本は「{0}」に保持されます。</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>今回の適用では復旧を利用できません。</value></data>
+  <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>{0}を適用</value></data>
+  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>検証する iTunes Library.itl ファイルを選択</value></data>
   <data name="Operations.Dialog.SelectRecoveryRoot" xml:space="preserve"><value>スキャンするソース、同期、またはデバイスのルートを選択</value></data>
-  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>スマートストレージの保存先を選択してください</value></data>
+  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>スマートストレージの保存先を選択</value></data>
   <data name="Operations.Diagnostic.NoApplyService" xml:space="preserve"><value>ジョブ「{0}」で使用できる型指定済み適用サービスがありません。</value></data>
   <data name="Operations.Diagnostic.NoPreviewService" xml:space="preserve"><value>ジョブ「{0}」で使用できる型指定済みプレビューサービスがありません。</value></data>
   <data name="Operations.Entry.State.Created" xml:space="preserve"><value>作成済み</value></data>
-  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>作成されたアイテムがありません</value></data>
+  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>作成した項目は存在しません</value></data>
   <data name="Operations.Entry.State.Deleted" xml:space="preserve"><value>削除済み</value></data>
   <data name="Operations.Entry.State.Moved" xml:space="preserve"><value>移動済み</value></data>
-  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>移動先がありません</value></data>
-  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>計画済み。完了は記録されません</value></data>
+  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>移動した項目は移動先に存在しません</value></data>
+  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>計画済み。完了は記録されていません</value></data>
   <data name="Operations.Entry.State.Quarantined" xml:space="preserve"><value>隔離済み</value></data>
-  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>隔離コピーが見つからない</value></data>
-  <data name="Operations.Entry.State.Unknown" xml:space="preserve"><value>不明 操作</value></data>
-  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes ライブラリ</value></data>
-  <data name="Operations.History.Elapsed" xml:space="preserve"><value>{0:0.##} さん</value></data>
+  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>隔離した項目は存在しません</value></data>
+  <data name="Operations.Entry.State.Unknown" xml:space="preserve"><value>不明な操作</value></data>
+  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes Library.itl ファイル</value></data>
+  <data name="Operations.History.Elapsed" xml:space="preserve"><value>{0:0.##} s</value></data>
   <data name="Operations.History.State.Applied" xml:space="preserve"><value>適用済み</value></data>
-  <data name="Operations.History.State.ApplyFailed" xml:space="preserve"><value>適用 失敗</value></data>
-  <data name="Operations.History.State.PreviewFailed" xml:space="preserve"><value>プレビュー 失敗</value></data>
-  <data name="Operations.History.State.PreviewPassed" xml:space="preserve"><value>プレビュー 合格</value></data>
-  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>構成されたカタログによって提供されるトラックの埋め込みアートワークを正規化します。</value></data>
-  <data name="Operations.Job.ArtworkNormalization.Name" xml:space="preserve"><value>アートワーク 正規化</value></data>
-  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>インデックス付きライブラリをバランスのとれたリムーバブル メディア エクスポートに投影します。</value></data>
-  <data name="Operations.Job.CarCard.Name" xml:space="preserve"><value>車 カード</value></data>
-  <data name="Operations.Job.ConfiguredExport.Description" xml:space="preserve"><value>構成された選択、名前付け、トランスポート、および調整ポリシーをプレビューして適用します。</value></data>
+  <data name="Operations.History.State.ApplyFailed" xml:space="preserve"><value>適用に失敗</value></data>
+  <data name="Operations.History.State.PreviewFailed" xml:space="preserve"><value>プレビューに失敗</value></data>
+  <data name="Operations.History.State.PreviewPassed" xml:space="preserve"><value>プレビューに成功</value></data>
+  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>構成済みカタログ内のトラックに埋め込まれたアートワークを正規化します。</value></data>
+  <data name="Operations.Job.ArtworkNormalization.Name" xml:space="preserve"><value>アートワークの正規化</value></data>
+  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>リムーバブルメディア用にバランスの取れたライブラリエクスポートを作成します。</value></data>
+  <data name="Operations.Job.CarCard.Name" xml:space="preserve"><value>車載カード</value></data>
+  <data name="Operations.Job.ConfiguredExport.Description" xml:space="preserve"><value>構成済みの選択、命名、転送、調整ポリシーをプレビューして適用します。</value></data>
   <data name="Operations.Job.ConfiguredExport.Name" xml:space="preserve"><value>エクスポート: {0}</value></data>
-  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>構成されたプレイリストをライブラリ ターゲットに同期します。</value></data>
-  <data name="Operations.Job.CrossLibrarySync.Name" xml:space="preserve"><value>クロス-ライブラリ 同期</value></data>
-  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>ITL ファイル内の構造的不変条件と参照不変条件を検証します。</value></data>
+  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>構成済みのプレイリストをターゲットライブラリと同期します。</value></data>
+  <data name="Operations.Job.CrossLibrarySync.Name" xml:space="preserve"><value>ライブラリ間同期</value></data>
+  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>ITL ファイルの構造エラーと参照エラーを確認します。</value></data>
   <data name="Operations.Job.ItunesValidation.Name" xml:space="preserve"><value>iTunes ライブラリの検証</value></data>
-  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>アクティブなライブラリ設定からすべてのプレイリスト エクスポート ターゲットを同期します。</value></data>
-  <data name="Operations.Job.PlaylistSync.Name" xml:space="preserve"><value>プレイリスト 同期</value></data>
-  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>構成されたカタログ統合から重複する可能性のあるトラックを報告します。</value></data>
-  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>冗長性 レポート</value></data>
-  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>構成されたカタログをバケット化されたポータブル ストレージ エクスポートに投影します。</value></data>
-  <data name="Operations.Job.SmartStorage.Name" xml:space="preserve"><value>スマート ストレージ</value></data>
+  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>アクティブなライブラリ構成で定義されたすべてのプレイリストのエクスポート先を同期します。</value></data>
+  <data name="Operations.Job.PlaylistSync.Name" xml:space="preserve"><value>プレイリスト同期</value></data>
+  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>構成済みカタログ内で重複している可能性のあるトラックを検索します。</value></data>
+  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>重複トラックレポート</value></data>
+  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>構成済みカタログをグループ分けしたフォルダーでポータブルストレージにエクスポートします。</value></data>
+  <data name="Operations.Job.SmartStorage.Name" xml:space="preserve"><value>スマートストレージ</value></data>
   <data name="Operations.Job.Status.ApplyCancelled" xml:space="preserve"><value>ジョブの適用をキャンセルしました。操作ページで復元ジャーナルを確認してください。</value></data>
-  <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>{0} は正常に適用されました。</value></data>
-  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>適用はコード {0} で終了しました。出力と操作ジャーナルを確認します。</value></data>
+  <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>{0}を正常に適用しました。</value></data>
+  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>適用は終了コード {0} で終了しました。出力と操作ジャーナルを確認してください。</value></data>
   <data name="Operations.Job.Status.ApplyFailed" xml:space="preserve"><value>ジョブの適用に失敗しました。</value></data>
-  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>ジョブのプレビューがキャンセルされました。</value></data>
+  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>ジョブのプレビューをキャンセルしました。</value></data>
   <data name="Operations.Job.Status.PreviewCompleted" xml:space="preserve"><value>プレビューが完了しました。適用する前に出力を確認してください。</value></data>
-  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>プレビューはコード {0} で終了しました。</value></data>
+  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>プレビューは終了コード {0} で終了しました。</value></data>
   <data name="Operations.Job.Status.PreviewFailed" xml:space="preserve"><value>ジョブのプレビューに失敗しました。</value></data>
   <data name="Operations.Job.Status.Previewing" xml:space="preserve"><value>プレビュー中 {0}…</value></data>
-  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>ジョブを選択し、必要な引数を指定して、プレビューします。</value></data>
+  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>ジョブを選択して必須フィールドを入力し、［プレビュー］を選択してください。</value></data>
   <data name="Operations.Progress.Determinate" xml:space="preserve"><value>{0}: {1:N0}/{2:N0}</value></data>
   <data name="Operations.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
-  <data name="Operations.Progress.Phase.Applying" xml:space="preserve"><value>適用中 変更</value></data>
-  <data name="Operations.Progress.Phase.Completed" xml:space="preserve"><value>操作 完了</value></data>
-  <data name="Operations.Progress.Phase.IndexingSources" xml:space="preserve"><value>スキャン中 ソース</value></data>
-  <data name="Operations.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>宛先をスキャン中</value></data>
-  <data name="Operations.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>読み込み中 構成</value></data>
-  <data name="Operations.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>ライブラリのロード</value></data>
-  <data name="Operations.Progress.Phase.Planning" xml:space="preserve"><value>計画中 変更</value></data>
-  <data name="Operations.Progress.Phase.RollingBack" xml:space="preserve"><value>変更をロールバックする</value></data>
-  <data name="Operations.Progress.Phase.Validating" xml:space="preserve"><value>操作の検証</value></data>
-  <data name="Operations.Run.AffectedItems.One" xml:space="preserve"><value>{0:N0} 記録アイテム</value></data>
-  <data name="Operations.Run.AffectedItems.Other" xml:space="preserve"><value>{0:N0} 記録アイテム</value></data>
-  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>実行を開いたときに利用可能なアイテム数</value></data>
-  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>ジャーナルなし (フォルダーのみの隔離)</value></data>
-  <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>アクティブなライブラリ構成で iTunes ライブラリ パスを設定します。</value></data>
-  <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>iTunes ライブラリ.itl パスが必要です。</value></data>
+  <data name="Operations.Progress.Phase.Applying" xml:space="preserve"><value>変更を適用しています</value></data>
+  <data name="Operations.Progress.Phase.Completed" xml:space="preserve"><value>操作が完了しました</value></data>
+  <data name="Operations.Progress.Phase.IndexingSources" xml:space="preserve"><value>ソースをスキャンしています</value></data>
+  <data name="Operations.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>保存先をスキャンしています</value></data>
+  <data name="Operations.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>構成を読み込んでいます</value></data>
+  <data name="Operations.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>ライブラリを読み込んでいます</value></data>
+  <data name="Operations.Progress.Phase.Planning" xml:space="preserve"><value>変更を計画しています</value></data>
+  <data name="Operations.Progress.Phase.RollingBack" xml:space="preserve"><value>変更をロールバックしています</value></data>
+  <data name="Operations.Progress.Phase.Validating" xml:space="preserve"><value>操作を検証しています</value></data>
+  <data name="Operations.Run.AffectedItems.One" xml:space="preserve"><value>記録済み項目 {0:N0} 件</value></data>
+  <data name="Operations.Run.AffectedItems.Other" xml:space="preserve"><value>記録済み項目 {0:N0} 件</value></data>
+  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>実行を開くと項目数を確認できます</value></data>
+  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>ジャーナルなし（隔離フォルダーのみ）</value></data>
+  <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>アクティブなライブラリ構成で iTunes ライブラリのパスを設定してください。</value></data>
+  <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>iTunes Library.itl のパスが必要です。</value></data>
   <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>iTunes プレイリスト名を入力してください。</value></data>
-  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>スマートな保存先が必要です。</value></data>
+  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>スマートストレージの保存先が必要です。</value></data>
   <data name="Operations.Count.Errors.One" xml:space="preserve"><value>{0:N0} エラー</value></data>
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} エラー</value></data>
   <data name="Operations.Count.Warnings.One" xml:space="preserve"><value>{0:N0} 警告</value></data>
   <data name="Operations.Count.Warnings.Other" xml:space="preserve"><value>{0:N0} 警告</value></data>
   <data name="Operations.Output.ArtworkNormalization.Item" xml:space="preserve"><value>{0} {1}: {2}、{3}×{4}、{5:N0} バイト → image/jpeg、{6}×{7}、{8:N0} バイト</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>計画: {0:N0} トラックは検査済み、{1:N0} はすでに有効、{2:N0} メディア ファイルは置き換えられます。</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>計画: {0:N0} トラックは検査され、{1:N0} はすでに有効で、{2:N0} メディア ファイルは置き換えられます。</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>適用: {0:N0} メディア ファイルと {1:N0} ITL トラック キャッシュが更新されました。</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>適用: {0:N0} メディア ファイルと {1:N0} ITL トラック キャッシュが更新されました。</value></data>
-  <data name="Operations.Output.CacheWarning" xml:space="preserve"><value>キャッシュ警告: {0}</value></data>
-  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>計画: {0:N0} トラック、{1:N0} インストール、{2:N0} 変更なし、{3:N0} 削除、{4:N0} プレイリスト。</value></data>
-  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>計画: {0:N0} トラック、{1:N0} インストール、{2:N0} 変更なし、{3:N0} 削除、{4:N0} プレイリスト。</value></data>
-  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>適用された {0:N0} トラックと {1:N0} プレイリスト: {2:N0} が作成され、{3:N0} が置き換えられ、{4:N0} が隔離されました。</value></data>
-  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>適用された {0:N0} トラックと {1:N0} プレイリスト: {2:N0} が作成され、{3:N0} が置き換えられ、{4:N0} が隔離されました。</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>計画: {0:N0} 目的のファイル、{1:N0} は変更なし、{2:N0} 追加、{3:N0} 変更。</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>計画: {0:N0} の必要なファイル、{1:N0} は変更なし、{2:N0} は追加、{3:N0} は変更します。</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>適用されたエクスポート「{1}」: {0:N0} がコピーされ、{2:N0} が置換され、{3:N0} が隔離され、{4:N0} が削除され、{5:N0} は変更されません。</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>適用されたエクスポート「{1}」: {0:N0} がコピーされ、{2:N0} が置換され、{3:N0} が隔離され、{4:N0} が削除され、{5:N0} は変更されません。</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>計画: {0:N0} 目的のファイル、{1:N0} は変更なし、{2:N0} は無効、{3:N0} は変更します。</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>計画: {0:N0} 必要なファイル、{1:N0} は変更なし、{2:N0} は無効、{3:N0} は変更します。</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>適用: {0:N0} がコピーされ、{1:N0} が置換され、{2:N0} が隔離され、{3:N0} が削除され、{4:N0} は変更されません。</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>適用: {0:N0} がコピーされ、{1:N0} が置換され、{2:N0} が隔離され、{3:N0} が削除され、{4:N0} は変更されません。</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>計画: 検査したトラック: {0:N0}、有効: {1:N0}、置換するメディアファイル: {2:N0}。</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>計画: 検査したトラック: {0:N0}、有効: {1:N0}、置換するメディアファイル: {2:N0}。</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>適用済み: 更新したメディアファイル: {0:N0}、更新した ITL トラックキャッシュ: {1:N0}。</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>適用済み: 更新したメディアファイル: {0:N0}、更新した ITL トラックキャッシュ: {1:N0}。</value></data>
+  <data name="Operations.Output.CacheWarning" xml:space="preserve"><value>キャッシュの警告: {0}</value></data>
+  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>計画: ライブラリトラック: {0:N0}、インストール: {1:N0}、変更なし: {2:N0}、削除: {3:N0}、プレイリスト: {4:N0}。</value></data>
+  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>計画: ライブラリトラック: {0:N0}、インストール: {1:N0}、変更なし: {2:N0}、削除: {3:N0}、プレイリスト: {4:N0}。</value></data>
+  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>適用済み: トラック: {0:N0}、プレイリスト: {1:N0}、作成: {2:N0}、置換: {3:N0}、隔離: {4:N0}。</value></data>
+  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>適用済み: トラック: {0:N0}、プレイリスト: {1:N0}、作成: {2:N0}、置換: {3:N0}、隔離: {4:N0}。</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>計画: 対象ファイル: {0:N0}、変更なし: {1:N0}、余分なファイル: {2:N0}、ファイル操作: {3:N0}。</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>計画: 対象ファイル: {0:N0}、変更なし: {1:N0}、余分なファイル: {2:N0}、ファイル操作: {3:N0}。</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>エクスポート「{1}」を適用: コピー: {0:N0}、置換: {2:N0}、隔離: {3:N0}、削除: {4:N0}、変更なし: {5:N0}。</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>エクスポート「{1}」を適用: コピー: {0:N0}、置換: {2:N0}、隔離: {3:N0}、削除: {4:N0}、変更なし: {5:N0}。</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>計画: 対象ファイル: {0:N0}、変更なし: {1:N0}、古いファイル: {2:N0}、ファイル操作: {3:N0}。</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>計画: 対象ファイル: {0:N0}、変更なし: {1:N0}、古いファイル: {2:N0}、ファイル操作: {3:N0}。</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>適用済み: コピー: {0:N0}、置換: {1:N0}、隔離: {2:N0}、削除: {3:N0}、変更なし: {4:N0}。</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>適用済み: コピー: {0:N0}、置換: {1:N0}、隔離: {2:N0}、削除: {3:N0}、変更なし: {4:N0}。</value></data>
   <data name="Operations.Output.Issue" xml:space="preserve"><value>{0} {1}: {2}{3}</value></data>
   <data name="Operations.Output.Mutation.Destination" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.Source" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.SourceDestination" xml:space="preserve"><value>{0} {1} → {2}</value></data>
   <data name="Operations.Output.PathSuffix" xml:space="preserve"><value> [{0}]</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>適用された {0:N0} プレイリスト: {1:N0} が作成され、{2:N0} が置き換えられ、{3:N0} が隔離され、{4:N0} が削除されました。</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>適用された {0:N0} プレイリスト: {1:N0} が作成され、{2:N0} が置き換えられ、{3:N0} が隔離され、{4:N0} が削除されました。</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>ターゲット {1}: {0:N0} プレイリスト、{2:N0} マッピングがありません。</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>ターゲット {1}: {0:N0} プレイリスト、{2:N0} マッピングがありません。</value></data>
-  <data name="Operations.Output.RecoveryJournal" xml:space="preserve"><value>リカバリジャーナル: {0}</value></data>
-  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>{1:N0} ローカル トラック間の {0:N0} 冗長グループ。</value></data>
-  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>{1:N0} ローカル トラック間の {0:N0} 冗長グループ。</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>計画: {0:N0} トラック、{1:N0} インストール、{2:N0} 変更なし、{3:N0} 古い、{4:N0} プレイリスト、{5:N0} アートワーク アイテム。</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>計画: {0:N0} トラック、{1:N0} インストール、{2:N0} 変更なし、{3:N0} 古い、{4:N0} プレイリスト、{5:N0} アートワーク アイテム。</value></data>
-  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>適用された {0:N0} トラック、{1:N0} プレイリスト、および {2:N0} アートワーク アイテム: {3:N0} が作成され、{4:N0} が置換され、{5:N0} が隔離されました。</value></data>
-  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>適用された {0:N0} トラック、{1:N0} プレイリスト、および {2:N0} アートワーク アイテム: {3:N0} が作成され、{4:N0} が置換され、{5:N0} が隔離されました。</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>適用済み: プレイリスト: {0:N0}、作成: {1:N0}、置換: {2:N0}、隔離: {3:N0}、削除: {4:N0}。</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>適用済み: プレイリスト: {0:N0}、作成: {1:N0}、置換: {2:N0}、隔離: {3:N0}、削除: {4:N0}。</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>出力先 {1}: プレイリスト: {0:N0}、マッピングなし: {2:N0}。</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>出力先 {1}: プレイリスト: {0:N0}、マッピングなし: {2:N0}。</value></data>
+  <data name="Operations.Output.RecoveryJournal" xml:space="preserve"><value>復旧ジャーナル: {0}</value></data>
+  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>重複の可能性があるグループ: {0:N0}、スキャンしたローカルトラック: {1:N0}。</value></data>
+  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>重複の可能性があるグループ: {0:N0}、スキャンしたローカルトラック: {1:N0}。</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>計画: ライブラリトラック: {0:N0}、インストール: {1:N0}、変更なし: {2:N0}、古いトラック: {3:N0}、プレイリスト: {4:N0}、アートワーク項目: {5:N0}。</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>計画: ライブラリトラック: {0:N0}、インストール: {1:N0}、変更なし: {2:N0}、古いトラック: {3:N0}、プレイリスト: {4:N0}、アートワーク項目: {5:N0}。</value></data>
+  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>適用済み: トラック: {0:N0}、プレイリスト: {1:N0}、アートワーク項目: {2:N0}、作成: {3:N0}、置換: {4:N0}、隔離: {5:N0}。</value></data>
+  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>適用済み: トラック: {0:N0}、プレイリスト: {1:N0}、アートワーク項目: {2:N0}、作成: {3:N0}、置換: {4:N0}、隔離: {5:N0}。</value></data>
   <data name="Operations.Output.Unchanged" xml:space="preserve"><value>変更なし</value></data>
   <data name="Operations.Output.Validation.Issue" xml:space="preserve"><value>{0} {1} {2}</value></data>
   <data name="Operations.Output.Validation.Summary" xml:space="preserve"><value>検証: {0}、{1}</value></data>
-  <data name="Operations.PurgePreview.Backups.One" xml:space="preserve"><value>、復元時の競合バックアップ {0:N0} ファイルを含む</value></data>
-  <data name="Operations.PurgePreview.Backups.Other" xml:space="preserve"><value>、復元時の競合バックアップ {0:N0} ファイルを含む</value></data>
-  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>消去のプレビュー: 実行 {0:N0} 件、ファイル {1:N0} 件、{2}</value></data>
-  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>消去のプレビュー: 実行 {0:N0} 件、ファイル {1:N0} 件、{2}</value></data>
-  <data name="Operations.PurgePreview.NoneEligible" xml:space="preserve"><value>消去のプレビュー: 保持期限を過ぎた実行はありません</value></data>
-  <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}。保護された中断された実行: {2:N0};保存期間内で実行されます: {3:N0}{4}。</value></data>
+  <data name="Operations.PurgePreview.Backups.One" xml:space="preserve"><value>、復元時の競合に備えたバックアップファイル {0:N0} 件を含む</value></data>
+  <data name="Operations.PurgePreview.Backups.Other" xml:space="preserve"><value>、復元時の競合に備えたバックアップファイル {0:N0} 件を含む</value></data>
+  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>完全削除のプレビュー: 実行: {0:N0}、ファイル: {1:N0}、サイズ: {2}</value></data>
+  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>完全削除のプレビュー: 実行: {0:N0}、ファイル: {1:N0}、サイズ: {2}</value></data>
+  <data name="Operations.PurgePreview.NoneEligible" xml:space="preserve"><value>完全削除のプレビュー: 完全に削除できる期間を経過した実行はありません</value></data>
+  <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}。保護された中断済み実行: {2:N0}、保持期間内の実行: {3:N0}{4}。</value></data>
   <data name="Operations.PurgePreview.UnsafeRoots.One" xml:space="preserve"><value>。安全でない実行ルート {0:N0} 件を除外</value></data>
   <data name="Operations.PurgePreview.UnsafeRoots.Other" xml:space="preserve"><value>。安全でない実行ルート {0:N0} 件を除外</value></data>
   <data name="Operations.RestorePreview.None" xml:space="preserve"><value>選択した項目に復元できるものはありません。</value></data>
-  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>プレビューの復元: {0:N0} 項目、{1:N0} 宛先の衝突、{2:N0} はスキップされました。</value></data>
-  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>プレビューの復元: {0:N0} 項目、{1:N0} 宛先の衝突、{2:N0} はスキップされました。</value></data>
-  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>操作の検出がキャンセルされました。</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>{0:N0} オペレーションの実行が見つかりました。中断されました: {1:N0};ルートがスキャンされていません: {2:N0}。</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>{0:N0} オペレーションが実行されました。中断されました: {1:N0};ルートがスキャンされていません: {2:N0}。</value></data>
-  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>オペレーションの検出に失敗しました。</value></data>
-  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>{0:N0} 日より古い操作実行を確認しています…</value></data>
-  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>{0:N0} 日より古い操作実行を確認しています…</value></data>
+  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>復元のプレビュー: 項目: {0:N0}、保存先の競合: {1:N0}、スキップ: {2:N0}。</value></data>
+  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>復元のプレビュー: 項目: {0:N0}、保存先の競合: {1:N0}、スキップ: {2:N0}。</value></data>
+  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>復旧検索をキャンセルしました。</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>見つかった復旧実行: {0:N0}、中断: {1:N0}、未スキャンのルート: {2:N0}。</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>見つかった復旧実行: {0:N0}、中断: {1:N0}、未スキャンのルート: {2:N0}。</value></data>
+  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>復旧検索に失敗しました。</value></data>
+  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>{0:N0} 日より古い復旧実行を確認しています…</value></data>
+  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>{0:N0} 日より古い復旧実行を確認しています…</value></data>
   <data name="Operations.Status.NoSearchRoots" xml:space="preserve"><value>復元データを検索するルートを 1 つ以上選択してください。</value></data>
-  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>{0} オペレーションを開始しています…</value></data>
-  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>オープン操作はキャンセルされました。</value></data>
-  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>操作を開けませんでした。</value></data>
-  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>パージはキャンセルされました。まだ元に戻せない状態で削除されていない実行は、パージ ステージングに残る可能性があります。</value></data>
-  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>{0:N0} 実行、{1:N0} ファイル、および {2} をパージしました。</value></data>
-  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>{0:N0} 実行、{1:N0} ファイル、および {2} がパージされました。</value></data>
-  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>パージが停止しました。</value></data>
-  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>パージプレビューがキャンセルされました。</value></data>
-  <data name="Operations.Status.PurgePreviewFailed" xml:space="preserve"><value>プレビューの消去に失敗しました。</value></data>
-  <data name="Operations.Status.Purging.One" xml:space="preserve"><value>消去中… 実行 {1:N0}/{0:N0}</value></data>
-  <data name="Operations.Status.Purging.Other" xml:space="preserve"><value>消去中… 実行 {1:N0}/{0:N0}</value></data>
-  <data name="Operations.Status.Ready" xml:space="preserve"><value>構成されたルートをスキャンするか、デバイスまたはフォルダーを選択して回復操作を検出します。</value></data>
-  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>復元がキャンセルされ、完了したアクションがロールバックされました。</value></data>
-  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>{0:N0} アイテムを復元しました。 {1:N0} 衝突を保存しました。</value></data>
-  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>{0:N0} アイテムを復元しました。 {1:N0} 衝突を保存しました。</value></data>
-  <data name="Operations.Status.RestoreFailed" xml:space="preserve"><value>復元が失敗し、完了したアクションがロールバックされました。</value></data>
-  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>復元プレビューがキャンセルされました。</value></data>
-  <data name="Operations.Status.RestorePreviewFailed" xml:space="preserve"><value>プレビューの復元に失敗しました。</value></data>
+  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>復旧実行「{0}」を開いています…</value></data>
+  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>復旧実行を開く操作をキャンセルしました。</value></data>
+  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>復旧実行を開けませんでした。</value></data>
+  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>完全削除をキャンセルしました。まだ完全に削除されていない実行が削除用のステージング領域に残る場合があります。</value></data>
+  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>完全削除が完了しました: 実行: {0:N0}、ファイル: {1:N0}、サイズ: {2}。</value></data>
+  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>完全削除が完了しました: 実行: {0:N0}、ファイル: {1:N0}、サイズ: {2}。</value></data>
+  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>完全削除に失敗しました。</value></data>
+  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>完全削除のプレビューをキャンセルしました。</value></data>
+  <data name="Operations.Status.PurgePreviewFailed" xml:space="preserve"><value>完全削除のプレビューに失敗しました。</value></data>
+  <data name="Operations.Status.Purging.One" xml:space="preserve"><value>完全に削除しています… {1:N0}/{0:N0} 件</value></data>
+  <data name="Operations.Status.Purging.Other" xml:space="preserve"><value>完全に削除しています… {1:N0}/{0:N0} 件</value></data>
+  <data name="Operations.Status.Ready" xml:space="preserve"><value>構成済みのルートをスキャンするか、デバイスまたはフォルダーを選択して復旧操作を検索します。</value></data>
+  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>復元をキャンセルし、完了済みの操作をロールバックしました。</value></data>
+  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>復元が完了しました: 項目: {0:N0}、保持した競合: {1:N0}。</value></data>
+  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>復元が完了しました: 項目: {0:N0}、保持した競合: {1:N0}。</value></data>
+  <data name="Operations.Status.RestoreFailed" xml:space="preserve"><value>復元に失敗し、完了済みの操作をロールバックしました。</value></data>
+  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>復元のプレビューをキャンセルしました。</value></data>
+  <data name="Operations.Status.RestorePreviewFailed" xml:space="preserve"><value>復元のプレビューに失敗しました。</value></data>
   <data name="Operations.Status.Restoring" xml:space="preserve"><value>復元中… {0:N0}/{1:N0}</value></data>
-  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>元の階層内の {0:N0} 操作アイテム。読み取られなかった項目: {1:N0}。</value></data>
-  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>元の階層内の {0:N0} 操作アイテム。読み取られなかった項目: {1:N0}。</value></data>
-  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>{0:N0} 件のルートで操作ジャーナルをスキャンしています…</value></data>
-  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>{0:N0} 件のルートで操作ジャーナルをスキャンしています…</value></data>
-  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>{0:N0} で検出された操作の実行を表示しています。</value></data>
-  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>{0:N0} で検出された操作の実行を表示しています。</value></data>
+  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>元の階層内の復旧項目: {0:N0}、読み取れなかった項目: {1:N0}。</value></data>
+  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>元の階層内の復旧項目: {0:N0}、読み取れなかった項目: {1:N0}。</value></data>
+  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>{0:N0} 個のルートで復旧ジャーナルをスキャンしています…</value></data>
+  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>{0:N0} 個のルートで復旧ジャーナルをスキャンしています…</value></data>
+  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>表示している復旧実行: {0:N0}。</value></data>
+  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>表示している復旧実行: {0:N0}。</value></data>
   <data name="Common.No" xml:space="preserve"><value>いいえ</value></data>
   <data name="Common.Yes" xml:space="preserve"><value>はい</value></data>
   <data name="Fields.Action.ApplyChanges" xml:space="preserve"><value>変更を適用</value></data>
@@ -6253,8 +6253,8 @@
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>一部のメタデータは出力形式で表現できません。</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>一部のアートワークは出力形式で表現できません。</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>削除</value></data>
-  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>ボリューム {0:N0} · コミット済み {1:N0}</value></data>
-  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>ボリューム {0:N0} · コミット済み {1:N0}</value></data>
+  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} ボリューム · {1:N0} コミット済み</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} ボリューム · {1:N0} コミット済み</value></data>
   <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
   <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC 実行可能ファイル</value></data>
   <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC 実行可能ファイルを選択します</value></data>

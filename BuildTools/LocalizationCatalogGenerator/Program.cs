@@ -672,20 +672,7 @@ internal static partial class CatalogGenerator
         var tokens = new List<string>();
         IReadOnlyList<string> sourceDerivedTokens =
             LocalizationProtectedTerms.SourceDerivedTokens(value);
-        string protectedValue =
-            LocalizationProtectedTerms.DynamicTokenPattern.Replace(
-            value,
-            match => AddProtectedToken(match.Value, tokens));
-        foreach (string literal in
-                 LocalizationProtectedTerms.LiteralTokens
-                      .OrderByDescending(token => token.Length))
-        {
-            protectedValue = Regex.Replace(
-                protectedValue,
-                $@"(?<![A-Za-z0-9]){Regex.Escape(literal)}(?![A-Za-z0-9])",
-                match => AddProtectedToken(match.Value, tokens),
-                RegexOptions.CultureInvariant);
-        }
+        string protectedValue = value;
         foreach (string sourceDerivedToken in
                  sourceDerivedTokens.OrderByDescending(
                      token => token.Length))
@@ -700,6 +687,20 @@ internal static partial class CatalogGenerator
                     tokens),
                 RegexOptions.CultureInvariant);
         }
+        foreach (string literal in
+                 LocalizationProtectedTerms.LiteralTokens
+                      .OrderByDescending(token => token.Length))
+        {
+            protectedValue = Regex.Replace(
+                protectedValue,
+                $@"(?<![A-Za-z0-9]){Regex.Escape(literal)}(?![A-Za-z0-9])",
+                match => AddProtectedToken(match.Value, tokens),
+                RegexOptions.CultureInvariant);
+        }
+        protectedValue =
+            LocalizationProtectedTerms.DynamicTokenPattern.Replace(
+                protectedValue,
+                match => AddProtectedToken(match.Value, tokens));
         return new ProtectedText(protectedValue, tokens);
     }
 

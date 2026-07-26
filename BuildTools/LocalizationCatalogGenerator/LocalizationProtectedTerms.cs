@@ -131,6 +131,7 @@ public static class LocalizationProtectedTerms
         "DiscNumLengthLimit",
         "LengthLimit",
         "FileNameWithoutExtension",
+        "iTunes Library.itl",
         "iTunes",
         "Monkey's Audio",
         "True Audio",

@@ -41,6 +41,7 @@ public sealed partial class LocalizationCatalogTests
             "MusicLibraryTools",
             "MusicBrainz",
             "Cover Art Archive",
+            "iTunes Library.itl",
             "Discogs",
             "AcoustID",
             "Avalonia UI",
@@ -165,6 +166,12 @@ public sealed partial class LocalizationCatalogTests
                 "path",
                 @"Use C:\Tools\ffmpeg.exe.",
                 @"Use C:\Werkzeuge\ffmpeg.exe.",
+            ];
+            yield return
+            [
+                "application data filename",
+                "Select iTunes Library.itl.",
+                "Select iTunes Bibliothek.itl.",
             ];
             yield return
             [
@@ -524,22 +531,27 @@ public sealed partial class LocalizationCatalogTests
                         entry.Key))
                     continue;
 
-                string value =
-                    LocalizationProtectedTerms.DynamicTokenPattern
-                    .Replace(entry.Value, "");
+                string value = entry.Value;
                 foreach (string token in
-                          CjkAllowedLatinTokens)
+                         LocalizationProtectedTerms
+                             .SourceDerivedTokens(
+                                 neutral[entry.Key])
+                             .OrderByDescending(
+                                 token => token.Length))
                     value = ProtectedTokenPattern(
                             token,
                             ignoreCase: false)
                         .Replace(value, "");
                 foreach (string token in
-                         LocalizationProtectedTerms
-                             .SourceDerivedTokens(
-                                 neutral[entry.Key]))
+                          CjkAllowedLatinTokens
+                              .OrderByDescending(
+                                  token => token.Length))
                     value = ProtectedTokenPattern(
                             token,
                             ignoreCase: false)
+                        .Replace(value, "");
+                value =
+                    LocalizationProtectedTerms.DynamicTokenPattern
                         .Replace(value, "");
                 string[] residual = LatinWordPattern()
                     .Matches(value)

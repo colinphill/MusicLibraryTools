@@ -1801,10 +1801,10 @@
     <value>anwenden</value>
   </data>
   <data name="Operations.Action.ApplyRestore" xml:space="preserve">
-    <value>anwenden geprüft wiederherstellen</value>
+    <value>Ausgewählte Elemente wiederherstellen</value>
   </data>
   <data name="Operations.Action.ClearSelection" xml:space="preserve">
-    <value>leeren Auswahl</value>
+    <value>Auswahl aufheben</value>
   </data>
   <data name="Operations.Action.Maintenance" xml:space="preserve">
     <value>Wartung…</value>
@@ -1813,13 +1813,13 @@
     <value>Wartungsaktionen für die Wiederherstellung</value>
   </data>
   <data name="Operations.Action.OpenRun" xml:space="preserve">
-    <value>öffnen ausführen</value>
+    <value>Ausführung öffnen</value>
   </data>
   <data name="Operations.Action.PreviewRestore" xml:space="preserve">
-    <value>Vorschau wiederherstellen</value>
+    <value>Wiederherstellung prüfen</value>
   </data>
   <data name="Operations.Action.SelectRestorable" xml:space="preserve">
-    <value>auswählen Wiederherstellbar</value>
+    <value>Wiederherstellbare Elemente auswählen</value>
   </data>
   <data name="Operations.Destination" xml:space="preserve">
     <value>Ziel</value>
@@ -1828,19 +1828,19 @@
     <value>Initialisieren</value>
   </data>
   <data name="Operations.JobDestinationAutomation" xml:space="preserve">
-    <value>Auftrag Ziel</value>
+    <value>Auftragsziel</value>
   </data>
   <data name="Operations.JobOutputAutomation" xml:space="preserve">
-    <value>Auftrag Ausgabe</value>
+    <value>Auftragsausgabe</value>
   </data>
   <data name="Operations.MaximumRemovals" xml:space="preserve">
-    <value>Maximum Entfernungen</value>
+    <value>Maximal zu entfernende Dateien</value>
   </data>
   <data name="Operations.PlaylistName" xml:space="preserve">
     <value>Wiedergabelistenname</value>
   </data>
   <data name="Operations.PurgeReviewed" xml:space="preserve">
-    <value>bereinigen geprüft Wiederherstellung Verlauf</value>
+    <value>Zulässigen Wiederherstellungsverlauf endgültig löschen</value>
   </data>
   <data name="Operations.Rebalance" xml:space="preserve">
     <value>Neu verteilen</value>
@@ -1852,16 +1852,16 @@
     <value>Keine Wiederherstellungsläufe gefunden</value>
   </data>
   <data name="Operations.Recovery.Retention" xml:space="preserve">
-    <value>Wiederherstellung Aufbewahrung (Tage)</value>
+    <value>Wiederherstellungsaufbewahrung (Tage)</value>
   </data>
   <data name="Operations.Recovery.RetentionAutomation" xml:space="preserve">
-    <value>Wiederherstellung Aufbewahrung in Tage</value>
+    <value>Wiederherstellungsaufbewahrung in Tagen</value>
   </data>
   <data name="Operations.Recovery.SearchRoot" xml:space="preserve">
-    <value>suchen Stammordner</value>
+    <value>Suchstamm für Wiederherstellung</value>
   </data>
   <data name="Operations.Recovery.SearchRootAutomation" xml:space="preserve">
-    <value>Wiederherstellung suchen Stammordner</value>
+    <value>Suchstamm für Wiederherstellung</value>
   </data>
   <data name="Operations.Entry.Recovery.Compact" xml:space="preserve">
     <value>Kompakte Wiederherstellung · {0:N0} Byte beibehalten · {1:N0} Byte eingespart</value>
@@ -1873,7 +1873,7 @@
     <value>Einheitliche Aufträge ausführen, Verlauf prüfen und protokollierte Änderungen wiederherstellen.</value>
   </data>
   <data name="Operations.Tab.History" xml:space="preserve">
-    <value>Auftrag Verlauf</value>
+    <value>Verlauf</value>
   </data>
   <data name="Operations.Tab.Jobs" xml:space="preserve">
     <value>Aufträge</value>
@@ -1885,13 +1885,13 @@
     <value>Vorgänge</value>
   </data>
   <data name="Operations.ValidationPath" xml:space="preserve">
-    <value>Validierung Pfad</value>
+    <value>iTunes Library.itl-Datei</value>
   </data>
   <data name="Operations.FixErrors" xml:space="preserve">
-    <value>Beheben Fehler</value>
+    <value>Fehler beheben</value>
   </data>
   <data name="Operations.PreviewRetentionPurge" xml:space="preserve">
-    <value>Vorschau Aufbewahrung bereinigen</value>
+    <value>Endgültiges Löschen des Wiederherstellungsverlaufs prüfen</value>
   </data>
   <data name="ReviewedFileOperation.Apply" xml:space="preserve">
     <value>Geprüften Plan anwenden</value>
@@ -5693,209 +5693,209 @@
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>Arbeitsverzeichnis</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
   <data name="Workbench.Value.SampleRate" xml:space="preserve"><value>{0:N0} Hz</value></data>
-  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>Startet anwenden</value></data>
-  <data name="Operations.Activity.Apply.Title" xml:space="preserve"><value>anwenden {0}</value></data>
-  <data name="Operations.Activity.Discovery.Starting.One" xml:space="preserve"><value>wird gescannt {0:N0} Stammordner</value></data>
-  <data name="Operations.Activity.Discovery.Starting.Other" xml:space="preserve"><value>wird gescannt {0:N0} Stammordner</value></data>
-  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>scannen Wiederherstellung Vorgänge</value></data>
-  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>öffnen die {0} Vorgang</value></data>
-  <data name="Operations.Activity.OpenRun.Title" xml:space="preserve"><value>öffnen Wiederherstellung ausführen</value></data>
-  <data name="Operations.Activity.Preview.Starting" xml:space="preserve"><value>Startet Vorschau</value></data>
-  <data name="Operations.Activity.Preview.Title" xml:space="preserve"><value>Vorschau {0}</value></data>
-  <data name="Operations.Activity.Purge.Starting.One" xml:space="preserve"><value>Bereinigung {0:N0} ausführen</value></data>
-  <data name="Operations.Activity.Purge.Starting.Other" xml:space="preserve"><value>Bereinigung {0:N0} Läufe</value></data>
-  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>bereinigen Vorgang Verlauf</value></data>
-  <data name="Operations.Activity.PurgePreview.Starting.One" xml:space="preserve"><value>Prüfung Läufe Älter als {0:N0} Tag</value></data>
-  <data name="Operations.Activity.PurgePreview.Starting.Other" xml:space="preserve"><value>Prüfung Läufe Älter als {0:N0} Tage</value></data>
-  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>Vorschau Wiederherstellung bereinigen</value></data>
-  <data name="Operations.Activity.Restore.Starting.One" xml:space="preserve"><value>Wiederherstellung {0:N0} Element</value></data>
-  <data name="Operations.Activity.Restore.Starting.Other" xml:space="preserve"><value>Wiederherstellung {0:N0} Elemente</value></data>
-  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>wiederherstellen Vorgang Elemente</value></data>
-  <data name="Operations.Activity.RestorePreview.Starting.One" xml:space="preserve"><value>Prüfung {0:N0} ausgewählt Element</value></data>
-  <data name="Operations.Activity.RestorePreview.Starting.Other" xml:space="preserve"><value>Prüfung {0:N0} ausgewählte Elemente</value></data>
-  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>Vorschau Wiederherstellung wiederherstellen</value></data>
+  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>Änderungen werden zum Anwenden vorbereitet</value></data>
+  <data name="Operations.Activity.Apply.Title" xml:space="preserve"><value>{0} anwenden</value></data>
+  <data name="Operations.Activity.Discovery.Starting.One" xml:space="preserve"><value>{0:N0} Stammordner wird durchsucht</value></data>
+  <data name="Operations.Activity.Discovery.Starting.Other" xml:space="preserve"><value>{0:N0} Stammordner werden durchsucht</value></data>
+  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>Nach Wiederherstellungsvorgängen suchen</value></data>
+  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>Wiederherstellungsausführung „{0}“ wird geöffnet</value></data>
+  <data name="Operations.Activity.OpenRun.Title" xml:space="preserve"><value>Wiederherstellungsausführung öffnen</value></data>
+  <data name="Operations.Activity.Preview.Starting" xml:space="preserve"><value>Vorschau wird gestartet</value></data>
+  <data name="Operations.Activity.Preview.Title" xml:space="preserve"><value>{0} prüfen</value></data>
+  <data name="Operations.Activity.Purge.Starting.One" xml:space="preserve"><value>{0:N0} Ausführung wird endgültig gelöscht</value></data>
+  <data name="Operations.Activity.Purge.Starting.Other" xml:space="preserve"><value>{0:N0} Ausführungen werden endgültig gelöscht</value></data>
+  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>Wiederherstellungsverlauf endgültig löschen</value></data>
+  <data name="Operations.Activity.PurgePreview.Starting.One" xml:space="preserve"><value>Ausführungen, die älter als {0:N0} Tag sind, werden geprüft</value></data>
+  <data name="Operations.Activity.PurgePreview.Starting.Other" xml:space="preserve"><value>Ausführungen, die älter als {0:N0} Tage sind, werden geprüft</value></data>
+  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>Endgültiges Löschen des Wiederherstellungsverlaufs prüfen</value></data>
+  <data name="Operations.Activity.Restore.Starting.One" xml:space="preserve"><value>{0:N0} Element wird wiederhergestellt</value></data>
+  <data name="Operations.Activity.Restore.Starting.Other" xml:space="preserve"><value>{0:N0} Elemente werden wiederhergestellt</value></data>
+  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>Ausgewählte Elemente wiederherstellen</value></data>
+  <data name="Operations.Activity.RestorePreview.Starting.One" xml:space="preserve"><value>{0:N0} ausgewähltes Element wird geprüft</value></data>
+  <data name="Operations.Activity.RestorePreview.Starting.Other" xml:space="preserve"><value>{0:N0} ausgewählte Elemente werden geprüft</value></data>
+  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>Wiederherstellung prüfen</value></data>
   <data name="Operations.Choice.FileMutationKind.Copy" xml:space="preserve"><value>kopieren</value></data>
   <data name="Operations.Choice.FileMutationKind.Delete" xml:space="preserve"><value>löschen</value></data>
   <data name="Operations.Choice.FileMutationKind.Move" xml:space="preserve"><value>verschieben</value></data>
   <data name="Operations.Choice.FileMutationKind.Quarantine" xml:space="preserve"><value>Quarantäne</value></data>
   <data name="Operations.Choice.FileMutationKind.Replace" xml:space="preserve"><value>ersetzen</value></data>
-  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>ersetzen Erzeugen Datei</value></data>
+  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>Durch generierte Datei ersetzen</value></data>
   <data name="Operations.Choice.FileMutationKind.Write" xml:space="preserve"><value>schreiben</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Error" xml:space="preserve"><value>Fehler</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Info" xml:space="preserve"><value>Information</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Warning" xml:space="preserve"><value>Warnung</value></data>
-  <data name="Operations.Choice.OperationIssueSeverity.Blocker" xml:space="preserve"><value>Blockierend Problem</value></data>
+  <data name="Operations.Choice.OperationIssueSeverity.Blocker" xml:space="preserve"><value>Blockierendes Problem</value></data>
   <data name="Operations.Choice.OperationIssueSeverity.Information" xml:space="preserve"><value>Information</value></data>
   <data name="Operations.Choice.OperationIssueSeverity.Warning" xml:space="preserve"><value>Warnung</value></data>
   <data name="Operations.Choice.OperationJournalKind.Device" xml:space="preserve"><value>Gerät</value></data>
   <data name="Operations.Choice.OperationJournalKind.Ingest" xml:space="preserve"><value>Aufnahme</value></data>
-  <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>Organisation</value></data>
+  <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>Organisieren</value></data>
   <data name="Operations.Choice.OperationJournalKind.OtherKind" xml:space="preserve"><value>Sonstige</value></data>
   <data name="Operations.Choice.OperationJournalKind.ReviewedChange" xml:space="preserve"><value>Geprüfte Änderung</value></data>
   <data name="Operations.Choice.OperationJournalKind.Sync" xml:space="preserve"><value>Synchronisierung</value></data>
   <data name="Operations.Choice.OperationJournalState.Completed" xml:space="preserve"><value>abgeschlossen</value></data>
   <data name="Operations.Choice.OperationJournalState.Interrupted" xml:space="preserve"><value>Unterbrochen — Wiederherstellung kann erforderlich sein</value></data>
-  <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>Zurückgesetzt Rückseite</value></data>
+  <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>Zurückgesetzt</value></data>
   <data name="Operations.Choice.OperationJournalState.Unknown" xml:space="preserve"><value>Quarantäne vorhanden — Endzustand nicht aufgezeichnet</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>anwenden {1} mit {0:N0} geplant Datei Mutation?
+  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>„{1}“ mit {0:N0} geplanter Dateiänderung anwenden?
 
 {2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>anwenden {1} mit {0:N0} geplant Datei Mutationen?
+  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>„{1}“ mit {0:N0} geplanten Dateiänderungen anwenden?
 
 {2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>Wiederherstellung ist verfügbar: geändert Dateien wird sein Journal.</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>Wiederherstellung ist verfügbar: geändert Dateien wird sein Journal unter “{0}”.</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>Wiederherstellung ist Nicht verfügbar für dies anwenden.</value></data>
-  <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>anwenden {0}</value></data>
-  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>auswählen die iTunes Bibliothek zu überprüfen</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>Wiederherstellung ist verfügbar: Originale geänderter Dateien werden im Wiederherstellungsjournal aufbewahrt.</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>Wiederherstellung ist verfügbar: Originale geänderter Dateien werden unter „{0}“ aufbewahrt.</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>Für diese Anwendung ist keine Wiederherstellung verfügbar.</value></data>
+  <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>{0} anwenden</value></data>
+  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>Die zu validierende iTunes Library.itl-Datei auswählen</value></data>
   <data name="Operations.Dialog.SelectRecoveryRoot" xml:space="preserve"><value>Zu scannenden Quell-, Synchronisierungs- oder Gerätestammordner auswählen</value></data>
-  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>auswählen die Intelligent-Speicher Ziel</value></data>
+  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>Ziel für intelligenten Speicher auswählen</value></data>
   <data name="Operations.Diagnostic.NoApplyService" xml:space="preserve"><value>Für den Auftrag „{0}“ ist kein typisierter Anwendungsdienst verfügbar.</value></data>
   <data name="Operations.Diagnostic.NoPreviewService" xml:space="preserve"><value>Für den Auftrag „{0}“ ist kein typisierter Vorschaudienst verfügbar.</value></data>
   <data name="Operations.Entry.State.Created" xml:space="preserve"><value>erstellt</value></data>
-  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>erstellt Element fehlend</value></data>
+  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>Erstelltes Element ist nicht mehr vorhanden</value></data>
   <data name="Operations.Entry.State.Deleted" xml:space="preserve"><value>gelöscht</value></data>
   <data name="Operations.Entry.State.Moved" xml:space="preserve"><value>verschoben</value></data>
-  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>verschieben Ziel fehlend</value></data>
-  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>geplant; Abschluss nicht Erfasst</value></data>
+  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>Verschobenes Element ist am Ziel nicht mehr vorhanden</value></data>
+  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>Geplant; Abschluss wurde nicht aufgezeichnet</value></data>
   <data name="Operations.Entry.State.Quarantined" xml:space="preserve"><value>in Quarantäne</value></data>
-  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>Quarantäne kopieren fehlend</value></data>
-  <data name="Operations.Entry.State.Unknown" xml:space="preserve"><value>unbekannt Vorgang</value></data>
-  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes Bibliothek</value></data>
+  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>Element in Quarantäne ist nicht mehr vorhanden</value></data>
+  <data name="Operations.Entry.State.Unknown" xml:space="preserve"><value>Unbekannter Vorgang</value></data>
+  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes Library.itl-Datei</value></data>
   <data name="Operations.History.Elapsed" xml:space="preserve"><value>{0:0.##} s</value></data>
   <data name="Operations.History.State.Applied" xml:space="preserve"><value>angewendet</value></data>
-  <data name="Operations.History.State.ApplyFailed" xml:space="preserve"><value>anwenden fehlgeschlagen</value></data>
+  <data name="Operations.History.State.ApplyFailed" xml:space="preserve"><value>Anwenden fehlgeschlagen</value></data>
   <data name="Operations.History.State.PreviewFailed" xml:space="preserve"><value>Vorschau fehlgeschlagen</value></data>
-  <data name="Operations.History.State.PreviewPassed" xml:space="preserve"><value>Vorschau Bestanden</value></data>
-  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>normalisieren eingebettet Cover für Titel Bereitgestellt durch die Konfiguriert Katalog.</value></data>
-  <data name="Operations.Job.ArtworkNormalization.Name" xml:space="preserve"><value>Cover Normalisierung</value></data>
-  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>Projekt die Indexiert Bibliothek in ein Ausgeglichen Wechseldatenträger-Medien exportieren.</value></data>
-  <data name="Operations.Job.CarCard.Name" xml:space="preserve"><value>Auto Karte</value></data>
-  <data name="Operations.Job.ConfiguredExport.Description" xml:space="preserve"><value>Vorschau und anwenden die Konfiguriert Auswahl, Benennung, Transport, und Abgleich Richtlinie.</value></data>
-  <data name="Operations.Job.ConfiguredExport.Name" xml:space="preserve"><value>exportieren: {0}</value></data>
-  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>synchronisieren Konfiguriert Wiedergabelisten in die Bibliothek Ziel.</value></data>
-  <data name="Operations.Job.CrossLibrarySync.Name" xml:space="preserve"><value>Kreuz-Bibliothek Synchronisieren</value></data>
-  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>überprüfen Strukturell und Referenziell Invarianten in ein ITL Datei.</value></data>
-  <data name="Operations.Job.ItunesValidation.Name" xml:space="preserve"><value>iTunes Bibliothek Validierung</value></data>
-  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>synchronisieren jede Wiedergabeliste exportieren Ziel von die aktiv Bibliothek Konfiguration.</value></data>
-  <data name="Operations.Job.PlaylistSync.Name" xml:space="preserve"><value>Wiedergabeliste Synchronisieren</value></data>
-  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>Bericht Wahrscheinlich Duplikat Titel von die Konfiguriert Katalog Integration.</value></data>
-  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>Redundanz Bericht</value></data>
-  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>Projekt die Konfiguriert Katalog in ein Gruppiert Portabel-Speicher exportieren.</value></data>
-  <data name="Operations.Job.SmartStorage.Name" xml:space="preserve"><value>Intelligent Speicher</value></data>
+  <data name="Operations.History.State.PreviewPassed" xml:space="preserve"><value>Vorschau erfolgreich</value></data>
+  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>Eingebettete Coverbilder für Titel im konfigurierten Katalog normalisieren.</value></data>
+  <data name="Operations.Job.ArtworkNormalization.Name" xml:space="preserve"><value>Coverbildnormalisierung</value></data>
+  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>Einen ausgewogenen Mediathekexport für Wechselmedien erstellen.</value></data>
+  <data name="Operations.Job.CarCard.Name" xml:space="preserve"><value>Fahrzeugkarte</value></data>
+  <data name="Operations.Job.ConfiguredExport.Description" xml:space="preserve"><value>Konfigurierte Auswahl-, Benennungs-, Übertragungs- und Abgleichrichtlinie prüfen und anwenden.</value></data>
+  <data name="Operations.Job.ConfiguredExport.Name" xml:space="preserve"><value>Export: {0}</value></data>
+  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>Konfigurierte Wiedergabelisten mit der Zielmediathek synchronisieren.</value></data>
+  <data name="Operations.Job.CrossLibrarySync.Name" xml:space="preserve"><value>Mediathekenübergreifende Synchronisierung</value></data>
+  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>Eine ITL-Datei auf Struktur- und Verweisfehler prüfen.</value></data>
+  <data name="Operations.Job.ItunesValidation.Name" xml:space="preserve"><value>iTunes-Mediatheksvalidierung</value></data>
+  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>Alle in der aktiven Mediathekskonfiguration definierten Wiedergabelisten-Exportziele synchronisieren.</value></data>
+  <data name="Operations.Job.PlaylistSync.Name" xml:space="preserve"><value>Wiedergabelistensynchronisierung</value></data>
+  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>Wahrscheinliche Duplikate im konfigurierten Katalog suchen.</value></data>
+  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>Bericht zu Titelduplikaten</value></data>
+  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>Den konfigurierten Katalog mithilfe gruppierter Ordner auf einen tragbaren Speicher exportieren.</value></data>
+  <data name="Operations.Job.SmartStorage.Name" xml:space="preserve"><value>Intelligenter Speicher</value></data>
   <data name="Operations.Job.Status.ApplyCancelled" xml:space="preserve"><value>Auftrag abgebrochen. Prüfen Sie unter „Vorgänge“ das Wiederherstellungsjournal.</value></data>
-  <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>{0} angewendet Erfolgreich.</value></data>
-  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>anwenden Beendet mit Code {0}. prüfen die Ausgabe und Vorgang Journal.</value></data>
-  <data name="Operations.Job.Status.ApplyFailed" xml:space="preserve"><value>Auftrag anwenden fehlgeschlagen.</value></data>
-  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>Auftrag Vorschau abgebrochen.</value></data>
-  <data name="Operations.Job.Status.PreviewCompleted" xml:space="preserve"><value>Vorschau abgeschlossen. prüfen die Ausgabe vorher wird angewendet.</value></data>
-  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>Vorschau Beendet mit Code {0}.</value></data>
-  <data name="Operations.Job.Status.PreviewFailed" xml:space="preserve"><value>Auftrag Vorschau fehlgeschlagen.</value></data>
+  <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>{0} wurde erfolgreich angewendet.</value></data>
+  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>Das Anwenden wurde mit Exitcode {0} beendet. Prüfen Sie die Ausgabe und das Vorgangsjournal.</value></data>
+  <data name="Operations.Job.Status.ApplyFailed" xml:space="preserve"><value>Auftrag konnte nicht angewendet werden.</value></data>
+  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>Auftragsvorschau wurde abgebrochen.</value></data>
+  <data name="Operations.Job.Status.PreviewCompleted" xml:space="preserve"><value>Vorschau abgeschlossen. Prüfen Sie die Ausgabe vor dem Anwenden.</value></data>
+  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>Die Vorschau wurde mit Exitcode {0} beendet.</value></data>
+  <data name="Operations.Job.Status.PreviewFailed" xml:space="preserve"><value>Auftragsvorschau fehlgeschlagen.</value></data>
   <data name="Operations.Job.Status.Previewing" xml:space="preserve"><value>Vorschau läuft {0}…</value></data>
-  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>auswählen ein Auftrag, Bereitstellen Beliebig erforderlich Argumente, dann Vorschau.</value></data>
+  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>Wählen Sie einen Auftrag, füllen Sie die erforderlichen Felder aus und wählen Sie dann „Vorschau“.</value></data>
   <data name="Operations.Progress.Determinate" xml:space="preserve"><value>{0}: {1:N0}/{2:N0}</value></data>
   <data name="Operations.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
-  <data name="Operations.Progress.Phase.Applying" xml:space="preserve"><value>wird angewendet Änderungen</value></data>
-  <data name="Operations.Progress.Phase.Completed" xml:space="preserve"><value>Vorgang vollständig</value></data>
-  <data name="Operations.Progress.Phase.IndexingSources" xml:space="preserve"><value>wird gescannt Quellen</value></data>
-  <data name="Operations.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>wird gescannt die Ziel</value></data>
-  <data name="Operations.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>wird geladen Konfiguration</value></data>
-  <data name="Operations.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>wird geladen die Bibliothek</value></data>
-  <data name="Operations.Progress.Phase.Planning" xml:space="preserve"><value>Planung Änderungen</value></data>
-  <data name="Operations.Progress.Phase.RollingBack" xml:space="preserve"><value>Zurücksetzen Rückseite Änderungen</value></data>
-  <data name="Operations.Progress.Phase.Validating" xml:space="preserve"><value>überprüfen die Vorgang</value></data>
-  <data name="Operations.Run.AffectedItems.One" xml:space="preserve"><value>{0:N0} Erfasst Element</value></data>
-  <data name="Operations.Run.AffectedItems.Other" xml:space="preserve"><value>{0:N0} Erfasst Elemente</value></data>
-  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>Element Anzahl verfügbar wenn die ausführen ist öffnen</value></data>
-  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>Nein Journal (Ordner-nur Quarantäne)</value></data>
-  <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>festlegen die iTunes Bibliothek Pfad in die aktiv Bibliothek Konfiguration.</value></data>
-  <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>ein iTunes Bibliothek.itl Pfad ist erforderlich.</value></data>
+  <data name="Operations.Progress.Phase.Applying" xml:space="preserve"><value>Änderungen werden angewendet</value></data>
+  <data name="Operations.Progress.Phase.Completed" xml:space="preserve"><value>Vorgang abgeschlossen</value></data>
+  <data name="Operations.Progress.Phase.IndexingSources" xml:space="preserve"><value>Quellen werden durchsucht</value></data>
+  <data name="Operations.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>Ziel wird durchsucht</value></data>
+  <data name="Operations.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>Konfiguration wird geladen</value></data>
+  <data name="Operations.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>Mediathek wird geladen</value></data>
+  <data name="Operations.Progress.Phase.Planning" xml:space="preserve"><value>Änderungen werden geplant</value></data>
+  <data name="Operations.Progress.Phase.RollingBack" xml:space="preserve"><value>Änderungen werden zurückgesetzt</value></data>
+  <data name="Operations.Progress.Phase.Validating" xml:space="preserve"><value>Vorgang wird validiert</value></data>
+  <data name="Operations.Run.AffectedItems.One" xml:space="preserve"><value>{0:N0} aufgezeichnetes Element</value></data>
+  <data name="Operations.Run.AffectedItems.Other" xml:space="preserve"><value>{0:N0} aufgezeichnete Elemente</value></data>
+  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>Öffnen Sie die Ausführung, um ihre Elemente zu zählen</value></data>
+  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>Kein Journal (nur Quarantäneordner)</value></data>
+  <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>Legen Sie den iTunes-Mediathekspfad in der aktiven Mediathekskonfiguration fest.</value></data>
+  <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>Ein Pfad zu iTunes Library.itl ist erforderlich.</value></data>
   <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>Ein Name für die iTunes-Wiedergabeliste ist erforderlich.</value></data>
-  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>ein Intelligent-Speicher Ziel ist erforderlich.</value></data>
+  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>Ein Ziel für intelligenten Speicher ist erforderlich.</value></data>
   <data name="Operations.Count.Errors.One" xml:space="preserve"><value>{0:N0} Fehler</value></data>
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} Fehler</value></data>
   <data name="Operations.Count.Warnings.One" xml:space="preserve"><value>{0:N0} Warnung</value></data>
   <data name="Operations.Count.Warnings.Other" xml:space="preserve"><value>{0:N0} Warnungen</value></data>
   <data name="Operations.Output.ArtworkNormalization.Item" xml:space="preserve"><value>{0} {1}: {2}, {3}×{4}, {5:N0} Bytes → image/jpeg, {6}×{7}, {8:N0} Bytes</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>Plan: {0:N0} Titel prüfen, {1:N0} bereits gültig, {2:N0} Medien Dateien zu ersetzen.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} Titel prüfen, {1:N0} bereits gültig, {2:N0} Medien Dateien zu ersetzen.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>angewendet: {0:N0} Medien Datei und {1:N0} ITL Titel Cache aktualisiert.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>angewendet: {0:N0} Medien Dateien und {1:N0} ITL Titel Cache aktualisiert.</value></data>
-  <data name="Operations.Output.CacheWarning" xml:space="preserve"><value>Cache Warnung: {0}</value></data>
-  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>Plan: {0:N0} Titel, {1:N0} Installiert, {2:N0} unverändert, {3:N0} Entfernungen, {4:N0} Wiedergabelisten.</value></data>
-  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} Titel, {1:N0} Installiert, {2:N0} unverändert, {3:N0} Entfernungen, {4:N0} Wiedergabelisten.</value></data>
-  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>angewendet {0:N0} Titel und {1:N0} Wiedergabelisten: {2:N0} erstellt, {3:N0} ersetzt, {4:N0} in Quarantäne.</value></data>
-  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>angewendet {0:N0} Titel und {1:N0} Wiedergabelisten: {2:N0} erstellt, {3:N0} ersetzt, {4:N0} in Quarantäne.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>Plan: {0:N0} Gewünscht Datei, {1:N0} unverändert, {2:N0} Zusätzlich, {3:N0} Mutationen.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} Gewünscht Dateien, {1:N0} unverändert, {2:N0} Zusätzlich, {3:N0} Mutationen.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>angewendet exportieren “{1}”: {0:N0} kopiert, {2:N0} ersetzt, {3:N0} in Quarantäne, {4:N0} gelöscht, {5:N0} unverändert.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>angewendet exportieren “{1}”: {0:N0} kopiert, {2:N0} ersetzt, {3:N0} in Quarantäne, {4:N0} gelöscht, {5:N0} unverändert.</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>Plan: {0:N0} Gewünscht Datei, {1:N0} unverändert, {2:N0} veraltet, {3:N0} Mutationen.</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} Gewünscht Dateien, {1:N0} unverändert, {2:N0} veraltet, {3:N0} Mutationen.</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>angewendet: {0:N0} kopiert, {1:N0} ersetzt, {2:N0} in Quarantäne, {3:N0} gelöscht, {4:N0} unverändert.</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>angewendet: {0:N0} kopiert, {1:N0} ersetzt, {2:N0} in Quarantäne, {3:N0} gelöscht, {4:N0} unverändert.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>Plan: geprüfte Titel: {0:N0}; bereits gültig: {1:N0}; zu ersetzende Mediendateien: {2:N0}.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>Plan: geprüfte Titel: {0:N0}; bereits gültig: {1:N0}; zu ersetzende Mediendateien: {2:N0}.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>Angewendet: aktualisierte Mediendateien: {0:N0}; aktualisierte ITL-Titelcaches: {1:N0}.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>Angewendet: aktualisierte Mediendateien: {0:N0}; aktualisierte ITL-Titelcaches: {1:N0}.</value></data>
+  <data name="Operations.Output.CacheWarning" xml:space="preserve"><value>Cachewarnung: {0}</value></data>
+  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>Plan: Mediathekstitel: {0:N0}; zu installieren: {1:N0}; unverändert: {2:N0}; zu entfernen: {3:N0}; Wiedergabelisten: {4:N0}.</value></data>
+  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>Plan: Mediathekstitel: {0:N0}; zu installieren: {1:N0}; unverändert: {2:N0}; zu entfernen: {3:N0}; Wiedergabelisten: {4:N0}.</value></data>
+  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>Angewendet: Titel: {0:N0}; Wiedergabelisten: {1:N0}; erstellt: {2:N0}; ersetzt: {3:N0}; in Quarantäne: {4:N0}.</value></data>
+  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>Angewendet: Titel: {0:N0}; Wiedergabelisten: {1:N0}; erstellt: {2:N0}; ersetzt: {3:N0}; in Quarantäne: {4:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>Plan: Zieldateien: {0:N0}; unverändert: {1:N0}; zusätzliche Dateien: {2:N0}; Dateivorgänge: {3:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>Plan: Zieldateien: {0:N0}; unverändert: {1:N0}; zusätzliche Dateien: {2:N0}; Dateivorgänge: {3:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>Export „{1}“ angewendet: kopiert: {0:N0}; ersetzt: {2:N0}; in Quarantäne: {3:N0}; gelöscht: {4:N0}; unverändert: {5:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>Export „{1}“ angewendet: kopiert: {0:N0}; ersetzt: {2:N0}; in Quarantäne: {3:N0}; gelöscht: {4:N0}; unverändert: {5:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>Plan: Zieldateien: {0:N0}; unverändert: {1:N0}; veraltete Dateien: {2:N0}; Dateivorgänge: {3:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>Plan: Zieldateien: {0:N0}; unverändert: {1:N0}; veraltete Dateien: {2:N0}; Dateivorgänge: {3:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>Angewendet: kopiert: {0:N0}; ersetzt: {1:N0}; in Quarantäne: {2:N0}; gelöscht: {3:N0}; unverändert: {4:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>Angewendet: kopiert: {0:N0}; ersetzt: {1:N0}; in Quarantäne: {2:N0}; gelöscht: {3:N0}; unverändert: {4:N0}.</value></data>
   <data name="Operations.Output.Issue" xml:space="preserve"><value>{0} {1}: {2}{3}</value></data>
   <data name="Operations.Output.Mutation.Destination" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.Source" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.SourceDestination" xml:space="preserve"><value>{0} {1} → {2}</value></data>
   <data name="Operations.Output.PathSuffix" xml:space="preserve"><value> [{0}]</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>angewendet {0:N0} Wiedergabeliste: {1:N0} erstellt, {2:N0} ersetzt, {3:N0} in Quarantäne, {4:N0} gelöscht.</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>angewendet {0:N0} Wiedergabelisten: {1:N0} erstellt, {2:N0} ersetzt, {3:N0} in Quarantäne, {4:N0} gelöscht.</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>Ziel {1}: {0:N0} Wiedergabeliste, {2:N0} fehlend Zuordnungen.</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>Ziel {1}: {0:N0} Wiedergabelisten, {2:N0} fehlend Zuordnungen.</value></data>
-  <data name="Operations.Output.RecoveryJournal" xml:space="preserve"><value>Wiederherstellung Journal: {0}</value></data>
-  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>{0:N0} Redundanz Gruppe unter {1:N0} lokal Titel.</value></data>
-  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>{0:N0} Redundanz Gruppe unter {1:N0} lokal Titel.</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>Plan: {0:N0} Titel, {1:N0} Installiert, {2:N0} unverändert, {3:N0} veraltet, {4:N0} Wiedergabelisten, {5:N0} Cover Elemente.</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} Titel, {1:N0} Installiert, {2:N0} unverändert, {3:N0} veraltet, {4:N0} Wiedergabelisten, {5:N0} Cover Elemente.</value></data>
-  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>angewendet {0:N0} Titel, {1:N0} Wiedergabelisten, und {2:N0} Cover Elemente: {3:N0} erstellt, {4:N0} ersetzt, {5:N0} in Quarantäne.</value></data>
-  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>angewendet {0:N0} Titel, {1:N0} Wiedergabelisten, und {2:N0} Cover Elemente: {3:N0} erstellt, {4:N0} ersetzt, {5:N0} in Quarantäne.</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>Angewendet: Wiedergabelisten: {0:N0}; erstellt: {1:N0}; ersetzt: {2:N0}; in Quarantäne: {3:N0}; gelöscht: {4:N0}.</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>Angewendet: Wiedergabelisten: {0:N0}; erstellt: {1:N0}; ersetzt: {2:N0}; in Quarantäne: {3:N0}; gelöscht: {4:N0}.</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>Ziel {1}: Wiedergabelisten: {0:N0}; fehlende Zuordnungen: {2:N0}.</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>Ziel {1}: Wiedergabelisten: {0:N0}; fehlende Zuordnungen: {2:N0}.</value></data>
+  <data name="Operations.Output.RecoveryJournal" xml:space="preserve"><value>Wiederherstellungsjournal: {0}</value></data>
+  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>Wahrscheinliche Duplikatgruppen: {0:N0}; geprüfte lokale Titel: {1:N0}.</value></data>
+  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>Wahrscheinliche Duplikatgruppen: {0:N0}; geprüfte lokale Titel: {1:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>Plan: Mediathekstitel: {0:N0}; zu installieren: {1:N0}; unverändert: {2:N0}; veraltet: {3:N0}; Wiedergabelisten: {4:N0}; Coverelemente: {5:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>Plan: Mediathekstitel: {0:N0}; zu installieren: {1:N0}; unverändert: {2:N0}; veraltet: {3:N0}; Wiedergabelisten: {4:N0}; Coverelemente: {5:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>Angewendet: Titel: {0:N0}; Wiedergabelisten: {1:N0}; Coverelemente: {2:N0}; erstellt: {3:N0}; ersetzt: {4:N0}; in Quarantäne: {5:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>Angewendet: Titel: {0:N0}; Wiedergabelisten: {1:N0}; Coverelemente: {2:N0}; erstellt: {3:N0}; ersetzt: {4:N0}; in Quarantäne: {5:N0}.</value></data>
   <data name="Operations.Output.Unchanged" xml:space="preserve"><value>unverändert</value></data>
   <data name="Operations.Output.Validation.Issue" xml:space="preserve"><value>{0} {1} {2}</value></data>
   <data name="Operations.Output.Validation.Summary" xml:space="preserve"><value>Validierung: {0}, {1}</value></data>
-  <data name="Operations.PurgePreview.Backups.One" xml:space="preserve"><value>, einschließen {0:N0} wiederherstellen-Konflikt Sicherung Datei</value></data>
-  <data name="Operations.PurgePreview.Backups.Other" xml:space="preserve"><value>, einschließen {0:N0} wiederherstellen-Konflikt Sicherung Dateien</value></data>
-  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>bereinigen Vorschau: {0:N0} ausführen, {1:N0} Dateien, {2}</value></data>
-  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>bereinigen Vorschau: {0:N0} Läufe, {1:N0} Dateien, {2}</value></data>
-  <data name="Operations.PurgePreview.NoneEligible" xml:space="preserve"><value>bereinigen Vorschau: Nein Läufe sind alt Ausreichend zu bereinigen</value></data>
-  <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}. Geschützt Unterbrochen Läufe: {2:N0}; Läufe innerhalb Aufbewahrung: {3:N0}{4}.</value></data>
-  <data name="Operations.PurgePreview.UnsafeRoots.One" xml:space="preserve"><value>; {0:N0} Unsicher ausführen Stammordner war ausschließen</value></data>
-  <data name="Operations.PurgePreview.UnsafeRoots.Other" xml:space="preserve"><value>; {0:N0} Unsicher ausführen Stammordner waren ausschließen</value></data>
+  <data name="Operations.PurgePreview.Backups.One" xml:space="preserve"><value>, einschließlich {0:N0} Sicherungsdatei für Wiederherstellungskonflikte</value></data>
+  <data name="Operations.PurgePreview.Backups.Other" xml:space="preserve"><value>, einschließlich {0:N0} Sicherungsdateien für Wiederherstellungskonflikte</value></data>
+  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>Löschvorschau: Ausführungen: {0:N0}; Dateien: {1:N0}; Größe: {2}</value></data>
+  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>Löschvorschau: Ausführungen: {0:N0}; Dateien: {1:N0}; Größe: {2}</value></data>
+  <data name="Operations.PurgePreview.NoneEligible" xml:space="preserve"><value>Löschvorschau: Keine Ausführung ist alt genug zum endgültigen Löschen</value></data>
+  <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}. Geschützte unterbrochene Ausführungen: {2:N0}; Ausführungen innerhalb der Aufbewahrungsfrist: {3:N0}{4}.</value></data>
+  <data name="Operations.PurgePreview.UnsafeRoots.One" xml:space="preserve"><value>; {0:N0} unsicherer Ausführungsstamm wurde ausgeschlossen</value></data>
+  <data name="Operations.PurgePreview.UnsafeRoots.Other" xml:space="preserve"><value>; {0:N0} unsichere Ausführungsstämme wurden ausgeschlossen</value></data>
   <data name="Operations.RestorePreview.None" xml:space="preserve"><value>Keine ausgewählten Einträge können wiederhergestellt werden.</value></data>
-  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>wiederherstellen Vorschau: {0:N0} Element, {1:N0} Ziel Konflikt, {2:N0} Übersprungen.</value></data>
-  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>wiederherstellen Vorschau: {0:N0} Elemente, {1:N0} Ziel Konflikt, {2:N0} Übersprungen.</value></data>
-  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>Vorgang Erkennung abgebrochen.</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>gefunden {0:N0} Vorgang ausführen; Unterbrochen: {1:N0}; Stammordner nicht Gescannt: {2:N0}.</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>gefunden {0:N0} Vorgang Läufe; Unterbrochen: {1:N0}; Stammordner nicht Gescannt: {2:N0}.</value></data>
-  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>Vorgang Erkennung fehlgeschlagen.</value></data>
-  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>Inventarisierung Vorgang Läufe Älter als {0:N0} Tag…</value></data>
-  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>Inventarisierung Vorgang Läufe Älter als {0:N0} Tage…</value></data>
+  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>Wiederherstellungsvorschau: Elemente: {0:N0}; Zielkonflikte: {1:N0}; übersprungen: {2:N0}.</value></data>
+  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>Wiederherstellungsvorschau: Elemente: {0:N0}; Zielkonflikte: {1:N0}; übersprungen: {2:N0}.</value></data>
+  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>Wiederherstellungssuche wurde abgebrochen.</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>Gefundene Wiederherstellungsausführungen: {0:N0}; unterbrochen: {1:N0}; nicht durchsuchte Stammordner: {2:N0}.</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>Gefundene Wiederherstellungsausführungen: {0:N0}; unterbrochen: {1:N0}; nicht durchsuchte Stammordner: {2:N0}.</value></data>
+  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>Wiederherstellungssuche fehlgeschlagen.</value></data>
+  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>Wiederherstellungsausführungen, die älter als {0:N0} Tag sind, werden geprüft…</value></data>
+  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>Wiederherstellungsausführungen, die älter als {0:N0} Tage sind, werden geprüft…</value></data>
   <data name="Operations.Status.NoSearchRoots" xml:space="preserve"><value>Wählen Sie mindestens einen Stammordner für die Wiederherstellungssuche aus.</value></data>
-  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>öffnen die {0} Vorgang…</value></data>
-  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>öffnen die Vorgang war abgebrochen.</value></data>
-  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>die Vorgang konnte nicht sein öffnen.</value></data>
-  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>bereinigen abgebrochen. Läufe nicht noch Unwiderruflich gelöscht kann verbleiben in bereinigen Bereitstellung.</value></data>
-  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>bereinigen {0:N0} ausführen, {1:N0} Dateien, und {2}.</value></data>
-  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>bereinigen {0:N0} Läufe, {1:N0} Dateien, und {2}.</value></data>
-  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>bereinigen Angehalten.</value></data>
-  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>bereinigen Vorschau abgebrochen.</value></data>
-  <data name="Operations.Status.PurgePreviewFailed" xml:space="preserve"><value>bereinigen Vorschau fehlgeschlagen.</value></data>
-  <data name="Operations.Status.Purging.One" xml:space="preserve"><value>Bereinigung… {1:N0}/{0:N0} ausführen</value></data>
-  <data name="Operations.Status.Purging.Other" xml:space="preserve"><value>Bereinigung… {1:N0}/{0:N0} Läufe</value></data>
-  <data name="Operations.Status.Ready" xml:space="preserve"><value>scannen Konfiguriert Stammordner oder auswählen ein Gerät oder Ordner zu Erkennen Wiederherstellung Vorgänge.</value></data>
-  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>wiederherstellen abgebrochen und abgeschlossen Aktionen waren Zurückgesetzt Rückseite.</value></data>
-  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>wiederhergestellt {0:N0} Element; beibehalten {1:N0} Konflikt.</value></data>
-  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>wiederhergestellt {0:N0} Elemente; beibehalten {1:N0} Konflikt.</value></data>
-  <data name="Operations.Status.RestoreFailed" xml:space="preserve"><value>wiederherstellen fehlgeschlagen und abgeschlossen Aktionen waren Zurückgesetzt Rückseite.</value></data>
-  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>wiederherstellen Vorschau abgebrochen.</value></data>
-  <data name="Operations.Status.RestorePreviewFailed" xml:space="preserve"><value>wiederherstellen Vorschau fehlgeschlagen.</value></data>
+  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>Wiederherstellungsausführung „{0}“ wird geöffnet…</value></data>
+  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>Das Öffnen der Wiederherstellungsausführung wurde abgebrochen.</value></data>
+  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>Die Wiederherstellungsausführung konnte nicht geöffnet werden.</value></data>
+  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>Das endgültige Löschen wurde abgebrochen. Noch nicht dauerhaft gelöschte Ausführungen können im Löschstaging verbleiben.</value></data>
+  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>Endgültiges Löschen abgeschlossen: Ausführungen: {0:N0}; Dateien: {1:N0}; Größe: {2}.</value></data>
+  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>Endgültiges Löschen abgeschlossen: Ausführungen: {0:N0}; Dateien: {1:N0}; Größe: {2}.</value></data>
+  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>Endgültiges Löschen fehlgeschlagen.</value></data>
+  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>Löschvorschau wurde abgebrochen.</value></data>
+  <data name="Operations.Status.PurgePreviewFailed" xml:space="preserve"><value>Löschvorschau fehlgeschlagen.</value></data>
+  <data name="Operations.Status.Purging.One" xml:space="preserve"><value>Wird endgültig gelöscht… {1:N0}/{0:N0} Ausführung</value></data>
+  <data name="Operations.Status.Purging.Other" xml:space="preserve"><value>Wird endgültig gelöscht… {1:N0}/{0:N0} Ausführungen</value></data>
+  <data name="Operations.Status.Ready" xml:space="preserve"><value>Durchsuchen Sie konfigurierte Stammordner oder wählen Sie ein Gerät bzw. einen Ordner aus, um Wiederherstellungsvorgänge zu finden.</value></data>
+  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>Die Wiederherstellung wurde abgebrochen und abgeschlossene Aktionen wurden zurückgesetzt.</value></data>
+  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>Wiederherstellung abgeschlossen: Elemente: {0:N0}; erhaltene Konflikte: {1:N0}.</value></data>
+  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>Wiederherstellung abgeschlossen: Elemente: {0:N0}; erhaltene Konflikte: {1:N0}.</value></data>
+  <data name="Operations.Status.RestoreFailed" xml:space="preserve"><value>Die Wiederherstellung ist fehlgeschlagen und abgeschlossene Aktionen wurden zurückgesetzt.</value></data>
+  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>Wiederherstellungsvorschau wurde abgebrochen.</value></data>
+  <data name="Operations.Status.RestorePreviewFailed" xml:space="preserve"><value>Wiederherstellungsvorschau fehlgeschlagen.</value></data>
   <data name="Operations.Status.Restoring" xml:space="preserve"><value>Wiederherstellung… {0:N0}/{1:N0}</value></data>
-  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>{0:N0} Vorgang Element in dessen Original Hierarchie; Elemente nicht lesen: {1:N0}.</value></data>
-  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>{0:N0} Vorgang Elemente in deren Original Hierarchie; Elemente nicht lesen: {1:N0}.</value></data>
-  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>wird gescannt {0:N0} Stammordner für Vorgang Journal…</value></data>
-  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>wird gescannt {0:N0} Stammordner für Vorgang Journal…</value></data>
-  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>anzeigen {0:N0} Erkennen Vorgang ausführen.</value></data>
-  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>anzeigen {0:N0} Erkennen Vorgang Läufe.</value></data>
+  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>Wiederherstellungselemente in ursprünglicher Hierarchie: {0:N0}; nicht gelesene Elemente: {1:N0}.</value></data>
+  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>Wiederherstellungselemente in ursprünglicher Hierarchie: {0:N0}; nicht gelesene Elemente: {1:N0}.</value></data>
+  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>{0:N0} Stammordner wird nach Wiederherstellungsjournalen durchsucht…</value></data>
+  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>{0:N0} Stammordner werden nach Wiederherstellungsjournalen durchsucht…</value></data>
+  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>Angezeigte Wiederherstellungsausführungen: {0:N0}.</value></data>
+  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>Angezeigte Wiederherstellungsausführungen: {0:N0}.</value></data>
   <data name="Common.No" xml:space="preserve"><value>Nein</value></data>
   <data name="Common.Yes" xml:space="preserve"><value>Ja</value></data>
   <data name="Fields.Action.ApplyChanges" xml:space="preserve"><value>Änderungen anwenden</value></data>
@@ -6253,8 +6253,8 @@
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>Einige Metadaten können im Ausgabeformat nicht dargestellt werden.</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>Einige Cover können im Ausgabeformat nicht dargestellt werden.</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>Löschen</value></data>
-  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} Volume · {1:N0} Bestätigt</value></data>
-  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} Volume · {1:N0} Bestätigt</value></data>
+  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} Volume · {1:N0} bestätigt</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} Volumes · {1:N0} bestätigt</value></data>
   <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
   <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC Programmdatei</value></data>
   <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>auswählen Monkey's Audio MAC Programmdatei</value></data>

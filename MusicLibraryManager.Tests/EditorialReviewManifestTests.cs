@@ -21,7 +21,7 @@ public sealed class EditorialReviewManifestTests
 
         Assert.Equal(3_544, manifest.Records.Count);
         Assert.Equal(
-            2_412,
+            2_200,
             Count(
                 manifest,
                 EditorialReviewStatus.Pending));
@@ -31,12 +31,12 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.InvariantApproved));
         Assert.Equal(
-            8,
+            44,
             Count(
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            1_009,
+            1_185,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -443,7 +443,7 @@ public sealed class EditorialReviewManifestTests
                     requireComplete: true));
 
         Assert.Equal(
-            "Strict editorial review failed: 2,412 resources remain Pending.",
+            "Strict editorial review failed: 2,200 resources remain Pending.",
             exception.Message);
         EditorialReviewManifest unchanged =
             EditorialReviewInfrastructure.LoadAndValidate(
@@ -452,7 +452,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
         Assert.Equal(
-            2_412,
+            2_200,
             Count(
                 unchanged,
                 EditorialReviewStatus.Pending));
@@ -513,7 +513,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                1_009,
+                1_185,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));
@@ -523,12 +523,12 @@ public sealed class EditorialReviewManifestTests
                     refreshed,
                     EditorialReviewStatus.InvariantApproved));
             Assert.Equal(
-                2_412,
+                2_200,
                 Count(
                     refreshed,
                     EditorialReviewStatus.Pending));
             Assert.Equal(
-                8,
+                44,
                 Count(
                     refreshed,
                     EditorialReviewStatus.GlossaryReviewed));
@@ -625,6 +625,75 @@ public sealed class EditorialReviewManifestTests
             actualDomainCounts.OrderBy(
                 item => item.Key,
                 StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Operations_review_batch_contains_the_exact_focused_domain()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: false);
+        const string batch =
+            "gui-usability-operations-editorial-2026-07-25";
+        EditorialReviewRecord[] records =
+            manifest.Records.Values
+                .Where(record =>
+                    string.Equals(
+                        record.Batch,
+                        batch,
+                        StringComparison.Ordinal))
+                .OrderBy(
+                    record => record.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        Assert.Equal(212, records.Length);
+        Assert.Equal(
+            176,
+            records.Count(record =>
+                record.Status ==
+                EditorialReviewStatus.EditorialReviewed));
+        Assert.Equal(
+            36,
+            records.Count(record =>
+                record.Status ==
+                EditorialReviewStatus.GlossaryReviewed));
+        Assert.Equal(
+            176,
+            records.Count(record =>
+                record.Route ==
+                CatalogTranslationRoute.EditorialOverride));
+        Assert.Equal(
+            35,
+            records.Count(record =>
+                record.Route ==
+                CatalogTranslationRoute.Glossary));
+        Assert.Single(
+            records,
+            record =>
+                record.Route ==
+                CatalogTranslationRoute.ExactResource);
+        Assert.All(
+            records,
+            record =>
+            {
+                Assert.StartsWith(
+                    "Operations.",
+                    record.Key,
+                    StringComparison.Ordinal);
+                Assert.Equal(
+                    "Codex focused editorial review",
+                    record.Reviewer);
+                Assert.Equal("2026-07-25", record.Date);
+                Assert.StartsWith(
+                    "packet:v1:",
+                    record.Disposition,
+                    StringComparison.Ordinal);
+            });
     }
 
     [Fact]

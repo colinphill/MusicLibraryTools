@@ -117,6 +117,44 @@ public sealed class OperationsLocalizationTests
     }
 
     [Fact]
+    public void Operations_recovery_copy_keeps_scope_and_consequences_explicit()
+    {
+        Dictionary<string, string> resources = XDocument.Load(Path.Combine(
+                FindRepositoryRoot(),
+                "MusicLibraryManager.Presentation",
+                "Resources",
+                "Strings.resx"))
+            .Root!
+            .Elements("data")
+            .ToDictionary(
+                element =>
+                    (string?)element.Attribute("name") ?? "",
+                element =>
+                    element.Element("value")?.Value ?? "",
+                StringComparer.Ordinal);
+
+        Assert.Equal(
+            "Restore selected items",
+            resources["Operations.Action.ApplyRestore"]);
+        Assert.Equal(
+            "Purge eligible recovery history",
+            resources["Operations.PurgeReviewed"]);
+        Assert.Equal(
+            "Preview recovery-history purge",
+            resources["Operations.PreviewRetentionPurge"]);
+        Assert.Equal(
+            "Purge failed.",
+            resources["Operations.Status.PurgeFailed"]);
+        Assert.Equal(
+            "An iTunes Library.itl path is required.",
+            resources["Operations.Validation.ItunesLibraryRequired"]);
+        Assert.Equal(
+            "Plan: library tracks: {0:N0}; to install: {1:N0}; " +
+            "unchanged: {2:N0}; to remove: {3:N0}; playlists: {4:N0}.",
+            resources["Operations.Output.CarCard.Plan.One"]);
+    }
+
+    [Fact]
     public void Culture_refresh_keeps_job_and_recovery_semantic_identity()
     {
         using var temp = new TempDirectory();

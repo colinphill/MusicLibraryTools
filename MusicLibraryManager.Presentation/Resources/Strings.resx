@@ -1801,7 +1801,7 @@
     <value>Apply</value>
   </data>
   <data name="Operations.Action.ApplyRestore" xml:space="preserve">
-    <value>Apply reviewed restore</value>
+    <value>Restore selected items</value>
   </data>
   <data name="Operations.Action.ClearSelection" xml:space="preserve">
     <value>Clear selection</value>
@@ -1819,7 +1819,7 @@
     <value>Preview restore</value>
   </data>
   <data name="Operations.Action.SelectRestorable" xml:space="preserve">
-    <value>Select restorable</value>
+    <value>Select restorable items</value>
   </data>
   <data name="Operations.Destination" xml:space="preserve">
     <value>Destination</value>
@@ -1834,13 +1834,13 @@
     <value>Job output</value>
   </data>
   <data name="Operations.MaximumRemovals" xml:space="preserve">
-    <value>Maximum removals</value>
+    <value>Maximum files to remove</value>
   </data>
   <data name="Operations.PlaylistName" xml:space="preserve">
     <value>Playlist name</value>
   </data>
   <data name="Operations.PurgeReviewed" xml:space="preserve">
-    <value>Purge reviewed recovery history</value>
+    <value>Purge eligible recovery history</value>
   </data>
   <data name="Operations.Rebalance" xml:space="preserve">
     <value>Rebalance</value>
@@ -1858,7 +1858,7 @@
     <value>Recovery retention in days</value>
   </data>
   <data name="Operations.Recovery.SearchRoot" xml:space="preserve">
-    <value>Search root</value>
+    <value>Recovery search root</value>
   </data>
   <data name="Operations.Recovery.SearchRootAutomation" xml:space="preserve">
     <value>Recovery search root</value>
@@ -1873,7 +1873,7 @@
     <value>Run unified jobs, inspect history, and recover journaled changes.</value>
   </data>
   <data name="Operations.Tab.History" xml:space="preserve">
-    <value>Job history</value>
+    <value>History</value>
   </data>
   <data name="Operations.Tab.Jobs" xml:space="preserve">
     <value>Jobs</value>
@@ -1885,13 +1885,13 @@
     <value>Operations</value>
   </data>
   <data name="Operations.ValidationPath" xml:space="preserve">
-    <value>Validation path</value>
+    <value>iTunes Library.itl file</value>
   </data>
   <data name="Operations.FixErrors" xml:space="preserve">
     <value>Fix errors</value>
   </data>
   <data name="Operations.PreviewRetentionPurge" xml:space="preserve">
-    <value>Preview retention purge</value>
+    <value>Preview recovery-history purge</value>
   </data>
   <data name="ReviewedFileOperation.Apply" xml:space="preserve">
     <value>Apply reviewed plan</value>
@@ -5693,33 +5693,33 @@
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>Working Directory</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
   <data name="Workbench.Value.SampleRate" xml:space="preserve"><value>{0:N0} Hz</value></data>
-  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>Starting apply</value></data>
+  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>Preparing to apply changes</value></data>
   <data name="Operations.Activity.Apply.Title" xml:space="preserve"><value>Apply {0}</value></data>
   <data name="Operations.Activity.Discovery.Starting.One" xml:space="preserve"><value>Scanning {0:N0} root</value></data>
   <data name="Operations.Activity.Discovery.Starting.Other" xml:space="preserve"><value>Scanning {0:N0} roots</value></data>
-  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>Scan recovery operations</value></data>
-  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>Opening the {0} operation</value></data>
+  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>Scan for recovery operations</value></data>
+  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>Opening the {0} recovery run</value></data>
   <data name="Operations.Activity.OpenRun.Title" xml:space="preserve"><value>Open recovery run</value></data>
   <data name="Operations.Activity.Preview.Starting" xml:space="preserve"><value>Starting preview</value></data>
   <data name="Operations.Activity.Preview.Title" xml:space="preserve"><value>Preview {0}</value></data>
   <data name="Operations.Activity.Purge.Starting.One" xml:space="preserve"><value>Purging {0:N0} run</value></data>
   <data name="Operations.Activity.Purge.Starting.Other" xml:space="preserve"><value>Purging {0:N0} runs</value></data>
-  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>Purge operation history</value></data>
+  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>Purge recovery history</value></data>
   <data name="Operations.Activity.PurgePreview.Starting.One" xml:space="preserve"><value>Reviewing runs older than {0:N0} day</value></data>
   <data name="Operations.Activity.PurgePreview.Starting.Other" xml:space="preserve"><value>Reviewing runs older than {0:N0} days</value></data>
-  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>Preview recovery purge</value></data>
+  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>Preview recovery-history purge</value></data>
   <data name="Operations.Activity.Restore.Starting.One" xml:space="preserve"><value>Restoring {0:N0} item</value></data>
   <data name="Operations.Activity.Restore.Starting.Other" xml:space="preserve"><value>Restoring {0:N0} items</value></data>
-  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>Restore operation items</value></data>
+  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>Restore selected items</value></data>
   <data name="Operations.Activity.RestorePreview.Starting.One" xml:space="preserve"><value>Reviewing {0:N0} selected item</value></data>
   <data name="Operations.Activity.RestorePreview.Starting.Other" xml:space="preserve"><value>Reviewing {0:N0} selected items</value></data>
-  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>Preview recovery restore</value></data>
+  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>Preview restore</value></data>
   <data name="Operations.Choice.FileMutationKind.Copy" xml:space="preserve"><value>Copy</value></data>
   <data name="Operations.Choice.FileMutationKind.Delete" xml:space="preserve"><value>Delete</value></data>
   <data name="Operations.Choice.FileMutationKind.Move" xml:space="preserve"><value>Move</value></data>
   <data name="Operations.Choice.FileMutationKind.Quarantine" xml:space="preserve"><value>Quarantine</value></data>
   <data name="Operations.Choice.FileMutationKind.Replace" xml:space="preserve"><value>Replace</value></data>
-  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>Replace generated file</value></data>
+  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>Replace with generated file</value></data>
   <data name="Operations.Choice.FileMutationKind.Write" xml:space="preserve"><value>Write</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Error" xml:space="preserve"><value>Error</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Info" xml:space="preserve"><value>Information</value></data>
@@ -5729,7 +5729,7 @@
   <data name="Operations.Choice.OperationIssueSeverity.Warning" xml:space="preserve"><value>Warning</value></data>
   <data name="Operations.Choice.OperationJournalKind.Device" xml:space="preserve"><value>Device</value></data>
   <data name="Operations.Choice.OperationJournalKind.Ingest" xml:space="preserve"><value>Ingest</value></data>
-  <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>Organization</value></data>
+  <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>Organize</value></data>
   <data name="Operations.Choice.OperationJournalKind.OtherKind" xml:space="preserve"><value>Other</value></data>
   <data name="Operations.Choice.OperationJournalKind.ReviewedChange" xml:space="preserve"><value>Reviewed change</value></data>
   <data name="Operations.Choice.OperationJournalKind.Sync" xml:space="preserve"><value>Synchronization</value></data>
@@ -5737,58 +5737,62 @@
   <data name="Operations.Choice.OperationJournalState.Interrupted" xml:space="preserve"><value>Interrupted — recovery may be required</value></data>
   <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>Rolled back</value></data>
   <data name="Operations.Choice.OperationJournalState.Unknown" xml:space="preserve"><value>Quarantine present — terminal state not recorded</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>Apply {1} with {0:N0} planned file mutation?&#10;&#10;{2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>Apply {1} with {0:N0} planned file mutations?&#10;&#10;{2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>Recovery is available: changed files will be journaled.</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>Recovery is available: changed files will be journaled under “{0}”.</value></data>
+  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>Apply “{1}” with {0:N0} planned file mutation?
+
+{2}</value></data>
+  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>Apply “{1}” with {0:N0} planned file mutations?
+
+{2}</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>Recovery is available: originals of changed files will be retained in the recovery journal.</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>Recovery is available: originals of changed files will be retained under “{0}”.</value></data>
   <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>Recovery is not available for this apply.</value></data>
   <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>Apply {0}</value></data>
-  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>Select the iTunes library to validate</value></data>
+  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>Select the iTunes Library.itl file to validate</value></data>
   <data name="Operations.Dialog.SelectRecoveryRoot" xml:space="preserve"><value>Select the source, synchronization, or device root to scan</value></data>
-  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>Select the smart-storage destination</value></data>
+  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>Select the smart storage destination</value></data>
   <data name="Operations.Diagnostic.NoApplyService" xml:space="preserve"><value>No typed apply service is available for job “{0}”.</value></data>
   <data name="Operations.Diagnostic.NoPreviewService" xml:space="preserve"><value>No typed preview service is available for job “{0}”.</value></data>
   <data name="Operations.Entry.State.Created" xml:space="preserve"><value>Created</value></data>
-  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>Created item missing</value></data>
+  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>Created item no longer exists</value></data>
   <data name="Operations.Entry.State.Deleted" xml:space="preserve"><value>Deleted</value></data>
   <data name="Operations.Entry.State.Moved" xml:space="preserve"><value>Moved</value></data>
-  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>Move destination missing</value></data>
-  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>Planned; completion not recorded</value></data>
+  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>Moved item no longer exists at its destination</value></data>
+  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>Planned; completion was not recorded</value></data>
   <data name="Operations.Entry.State.Quarantined" xml:space="preserve"><value>Quarantined</value></data>
-  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>Quarantine copy missing</value></data>
+  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>Quarantined item no longer exists</value></data>
   <data name="Operations.Entry.State.Unknown" xml:space="preserve"><value>Unknown operation</value></data>
-  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes library</value></data>
+  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes Library.itl file</value></data>
   <data name="Operations.History.Elapsed" xml:space="preserve"><value>{0:0.##} s</value></data>
   <data name="Operations.History.State.Applied" xml:space="preserve"><value>Applied</value></data>
   <data name="Operations.History.State.ApplyFailed" xml:space="preserve"><value>Apply failed</value></data>
   <data name="Operations.History.State.PreviewFailed" xml:space="preserve"><value>Preview failed</value></data>
   <data name="Operations.History.State.PreviewPassed" xml:space="preserve"><value>Preview passed</value></data>
-  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>Normalize embedded artwork for tracks supplied by the configured catalog.</value></data>
+  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>Normalize embedded artwork for tracks in the configured catalog.</value></data>
   <data name="Operations.Job.ArtworkNormalization.Name" xml:space="preserve"><value>Artwork normalization</value></data>
-  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>Project the indexed library into a balanced removable-media export.</value></data>
+  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>Create a balanced library export for removable media.</value></data>
   <data name="Operations.Job.CarCard.Name" xml:space="preserve"><value>Car card</value></data>
   <data name="Operations.Job.ConfiguredExport.Description" xml:space="preserve"><value>Preview and apply the configured selection, naming, transport, and reconciliation policy.</value></data>
   <data name="Operations.Job.ConfiguredExport.Name" xml:space="preserve"><value>Export: {0}</value></data>
-  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>Synchronize configured playlists into the library target.</value></data>
+  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>Synchronize configured playlists with the target library.</value></data>
   <data name="Operations.Job.CrossLibrarySync.Name" xml:space="preserve"><value>Cross-library sync</value></data>
-  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>Validate structural and referential invariants in an ITL file.</value></data>
+  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>Check an ITL file for structural and reference errors.</value></data>
   <data name="Operations.Job.ItunesValidation.Name" xml:space="preserve"><value>iTunes library validation</value></data>
-  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>Synchronize every playlist export target from the active library configuration.</value></data>
+  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>Synchronize all playlist export targets defined by the active library configuration.</value></data>
   <data name="Operations.Job.PlaylistSync.Name" xml:space="preserve"><value>Playlist sync</value></data>
-  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>Report likely duplicate tracks from the configured catalog integration.</value></data>
-  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>Redundancy report</value></data>
-  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>Project the configured catalog into a bucketed portable-storage export.</value></data>
+  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>Find likely duplicate tracks in the configured catalog.</value></data>
+  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>Duplicate-track report</value></data>
+  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>Export the configured catalog to portable storage using bucketed folders.</value></data>
   <data name="Operations.Job.SmartStorage.Name" xml:space="preserve"><value>Smart storage</value></data>
   <data name="Operations.Job.Status.ApplyCancelled" xml:space="preserve"><value>Job apply cancelled; inspect Operations for a recovery journal.</value></data>
   <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>{0} applied successfully.</value></data>
-  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>Apply exited with code {0}. Review the output and operation journal.</value></data>
+  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>Apply finished with exit code {0}. Review the output and operation journal.</value></data>
   <data name="Operations.Job.Status.ApplyFailed" xml:space="preserve"><value>Job apply failed.</value></data>
-  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>Job preview cancelled.</value></data>
+  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>Job preview canceled.</value></data>
   <data name="Operations.Job.Status.PreviewCompleted" xml:space="preserve"><value>Preview completed. Review the output before applying.</value></data>
-  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>Preview exited with code {0}.</value></data>
+  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>Preview finished with exit code {0}.</value></data>
   <data name="Operations.Job.Status.PreviewFailed" xml:space="preserve"><value>Job preview failed.</value></data>
   <data name="Operations.Job.Status.Previewing" xml:space="preserve"><value>Previewing {0}…</value></data>
-  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>Choose a job, supply any required arguments, then Preview.</value></data>
+  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>Choose a job, complete the required fields, then select Preview.</value></data>
   <data name="Operations.Progress.Determinate" xml:space="preserve"><value>{0}: {1:N0}/{2:N0}</value></data>
   <data name="Operations.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
   <data name="Operations.Progress.Phase.Applying" xml:space="preserve"><value>Applying changes</value></data>
@@ -5802,96 +5806,96 @@
   <data name="Operations.Progress.Phase.Validating" xml:space="preserve"><value>Validating the operation</value></data>
   <data name="Operations.Run.AffectedItems.One" xml:space="preserve"><value>{0:N0} recorded item</value></data>
   <data name="Operations.Run.AffectedItems.Other" xml:space="preserve"><value>{0:N0} recorded items</value></data>
-  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>Item count available when the run is opened</value></data>
-  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>No journal (folder-only quarantine)</value></data>
+  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>Open the run to count its items</value></data>
+  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>No journal (quarantine folder only)</value></data>
   <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>Set the iTunes library path in the active library configuration.</value></data>
   <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>An iTunes Library.itl path is required.</value></data>
   <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>An iTunes playlist name is required.</value></data>
-  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>A smart-storage destination is required.</value></data>
+  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>A smart storage destination is required.</value></data>
   <data name="Operations.Count.Errors.One" xml:space="preserve"><value>{0:N0} error</value></data>
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} errors</value></data>
   <data name="Operations.Count.Warnings.One" xml:space="preserve"><value>{0:N0} warning</value></data>
   <data name="Operations.Count.Warnings.Other" xml:space="preserve"><value>{0:N0} warnings</value></data>
   <data name="Operations.Output.ArtworkNormalization.Item" xml:space="preserve"><value>{0} {1}: {2}, {3}×{4}, {5:N0} bytes → image/jpeg, {6}×{7}, {8:N0} bytes</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>Plan: {0:N0} track inspected, {1:N0} already valid, {2:N0} media files to replace.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} tracks inspected, {1:N0} already valid, {2:N0} media files to replace.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>Applied: {0:N0} media file and {1:N0} ITL track caches updated.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>Applied: {0:N0} media files and {1:N0} ITL track caches updated.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>Plan: tracks inspected: {0:N0}; already valid: {1:N0}; media files to replace: {2:N0}.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>Plan: tracks inspected: {0:N0}; already valid: {1:N0}; media files to replace: {2:N0}.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>Applied: media files updated: {0:N0}; ITL track caches updated: {1:N0}.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>Applied: media files updated: {0:N0}; ITL track caches updated: {1:N0}.</value></data>
   <data name="Operations.Output.CacheWarning" xml:space="preserve"><value>Cache warning: {0}</value></data>
-  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>Plan: {0:N0} track, {1:N0} installs, {2:N0} unchanged, {3:N0} removals, {4:N0} playlists.</value></data>
-  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} tracks, {1:N0} installs, {2:N0} unchanged, {3:N0} removals, {4:N0} playlists.</value></data>
-  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>Applied {0:N0} track and {1:N0} playlists: {2:N0} created, {3:N0} replaced, {4:N0} quarantined.</value></data>
-  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>Applied {0:N0} tracks and {1:N0} playlists: {2:N0} created, {3:N0} replaced, {4:N0} quarantined.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>Plan: {0:N0} desired file, {1:N0} unchanged, {2:N0} extra, {3:N0} mutations.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} desired files, {1:N0} unchanged, {2:N0} extra, {3:N0} mutations.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>Applied export “{1}”: {0:N0} copied, {2:N0} replaced, {3:N0} quarantined, {4:N0} deleted, {5:N0} unchanged.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>Applied export “{1}”: {0:N0} copied, {2:N0} replaced, {3:N0} quarantined, {4:N0} deleted, {5:N0} unchanged.</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>Plan: {0:N0} desired file, {1:N0} unchanged, {2:N0} stale, {3:N0} mutations.</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} desired files, {1:N0} unchanged, {2:N0} stale, {3:N0} mutations.</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>Applied: {0:N0} copied, {1:N0} replaced, {2:N0} quarantined, {3:N0} deleted, {4:N0} unchanged.</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>Applied: {0:N0} copied, {1:N0} replaced, {2:N0} quarantined, {3:N0} deleted, {4:N0} unchanged.</value></data>
+  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>Plan: library tracks: {0:N0}; to install: {1:N0}; unchanged: {2:N0}; to remove: {3:N0}; playlists: {4:N0}.</value></data>
+  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>Plan: library tracks: {0:N0}; to install: {1:N0}; unchanged: {2:N0}; to remove: {3:N0}; playlists: {4:N0}.</value></data>
+  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>Applied: tracks: {0:N0}; playlists: {1:N0}; created: {2:N0}; replaced: {3:N0}; quarantined: {4:N0}.</value></data>
+  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>Applied: tracks: {0:N0}; playlists: {1:N0}; created: {2:N0}; replaced: {3:N0}; quarantined: {4:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>Plan: target files: {0:N0}; unchanged: {1:N0}; extra files: {2:N0}; file operations: {3:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>Plan: target files: {0:N0}; unchanged: {1:N0}; extra files: {2:N0}; file operations: {3:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>Applied export “{1}”: copied: {0:N0}; replaced: {2:N0}; quarantined: {3:N0}; deleted: {4:N0}; unchanged: {5:N0}.</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>Applied export “{1}”: copied: {0:N0}; replaced: {2:N0}; quarantined: {3:N0}; deleted: {4:N0}; unchanged: {5:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>Plan: target files: {0:N0}; unchanged: {1:N0}; stale files: {2:N0}; file operations: {3:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>Plan: target files: {0:N0}; unchanged: {1:N0}; stale files: {2:N0}; file operations: {3:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>Applied: copied: {0:N0}; replaced: {1:N0}; quarantined: {2:N0}; deleted: {3:N0}; unchanged: {4:N0}.</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>Applied: copied: {0:N0}; replaced: {1:N0}; quarantined: {2:N0}; deleted: {3:N0}; unchanged: {4:N0}.</value></data>
   <data name="Operations.Output.Issue" xml:space="preserve"><value>{0} {1}: {2}{3}</value></data>
   <data name="Operations.Output.Mutation.Destination" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.Source" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.SourceDestination" xml:space="preserve"><value>{0} {1} → {2}</value></data>
   <data name="Operations.Output.PathSuffix" xml:space="preserve"><value> [{0}]</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>Applied {0:N0} playlist: {1:N0} created, {2:N0} replaced, {3:N0} quarantined, {4:N0} deleted.</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>Applied {0:N0} playlists: {1:N0} created, {2:N0} replaced, {3:N0} quarantined, {4:N0} deleted.</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>Target {1}: {0:N0} playlist, {2:N0} missing mappings.</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>Target {1}: {0:N0} playlists, {2:N0} missing mappings.</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>Applied: playlists: {0:N0}; created: {1:N0}; replaced: {2:N0}; quarantined: {3:N0}; deleted: {4:N0}.</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>Applied: playlists: {0:N0}; created: {1:N0}; replaced: {2:N0}; quarantined: {3:N0}; deleted: {4:N0}.</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>Target {1}: playlists: {0:N0}; missing mappings: {2:N0}.</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>Target {1}: playlists: {0:N0}; missing mappings: {2:N0}.</value></data>
   <data name="Operations.Output.RecoveryJournal" xml:space="preserve"><value>Recovery journal: {0}</value></data>
-  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>{0:N0} redundancy group among {1:N0} local tracks.</value></data>
-  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>{0:N0} redundancy groups among {1:N0} local tracks.</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>Plan: {0:N0} track, {1:N0} installs, {2:N0} unchanged, {3:N0} stale, {4:N0} playlists, {5:N0} artwork items.</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>Plan: {0:N0} tracks, {1:N0} installs, {2:N0} unchanged, {3:N0} stale, {4:N0} playlists, {5:N0} artwork items.</value></data>
-  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>Applied {0:N0} track, {1:N0} playlists, and {2:N0} artwork items: {3:N0} created, {4:N0} replaced, {5:N0} quarantined.</value></data>
-  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>Applied {0:N0} tracks, {1:N0} playlists, and {2:N0} artwork items: {3:N0} created, {4:N0} replaced, {5:N0} quarantined.</value></data>
+  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>Likely duplicate groups: {0:N0}; local tracks scanned: {1:N0}.</value></data>
+  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>Likely duplicate groups: {0:N0}; local tracks scanned: {1:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>Plan: library tracks: {0:N0}; to install: {1:N0}; unchanged: {2:N0}; stale: {3:N0}; playlists: {4:N0}; artwork items: {5:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>Plan: library tracks: {0:N0}; to install: {1:N0}; unchanged: {2:N0}; stale: {3:N0}; playlists: {4:N0}; artwork items: {5:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>Applied: tracks: {0:N0}; playlists: {1:N0}; artwork items: {2:N0}; created: {3:N0}; replaced: {4:N0}; quarantined: {5:N0}.</value></data>
+  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>Applied: tracks: {0:N0}; playlists: {1:N0}; artwork items: {2:N0}; created: {3:N0}; replaced: {4:N0}; quarantined: {5:N0}.</value></data>
   <data name="Operations.Output.Unchanged" xml:space="preserve"><value>Unchanged</value></data>
   <data name="Operations.Output.Validation.Issue" xml:space="preserve"><value>{0} {1} {2}</value></data>
   <data name="Operations.Output.Validation.Summary" xml:space="preserve"><value>Validation: {0}, {1}</value></data>
   <data name="Operations.PurgePreview.Backups.One" xml:space="preserve"><value>, including {0:N0} restore-collision backup file</value></data>
   <data name="Operations.PurgePreview.Backups.Other" xml:space="preserve"><value>, including {0:N0} restore-collision backup files</value></data>
-  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>Purge preview: {0:N0} run, {1:N0} files, {2}</value></data>
-  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>Purge preview: {0:N0} runs, {1:N0} files, {2}</value></data>
+  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>Purge preview: runs: {0:N0}; files: {1:N0}; size: {2}</value></data>
+  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>Purge preview: runs: {0:N0}; files: {1:N0}; size: {2}</value></data>
   <data name="Operations.PurgePreview.NoneEligible" xml:space="preserve"><value>Purge preview: no runs are old enough to purge</value></data>
   <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}. Protected interrupted runs: {2:N0}; runs within retention: {3:N0}{4}.</value></data>
   <data name="Operations.PurgePreview.UnsafeRoots.One" xml:space="preserve"><value>; {0:N0} unsafe run root was excluded</value></data>
   <data name="Operations.PurgePreview.UnsafeRoots.Other" xml:space="preserve"><value>; {0:N0} unsafe run roots were excluded</value></data>
   <data name="Operations.RestorePreview.None" xml:space="preserve"><value>No selected entries are currently recoverable.</value></data>
-  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>Restore preview: {0:N0} item, {1:N0} destination collisions, {2:N0} skipped.</value></data>
-  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>Restore preview: {0:N0} items, {1:N0} destination collisions, {2:N0} skipped.</value></data>
-  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>Operation discovery cancelled.</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>Found {0:N0} operation run; interrupted: {1:N0}; roots not scanned: {2:N0}.</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>Found {0:N0} operation runs; interrupted: {1:N0}; roots not scanned: {2:N0}.</value></data>
-  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>Operation discovery failed.</value></data>
-  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>Inventorying operation runs older than {0:N0} day…</value></data>
-  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>Inventorying operation runs older than {0:N0} days…</value></data>
+  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>Restore preview: items: {0:N0}; destination collisions: {1:N0}; skipped: {2:N0}.</value></data>
+  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>Restore preview: items: {0:N0}; destination collisions: {1:N0}; skipped: {2:N0}.</value></data>
+  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>Recovery discovery canceled.</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>Recovery runs found: {0:N0}; interrupted: {1:N0}; roots not scanned: {2:N0}.</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>Recovery runs found: {0:N0}; interrupted: {1:N0}; roots not scanned: {2:N0}.</value></data>
+  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>Recovery discovery failed.</value></data>
+  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>Reviewing recovery runs older than {0:N0} day…</value></data>
+  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>Reviewing recovery runs older than {0:N0} days…</value></data>
   <data name="Operations.Status.NoSearchRoots" xml:space="preserve"><value>No configuration or search root is available. Choose a folder to scan.</value></data>
-  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>Opening the {0} operation…</value></data>
-  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>Opening the operation was cancelled.</value></data>
-  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>The operation could not be opened.</value></data>
-  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>Purge cancelled. Runs not yet irreversibly deleted may remain in purge staging.</value></data>
-  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>Purged {0:N0} run, {1:N0} files, and {2}.</value></data>
-  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>Purged {0:N0} runs, {1:N0} files, and {2}.</value></data>
-  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>Purge stopped.</value></data>
-  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>Purge preview cancelled.</value></data>
+  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>Opening the {0} recovery run…</value></data>
+  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>Opening the recovery run was canceled.</value></data>
+  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>The recovery run could not be opened.</value></data>
+  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>Purge canceled. Runs not yet permanently deleted may remain in purge staging.</value></data>
+  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>Purge complete: runs: {0:N0}; files: {1:N0}; size: {2}.</value></data>
+  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>Purge complete: runs: {0:N0}; files: {1:N0}; size: {2}.</value></data>
+  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>Purge failed.</value></data>
+  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>Purge preview canceled.</value></data>
   <data name="Operations.Status.PurgePreviewFailed" xml:space="preserve"><value>Purge preview failed.</value></data>
   <data name="Operations.Status.Purging.One" xml:space="preserve"><value>Purging… {1:N0}/{0:N0} run</value></data>
   <data name="Operations.Status.Purging.Other" xml:space="preserve"><value>Purging… {1:N0}/{0:N0} runs</value></data>
   <data name="Operations.Status.Ready" xml:space="preserve"><value>Scan configured roots or choose a device or folder to discover recovery operations.</value></data>
-  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>Restore cancelled and completed actions were rolled back.</value></data>
-  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>Restored {0:N0} item; preserved {1:N0} collisions.</value></data>
-  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>Restored {0:N0} items; preserved {1:N0} collisions.</value></data>
+  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>Restore canceled, and completed actions were rolled back.</value></data>
+  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>Restore complete: items: {0:N0}; collisions preserved: {1:N0}.</value></data>
+  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>Restore complete: items: {0:N0}; collisions preserved: {1:N0}.</value></data>
   <data name="Operations.Status.RestoreFailed" xml:space="preserve"><value>Restore failed and completed actions were rolled back.</value></data>
-  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>Restore preview cancelled.</value></data>
+  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>Restore preview canceled.</value></data>
   <data name="Operations.Status.RestorePreviewFailed" xml:space="preserve"><value>Restore preview failed.</value></data>
   <data name="Operations.Status.Restoring" xml:space="preserve"><value>Restoring… {0:N0}/{1:N0}</value></data>
-  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>{0:N0} operation item in its original hierarchy; items not read: {1:N0}.</value></data>
-  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>{0:N0} operation items in their original hierarchy; items not read: {1:N0}.</value></data>
-  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>Scanning {0:N0} root for operation journals…</value></data>
-  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>Scanning {0:N0} roots for operation journals…</value></data>
-  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>Showing {0:N0} discovered operation run.</value></data>
-  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>Showing {0:N0} discovered operation runs.</value></data>
+  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>Recovery items in original hierarchy: {0:N0}; items not read: {1:N0}.</value></data>
+  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>Recovery items in original hierarchy: {0:N0}; items not read: {1:N0}.</value></data>
+  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>Scanning {0:N0} root for recovery journals…</value></data>
+  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>Scanning {0:N0} roots for recovery journals…</value></data>
+  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>Recovery runs shown: {0:N0}.</value></data>
+  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>Recovery runs shown: {0:N0}.</value></data>
   <data name="Common.No" xml:space="preserve"><value>No</value></data>
   <data name="Common.Yes" xml:space="preserve"><value>Yes</value></data>
   <data name="Fields.Action.ApplyChanges" xml:space="preserve"><value>Apply changes</value></data>

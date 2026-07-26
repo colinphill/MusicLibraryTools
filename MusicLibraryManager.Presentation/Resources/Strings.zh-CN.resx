@@ -1801,10 +1801,10 @@
     <value>应用</value>
   </data>
   <data name="Operations.Action.ApplyRestore" xml:space="preserve">
-    <value>应用 已审阅 还原</value>
+    <value>恢复所选项目</value>
   </data>
   <data name="Operations.Action.ClearSelection" xml:space="preserve">
-    <value>清除 选择</value>
+    <value>清除选择</value>
   </data>
   <data name="Operations.Action.Maintenance" xml:space="preserve">
     <value>维护…</value>
@@ -1813,13 +1813,13 @@
     <value>恢复维护操作</value>
   </data>
   <data name="Operations.Action.OpenRun" xml:space="preserve">
-    <value>打开 运行</value>
+    <value>打开运行记录</value>
   </data>
   <data name="Operations.Action.PreviewRestore" xml:space="preserve">
-    <value>预览 还原</value>
+    <value>预览恢复</value>
   </data>
   <data name="Operations.Action.SelectRestorable" xml:space="preserve">
-    <value>选择 可还原</value>
+    <value>选择可恢复项目</value>
   </data>
   <data name="Operations.Destination" xml:space="preserve">
     <value>目标</value>
@@ -1828,19 +1828,19 @@
     <value>初始化</value>
   </data>
   <data name="Operations.JobDestinationAutomation" xml:space="preserve">
-    <value>作业 目标</value>
+    <value>作业目标</value>
   </data>
   <data name="Operations.JobOutputAutomation" xml:space="preserve">
-    <value>作业 输出</value>
+    <value>作业输出</value>
   </data>
   <data name="Operations.MaximumRemovals" xml:space="preserve">
-    <value>最大值 移除</value>
+    <value>要移除的最大文件数</value>
   </data>
   <data name="Operations.PlaylistName" xml:space="preserve">
     <value>播放列表名称</value>
   </data>
   <data name="Operations.PurgeReviewed" xml:space="preserve">
-    <value>清除 已审阅 恢复 历史记录</value>
+    <value>清除符合条件的恢复历史记录</value>
   </data>
   <data name="Operations.Rebalance" xml:space="preserve">
     <value>重新平衡</value>
@@ -1852,16 +1852,16 @@
     <value>未找到恢复运行记录</value>
   </data>
   <data name="Operations.Recovery.Retention" xml:space="preserve">
-    <value>恢复 保留 (天)</value>
+    <value>恢复保留期（天）</value>
   </data>
   <data name="Operations.Recovery.RetentionAutomation" xml:space="preserve">
-    <value>恢复 保留 在 天</value>
+    <value>恢复保留天数</value>
   </data>
   <data name="Operations.Recovery.SearchRoot" xml:space="preserve">
-    <value>搜索 根</value>
+    <value>恢复搜索根目录</value>
   </data>
   <data name="Operations.Recovery.SearchRootAutomation" xml:space="preserve">
-    <value>恢复 搜索 根</value>
+    <value>恢复搜索根目录</value>
   </data>
   <data name="Operations.Entry.Recovery.Compact" xml:space="preserve">
     <value>紧凑恢复 · 保留 {0:N0} 字节 · 节省 {1:N0} 字节</value>
@@ -1873,7 +1873,7 @@
     <value>运行统一作业、检查历史记录并恢复已记入日志的更改。</value>
   </data>
   <data name="Operations.Tab.History" xml:space="preserve">
-    <value>作业 历史记录</value>
+    <value>历史记录</value>
   </data>
   <data name="Operations.Tab.Jobs" xml:space="preserve">
     <value>作业</value>
@@ -1885,13 +1885,13 @@
     <value>操作</value>
   </data>
   <data name="Operations.ValidationPath" xml:space="preserve">
-    <value>验证 路径</value>
+    <value>iTunes Library.itl 文件</value>
   </data>
   <data name="Operations.FixErrors" xml:space="preserve">
-    <value>修复 错误</value>
+    <value>修复错误</value>
   </data>
   <data name="Operations.PreviewRetentionPurge" xml:space="preserve">
-    <value>预览 保留 清除</value>
+    <value>预览恢复历史记录清除</value>
   </data>
   <data name="ReviewedFileOperation.Apply" xml:space="preserve">
     <value>应用已审核计划</value>
@@ -5693,209 +5693,209 @@
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>工作目录</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
   <data name="Workbench.Value.SampleRate" xml:space="preserve"><value>{0:N0} Hz</value></data>
-  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>正在开始 应用</value></data>
-  <data name="Operations.Activity.Apply.Title" xml:space="preserve"><value>应用 {0}</value></data>
-  <data name="Operations.Activity.Discovery.Starting.One" xml:space="preserve"><value>正在扫描 {0:N0} 根</value></data>
-  <data name="Operations.Activity.Discovery.Starting.Other" xml:space="preserve"><value>正在扫描 {0:N0} 根</value></data>
-  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>扫描 恢复 操作</value></data>
-  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>打开 该 {0} 操作</value></data>
-  <data name="Operations.Activity.OpenRun.Title" xml:space="preserve"><value>打开 恢复 运行</value></data>
-  <data name="Operations.Activity.Preview.Starting" xml:space="preserve"><value>正在开始 预览</value></data>
-  <data name="Operations.Activity.Preview.Title" xml:space="preserve"><value>预览 {0}</value></data>
-  <data name="Operations.Activity.Purge.Starting.One" xml:space="preserve"><value>正在清除 {0:N0} 运行</value></data>
-  <data name="Operations.Activity.Purge.Starting.Other" xml:space="preserve"><value>正在清除 {0:N0} 运行</value></data>
-  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>清除 操作 历史记录</value></data>
-  <data name="Operations.Activity.PurgePreview.Starting.One" xml:space="preserve"><value>正在审阅 运行 较旧 比 {0:N0} 天</value></data>
-  <data name="Operations.Activity.PurgePreview.Starting.Other" xml:space="preserve"><value>正在审阅 运行 较旧 比 {0:N0} 天</value></data>
-  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>预览 恢复 清除</value></data>
-  <data name="Operations.Activity.Restore.Starting.One" xml:space="preserve"><value>正在还原 {0:N0} 项目</value></data>
-  <data name="Operations.Activity.Restore.Starting.Other" xml:space="preserve"><value>正在还原 {0:N0} 项目</value></data>
-  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>还原 操作 项目</value></data>
-  <data name="Operations.Activity.RestorePreview.Starting.One" xml:space="preserve"><value>正在审阅 {0:N0} 已选择 项目</value></data>
-  <data name="Operations.Activity.RestorePreview.Starting.Other" xml:space="preserve"><value>正在审阅 {0:N0} 所选项目</value></data>
-  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>预览 恢复 还原</value></data>
+  <data name="Operations.Activity.Apply.Starting" xml:space="preserve"><value>正在准备应用更改</value></data>
+  <data name="Operations.Activity.Apply.Title" xml:space="preserve"><value>应用{0}</value></data>
+  <data name="Operations.Activity.Discovery.Starting.One" xml:space="preserve"><value>正在扫描 {0:N0} 个根目录</value></data>
+  <data name="Operations.Activity.Discovery.Starting.Other" xml:space="preserve"><value>正在扫描 {0:N0} 个根目录</value></data>
+  <data name="Operations.Activity.Discovery.Title" xml:space="preserve"><value>扫描恢复操作</value></data>
+  <data name="Operations.Activity.OpenRun.Starting" xml:space="preserve"><value>正在打开恢复运行“{0}”</value></data>
+  <data name="Operations.Activity.OpenRun.Title" xml:space="preserve"><value>打开恢复运行</value></data>
+  <data name="Operations.Activity.Preview.Starting" xml:space="preserve"><value>正在启动预览</value></data>
+  <data name="Operations.Activity.Preview.Title" xml:space="preserve"><value>预览{0}</value></data>
+  <data name="Operations.Activity.Purge.Starting.One" xml:space="preserve"><value>正在清除 {0:N0} 个运行记录</value></data>
+  <data name="Operations.Activity.Purge.Starting.Other" xml:space="preserve"><value>正在清除 {0:N0} 个运行记录</value></data>
+  <data name="Operations.Activity.Purge.Title" xml:space="preserve"><value>清除恢复历史记录</value></data>
+  <data name="Operations.Activity.PurgePreview.Starting.One" xml:space="preserve"><value>正在检查早于 {0:N0} 天的运行记录</value></data>
+  <data name="Operations.Activity.PurgePreview.Starting.Other" xml:space="preserve"><value>正在检查早于 {0:N0} 天的运行记录</value></data>
+  <data name="Operations.Activity.PurgePreview.Title" xml:space="preserve"><value>预览恢复历史记录清除</value></data>
+  <data name="Operations.Activity.Restore.Starting.One" xml:space="preserve"><value>正在恢复 {0:N0} 个项目</value></data>
+  <data name="Operations.Activity.Restore.Starting.Other" xml:space="preserve"><value>正在恢复 {0:N0} 个项目</value></data>
+  <data name="Operations.Activity.Restore.Title" xml:space="preserve"><value>恢复所选项目</value></data>
+  <data name="Operations.Activity.RestorePreview.Starting.One" xml:space="preserve"><value>正在检查 {0:N0} 个所选项目</value></data>
+  <data name="Operations.Activity.RestorePreview.Starting.Other" xml:space="preserve"><value>正在检查 {0:N0} 个所选项目</value></data>
+  <data name="Operations.Activity.RestorePreview.Title" xml:space="preserve"><value>预览恢复</value></data>
   <data name="Operations.Choice.FileMutationKind.Copy" xml:space="preserve"><value>复制</value></data>
   <data name="Operations.Choice.FileMutationKind.Delete" xml:space="preserve"><value>删除</value></data>
   <data name="Operations.Choice.FileMutationKind.Move" xml:space="preserve"><value>移动</value></data>
   <data name="Operations.Choice.FileMutationKind.Quarantine" xml:space="preserve"><value>隔离</value></data>
   <data name="Operations.Choice.FileMutationKind.Replace" xml:space="preserve"><value>替换</value></data>
-  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>替换 生成 文件</value></data>
+  <data name="Operations.Choice.FileMutationKind.ReplaceGenerated" xml:space="preserve"><value>替换为生成的文件</value></data>
   <data name="Operations.Choice.FileMutationKind.Write" xml:space="preserve"><value>写入</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Error" xml:space="preserve"><value>错误</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Info" xml:space="preserve"><value>信息</value></data>
   <data name="Operations.Choice.ItlValidationSeverity.Warning" xml:space="preserve"><value>警告</value></data>
-  <data name="Operations.Choice.OperationIssueSeverity.Blocker" xml:space="preserve"><value>阻止 问题</value></data>
+  <data name="Operations.Choice.OperationIssueSeverity.Blocker" xml:space="preserve"><value>阻止继续的问题</value></data>
   <data name="Operations.Choice.OperationIssueSeverity.Information" xml:space="preserve"><value>信息</value></data>
   <data name="Operations.Choice.OperationIssueSeverity.Warning" xml:space="preserve"><value>警告</value></data>
   <data name="Operations.Choice.OperationJournalKind.Device" xml:space="preserve"><value>设备</value></data>
   <data name="Operations.Choice.OperationJournalKind.Ingest" xml:space="preserve"><value>引入</value></data>
-  <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>组织</value></data>
+  <data name="Operations.Choice.OperationJournalKind.Organize" xml:space="preserve"><value>整理</value></data>
   <data name="Operations.Choice.OperationJournalKind.OtherKind" xml:space="preserve"><value>其他</value></data>
   <data name="Operations.Choice.OperationJournalKind.ReviewedChange" xml:space="preserve"><value>已审核的更改</value></data>
   <data name="Operations.Choice.OperationJournalKind.Sync" xml:space="preserve"><value>同步</value></data>
   <data name="Operations.Choice.OperationJournalState.Completed" xml:space="preserve"><value>已完成</value></data>
   <data name="Operations.Choice.OperationJournalState.Interrupted" xml:space="preserve"><value>已中断 — 可能需要恢复</value></data>
-  <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>已回滚 背面</value></data>
+  <data name="Operations.Choice.OperationJournalState.RolledBack" xml:space="preserve"><value>已回滚</value></data>
   <data name="Operations.Choice.OperationJournalState.Unknown" xml:space="preserve"><value>存在隔离项 — 未记录最终状态</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>应用 {1} 带 {0:N0} 已计划 文件 变更?
+  <data name="Operations.Dialog.ApplyJob.Message.One" xml:space="preserve"><value>是否应用“{1}”及 {0:N0} 项计划的文件更改？
 
 {2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>应用 {1} 带 {0:N0} 已计划 文件 变更?
+  <data name="Operations.Dialog.ApplyJob.Message.Other" xml:space="preserve"><value>是否应用“{1}”及 {0:N0} 项计划的文件更改？
 
 {2}</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>恢复 是 可用: 已更改 文件 将 为 日志.</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>恢复 是 可用: 已更改 文件 将 为 日志 下 “{0}”.</value></data>
-  <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>恢复 是 不可用 用于 此 应用.</value></data>
-  <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>应用 {0}</value></data>
-  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>选择 该 iTunes 库 到 验证</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailable" xml:space="preserve"><value>恢复可用：已更改文件的原始版本将保留在恢复日志中。</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryAvailableAt" xml:space="preserve"><value>恢复可用：已更改文件的原始版本将保留在“{0}”中。</value></data>
+  <data name="Operations.Dialog.ApplyJob.RecoveryUnavailable" xml:space="preserve"><value>此次应用无法使用恢复。</value></data>
+  <data name="Operations.Dialog.ApplyJob.Title" xml:space="preserve"><value>应用{0}</value></data>
+  <data name="Operations.Dialog.SelectItunesLibrary" xml:space="preserve"><value>选择要验证的 iTunes Library.itl 文件</value></data>
   <data name="Operations.Dialog.SelectRecoveryRoot" xml:space="preserve"><value>选择要扫描的源、同步或设备根目录</value></data>
-  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>选择 该 智能-存储 目标</value></data>
+  <data name="Operations.Dialog.SelectSmartStorageDestination" xml:space="preserve"><value>选择智能存储目标</value></data>
   <data name="Operations.Diagnostic.NoApplyService" xml:space="preserve"><value>作业“{0}”没有可用的类型化应用服务。</value></data>
   <data name="Operations.Diagnostic.NoPreviewService" xml:space="preserve"><value>作业“{0}”没有可用的类型化预览服务。</value></data>
   <data name="Operations.Entry.State.Created" xml:space="preserve"><value>已创建</value></data>
-  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>已创建 项目 缺失</value></data>
+  <data name="Operations.Entry.State.CreatedItemMissing" xml:space="preserve"><value>创建的项目已不存在</value></data>
   <data name="Operations.Entry.State.Deleted" xml:space="preserve"><value>已删除</value></data>
   <data name="Operations.Entry.State.Moved" xml:space="preserve"><value>已移动</value></data>
-  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>移动 目标 缺失</value></data>
-  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>已计划; 完成 不 已记录</value></data>
+  <data name="Operations.Entry.State.MoveDestinationMissing" xml:space="preserve"><value>移动的项目已不在目标位置</value></data>
+  <data name="Operations.Entry.State.Planned" xml:space="preserve"><value>已计划；未记录完成状态</value></data>
   <data name="Operations.Entry.State.Quarantined" xml:space="preserve"><value>已隔离</value></data>
-  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>隔离 复制 缺失</value></data>
-  <data name="Operations.Entry.State.Unknown" xml:space="preserve"><value>未知 操作</value></data>
-  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes 库</value></data>
+  <data name="Operations.Entry.State.QuarantineMissing" xml:space="preserve"><value>隔离的项目已不存在</value></data>
+  <data name="Operations.Entry.State.Unknown" xml:space="preserve"><value>未知操作</value></data>
+  <data name="Operations.FileType.ItunesLibrary" xml:space="preserve"><value>iTunes Library.itl 文件</value></data>
   <data name="Operations.History.Elapsed" xml:space="preserve"><value>{0:0.##} s</value></data>
   <data name="Operations.History.State.Applied" xml:space="preserve"><value>已应用</value></data>
-  <data name="Operations.History.State.ApplyFailed" xml:space="preserve"><value>应用 失败</value></data>
-  <data name="Operations.History.State.PreviewFailed" xml:space="preserve"><value>预览 失败</value></data>
-  <data name="Operations.History.State.PreviewPassed" xml:space="preserve"><value>预览 已通过</value></data>
-  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>规范化 嵌入式 封面 用于 音轨 已提供 按 该 已配置 目录.</value></data>
-  <data name="Operations.Job.ArtworkNormalization.Name" xml:space="preserve"><value>封面 规范化</value></data>
-  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>项目 该 已索引 库 到 一个 平衡 可移动-媒体 导出.</value></data>
-  <data name="Operations.Job.CarCard.Name" xml:space="preserve"><value>汽车 卡片</value></data>
-  <data name="Operations.Job.ConfiguredExport.Description" xml:space="preserve"><value>预览 和 应用 该 已配置 选择, 命名, 传输, 和 协调 策略.</value></data>
-  <data name="Operations.Job.ConfiguredExport.Name" xml:space="preserve"><value>导出: {0}</value></data>
-  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>同步 已配置 播放列表 到 该 库 目标.</value></data>
-  <data name="Operations.Job.CrossLibrarySync.Name" xml:space="preserve"><value>交叉-库 同步</value></data>
-  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>验证 结构 和 引用 不变量 在 一个 ITL 文件.</value></data>
-  <data name="Operations.Job.ItunesValidation.Name" xml:space="preserve"><value>iTunes 库 验证</value></data>
-  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>同步 每个 播放列表 导出 目标 从 该 活动 库 配置.</value></data>
-  <data name="Operations.Job.PlaylistSync.Name" xml:space="preserve"><value>播放列表 同步</value></data>
-  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>报告 可能 重复 音轨 从 该 已配置 目录 集成.</value></data>
-  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>冗余 报告</value></data>
-  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>项目 该 已配置 目录 到 一个 已分组 便携-存储 导出.</value></data>
-  <data name="Operations.Job.SmartStorage.Name" xml:space="preserve"><value>智能 存储</value></data>
+  <data name="Operations.History.State.ApplyFailed" xml:space="preserve"><value>应用失败</value></data>
+  <data name="Operations.History.State.PreviewFailed" xml:space="preserve"><value>预览失败</value></data>
+  <data name="Operations.History.State.PreviewPassed" xml:space="preserve"><value>预览通过</value></data>
+  <data name="Operations.Job.ArtworkNormalization.Description" xml:space="preserve"><value>规范化已配置目录中音轨的嵌入式插图。</value></data>
+  <data name="Operations.Job.ArtworkNormalization.Name" xml:space="preserve"><value>插图规范化</value></data>
+  <data name="Operations.Job.CarCard.Description" xml:space="preserve"><value>为可移动媒体创建均衡的资料库导出。</value></data>
+  <data name="Operations.Job.CarCard.Name" xml:space="preserve"><value>车载存储卡</value></data>
+  <data name="Operations.Job.ConfiguredExport.Description" xml:space="preserve"><value>预览并应用已配置的选择、命名、传输和协调策略。</value></data>
+  <data name="Operations.Job.ConfiguredExport.Name" xml:space="preserve"><value>导出：{0}</value></data>
+  <data name="Operations.Job.CrossLibrarySync.Description" xml:space="preserve"><value>将已配置的播放列表与目标资料库同步。</value></data>
+  <data name="Operations.Job.CrossLibrarySync.Name" xml:space="preserve"><value>跨资料库同步</value></data>
+  <data name="Operations.Job.ItunesValidation.Description" xml:space="preserve"><value>检查 ITL 文件中的结构和引用错误。</value></data>
+  <data name="Operations.Job.ItunesValidation.Name" xml:space="preserve"><value>iTunes 资料库验证</value></data>
+  <data name="Operations.Job.PlaylistSync.Description" xml:space="preserve"><value>同步活动资料库配置中定义的所有播放列表导出目标。</value></data>
+  <data name="Operations.Job.PlaylistSync.Name" xml:space="preserve"><value>播放列表同步</value></data>
+  <data name="Operations.Job.Redundancies.Description" xml:space="preserve"><value>在已配置的目录中查找可能重复的音轨。</value></data>
+  <data name="Operations.Job.Redundancies.Name" xml:space="preserve"><value>重复音轨报告</value></data>
+  <data name="Operations.Job.SmartStorage.Description" xml:space="preserve"><value>使用分组文件夹将已配置的目录导出到便携式存储设备。</value></data>
+  <data name="Operations.Job.SmartStorage.Name" xml:space="preserve"><value>智能存储</value></data>
   <data name="Operations.Job.Status.ApplyCancelled" xml:space="preserve"><value>作业应用已取消。请在“操作”中检查恢复日志。</value></data>
-  <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>{0} 已应用 成功.</value></data>
-  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>应用 已退出 带 代码 {0}. 审阅 该 输出 和 操作 日志.</value></data>
-  <data name="Operations.Job.Status.ApplyFailed" xml:space="preserve"><value>作业 应用 失败.</value></data>
-  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>作业 预览 已取消.</value></data>
-  <data name="Operations.Job.Status.PreviewCompleted" xml:space="preserve"><value>预览 已完成. 审阅 该 输出 之前 正在应用.</value></data>
-  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>预览 已退出 带 代码 {0}.</value></data>
-  <data name="Operations.Job.Status.PreviewFailed" xml:space="preserve"><value>作业 预览 失败.</value></data>
+  <data name="Operations.Job.Status.ApplyCompleted" xml:space="preserve"><value>已成功应用{0}。</value></data>
+  <data name="Operations.Job.Status.ApplyExitCode" xml:space="preserve"><value>应用已完成，退出代码为 {0}。请查看输出和操作日志。</value></data>
+  <data name="Operations.Job.Status.ApplyFailed" xml:space="preserve"><value>作业应用失败。</value></data>
+  <data name="Operations.Job.Status.PreviewCancelled" xml:space="preserve"><value>已取消作业预览。</value></data>
+  <data name="Operations.Job.Status.PreviewCompleted" xml:space="preserve"><value>预览已完成。应用前请查看输出。</value></data>
+  <data name="Operations.Job.Status.PreviewExitCode" xml:space="preserve"><value>预览已完成，退出代码为 {0}。</value></data>
+  <data name="Operations.Job.Status.PreviewFailed" xml:space="preserve"><value>作业预览失败。</value></data>
   <data name="Operations.Job.Status.Previewing" xml:space="preserve"><value>正在预览 {0}…</value></data>
-  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>选择 一个 作业, 提供 任意 必需 参数, 然后 预览.</value></data>
+  <data name="Operations.Job.Status.Ready" xml:space="preserve"><value>选择作业，填写必填字段，然后选择“预览”。</value></data>
   <data name="Operations.Progress.Determinate" xml:space="preserve"><value>{0}: {1:N0}/{2:N0}</value></data>
   <data name="Operations.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
-  <data name="Operations.Progress.Phase.Applying" xml:space="preserve"><value>正在应用 更改</value></data>
-  <data name="Operations.Progress.Phase.Completed" xml:space="preserve"><value>操作 完成</value></data>
-  <data name="Operations.Progress.Phase.IndexingSources" xml:space="preserve"><value>正在扫描 源</value></data>
-  <data name="Operations.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>正在扫描 该 目标</value></data>
-  <data name="Operations.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>正在加载 配置</value></data>
-  <data name="Operations.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>正在加载 该 库</value></data>
-  <data name="Operations.Progress.Phase.Planning" xml:space="preserve"><value>正在规划 更改</value></data>
-  <data name="Operations.Progress.Phase.RollingBack" xml:space="preserve"><value>正在回滚 背面 更改</value></data>
-  <data name="Operations.Progress.Phase.Validating" xml:space="preserve"><value>验证 该 操作</value></data>
-  <data name="Operations.Run.AffectedItems.One" xml:space="preserve"><value>{0:N0} 已记录 项目</value></data>
-  <data name="Operations.Run.AffectedItems.Other" xml:space="preserve"><value>{0:N0} 已记录 项目</value></data>
-  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>项目 计数 可用 当 该 运行 是 打开</value></data>
-  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>否 日志 (文件夹-仅 隔离)</value></data>
-  <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>设置 该 iTunes 库 路径 在 该 活动 库 配置.</value></data>
-  <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>一个 iTunes 库.itl 路径 是 必需.</value></data>
+  <data name="Operations.Progress.Phase.Applying" xml:space="preserve"><value>正在应用更改</value></data>
+  <data name="Operations.Progress.Phase.Completed" xml:space="preserve"><value>操作已完成</value></data>
+  <data name="Operations.Progress.Phase.IndexingSources" xml:space="preserve"><value>正在扫描源</value></data>
+  <data name="Operations.Progress.Phase.InventoryingDestination" xml:space="preserve"><value>正在扫描目标</value></data>
+  <data name="Operations.Progress.Phase.LoadingConfiguration" xml:space="preserve"><value>正在加载配置</value></data>
+  <data name="Operations.Progress.Phase.LoadingLibrary" xml:space="preserve"><value>正在加载资料库</value></data>
+  <data name="Operations.Progress.Phase.Planning" xml:space="preserve"><value>正在规划更改</value></data>
+  <data name="Operations.Progress.Phase.RollingBack" xml:space="preserve"><value>正在回滚更改</value></data>
+  <data name="Operations.Progress.Phase.Validating" xml:space="preserve"><value>正在验证操作</value></data>
+  <data name="Operations.Run.AffectedItems.One" xml:space="preserve"><value>{0:N0} 个已记录项目</value></data>
+  <data name="Operations.Run.AffectedItems.Other" xml:space="preserve"><value>{0:N0} 个已记录项目</value></data>
+  <data name="Operations.Run.AffectedItemsDeferred" xml:space="preserve"><value>打开运行记录以统计其项目</value></data>
+  <data name="Operations.Run.NoJournal" xml:space="preserve"><value>无日志（仅有隔离文件夹）</value></data>
+  <data name="Operations.Validation.ActiveLibraryPathRequired" xml:space="preserve"><value>请在活动资料库配置中设置 iTunes 资料库路径。</value></data>
+  <data name="Operations.Validation.ItunesLibraryRequired" xml:space="preserve"><value>需要 iTunes Library.itl 路径。</value></data>
   <data name="Operations.Validation.PlaylistNameRequired" xml:space="preserve"><value>必须输入 iTunes 播放列表名称。</value></data>
-  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>一个 智能-存储 目标 是 必需.</value></data>
+  <data name="Operations.Validation.SmartStorageDestinationRequired" xml:space="preserve"><value>需要智能存储目标。</value></data>
   <data name="Operations.Count.Errors.One" xml:space="preserve"><value>{0:N0} 错误</value></data>
   <data name="Operations.Count.Errors.Other" xml:space="preserve"><value>{0:N0} 错误</value></data>
   <data name="Operations.Count.Warnings.One" xml:space="preserve"><value>{0:N0} 警告</value></data>
   <data name="Operations.Count.Warnings.Other" xml:space="preserve"><value>{0:N0} 警告</value></data>
   <data name="Operations.Output.ArtworkNormalization.Item" xml:space="preserve"><value>{0} {1}: {2}, {3}×{4}, {5:N0} 字节 → image/jpeg, {6}×{7}, {8:N0} 字节</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>计划: {0:N0} 音轨 检查, {1:N0} 已经 有效, {2:N0} 媒体 文件 到 替换.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>计划: {0:N0} 音轨 检查, {1:N0} 已经 有效, {2:N0} 媒体 文件 到 替换.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>已应用: {0:N0} 媒体 文件 和 {1:N0} ITL 音轨 缓存 已更新.</value></data>
-  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>已应用: {0:N0} 媒体 文件 和 {1:N0} ITL 音轨 缓存 已更新.</value></data>
-  <data name="Operations.Output.CacheWarning" xml:space="preserve"><value>缓存 警告: {0}</value></data>
-  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>计划: {0:N0} 音轨, {1:N0} 安装, {2:N0} 未更改, {3:N0} 移除, {4:N0} 播放列表.</value></data>
-  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>计划: {0:N0} 音轨, {1:N0} 安装, {2:N0} 未更改, {3:N0} 移除, {4:N0} 播放列表.</value></data>
-  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>已应用 {0:N0} 音轨 和 {1:N0} 播放列表: {2:N0} 已创建, {3:N0} 已替换, {4:N0} 已隔离.</value></data>
-  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>已应用 {0:N0} 音轨 和 {1:N0} 播放列表: {2:N0} 已创建, {3:N0} 已替换, {4:N0} 已隔离.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>计划: {0:N0} 所需 文件, {1:N0} 未更改, {2:N0} 额外, {3:N0} 变更.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>计划: {0:N0} 所需 文件, {1:N0} 未更改, {2:N0} 额外, {3:N0} 变更.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>已应用 导出 “{1}”: {0:N0} 已复制, {2:N0} 已替换, {3:N0} 已隔离, {4:N0} 已删除, {5:N0} 未更改.</value></data>
-  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>已应用 导出 “{1}”: {0:N0} 已复制, {2:N0} 已替换, {3:N0} 已隔离, {4:N0} 已删除, {5:N0} 未更改.</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>计划: {0:N0} 所需 文件, {1:N0} 未更改, {2:N0} 已过期, {3:N0} 变更.</value></data>
-  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>计划: {0:N0} 所需 文件, {1:N0} 未更改, {2:N0} 已过期, {3:N0} 变更.</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>已应用: {0:N0} 已复制, {1:N0} 已替换, {2:N0} 已隔离, {3:N0} 已删除, {4:N0} 未更改.</value></data>
-  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>已应用: {0:N0} 已复制, {1:N0} 已替换, {2:N0} 已隔离, {3:N0} 已删除, {4:N0} 未更改.</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.One" xml:space="preserve"><value>计划：已检查音轨：{0:N0}；已有效：{1:N0}；要替换的媒体文件：{2:N0}。</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Plan.Other" xml:space="preserve"><value>计划：已检查音轨：{0:N0}；已有效：{1:N0}；要替换的媒体文件：{2:N0}。</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.One" xml:space="preserve"><value>已应用：已更新媒体文件：{0:N0}；已更新 ITL 音轨缓存：{1:N0}。</value></data>
+  <data name="Operations.Output.ArtworkNormalization.Result.Other" xml:space="preserve"><value>已应用：已更新媒体文件：{0:N0}；已更新 ITL 音轨缓存：{1:N0}。</value></data>
+  <data name="Operations.Output.CacheWarning" xml:space="preserve"><value>缓存警告：{0}</value></data>
+  <data name="Operations.Output.CarCard.Plan.One" xml:space="preserve"><value>计划：资料库音轨：{0:N0}；要安装：{1:N0}；未更改：{2:N0}；要移除：{3:N0}；播放列表：{4:N0}。</value></data>
+  <data name="Operations.Output.CarCard.Plan.Other" xml:space="preserve"><value>计划：资料库音轨：{0:N0}；要安装：{1:N0}；未更改：{2:N0}；要移除：{3:N0}；播放列表：{4:N0}。</value></data>
+  <data name="Operations.Output.CarCard.Result.One" xml:space="preserve"><value>已应用：音轨：{0:N0}；播放列表：{1:N0}；已创建：{2:N0}；已替换：{3:N0}；已隔离：{4:N0}。</value></data>
+  <data name="Operations.Output.CarCard.Result.Other" xml:space="preserve"><value>已应用：音轨：{0:N0}；播放列表：{1:N0}；已创建：{2:N0}；已替换：{3:N0}；已隔离：{4:N0}。</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.One" xml:space="preserve"><value>计划：目标文件：{0:N0}；未更改：{1:N0}；额外文件：{2:N0}；文件操作：{3:N0}。</value></data>
+  <data name="Operations.Output.ConfiguredExport.Plan.Other" xml:space="preserve"><value>计划：目标文件：{0:N0}；未更改：{1:N0}；额外文件：{2:N0}；文件操作：{3:N0}。</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.One" xml:space="preserve"><value>已应用导出“{1}”：已复制：{0:N0}；已替换：{2:N0}；已隔离：{3:N0}；已删除：{4:N0}；未更改：{5:N0}。</value></data>
+  <data name="Operations.Output.ConfiguredExport.Result.Other" xml:space="preserve"><value>已应用导出“{1}”：已复制：{0:N0}；已替换：{2:N0}；已隔离：{3:N0}；已删除：{4:N0}；未更改：{5:N0}。</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.One" xml:space="preserve"><value>计划：目标文件：{0:N0}；未更改：{1:N0}；过期文件：{2:N0}；文件操作：{3:N0}。</value></data>
+  <data name="Operations.Output.CrossLibrary.Plan.Other" xml:space="preserve"><value>计划：目标文件：{0:N0}；未更改：{1:N0}；过期文件：{2:N0}；文件操作：{3:N0}。</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.One" xml:space="preserve"><value>已应用：已复制：{0:N0}；已替换：{1:N0}；已隔离：{2:N0}；已删除：{3:N0}；未更改：{4:N0}。</value></data>
+  <data name="Operations.Output.CrossLibrary.Result.Other" xml:space="preserve"><value>已应用：已复制：{0:N0}；已替换：{1:N0}；已隔离：{2:N0}；已删除：{3:N0}；未更改：{4:N0}。</value></data>
   <data name="Operations.Output.Issue" xml:space="preserve"><value>{0} {1}: {2}{3}</value></data>
   <data name="Operations.Output.Mutation.Destination" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.Source" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Operations.Output.Mutation.SourceDestination" xml:space="preserve"><value>{0} {1} → {2}</value></data>
   <data name="Operations.Output.PathSuffix" xml:space="preserve"><value> [{0}]</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>已应用 {0:N0} 播放列表: {1:N0} 已创建, {2:N0} 已替换, {3:N0} 已隔离, {4:N0} 已删除.</value></data>
-  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>已应用 {0:N0} 播放列表: {1:N0} 已创建, {2:N0} 已替换, {3:N0} 已隔离, {4:N0} 已删除.</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>目标 {1}: {0:N0} 播放列表, {2:N0} 缺失 映射.</value></data>
-  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>目标 {1}: {0:N0} 播放列表, {2:N0} 缺失 映射.</value></data>
-  <data name="Operations.Output.RecoveryJournal" xml:space="preserve"><value>恢复 日志: {0}</value></data>
-  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>{0:N0} 冗余 组 之间 {1:N0} 本地 音轨.</value></data>
-  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>{0:N0} 冗余 组 之间 {1:N0} 本地 音轨.</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>计划: {0:N0} 音轨, {1:N0} 安装, {2:N0} 未更改, {3:N0} 已过期, {4:N0} 播放列表, {5:N0} 封面 项目.</value></data>
-  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>计划: {0:N0} 音轨, {1:N0} 安装, {2:N0} 未更改, {3:N0} 已过期, {4:N0} 播放列表, {5:N0} 封面 项目.</value></data>
-  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>已应用 {0:N0} 音轨, {1:N0} 播放列表, 和 {2:N0} 封面 项目: {3:N0} 已创建, {4:N0} 已替换, {5:N0} 已隔离.</value></data>
-  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>已应用 {0:N0} 音轨, {1:N0} 播放列表, 和 {2:N0} 封面 项目: {3:N0} 已创建, {4:N0} 已替换, {5:N0} 已隔离.</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.One" xml:space="preserve"><value>已应用：播放列表：{0:N0}；已创建：{1:N0}；已替换：{2:N0}；已隔离：{3:N0}；已删除：{4:N0}。</value></data>
+  <data name="Operations.Output.PlaylistExport.Result.Other" xml:space="preserve"><value>已应用：播放列表：{0:N0}；已创建：{1:N0}；已替换：{2:N0}；已隔离：{3:N0}；已删除：{4:N0}。</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.One" xml:space="preserve"><value>目标 {1}：播放列表：{0:N0}；缺失映射：{2:N0}。</value></data>
+  <data name="Operations.Output.PlaylistExport.Target.Other" xml:space="preserve"><value>目标 {1}：播放列表：{0:N0}；缺失映射：{2:N0}。</value></data>
+  <data name="Operations.Output.RecoveryJournal" xml:space="preserve"><value>恢复日志：{0}</value></data>
+  <data name="Operations.Output.Redundancy.Summary.One" xml:space="preserve"><value>可能的重复音轨组：{0:N0}；已扫描本地音轨：{1:N0}。</value></data>
+  <data name="Operations.Output.Redundancy.Summary.Other" xml:space="preserve"><value>可能的重复音轨组：{0:N0}；已扫描本地音轨：{1:N0}。</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.One" xml:space="preserve"><value>计划：资料库音轨：{0:N0}；要安装：{1:N0}；未更改：{2:N0}；过期：{3:N0}；播放列表：{4:N0}；封面项目：{5:N0}。</value></data>
+  <data name="Operations.Output.SmartStorage.Plan.Other" xml:space="preserve"><value>计划：资料库音轨：{0:N0}；要安装：{1:N0}；未更改：{2:N0}；过期：{3:N0}；播放列表：{4:N0}；封面项目：{5:N0}。</value></data>
+  <data name="Operations.Output.SmartStorage.Result.One" xml:space="preserve"><value>已应用：音轨：{0:N0}；播放列表：{1:N0}；封面项目：{2:N0}；已创建：{3:N0}；已替换：{4:N0}；已隔离：{5:N0}。</value></data>
+  <data name="Operations.Output.SmartStorage.Result.Other" xml:space="preserve"><value>已应用：音轨：{0:N0}；播放列表：{1:N0}；封面项目：{2:N0}；已创建：{3:N0}；已替换：{4:N0}；已隔离：{5:N0}。</value></data>
   <data name="Operations.Output.Unchanged" xml:space="preserve"><value>未更改</value></data>
   <data name="Operations.Output.Validation.Issue" xml:space="preserve"><value>{0} {1} {2}</value></data>
   <data name="Operations.Output.Validation.Summary" xml:space="preserve"><value>验证: {0}, {1}</value></data>
-  <data name="Operations.PurgePreview.Backups.One" xml:space="preserve"><value>, 包括 {0:N0} 还原-冲突 备份 文件</value></data>
-  <data name="Operations.PurgePreview.Backups.Other" xml:space="preserve"><value>, 包括 {0:N0} 还原-冲突 备份 文件</value></data>
-  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>清除 预览: {0:N0} 运行, {1:N0} 文件, {2}</value></data>
-  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>清除 预览: {0:N0} 运行, {1:N0} 文件, {2}</value></data>
-  <data name="Operations.PurgePreview.NoneEligible" xml:space="preserve"><value>清除 预览: 否 运行 是 旧 足够 到 清除</value></data>
-  <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}. 受保护 已中断 运行: {2:N0}; 运行 范围内 保留: {3:N0}{4}.</value></data>
-  <data name="Operations.PurgePreview.UnsafeRoots.One" xml:space="preserve"><value>; {0:N0} 不安全 运行 根 曾是 排除</value></data>
-  <data name="Operations.PurgePreview.UnsafeRoots.Other" xml:space="preserve"><value>; {0:N0} 不安全 运行 根 曾是 排除</value></data>
+  <data name="Operations.PurgePreview.Backups.One" xml:space="preserve"><value>，包括 {0:N0} 个恢复冲突备份文件</value></data>
+  <data name="Operations.PurgePreview.Backups.Other" xml:space="preserve"><value>，包括 {0:N0} 个恢复冲突备份文件</value></data>
+  <data name="Operations.PurgePreview.Eligible.One" xml:space="preserve"><value>清除预览：运行记录：{0:N0}；文件：{1:N0}；大小：{2}</value></data>
+  <data name="Operations.PurgePreview.Eligible.Other" xml:space="preserve"><value>清除预览：运行记录：{0:N0}；文件：{1:N0}；大小：{2}</value></data>
+  <data name="Operations.PurgePreview.NoneEligible" xml:space="preserve"><value>清除预览：没有达到清除期限的运行记录</value></data>
+  <data name="Operations.PurgePreview.Summary" xml:space="preserve"><value>{0}{1}。受保护的中断运行记录：{2:N0}；保留期内的运行记录：{3:N0}{4}。</value></data>
+  <data name="Operations.PurgePreview.UnsafeRoots.One" xml:space="preserve"><value>；已排除 {0:N0} 个不安全的运行根目录</value></data>
+  <data name="Operations.PurgePreview.UnsafeRoots.Other" xml:space="preserve"><value>；已排除 {0:N0} 个不安全的运行根目录</value></data>
   <data name="Operations.RestorePreview.None" xml:space="preserve"><value>所选项目均无法还原。</value></data>
-  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>还原 预览: {0:N0} 项目, {1:N0} 目标 冲突, {2:N0} 已跳过.</value></data>
-  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>还原 预览: {0:N0} 项目, {1:N0} 目标 冲突, {2:N0} 已跳过.</value></data>
-  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>操作 发现 已取消.</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>已找到 {0:N0} 操作 运行; 已中断: {1:N0}; 根 不 已扫描: {2:N0}.</value></data>
-  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>已找到 {0:N0} 操作 运行; 已中断: {1:N0}; 根 不 已扫描: {2:N0}.</value></data>
-  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>操作 发现 失败.</value></data>
-  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>正在盘点 操作 运行 较旧 比 {0:N0} 天…</value></data>
-  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>正在盘点 操作 运行 较旧 比 {0:N0} 天…</value></data>
+  <data name="Operations.RestorePreview.Ready.One" xml:space="preserve"><value>恢复预览：项目：{0:N0}；目标冲突：{1:N0}；已跳过：{2:N0}。</value></data>
+  <data name="Operations.RestorePreview.Ready.Other" xml:space="preserve"><value>恢复预览：项目：{0:N0}；目标冲突：{1:N0}；已跳过：{2:N0}。</value></data>
+  <data name="Operations.Status.DiscoveryCancelled" xml:space="preserve"><value>已取消恢复发现。</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.One" xml:space="preserve"><value>找到的恢复运行记录：{0:N0}；已中断：{1:N0}；未扫描的根目录：{2:N0}。</value></data>
+  <data name="Operations.Status.DiscoveryCompleted.Other" xml:space="preserve"><value>找到的恢复运行记录：{0:N0}；已中断：{1:N0}；未扫描的根目录：{2:N0}。</value></data>
+  <data name="Operations.Status.DiscoveryFailed" xml:space="preserve"><value>恢复发现失败。</value></data>
+  <data name="Operations.Status.InventoryingPurge.One" xml:space="preserve"><value>正在检查早于 {0:N0} 天的恢复运行记录…</value></data>
+  <data name="Operations.Status.InventoryingPurge.Other" xml:space="preserve"><value>正在检查早于 {0:N0} 天的恢复运行记录…</value></data>
   <data name="Operations.Status.NoSearchRoots" xml:space="preserve"><value>请选择至少一个用于搜索恢复记录的根目录。</value></data>
-  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>打开 该 {0} 操作…</value></data>
-  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>打开 该 操作 曾是 已取消.</value></data>
-  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>该 操作 可以 不 为 打开.</value></data>
-  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>清除 已取消. 运行 不 尚未 不可逆 已删除 可能 保留 在 清除 暂存.</value></data>
-  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>清除 {0:N0} 运行, {1:N0} 文件, 和 {2}.</value></data>
-  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>清除 {0:N0} 运行, {1:N0} 文件, 和 {2}.</value></data>
-  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>清除 已停止.</value></data>
-  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>清除 预览 已取消.</value></data>
-  <data name="Operations.Status.PurgePreviewFailed" xml:space="preserve"><value>清除 预览 失败.</value></data>
-  <data name="Operations.Status.Purging.One" xml:space="preserve"><value>正在清除… {1:N0}/{0:N0} 运行</value></data>
-  <data name="Operations.Status.Purging.Other" xml:space="preserve"><value>正在清除… {1:N0}/{0:N0} 运行</value></data>
-  <data name="Operations.Status.Ready" xml:space="preserve"><value>扫描 已配置 根 或 选择 一个 设备 或 文件夹 到 发现 恢复 操作.</value></data>
-  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>还原 已取消 和 已完成 操作 曾是 已回滚 背面.</value></data>
-  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>已还原 {0:N0} 项目; 已保留 {1:N0} 冲突.</value></data>
-  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>已还原 {0:N0} 项目; 已保留 {1:N0} 冲突.</value></data>
-  <data name="Operations.Status.RestoreFailed" xml:space="preserve"><value>还原 失败 和 已完成 操作 曾是 已回滚 背面.</value></data>
-  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>还原 预览 已取消.</value></data>
-  <data name="Operations.Status.RestorePreviewFailed" xml:space="preserve"><value>还原 预览 失败.</value></data>
+  <data name="Operations.Status.OpeningRun" xml:space="preserve"><value>正在打开恢复运行“{0}”…</value></data>
+  <data name="Operations.Status.OpenRunCancelled" xml:space="preserve"><value>已取消打开恢复运行。</value></data>
+  <data name="Operations.Status.OpenRunFailed" xml:space="preserve"><value>无法打开恢复运行。</value></data>
+  <data name="Operations.Status.PurgeCancelled" xml:space="preserve"><value>已取消清除。尚未永久删除的运行记录可能仍保留在清除暂存区。</value></data>
+  <data name="Operations.Status.PurgeCompleted.One" xml:space="preserve"><value>清除完成：运行记录：{0:N0}；文件：{1:N0}；大小：{2}。</value></data>
+  <data name="Operations.Status.PurgeCompleted.Other" xml:space="preserve"><value>清除完成：运行记录：{0:N0}；文件：{1:N0}；大小：{2}。</value></data>
+  <data name="Operations.Status.PurgeFailed" xml:space="preserve"><value>清除失败。</value></data>
+  <data name="Operations.Status.PurgePreviewCancelled" xml:space="preserve"><value>已取消清除预览。</value></data>
+  <data name="Operations.Status.PurgePreviewFailed" xml:space="preserve"><value>清除预览失败。</value></data>
+  <data name="Operations.Status.Purging.One" xml:space="preserve"><value>正在清除… {1:N0}/{0:N0} 个运行记录</value></data>
+  <data name="Operations.Status.Purging.Other" xml:space="preserve"><value>正在清除… {1:N0}/{0:N0} 个运行记录</value></data>
+  <data name="Operations.Status.Ready" xml:space="preserve"><value>扫描已配置的根目录，或选择设备或文件夹以查找恢复操作。</value></data>
+  <data name="Operations.Status.RestoreCancelled" xml:space="preserve"><value>已取消恢复，并已回滚完成的操作。</value></data>
+  <data name="Operations.Status.RestoreCompleted.One" xml:space="preserve"><value>恢复完成：项目：{0:N0}；保留的冲突：{1:N0}。</value></data>
+  <data name="Operations.Status.RestoreCompleted.Other" xml:space="preserve"><value>恢复完成：项目：{0:N0}；保留的冲突：{1:N0}。</value></data>
+  <data name="Operations.Status.RestoreFailed" xml:space="preserve"><value>恢复失败，并已回滚完成的操作。</value></data>
+  <data name="Operations.Status.RestorePreviewCancelled" xml:space="preserve"><value>已取消恢复预览。</value></data>
+  <data name="Operations.Status.RestorePreviewFailed" xml:space="preserve"><value>恢复预览失败。</value></data>
   <data name="Operations.Status.Restoring" xml:space="preserve"><value>正在还原… {0:N0}/{1:N0}</value></data>
-  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>{0:N0} 操作 项目 在 其 原始 层次结构; 项目 不 读取: {1:N0}.</value></data>
-  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>{0:N0} 操作 项目 在 其 原始 层次结构; 项目 不 读取: {1:N0}.</value></data>
-  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>正在扫描 {0:N0} 根 用于 操作 日志…</value></data>
-  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>正在扫描 {0:N0} 根 用于 操作 日志…</value></data>
-  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>显示 {0:N0} 发现 操作 运行.</value></data>
-  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>显示 {0:N0} 发现 操作 运行.</value></data>
+  <data name="Operations.Status.RunOpened.One" xml:space="preserve"><value>原始层次结构中的恢复项目：{0:N0}；未读取的项目：{1:N0}。</value></data>
+  <data name="Operations.Status.RunOpened.Other" xml:space="preserve"><value>原始层次结构中的恢复项目：{0:N0}；未读取的项目：{1:N0}。</value></data>
+  <data name="Operations.Status.ScanningRoots.One" xml:space="preserve"><value>正在扫描 {0:N0} 个根目录以查找恢复日志…</value></data>
+  <data name="Operations.Status.ScanningRoots.Other" xml:space="preserve"><value>正在扫描 {0:N0} 个根目录以查找恢复日志…</value></data>
+  <data name="Operations.Status.ShowingRuns.One" xml:space="preserve"><value>显示的恢复运行记录：{0:N0}。</value></data>
+  <data name="Operations.Status.ShowingRuns.Other" xml:space="preserve"><value>显示的恢复运行记录：{0:N0}。</value></data>
   <data name="Common.No" xml:space="preserve"><value>否</value></data>
   <data name="Common.Yes" xml:space="preserve"><value>是</value></data>
   <data name="Fields.Action.ApplyChanges" xml:space="preserve"><value>应用更改</value></data>
@@ -6253,8 +6253,8 @@
   <data name="Transcode.Issue.MetadataNotRepresentable" xml:space="preserve"><value>某些元数据无法用输出格式表示。</value></data>
   <data name="Transcode.Issue.ArtworkNotRepresentable" xml:space="preserve"><value>某些封面无法用输出格式表示。</value></data>
   <data name="Common.Delete" xml:space="preserve"><value>删除</value></data>
-  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} 卷 · {1:N0} 已提交</value></data>
-  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} 卷 · {1:N0} 已提交</value></data>
+  <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} 个卷 · {1:N0} 个已提交</value></data>
+  <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} 个卷 · {1:N0} 个已提交</value></data>
   <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
   <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC 可执行文件</value></data>
   <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>选择 Monkey's Audio MAC 可执行文件</value></data>
