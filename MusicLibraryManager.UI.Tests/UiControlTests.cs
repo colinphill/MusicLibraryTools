@@ -1704,6 +1704,44 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Grid_layout_capture_reorders_visible_columns_without_moving_hidden_columns()
+    {
+        AppGridColumnDefinition[] definitions =
+        [
+            new("File", "File", "File", 220),
+            new("Codec", "Codec", "Codec", 110, Visible: false),
+            new("Title", "Title", "Title", 220),
+            new("Artwork", "Artwork", "Artwork", 85, Visible: false),
+            new("Artist", "Artist", "Artist", 190),
+        ];
+        LibraryColumnState[] visibleLayout =
+        [
+            new("Artist", 205, 0, true),
+            new("File", 235, 1, true),
+            new("Title", 245, 2, true),
+        ];
+
+        IReadOnlyList<LibraryColumnState> captured =
+            PersistedGridLayout.CaptureSnapshotColumns(
+                definitions,
+                visibleLayout);
+
+        Assert.Equal(
+            ["Artist", "Codec", "File", "Artwork", "Title"],
+            captured.Select(column => column.Key));
+        Assert.Equal(
+            [true, false, true, false, true],
+            captured.Select(column => column.Visible));
+        Assert.Equal(
+            [0, 1, 2, 3, 4],
+            captured.Select(column => column.DisplayIndex));
+        Assert.Equal(
+            [205, 110, 235, 85, 245],
+            captured.Select(column =>
+                column.Width!.Value));
+    }
+
+    [AvaloniaFact]
     public void Data_grid_applies_a_typed_persisted_sort_state()
     {
         LibraryRow[] rows =

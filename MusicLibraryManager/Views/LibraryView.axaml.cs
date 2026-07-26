@@ -258,22 +258,10 @@ public partial class LibraryView : UserControl
         PersistLayout();
     }
 
-    private IReadOnlyList<LibraryColumnState> CaptureColumns()
-    {
-        var visible = LibraryGrid.CaptureColumnLayout();
-        var visibleByKey = visible.ToDictionary(item => item.Key, StringComparer.OrdinalIgnoreCase);
-        int displayIndex = 0;
-        var result = new List<LibraryColumnState>(_columns.Count);
-        foreach (AppGridColumnDefinition definition in _columns.OrderBy(item =>
-                     visibleByKey.TryGetValue(item.Key, out LibraryColumnState? state) ? state.DisplayIndex : int.MaxValue))
-        {
-            if (visibleByKey.TryGetValue(definition.Key, out LibraryColumnState? state))
-                result.Add(state with { DisplayIndex = displayIndex++, Visible = true });
-            else
-                result.Add(new LibraryColumnState(definition.Key, definition.Width, displayIndex++, false));
-        }
-        return result;
-    }
+    private IReadOnlyList<LibraryColumnState> CaptureColumns() =>
+        PersistedGridLayout.CaptureSnapshotColumns(
+            _columns,
+            LibraryGrid.CaptureColumnLayout());
 
     private void PersistLayout()
     {

@@ -40,4 +40,56 @@ internal static class PersistedGridLayout
         }
         return restored;
     }
+
+    internal static IReadOnlyList<LibraryColumnState> CaptureSnapshotColumns(
+        IReadOnlyList<AppGridColumnDefinition> definitions,
+        IReadOnlyList<LibraryColumnState> visibleLayout)
+    {
+        Dictionary<string, LibraryColumnState> visibleByKey =
+            visibleLayout.ToDictionary(
+                column => column.Key,
+                StringComparer.OrdinalIgnoreCase);
+        LibraryColumnState[] reorderedVisible =
+            visibleLayout
+                .Where(column =>
+                    definitions.Any(definition =>
+                        definition.Key.Equals(
+                            column.Key,
+                            StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(column => column.DisplayIndex)
+                .ToArray();
+        int visibleIndex = 0;
+        var result =
+            new List<LibraryColumnState>(
+                definitions.Count);
+
+        for (int displayIndex = 0;
+             displayIndex < definitions.Count;
+             displayIndex++)
+        {
+            AppGridColumnDefinition definition =
+                definitions[displayIndex];
+            if (visibleByKey.ContainsKey(
+                    definition.Key) &&
+                visibleIndex < reorderedVisible.Length)
+            {
+                result.Add(
+                    reorderedVisible[visibleIndex++] with
+                    {
+                        DisplayIndex = displayIndex,
+                        Visible = true,
+                    });
+                continue;
+            }
+
+            result.Add(
+                new LibraryColumnState(
+                    definition.Key,
+                    definition.Width,
+                    displayIndex,
+                    false));
+        }
+
+        return result;
+    }
 }

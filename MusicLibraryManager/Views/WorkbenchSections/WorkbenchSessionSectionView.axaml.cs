@@ -362,47 +362,12 @@ public partial class WorkbenchSessionSectionView : UserControl
     }
 
     private IReadOnlyList<LibraryColumnState>
-        CaptureColumns()
-    {
-        IReadOnlyList<LibraryColumnState> visible =
-            WorkbenchGrid.CaptureColumnLayout();
-        Dictionary<string, LibraryColumnState> byKey =
-            visible.ToDictionary(
-                column => column.Key,
-                StringComparer.OrdinalIgnoreCase);
-        int displayIndex = 0;
-        var result =
-            new List<LibraryColumnState>(
-                _workbenchColumns.Count);
-        foreach (AppGridColumnDefinition definition in
-                 _workbenchColumns.OrderBy(
-                     column =>
-                         byKey.TryGetValue(
-                             column.Key,
-                             out LibraryColumnState? state)
-                             ? state.DisplayIndex
-                             : int.MaxValue))
-        {
-            if (byKey.TryGetValue(
-                    definition.Key,
-                    out LibraryColumnState? state))
-                result.Add(
-                    state with
-                    {
-                        DisplayIndex =
-                            displayIndex++,
-                        Visible = true,
-                    });
-            else
-                result.Add(
-                    new(
-                        definition.Key,
-                        definition.Width,
-                        displayIndex++,
-                        false));
-        }
-        return result;
-    }
+        CaptureColumns() =>
+            PersistedGridLayout
+                .CaptureSnapshotColumns(
+                    _workbenchColumns,
+                    WorkbenchGrid
+                        .CaptureColumnLayout());
 
     private void PersistLayout() =>
         SaveLayout(CaptureColumns());

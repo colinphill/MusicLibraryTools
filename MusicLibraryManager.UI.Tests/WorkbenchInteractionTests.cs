@@ -13,7 +13,9 @@ using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
+using MusicLibraryManager.Services;
 using MusicLibraryManager.Views;
+using MusicLibraryManager.Views.WorkbenchSections;
 using MusicLibraryTools;
 using Xunit;
 
@@ -468,6 +470,263 @@ public sealed class WorkbenchInteractionTests
     }
 
     [AvaloniaFact]
+    public void Columns_drawer_searches_reorders_persists_and_explains_editability()
+    {
+        var settings = new TestSettings();
+        settings.SetPreference(
+            LocalizationPreferences.DisplayLanguage,
+            "de-DE");
+        using ServiceProvider services =
+            BuildServices(settings);
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(window, services, 900, 640);
+            WorkbenchSessionSectionView session =
+                view.FindControl<
+                    WorkbenchSessionSectionView>(
+                    "WorkbenchSessionSection")!;
+            view.FindControl<Button>(
+                    "WorkbenchColumnsButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            Render();
+
+            TextBox search =
+                view.FindControl<TextBox>(
+                    "ColumnSearchBox")!;
+            StackPanel options =
+                view.FindControl<StackPanel>(
+                    "WorkbenchColumnOptions")!;
+            ILocalizationService localization =
+                services.GetRequiredService<
+                    ILocalizationService>();
+
+            search.Text =
+                localization.Get("Column.File");
+            Render();
+            ColumnRow[] localizedRows = Rows();
+            Assert.NotEmpty(localizedRows);
+            Assert.Contains(
+                localizedRows,
+                row =>
+                    string.Equals(
+                        row.Check.Tag as string,
+                        "File",
+                        StringComparison.Ordinal));
+            Assert.All(
+                localizedRows,
+                row =>
+                    Assert.Contains(
+                        search.Text,
+                        Assert.IsType<string>(
+                            row.Check.Content),
+                        StringComparison
+                            .CurrentCultureIgnoreCase));
+
+            search.Text = "CodecType";
+            Render();
+            Assert.Equal(
+                "CodecType",
+                Assert.Single(Rows()).Check.Tag);
+
+            search.Text = "";
+            Render();
+            ColumnRow first = Rows()[0];
+            string[] beforeFirstBoundary =
+                CurrentOrder();
+            first.Up.RaiseEvent(
+                new RoutedEventArgs(
+                    Button.ClickEvent));
+            Render();
+            Assert.Equal(
+                beforeFirstBoundary,
+                CurrentOrder());
+
+            ColumnRow last = Rows()[^1];
+            string[] beforeLastBoundary =
+                CurrentOrder();
+            last.Down.RaiseEvent(
+                new RoutedEventArgs(
+                    Button.ClickEvent));
+            Render();
+            Assert.Equal(
+                beforeLastBoundary,
+                CurrentOrder());
+
+            string[] originalOrder =
+                CurrentOrder();
+            ColumnRow title = Rows()
+                .Single(row =>
+                    string.Equals(
+                        row.Check.Tag as string,
+                        "Title",
+                        StringComparison.Ordinal));
+            title.Down.RaiseEvent(
+                new RoutedEventArgs(
+                    Button.ClickEvent));
+            Render();
+            Assert.Equal(
+                ["File", "Artist", "Title"],
+                session.ColumnDefinitions
+                    .Take(3)
+                    .Select(column => column.Key));
+
+            title = Rows()
+                .Single(row =>
+                    string.Equals(
+                        row.Check.Tag as string,
+                        "Title",
+                        StringComparison.Ordinal));
+            title.Up.RaiseEvent(
+                new RoutedEventArgs(
+                    Button.ClickEvent));
+            Render();
+            string[] restoredOrder =
+                CurrentOrder();
+            Assert.True(
+                originalOrder.SequenceEqual(
+                    restoredOrder),
+                "Moving Title down and back up changed unrelated columns." +
+                Environment.NewLine +
+                $"Before: {string.Join(", ", originalOrder)}" +
+                Environment.NewLine +
+                $"After:  {string.Join(", ", restoredOrder)}");
+
+            title = Rows()
+                .Single(row =>
+                    string.Equals(
+                        row.Check.Tag as string,
+                        "Title",
+                        StringComparison.Ordinal));
+            title.Down.RaiseEvent(
+                new RoutedEventArgs(
+                    Button.ClickEvent));
+            Render();
+            GridSnapshot persisted =
+                Assert.IsType<GridSnapshot>(
+                    services.GetRequiredService<
+                            GridStateService>()
+                        .Load("workbench.session"));
+            Assert.Equal(
+                ["File", "Artist", "Title"],
+                persisted.Columns
+                    .OrderBy(column =>
+                        column.DisplayIndex)
+                    .Take(3)
+                    .Select(column => column.Key));
+
+            foreach (string key in
+                     session.ColumnDefinitions
+                         .Where(column =>
+                             !string.Equals(
+                                 column.Key,
+                                 "File",
+                                 StringComparison.Ordinal))
+                         .Select(column => column.Key)
+                         .ToArray())
+                session.SetColumnVisibility(
+                    key,
+                    visible: false);
+            Render();
+            Assert.Equal(
+                1,
+                session.ColumnDefinitions.Count(
+                    column => column.Visible));
+            ColumnRow onlyVisible = Rows()
+                .Single(row =>
+                    string.Equals(
+                        row.Check.Tag as string,
+                        "File",
+                        StringComparison.Ordinal));
+            onlyVisible.Check.IsChecked = false;
+            Render();
+            Assert.True(
+                session.ColumnDefinitions.Single(
+                    column =>
+                        string.Equals(
+                            column.Key,
+                            "File",
+                            StringComparison.Ordinal))
+                    .Visible);
+            Assert.True(
+                Rows()
+                    .Single(row =>
+                        string.Equals(
+                            row.Check.Tag as string,
+                            "File",
+                            StringComparison.Ordinal))
+                    .Check.IsChecked);
+
+            onlyVisible = Rows()
+                .Single(row =>
+                    string.Equals(
+                        row.Check.Tag as string,
+                        "File",
+                        StringComparison.Ordinal));
+            onlyVisible.Check.RaiseEvent(
+                new RoutedEventArgs(
+                    Button.ClickEvent));
+            Render();
+            Assert.True(
+                view.FindControl<Border>(
+                        "BuiltInColumnDetails")!
+                    .IsEffectivelyVisible);
+            Assert.True(
+                view.FindControl<TextBlock>(
+                        "BuiltInColumnEditingHelp")!
+                    .IsEffectivelyVisible);
+            Assert.False(
+                string.IsNullOrWhiteSpace(
+                    view.FindControl<TextBlock>(
+                            "BuiltInColumnEditingHelp")!
+                        .Text));
+
+            ColumnRow[] Rows() =>
+            [
+                .. options.Children
+                    .OfType<Border>()
+                    .Select(card =>
+                    {
+                        Grid row =
+                            Assert.IsType<Grid>(
+                                card.Child);
+                        CheckBox check =
+                            Assert.Single(
+                                row.Children
+                                    .OfType<CheckBox>());
+                        Button[] buttons =
+                        [
+                            .. row.Children
+                                .OfType<StackPanel>()
+                                .Single()
+                                .Children
+                                .OfType<Button>(),
+                        ];
+                        Assert.Equal(2, buttons.Length);
+                        return new ColumnRow(
+                            check,
+                            buttons[0],
+                            buttons[1]);
+                    }),
+            ];
+
+            string[] CurrentOrder() =>
+                session.ColumnDefinitions
+                    .Select(column => column.Key)
+                    .ToArray();
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Every_bulk_operation_descriptor_exposes_exactly_its_contextual_panels()
     {
         using ServiceProvider services = BuildServices();
@@ -898,9 +1157,10 @@ public sealed class WorkbenchInteractionTests
             RawInputModifiers.None);
     }
 
-    private static ServiceProvider BuildServices()
+    private static ServiceProvider BuildServices(
+        TestSettings? settings = null)
     {
-        var settings = new TestSettings();
+        settings ??= new TestSettings();
         settings.SetPreference(
             AppearancePreferences
                 .ShellRailExpandedPreference,
@@ -917,6 +1177,11 @@ public sealed class WorkbenchInteractionTests
                 new FixedTranscodeCapabilities());
         });
     }
+
+    private sealed record ColumnRow(
+        CheckBox Check,
+        Button Up,
+        Button Down);
 
     private static void Render()
     {
