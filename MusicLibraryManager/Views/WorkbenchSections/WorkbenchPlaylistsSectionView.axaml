@@ -27,11 +27,11 @@
           <StackPanel Grid.Column="1"
                       Classes="field">
             <TextBlock Classes="field-label"
-                       Text="{DynamicResource Loc.Workbench.Grid.Header.Formats}" />
+                       Text="{DynamicResource Loc.Workbench.Common.Format}" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding PlaylistEditor.Formats}"
                       SelectedItem="{Binding PlaylistEditor.Format, Mode=TwoWay}"
-                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Grid.Header.Formats}" />
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Common.Format}" />
           </StackPanel>
         </Grid>
         <StackPanel Classes="field">

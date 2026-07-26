@@ -84,10 +84,10 @@ Twelve of those resources have stronger focused-editorial evidence, so status
 precedence leaves 115 manifest entries as `InvariantApproved`:
 
 ```text
-Pending=635
+Pending=224
 InvariantApproved=115
-GlossaryReviewed=182
-EditorialReviewed=2,615
+GlossaryReviewed=216
+EditorialReviewed=2,994
 ```
 
 `FocusedEditorialReviewEvidence.v1.xml` independently records the exact 847

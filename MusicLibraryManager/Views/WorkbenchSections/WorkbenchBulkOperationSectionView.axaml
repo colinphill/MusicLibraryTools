@@ -354,7 +354,7 @@
                              BorderThickness="0"
                              Background="Transparent"
                              Text="{Binding Name, Mode=TwoWay}"
-                             AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.OrderedRecipe}" />
+                             AutomationProperties.Name="{DynamicResource Loc.Workbench.Bulk.StepName}" />
                   </Grid>
                 </Grid>
               </DataTemplate>

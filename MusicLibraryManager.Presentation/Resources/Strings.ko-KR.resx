@@ -5057,36 +5057,36 @@
   <data name="Workbench.Action.Redo" xml:space="preserve"><value>다시 실행</value></data>
   <data name="Workbench.Action.RepeatRecipe" xml:space="preserve"><value>레시피 반복</value></data>
   <data name="Workbench.Action.Revert" xml:space="preserve"><value>보류 중인 변경 내용 모두 버리기</value></data>
-  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>마지막 적용 실행 취소</value></data>
-  <data name="Workbench.Activity.ApplyingReviewedChanges" xml:space="preserve"><value>적용 중 검토됨 메타데이터 변경 사항</value></data>
-  <data name="Workbench.Activity.BuildingPlaylistPreview" xml:space="preserve"><value>빌드 재생 목록 미리 보기</value></data>
-  <data name="Workbench.Activity.BuildingPreview" xml:space="preserve"><value>빌드 메타데이터 미리 보기</value></data>
-  <data name="Workbench.Activity.BuildingReportPreview" xml:space="preserve"><value>빌드 보고서 미리 보기</value></data>
-  <data name="Workbench.Activity.FindingCoverArt" xml:space="preserve"><value>발견 사항 Cover Art Archive 이미지</value></data>
+  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>마지막으로 적용한 변경 사항 실행 취소</value></data>
+  <data name="Workbench.Activity.ApplyingReviewedChanges" xml:space="preserve"><value>검토된 변경 사항 적용 중</value></data>
+  <data name="Workbench.Activity.BuildingPlaylistPreview" xml:space="preserve"><value>재생 목록 미리 보기 만드는 중</value></data>
+  <data name="Workbench.Activity.BuildingPreview" xml:space="preserve"><value>메타데이터 미리 보기 만드는 중</value></data>
+  <data name="Workbench.Activity.BuildingReportPreview" xml:space="preserve"><value>보고서 미리 보기 만드는 중</value></data>
+  <data name="Workbench.Activity.FindingCoverArt" xml:space="preserve"><value>Cover Art Archive 이미지 검색 중</value></data>
   <data name="Workbench.Activity.LoadingDiscogsDetails" xml:space="preserve"><value>Discogs 릴리스 세부 정보 불러오는 중</value></data>
-  <data name="Workbench.Activity.MappingDiscogsTracks" xml:space="preserve"><value>일치 작업대 파일 로 Discogs 트랙</value></data>
-  <data name="Workbench.Activity.MappingReleaseTracks" xml:space="preserve"><value>일치 작업대 파일 로 릴리스 트랙</value></data>
-  <data name="Workbench.Activity.PreparingFingerprint" xml:space="preserve"><value>준비 중 오디오 지문 검색</value></data>
-  <data name="Workbench.Activity.ReloadingInspectorChanges" xml:space="preserve"><value>다시 불러오기 검사기 변경 사항</value></data>
-  <data name="Workbench.Activity.ResolvingMusicBrainz" xml:space="preserve"><value>해결 중 MusicBrainz 릴리스 에디션</value></data>
-  <data name="Workbench.Activity.RestoringLatest" xml:space="preserve"><value>복원 중 해당 최신 작업대 작업</value></data>
+  <data name="Workbench.Activity.MappingDiscogsTracks" xml:space="preserve"><value>워크벤치 파일을 Discogs 트랙과 일치시키는 중</value></data>
+  <data name="Workbench.Activity.MappingReleaseTracks" xml:space="preserve"><value>워크벤치 파일을 릴리스 트랙과 일치시키는 중</value></data>
+  <data name="Workbench.Activity.PreparingFingerprint" xml:space="preserve"><value>오디오 지문 검색 준비 중</value></data>
+  <data name="Workbench.Activity.ReloadingInspectorChanges" xml:space="preserve"><value>검사기 변경 사항 다시 불러오는 중</value></data>
+  <data name="Workbench.Activity.ResolvingMusicBrainz" xml:space="preserve"><value>MusicBrainz 릴리스 에디션 확인 중</value></data>
+  <data name="Workbench.Activity.RestoringLatest" xml:space="preserve"><value>최근 워크벤치 작업 복원 중</value></data>
   <data name="Workbench.Activity.RunningTool" xml:space="preserve"><value>실행 중 {0}</value></data>
-  <data name="Workbench.Activity.ScanningSources" xml:space="preserve"><value>스캔 중 작업대 원본</value></data>
-  <data name="Workbench.Activity.SearchingDiscogs" xml:space="preserve"><value>검색 중 Discogs 릴리스</value></data>
-  <data name="Workbench.Activity.SearchingMusicBrainz" xml:space="preserve"><value>검색 중 MusicBrainz 릴리스</value></data>
-  <data name="Workbench.Activity.WritingPlaylist" xml:space="preserve"><value>쓰기 검토됨 재생 목록</value></data>
-  <data name="Workbench.Activity.WritingReport" xml:space="preserve"><value>쓰기 검토됨 보고서</value></data>
+  <data name="Workbench.Activity.ScanningSources" xml:space="preserve"><value>워크벤치 원본 검색 중</value></data>
+  <data name="Workbench.Activity.SearchingDiscogs" xml:space="preserve"><value>Discogs 릴리스 검색 중</value></data>
+  <data name="Workbench.Activity.SearchingMusicBrainz" xml:space="preserve"><value>MusicBrainz 릴리스 검색 중</value></data>
+  <data name="Workbench.Activity.WritingPlaylist" xml:space="preserve"><value>검토된 재생 목록 쓰는 중</value></data>
+  <data name="Workbench.Activity.WritingReport" xml:space="preserve"><value>검토된 보고서 쓰는 중</value></data>
   <data name="Workbench.AllFields.Action.Copy" xml:space="preserve"><value>필드 복사</value></data>
   <data name="Workbench.AllFields.Action.CopyTooltip" xml:space="preserve"><value>태그 식별 정보와 함께 필드 값 복사</value></data>
   <data name="Workbench.AllFields.Action.NewCustomField" xml:space="preserve"><value>새 사용자 지정 필드</value></data>
-  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>새 알려진 필드</value></data>
-  <data name="Workbench.AllFields.Action.PastePreview" xml:space="preserve"><value>붙여넣기 + 미리 보기</value></data>
+  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>새 표준 메타데이터 필드</value></data>
+  <data name="Workbench.AllFields.Action.PastePreview" xml:space="preserve"><value>붙여넣고 미리 보기</value></data>
   <data name="Workbench.AllFields.Action.PastePreviewTooltip" xml:space="preserve"><value>붙여넣기 + 미리 보기</value></data>
   <data name="Workbench.AllFields.Action.Preview" xml:space="preserve"><value>미리 보기</value></data>
   <data name="Workbench.AllFields.Description" xml:space="preserve"><value>현재 선택 항목의 알려진 메타데이터와 사용자 지정 메타데이터를 검토하고 편집하세요.</value></data>
   <data name="Workbench.AllFields.ExistingField" xml:space="preserve"><value>기존 필드</value></data>
   <data name="Workbench.AllFields.OrderedValues" xml:space="preserve"><value>순서가 있는 값</value></data>
-  <data name="Workbench.AllFields.Title" xml:space="preserve"><value>모두 메타데이터 필드</value></data>
+  <data name="Workbench.AllFields.Title" xml:space="preserve"><value>모든 메타데이터 필드</value></data>
   <data name="Workbench.AllFields.ValueAction" xml:space="preserve"><value>값 작업</value></data>
   <data name="Workbench.Bulk.Action.AddToRecipe" xml:space="preserve"><value>레시피에 추가</value></data>
   <data name="Workbench.Bulk.Action.DeleteRecipe" xml:space="preserve"><value>레시피 삭제</value></data>
@@ -5101,7 +5101,7 @@
   <data name="Workbench.Bulk.Action.StepActionsAutomation" xml:space="preserve"><value>단계 작업</value></data>
   <data name="Workbench.Bulk.AssignmentPlaceholder" xml:space="preserve"><value>할당</value></data>
   <data name="Workbench.Bulk.CaptureGroup" xml:space="preserve"><value>캡처 그룹</value></data>
-  <data name="Workbench.Bulk.Case" xml:space="preserve"><value>대/소문자</value></data>
+  <data name="Workbench.Bulk.Case" xml:space="preserve"><value>텍스트 대/소문자</value></data>
   <data name="Workbench.Bulk.Condition" xml:space="preserve"><value>조건</value></data>
   <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>조건 값</value></data>
   <data name="Workbench.Bulk.Description" xml:space="preserve"><value>재사용 가능한 메타데이터 레시피를 만들고 결과를 미리 본 후 검토한 변경 사항만 적용하세요.</value></data>
@@ -5111,41 +5111,42 @@
   <data name="Workbench.Bulk.ExtractionPatternPlaceholder" xml:space="preserve"><value>추출 패턴</value></data>
   <data name="Workbench.Bulk.Field" xml:space="preserve"><value>필드</value></data>
   <data name="Workbench.Bulk.Find" xml:space="preserve"><value>찾기</value></data>
-  <data name="Workbench.Bulk.FindPlaceholder" xml:space="preserve"><value>찾기</value></data>
+  <data name="Workbench.Bulk.FindPlaceholder" xml:space="preserve"><value>찾을 텍스트</value></data>
   <data name="Workbench.Bulk.Operation" xml:space="preserve"><value>작업</value></data>
-  <data name="Workbench.Bulk.OrderedRecipe" xml:space="preserve"><value>순서 레시피</value></data>
+  <data name="Workbench.Bulk.OrderedRecipe" xml:space="preserve"><value>초안 레시피</value></data>
   <data name="Workbench.Bulk.ParentLevel" xml:space="preserve"><value>상위 수준</value></data>
   <data name="Workbench.Bulk.PathComponent" xml:space="preserve"><value>경로 구성 요소</value></data>
-  <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>보류 중 작업</value></data>
-  <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>보류 중 작업</value></data>
-  <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>개인 레시피</value></data>
+  <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>미리 보기 결과</value></data>
+  <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>미리 보기 결과</value></data>
+  <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>저장된 레시피</value></data>
   <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>레시피 이름</value></data>
+  <data name="Workbench.Bulk.StepName" xml:space="preserve"><value>단계 이름</value></data>
   <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>바꿀 내용</value></data>
-  <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>하나의 경량 초안 미리 보기 업데이트 으로 사용자 편집 해당 현재 작업.</value></data>
-  <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>대표 초안</value></data>
+  <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>현재 작업을 편집하면 간단한 초안 미리 보기가 업데이트됩니다.</value></data>
+  <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>대표 미리 보기</value></data>
   <data name="Workbench.Bulk.ReviewedChanges" xml:space="preserve"><value>검토한 변경 사항</value></data>
   <data name="Workbench.Bulk.Safety" xml:space="preserve"><value>미리 보기에서는 파일을 변경하지 않습니다. 적용할 때 오래된 파일 검사, 복구 저널 및 실행 취소 기능을 사용합니다.</value></data>
   <data name="Workbench.Bulk.SavedRecipePlaceholder" xml:space="preserve"><value>저장된 레시피</value></data>
   <data name="Workbench.Bulk.SecondSourceField" xml:space="preserve"><value>두 번째 원본 필드</value></data>
   <data name="Workbench.Bulk.Separator" xml:space="preserve"><value>구분 기호</value></data>
   <data name="Workbench.Bulk.Sequence" xml:space="preserve"><value>순번</value></data>
-  <data name="Workbench.Bulk.SequencePaddingAutomation" xml:space="preserve"><value>순서 채움</value></data>
-  <data name="Workbench.Bulk.SequenceStartAutomation" xml:space="preserve"><value>순서 시작</value></data>
-  <data name="Workbench.Bulk.UseRegularExpression" xml:space="preserve"><value>사용 정규 식</value></data>
+  <data name="Workbench.Bulk.SequencePaddingAutomation" xml:space="preserve"><value>시퀀스 최소 자릿수</value></data>
+  <data name="Workbench.Bulk.SequenceStartAutomation" xml:space="preserve"><value>시퀀스 시작 번호</value></data>
+  <data name="Workbench.Bulk.UseRegularExpression" xml:space="preserve"><value>정규식 사용</value></data>
   <data name="Workbench.Bulk.Value" xml:space="preserve"><value>값</value></data>
   <data name="Workbench.Bulk.ValueOrder" xml:space="preserve"><value>값 순서</value></data>
-  <data name="Workbench.Choice.ExternalToolInvocationMode.OnceForSelection" xml:space="preserve"><value>한 번 용 선택</value></data>
-  <data name="Workbench.Choice.ExternalToolInvocationMode.OncePerFile" xml:space="preserve"><value>한 번 당 파일</value></data>
+  <data name="Workbench.Choice.ExternalToolInvocationMode.OnceForSelection" xml:space="preserve"><value>전체 선택 항목에 한 번</value></data>
+  <data name="Workbench.Choice.ExternalToolInvocationMode.OncePerFile" xml:space="preserve"><value>파일마다 한 번</value></data>
   <data name="Workbench.Choice.FieldEditMode.Append" xml:space="preserve"><value>추가</value></data>
   <data name="Workbench.Choice.FieldEditMode.RemoveField" xml:space="preserve"><value>필드 제거</value></data>
   <data name="Workbench.Choice.FieldEditMode.RemoveValues" xml:space="preserve"><value>값 제거</value></data>
   <data name="Workbench.Choice.FieldEditMode.Replace" xml:space="preserve"><value>바꾸기</value></data>
   <data name="Workbench.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>자동</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>무시</value></data>
-  <data name="Workbench.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>유지 비어 있음 값</value></data>
+  <data name="Workbench.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>명시적 빈 값 유지</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>필드 제거</value></data>
-  <data name="Workbench.Choice.MetadataGridFieldKind.Custom" xml:space="preserve"><value>사용자 지정</value></data>
-  <data name="Workbench.Choice.MetadataGridFieldKind.Known" xml:space="preserve"><value>알려짐</value></data>
+  <data name="Workbench.Choice.MetadataGridFieldKind.Custom" xml:space="preserve"><value>사용자 지정 메타데이터 필드</value></data>
+  <data name="Workbench.Choice.MetadataGridFieldKind.Known" xml:space="preserve"><value>표준 메타데이터 필드</value></data>
   <data name="Workbench.Choice.MetadataGridSortType.Date" xml:space="preserve"><value>날짜</value></data>
   <data name="Workbench.Choice.MetadataGridSortType.Numeric" xml:space="preserve"><value>숫자</value></data>
   <data name="Workbench.Choice.MetadataGridSortType.Text" xml:space="preserve"><value>텍스트</value></data>
@@ -5153,19 +5154,19 @@
   <data name="Workbench.Choice.OnlineProvider.MusicBrainz" xml:space="preserve"><value>MusicBrainz</value></data>
   <data name="Workbench.Choice.OnlineScope.AllFiles" xml:space="preserve"><value>모든 파일</value></data>
   <data name="Workbench.Choice.OnlineScope.SelectedFile" xml:space="preserve"><value>선택한 파일</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.Platform" xml:space="preserve"><value>플랫폼</value></data>
-  <data name="Workbench.Choice.PlaylistPathStyle.Absolute" xml:space="preserve"><value>절대</value></data>
-  <data name="Workbench.Choice.PlaylistPathStyle.AsProvided" xml:space="preserve"><value>으로 제공됨</value></data>
-  <data name="Workbench.Choice.PlaylistPathStyle.Relative" xml:space="preserve"><value>상대</value></data>
+  <data name="Workbench.Choice.PlaylistLineEnding.Platform" xml:space="preserve"><value>운영 체제 기본값</value></data>
+  <data name="Workbench.Choice.PlaylistPathStyle.Absolute" xml:space="preserve"><value>절대 경로</value></data>
+  <data name="Workbench.Choice.PlaylistPathStyle.AsProvided" xml:space="preserve"><value>제공된 소스 경로 유지</value></data>
+  <data name="Workbench.Choice.PlaylistPathStyle.Relative" xml:space="preserve"><value>상대 경로</value></data>
   <data name="Workbench.Choice.ReportFormat.Text" xml:space="preserve"><value>텍스트</value></data>
-  <data name="Workbench.Choice.ReportSortType.DateTime" xml:space="preserve"><value>날짜 시간</value></data>
-  <data name="Workbench.Choice.ReportSortType.Natural" xml:space="preserve"><value>자연</value></data>
+  <data name="Workbench.Choice.ReportSortType.DateTime" xml:space="preserve"><value>날짜 및 시간</value></data>
+  <data name="Workbench.Choice.ReportSortType.Natural" xml:space="preserve"><value>자연스러운 순서</value></data>
   <data name="Workbench.Choice.ReportSortType.Numeric" xml:space="preserve"><value>숫자</value></data>
   <data name="Workbench.Choice.ReportSortType.Text" xml:space="preserve"><value>텍스트</value></data>
   <data name="Workbench.Choice.ShortcutTargetKind.Command" xml:space="preserve"><value>명령</value></data>
   <data name="Workbench.Choice.ShortcutTargetKind.Recipe" xml:space="preserve"><value>레시피</value></data>
   <data name="Workbench.Columns.Action.Save" xml:space="preserve"><value>열 저장</value></data>
-  <data name="Workbench.Columns.AllowInlineEditing" xml:space="preserve"><value>허용 인라인 편집 중</value></data>
+  <data name="Workbench.Columns.AllowInlineEditing" xml:space="preserve"><value>인라인 편집 허용</value></data>
   <data name="Workbench.Columns.Close" xml:space="preserve"><value>닫기</value></data>
   <data name="Workbench.Columns.Description" xml:space="preserve"><value>저장된 메타데이터를 변경하지 않고 표시할 열을 선택하거나 메타데이터 열을 만들 수 있습니다.</value></data>
   <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>인라인 편집은 지원되는 알려진 필드에서만 사용할 수 있습니다.</value></data>
@@ -5174,35 +5175,36 @@
   <data name="Workbench.Columns.Metadata" xml:space="preserve"><value>메타데이터</value></data>
   <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>알려진 필드를 선택하거나 사용자 지정 필드 이름을 입력하세요.</value></data>
   <data name="Workbench.Columns.Status.EnterLabel" xml:space="preserve"><value>열 레이블을 입력하세요.</value></data>
-  <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>새로 만들기 저장 안 됨 메타데이터 열.</value></data>
-  <data name="Workbench.Columns.Status.Removed" xml:space="preserve"><value>제거됨 메타데이터 열 '{0}'.</value></data>
-  <data name="Workbench.Columns.Status.Saved" xml:space="preserve"><value>저장됨 메타데이터 열 '{0}'.</value></data>
+  <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>저장되지 않은 새 메타데이터 열입니다.</value></data>
+  <data name="Workbench.Columns.Status.Removed" xml:space="preserve"><value>메타데이터 열 ‘{0}’을(를) 제거했습니다.</value></data>
+  <data name="Workbench.Columns.Status.Saved" xml:space="preserve"><value>메타데이터 열 ‘{0}’을(를) 저장했습니다.</value></data>
   <data name="Workbench.Columns.Title" xml:space="preserve"><value>열 세부 정보</value></data>
   <data name="Workbench.Columns.Visible" xml:space="preserve"><value>표시</value></data>
   <data name="Workbench.Common.After" xml:space="preserve"><value>변경 후</value></data>
   <data name="Workbench.Common.Before" xml:space="preserve"><value>변경 전</value></data>
-  <data name="Workbench.Common.CustomFieldPlaceholder" xml:space="preserve"><value>사용자 지정 필드</value></data>
+  <data name="Workbench.Common.CustomFieldPlaceholder" xml:space="preserve"><value>사용자 지정 필드 이름</value></data>
+  <data name="Workbench.Common.Format" xml:space="preserve"><value>형식</value></data>
   <data name="Workbench.Common.OutputPathPlaceholder" xml:space="preserve"><value>출력 경로</value></data>
-  <data name="Workbench.Dialog.Clear.Message" xml:space="preserve"><value>이 제거 해당 현재 세션 및 해당 커밋되지 않음 편집. 파일 에서 디스크 입니다 아님 변경됨.</value></data>
-  <data name="Workbench.Dialog.Clear.Title" xml:space="preserve"><value>지우기 작업대?</value></data>
-  <data name="Workbench.Dialog.Leave.Confirm" xml:space="preserve"><value>유지</value></data>
-  <data name="Workbench.Dialog.Leave.Message" xml:space="preserve"><value>해당 현재 미리 보기 및 인라인 편집 유지 에서 이 세션, 하지만 있음 아님 됨 적용됨 로 디스크.</value></data>
-  <data name="Workbench.Dialog.Leave.Title" xml:space="preserve"><value>유지 해당 작업대?</value></data>
-  <data name="Workbench.Dialog.Restore.Message" xml:space="preserve"><value>현재 파일 예정 됨 바뀜 기준 해당 유지됨 원본. 하나의 충돌 백업 입니다 만들어짐 때 필수.</value></data>
-  <data name="Workbench.Dialog.Restore.Title" xml:space="preserve"><value>복원 해당 마지막 작업대 작업?</value></data>
-  <data name="Workbench.Dialog.RunTool.Message" xml:space="preserve"><value>실행 '{0}' {1:N0} 회? 외부 도구 가능 변경 파일 및 입니다 외부 MusicLibraryManager 복구.</value></data>
-  <data name="Workbench.Dialog.RunTool.Title" xml:space="preserve"><value>실행 외부 도구?</value></data>
-  <data name="Workbench.Drawer.Automation" xml:space="preserve"><value>작업대 쪽 패널</value></data>
-  <data name="Workbench.Drawer.CloseAutomation" xml:space="preserve"><value>닫기 작업대 쪽 패널</value></data>
-  <data name="Workbench.Error.ChooseDiscogsRelease" xml:space="preserve"><value>선택 하나의 Discogs 릴리스.</value></data>
-  <data name="Workbench.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>선택 하나의 MusicBrainz 릴리스.</value></data>
-  <data name="Workbench.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs 입니다 사용 불가.</value></data>
-  <data name="Workbench.Error.NoImportRowsMatched" xml:space="preserve"><value>아니요 가져오기 행 일치함 이 작업대 세션.</value></data>
-  <data name="Workbench.FileOperations.PendingMetadataPreflight" xml:space="preserve"><value>적용 또는 버리기 해당 현재 메타데이터 및 아트워크 편집 이전 이동 파일.</value></data>
+  <data name="Workbench.Dialog.Clear.Message" xml:space="preserve"><value>현재 세션과 적용되지 않은 편집 내용이 제거됩니다. 디스크의 파일은 변경되지 않습니다.</value></data>
+  <data name="Workbench.Dialog.Clear.Title" xml:space="preserve"><value>워크벤치를 비우시겠습니까?</value></data>
+  <data name="Workbench.Dialog.Leave.Confirm" xml:space="preserve"><value>나가기</value></data>
+  <data name="Workbench.Dialog.Leave.Message" xml:space="preserve"><value>현재 미리 보기와 인라인 편집 내용은 이 세션에 남아 있지만 디스크에는 아직 적용되지 않았습니다.</value></data>
+  <data name="Workbench.Dialog.Leave.Title" xml:space="preserve"><value>워크벤치를 나가시겠습니까?</value></data>
+  <data name="Workbench.Dialog.Restore.Message" xml:space="preserve"><value>현재 파일이 보관된 원본으로 교체됩니다. 필요한 경우 충돌 백업이 생성됩니다.</value></data>
+  <data name="Workbench.Dialog.Restore.Title" xml:space="preserve"><value>마지막 워크벤치 작업을 복원하시겠습니까?</value></data>
+  <data name="Workbench.Dialog.RunTool.Message" xml:space="preserve"><value>‘{0}’을(를) 실행하시겠습니까? 호출 횟수: {1:N0}. 외부 도구는 파일을 변경할 수 있으며 MusicLibraryManager 복구 대상이 아닙니다.</value></data>
+  <data name="Workbench.Dialog.RunTool.Title" xml:space="preserve"><value>외부 도구를 실행하시겠습니까?</value></data>
+  <data name="Workbench.Drawer.Automation" xml:space="preserve"><value>워크벤치 측면 패널</value></data>
+  <data name="Workbench.Drawer.CloseAutomation" xml:space="preserve"><value>워크벤치 측면 패널 닫기</value></data>
+  <data name="Workbench.Error.ChooseDiscogsRelease" xml:space="preserve"><value>Discogs 릴리스를 선택하세요.</value></data>
+  <data name="Workbench.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>MusicBrainz 릴리스를 선택하세요.</value></data>
+  <data name="Workbench.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs를 사용할 수 없습니다.</value></data>
+  <data name="Workbench.Error.NoImportRowsMatched" xml:space="preserve"><value>이 워크벤치 세션과 일치하는 가져오기 행이 없습니다.</value></data>
+  <data name="Workbench.FileOperations.PendingMetadataPreflight" xml:space="preserve"><value>파일을 이동하기 전에 현재 메타데이터 및 아트워크 편집 내용을 적용하거나 버리세요.</value></data>
   <data name="Workbench.Grid.Header.After" xml:space="preserve"><value>변경 후</value></data>
   <data name="Workbench.Grid.Header.AppliesTo" xml:space="preserve"><value>적용 대상</value></data>
   <data name="Workbench.Grid.Header.Approved" xml:space="preserve"><value>승인됨</value></data>
-  <data name="Workbench.Grid.Header.ArchiveId" xml:space="preserve"><value>보관 ID</value></data>
+  <data name="Workbench.Grid.Header.ArchiveId" xml:space="preserve"><value>Cover Art Archive ID</value></data>
   <data name="Workbench.Grid.Header.Arguments" xml:space="preserve"><value>인수</value></data>
   <data name="Workbench.Grid.Header.ArtistCredit" xml:space="preserve"><value>아티스트 크레딧</value></data>
   <data name="Workbench.Grid.Header.Back" xml:space="preserve"><value>뒷면</value></data>
@@ -5228,8 +5230,8 @@
   <data name="Workbench.Grid.Header.Kind" xml:space="preserve"><value>종류</value></data>
   <data name="Workbench.Grid.Header.Label" xml:space="preserve"><value>레이블</value></data>
   <data name="Workbench.Grid.Header.Labels" xml:space="preserve"><value>레이블</value></data>
-  <data name="Workbench.Grid.Header.MatchedPosition" xml:space="preserve"><value>일치함 위치</value></data>
-  <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>MusicBrainz 녹음 IDs</value></data>
+  <data name="Workbench.Grid.Header.MatchedPosition" xml:space="preserve"><value>일치한 위치</value></data>
+  <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>MusicBrainz 녹음 ID</value></data>
   <data name="Workbench.Grid.Header.MusicBrainzReleaseId" xml:space="preserve"><value>MusicBrainz 릴리스 ID</value></data>
   <data name="Workbench.Grid.Header.Operation" xml:space="preserve"><value>작업</value></data>
   <data name="Workbench.Grid.Header.Position" xml:space="preserve"><value>위치</value></data>
@@ -5246,39 +5248,39 @@
   <data name="Workbench.Grid.Header.TargetDetails" xml:space="preserve"><value>대상 세부 정보</value></data>
   <data name="Workbench.Grid.Header.Thumbnail" xml:space="preserve"><value>미리 보기 이미지</value></data>
   <data name="Workbench.Grid.Header.Tracks" xml:space="preserve"><value>트랙</value></data>
-  <data name="Workbench.Grid.Header.Types" xml:space="preserve"><value>유형</value></data>
-  <data name="Workbench.Grid.Header.Use" xml:space="preserve"><value>사용</value></data>
+  <data name="Workbench.Grid.Header.Types" xml:space="preserve"><value>아트워크 역할</value></data>
+  <data name="Workbench.Grid.Header.Use" xml:space="preserve"><value>포함</value></data>
   <data name="Workbench.Grid.Header.Values" xml:space="preserve"><value>값</value></data>
   <data name="Workbench.Grid.Header.WorkingDirectory" xml:space="preserve"><value>작업 디렉터리</value></data>
   <data name="Workbench.Grid.Header.Year" xml:space="preserve"><value>연도</value></data>
-  <data name="Workbench.Inspector.AddApeV2Automation" xml:space="preserve"><value>추가 APEv2 태그 레이어</value></data>
-  <data name="Workbench.Inspector.AddId3v1Automation" xml:space="preserve"><value>추가 ID3v1 태그 레이어</value></data>
-  <data name="Workbench.Inspector.AddId3v2Automation" xml:space="preserve"><value>추가 ID3v2 태그 레이어</value></data>
-  <data name="Workbench.Inspector.CopyPrimaryMetadata" xml:space="preserve"><value>복사 기본 메타데이터</value></data>
-  <data name="Workbench.Inspector.CopyV1ToV2" xml:space="preserve"><value>복사 V1 로 V2</value></data>
-  <data name="Workbench.Inspector.CopyV1ToV2Automation" xml:space="preserve"><value>복사 V1 로 V2</value></data>
-  <data name="Workbench.Inspector.CopyV2ToV1" xml:space="preserve"><value>복사 V2 로 V1</value></data>
-  <data name="Workbench.Inspector.CopyV2ToV1Automation" xml:space="preserve"><value>복사 V2 로 V1</value></data>
+  <data name="Workbench.Inspector.AddApeV2Automation" xml:space="preserve"><value>APEv2 태그 레이어 추가</value></data>
+  <data name="Workbench.Inspector.AddId3v1Automation" xml:space="preserve"><value>ID3v1 태그 레이어 추가</value></data>
+  <data name="Workbench.Inspector.AddId3v2Automation" xml:space="preserve"><value>ID3v2 태그 레이어 추가</value></data>
+  <data name="Workbench.Inspector.CopyPrimaryMetadata" xml:space="preserve"><value>기본 메타데이터 복사</value></data>
+  <data name="Workbench.Inspector.CopyV1ToV2" xml:space="preserve"><value>ID3v1을 ID3v2로 복사</value></data>
+  <data name="Workbench.Inspector.CopyV1ToV2Automation" xml:space="preserve"><value>ID3v1을 ID3v2로 복사</value></data>
+  <data name="Workbench.Inspector.CopyV2ToV1" xml:space="preserve"><value>ID3v2를 ID3v1로 복사</value></data>
+  <data name="Workbench.Inspector.CopyV2ToV1Automation" xml:space="preserve"><value>ID3v2를 ID3v1로 복사</value></data>
   <data name="Workbench.Inspector.CurrentLayersFormat" xml:space="preserve"><value>현재 태그 레이어: {0}</value></data>
   <data name="Workbench.Inspector.CurrentValueFormat" xml:space="preserve"><value>현재 ID3 버전: {0}</value></data>
-  <data name="Workbench.Inspector.DropUnsupportedFrames" xml:space="preserve"><value>놓기 지원되지 않음 프레임</value></data>
+  <data name="Workbench.Inspector.DropUnsupportedFrames" xml:space="preserve"><value>지원되지 않는 프레임 버리기</value></data>
   <data name="Workbench.Inspector.Id3Conversion" xml:space="preserve"><value>ID3 변환</value></data>
   <data name="Workbench.Inspector.Id3EncodingAutomation" xml:space="preserve"><value>ID3 인코딩</value></data>
-  <data name="Workbench.Inspector.JoinMultiValueText" xml:space="preserve"><value>결합 다중 값 텍스트</value></data>
-  <data name="Workbench.Inspector.PreviewConversion" xml:space="preserve"><value>미리 보기 변환</value></data>
-  <data name="Workbench.Inspector.PreviewConversionAutomation" xml:space="preserve"><value>미리 보기 변환</value></data>
-  <data name="Workbench.Inspector.PreviewEncoding" xml:space="preserve"><value>미리 보기 인코딩</value></data>
-  <data name="Workbench.Inspector.PreviewEncodingAutomation" xml:space="preserve"><value>미리 보기 인코딩</value></data>
-  <data name="Workbench.Inspector.RemoveApeV2Automation" xml:space="preserve"><value>제거 APEv2 태그 레이어</value></data>
-  <data name="Workbench.Inspector.RemoveId3v1Automation" xml:space="preserve"><value>제거 ID3v1 태그 레이어</value></data>
-  <data name="Workbench.Inspector.RemoveId3v2Automation" xml:space="preserve"><value>제거 ID3v2 태그 레이어</value></data>
+  <data name="Workbench.Inspector.JoinMultiValueText" xml:space="preserve"><value>다중 값 텍스트 결합</value></data>
+  <data name="Workbench.Inspector.PreviewConversion" xml:space="preserve"><value>변환 미리 보기</value></data>
+  <data name="Workbench.Inspector.PreviewConversionAutomation" xml:space="preserve"><value>변환 미리 보기</value></data>
+  <data name="Workbench.Inspector.PreviewEncoding" xml:space="preserve"><value>인코딩 미리 보기</value></data>
+  <data name="Workbench.Inspector.PreviewEncodingAutomation" xml:space="preserve"><value>인코딩 미리 보기</value></data>
+  <data name="Workbench.Inspector.RemoveApeV2Automation" xml:space="preserve"><value>APEv2 태그 레이어 제거</value></data>
+  <data name="Workbench.Inspector.RemoveId3v1Automation" xml:space="preserve"><value>ID3v1 태그 레이어 제거</value></data>
+  <data name="Workbench.Inspector.RemoveId3v2Automation" xml:space="preserve"><value>ID3v2 태그 레이어 제거</value></data>
   <data name="Workbench.Inspector.TagLayers" xml:space="preserve"><value>태그 레이어</value></data>
   <data name="Workbench.Inspector.TargetId3VersionAutomation" xml:space="preserve"><value>대상 ID3 버전</value></data>
   <data name="Workbench.Metadata.Coverage" xml:space="preserve"><value>{0:N0}/{1:N0} 파일</value></data>
   <data name="Workbench.Metadata.Kind.Custom" xml:space="preserve"><value>사용자 지정</value></data>
   <data name="Workbench.Metadata.Kind.Known" xml:space="preserve"><value>알려짐</value></data>
-  <data name="Workbench.Metadata.Mixed.One" xml:space="preserve"><value>혼합 전체 {0:N0} 선택됨 파일</value></data>
-  <data name="Workbench.Metadata.Mixed.Other" xml:space="preserve"><value>혼합 전체 {0:N0} 선택한 파일</value></data>
+  <data name="Workbench.Metadata.Mixed.One" xml:space="preserve"><value>선택한 {0:N0}개 파일에서 값이 서로 다름</value></data>
+  <data name="Workbench.Metadata.Mixed.Other" xml:space="preserve"><value>선택한 {0:N0}개 파일에서 값이 서로 다름</value></data>
   <data name="Workbench.Navigation.Automation" xml:space="preserve"><value>워크벤치 탐색</value></data>
   <data name="Workbench.Navigation.Group.Automate" xml:space="preserve"><value>자동화</value></data>
   <data name="Workbench.Navigation.Group.Edit" xml:space="preserve"><value>편집</value></data>
@@ -5317,7 +5319,7 @@
   <data name="Workbench.Online.Discover" xml:space="preserve"><value>녹음 찾기</value></data>
   <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>선택한 파일의 지문을 생성하고 AcoustID 및 MusicBrainz에서 녹음 후보를 찾습니다. 데이터는 전송되지 않습니다.</value></data>
   <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>오디오 식별</value></data>
-  <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>포함됨 아트워크 설정</value></data>
+  <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>포함된 아트워크 세트</value></data>
   <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>아트워크 내보내기</value></data>
   <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>아트워크 내보내기</value></data>
   <data name="Workbench.Online.Field.AlbumArtistDate" xml:space="preserve"><value>앨범, 아티스트 및 날짜</value></data>
@@ -5328,21 +5330,21 @@
   <data name="Workbench.Online.Field.ReleaseDetails" xml:space="preserve"><value>릴리스 세부 정보</value></data>
   <data name="Workbench.Online.Field.Titles" xml:space="preserve"><value>제목</value></data>
   <data name="Workbench.Online.Field.TrackArtists" xml:space="preserve"><value>트랙 아티스트</value></data>
-  <data name="Workbench.Online.Field.TrackDiscNumbers" xml:space="preserve"><value>트랙 디스크 번호</value></data>
-  <data name="Workbench.Online.FindReleaseArtwork" xml:space="preserve"><value>찾기 릴리스 아트워크</value></data>
-  <data name="Workbench.Online.FindReleaseEditions" xml:space="preserve"><value>찾기 릴리스 에디션</value></data>
+  <data name="Workbench.Online.Field.TrackDiscNumbers" xml:space="preserve"><value>트랙 및 디스크 번호</value></data>
+  <data name="Workbench.Online.FindReleaseArtwork" xml:space="preserve"><value>릴리스 아트워크 찾기</value></data>
+  <data name="Workbench.Online.FindReleaseEditions" xml:space="preserve"><value>릴리스 에디션 찾기</value></data>
   <data name="Workbench.Online.LoadDetails" xml:space="preserve"><value>세부 정보 불러오기</value></data>
   <data name="Workbench.Online.MappingReviewDescription" xml:space="preserve"><value>선택한 필드를 일반 미리 보기에 추가하기 전에 제안된 파일-트랙 매핑을 모두 검토하세요.</value></data>
-  <data name="Workbench.Online.MaximumDimension" xml:space="preserve"><value>최대 너비 또는 높이 용 미리 보기/적용 (0 유지 크기)</value></data>
-  <data name="Workbench.Online.MoveArtworkDown" xml:space="preserve"><value>이동 아트워크 아래</value></data>
-  <data name="Workbench.Online.MoveArtworkDownAutomation" xml:space="preserve"><value>이동 아트워크 아래</value></data>
-  <data name="Workbench.Online.MoveArtworkUp" xml:space="preserve"><value>이동 아트워크 설정</value></data>
-  <data name="Workbench.Online.MoveArtworkUpAutomation" xml:space="preserve"><value>이동 아트워크 설정</value></data>
+  <data name="Workbench.Online.MaximumDimension" xml:space="preserve"><value>미리 보기/적용의 최대 너비 또는 높이(0이면 크기 유지)</value></data>
+  <data name="Workbench.Online.MoveArtworkDown" xml:space="preserve"><value>아트워크 아래로 이동</value></data>
+  <data name="Workbench.Online.MoveArtworkDownAutomation" xml:space="preserve"><value>아트워크 아래로 이동</value></data>
+  <data name="Workbench.Online.MoveArtworkUp" xml:space="preserve"><value>아트워크 위로 이동</value></data>
+  <data name="Workbench.Online.MoveArtworkUpAutomation" xml:space="preserve"><value>아트워크 위로 이동</value></data>
   <data name="Workbench.Online.MusicBrainzReleaseIdPlaceholder" xml:space="preserve"><value>MusicBrainz 릴리스 ID</value></data>
-  <data name="Workbench.Online.PreviewArtworkSet" xml:space="preserve"><value>미리 보기 아트워크 설정</value></data>
+  <data name="Workbench.Online.PreviewArtworkSet" xml:space="preserve"><value>아트워크 세트 미리 보기</value></data>
   <data name="Workbench.Online.PreviewCover" xml:space="preserve"><value>아트워크 미리 보기</value></data>
-  <data name="Workbench.Online.PreviewMappedMetadata" xml:space="preserve"><value>미리 보기 매핑됨 메타데이터</value></data>
-  <data name="Workbench.Online.PreviewReleaseCover" xml:space="preserve"><value>미리 보기 릴리스 표지</value></data>
+  <data name="Workbench.Online.PreviewMappedMetadata" xml:space="preserve"><value>매핑된 메타데이터 미리 보기</value></data>
+  <data name="Workbench.Online.PreviewReleaseCover" xml:space="preserve"><value>릴리스 표지 미리 보기</value></data>
   <data name="Workbench.Online.PreviewSelectedIds" xml:space="preserve"><value>선택한 IDs 미리 보기</value></data>
   <data name="Workbench.Online.ProviderAutomation" xml:space="preserve"><value>공급자</value></data>
   <data name="Workbench.Online.ReleaseArtworkCandidates" xml:space="preserve"><value>릴리스 아트워크 후보</value></data>
@@ -5364,30 +5366,30 @@
   <data name="Workbench.Online.Thumbnail.Cached" xml:space="preserve"><value>캐시됨</value></data>
   <data name="Workbench.Online.TrackMapping" xml:space="preserve"><value>트랙 매핑</value></data>
   <data name="Workbench.Online.TrackMappingDescription" xml:space="preserve"><value>릴리스를 선택하고 제안된 파일-트랙 매핑을 모두 검토한 다음 미리 볼 필드 그룹을 선택하세요.</value></data>
-  <data name="Workbench.Operation.ConvertId3Version" xml:space="preserve"><value>변환 로 ID3v2.{0}</value></data>
-  <data name="Workbench.Operation.ConvertTagLayer" xml:space="preserve"><value>변환 {0} 로 {1}</value></data>
+  <data name="Workbench.Operation.ConvertId3Version" xml:space="preserve"><value>ID3v2.{0}(으)로 변환</value></data>
+  <data name="Workbench.Operation.ConvertTagLayer" xml:space="preserve"><value>{0}을(를) {1}(으)로 변환</value></data>
   <data name="Workbench.Operation.CoverArtArchive" xml:space="preserve"><value>Cover Art Archive: {0}</value></data>
   <data name="Workbench.Operation.DiscogsArtwork" xml:space="preserve"><value>Discogs 아트워크: {0}</value></data>
   <data name="Workbench.Operation.DiscogsMetadata" xml:space="preserve"><value>Discogs: {0}</value></data>
-  <data name="Workbench.Operation.DraftRepresentativePreview" xml:space="preserve"><value>초안 대표 미리 보기</value></data>
-  <data name="Workbench.Operation.EditEmbeddedArtwork" xml:space="preserve"><value>편집 포함됨 아트워크 용 {0:N0} 파일</value></data>
-  <data name="Workbench.Operation.EditFieldValues" xml:space="preserve"><value>편집 {0} 값 용 {1:N0} 파일</value></data>
-  <data name="Workbench.Operation.FieldEdits" xml:space="preserve"><value>작업대 필드 편집</value></data>
-  <data name="Workbench.Operation.GridAndInspectorEdits" xml:space="preserve"><value>작업대 그리드 및 검사기 편집</value></data>
-  <data name="Workbench.Operation.ImportMetadata" xml:space="preserve"><value>메타데이터 가져오기 에서 {0}</value></data>
-  <data name="Workbench.Operation.InspectorArtwork" xml:space="preserve"><value>작업대 검사기 아트워크</value></data>
+  <data name="Workbench.Operation.DraftRepresentativePreview" xml:space="preserve"><value>대표 미리 보기 초안</value></data>
+  <data name="Workbench.Operation.EditEmbeddedArtwork" xml:space="preserve"><value>{0:N0}개 파일의 포함된 아트워크 편집</value></data>
+  <data name="Workbench.Operation.EditFieldValues" xml:space="preserve"><value>{1:N0}개 파일의 {0} 값 편집</value></data>
+  <data name="Workbench.Operation.FieldEdits" xml:space="preserve"><value>워크벤치 필드 편집</value></data>
+  <data name="Workbench.Operation.GridAndInspectorEdits" xml:space="preserve"><value>워크벤치 그리드 및 검사기 편집</value></data>
+  <data name="Workbench.Operation.ImportMetadata" xml:space="preserve"><value>{0}에서 메타데이터 가져오기</value></data>
+  <data name="Workbench.Operation.InspectorArtwork" xml:space="preserve"><value>워크벤치 검사기 아트워크</value></data>
   <data name="Workbench.Operation.MusicBrainzMetadata" xml:space="preserve"><value>MusicBrainz: {0}</value></data>
-  <data name="Workbench.Operation.PasteFieldValues" xml:space="preserve"><value>붙여넣기 {0} 값 용 {1:N0} 파일</value></data>
-  <data name="Workbench.Operation.PendingChanges" xml:space="preserve"><value>작업대 보류 중인 변경 사항</value></data>
-  <data name="Workbench.Operation.ReencodeId3" xml:space="preserve"><value>다시 인코딩 ID3 텍스트 으로 {0}</value></data>
-  <data name="Workbench.Operation.RemoveAllArtwork" xml:space="preserve"><value>제거 모두 아트워크</value></data>
-  <data name="Workbench.Operation.RemoveFrontCover" xml:space="preserve"><value>제거 앞면 표지</value></data>
-  <data name="Workbench.Operation.ReplaceFrontCover" xml:space="preserve"><value>바꾸기 앞면 표지</value></data>
-  <data name="Workbench.Operation.TagLayer" xml:space="preserve"><value>{0} {1} 태그 레이어</value></data>
+  <data name="Workbench.Operation.PasteFieldValues" xml:space="preserve"><value>{1:N0}개 파일에 {0} 값 붙여넣기</value></data>
+  <data name="Workbench.Operation.PendingChanges" xml:space="preserve"><value>워크벤치 보류 중인 변경 사항</value></data>
+  <data name="Workbench.Operation.ReencodeId3" xml:space="preserve"><value>ID3 텍스트를 {0}(으)로 다시 인코딩</value></data>
+  <data name="Workbench.Operation.RemoveAllArtwork" xml:space="preserve"><value>모든 아트워크 제거</value></data>
+  <data name="Workbench.Operation.RemoveFrontCover" xml:space="preserve"><value>앞표지 제거</value></data>
+  <data name="Workbench.Operation.ReplaceFrontCover" xml:space="preserve"><value>앞표지 바꾸기</value></data>
+  <data name="Workbench.Operation.TagLayer" xml:space="preserve"><value>{1} 태그 레이어 {0}</value></data>
   <data name="Workbench.PendingChanges.ApplyTooltip" xml:space="preserve"><value>적용</value></data>
   <data name="Workbench.PendingChanges.Close" xml:space="preserve"><value>닫기</value></data>
-  <data name="Workbench.PendingChanges.Count.One" xml:space="preserve"><value>{0:N0} 보류 중 편집</value></data>
-  <data name="Workbench.PendingChanges.Count.Other" xml:space="preserve"><value>{0:N0} 보류 중 편집</value></data>
+  <data name="Workbench.PendingChanges.Count.One" xml:space="preserve"><value>보류 중인 편집 {0:N0}개</value></data>
+  <data name="Workbench.PendingChanges.Count.Other" xml:space="preserve"><value>보류 중인 편집 {0:N0}개</value></data>
   <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>쓰기 전에 보류 중인 편집 내용과 파일 작업을 모두 검토하세요.</value></data>
   <data name="Workbench.PendingChanges.Empty" xml:space="preserve"><value>보류 중인 변경 내용이 없습니다. 그리드, 검사기, 파일 작업 및 트랜스코딩의 편집 내용이 여기에 표시됩니다.</value></data>
   <data name="Workbench.PendingChanges.EmptyDescription" xml:space="preserve"><value>그리드, 검사기, 파일 작업 및 트랜스코딩의 편집 내용은 쓰기 전에 여기에 표시됩니다.</value></data>
@@ -5402,7 +5404,7 @@
   <data name="Workbench.Picker.AddFolder.Title" xml:space="preserve"><value>원본 폴더 추가</value></data>
   <data name="Workbench.Picker.AddSources.Title" xml:space="preserve"><value>원본 파일 추가</value></data>
   <data name="Workbench.Picker.ArtworkImages" xml:space="preserve"><value>아트워크 이미지</value></data>
-  <data name="Workbench.Picker.DelimitedMetadata" xml:space="preserve"><value>구분됨 메타데이터</value></data>
+  <data name="Workbench.Picker.DelimitedMetadata" xml:space="preserve"><value>구분된 메타데이터</value></data>
   <data name="Workbench.Picker.ExportArtwork.Title" xml:space="preserve"><value>아트워크 내보내기</value></data>
   <data name="Workbench.Picker.ExternalTool.Title" xml:space="preserve"><value>도구 실행 파일 선택</value></data>
   <data name="Workbench.Picker.ExternalWorkingDirectory.Title" xml:space="preserve"><value>작업 디렉터리 선택</value></data>
@@ -5413,7 +5415,7 @@
   <data name="Workbench.Picker.ReplaceArtwork.Title" xml:space="preserve"><value>아트워크 바꾸기</value></data>
   <data name="Workbench.Picker.ReportFolder.Title" xml:space="preserve"><value>보고서 폴더 선택</value></data>
   <data name="Workbench.Picker.ReportOutput.Title" xml:space="preserve"><value>보고서 저장</value></data>
-  <data name="Workbench.Picker.SupportedSources" xml:space="preserve"><value>지원됨 원본</value></data>
+  <data name="Workbench.Picker.SupportedSources" xml:space="preserve"><value>지원되는 원본</value></data>
   <data name="Workbench.Playlists.Action.Preview" xml:space="preserve"><value>재생 목록 미리 보기</value></data>
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>쓰기</value></data>
   <data name="Workbench.Playlists.DefaultName" xml:space="preserve"><value>음악 재생 목록</value></data>
@@ -5421,17 +5423,17 @@
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>문자 인코딩</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>확장 정보</value></data>
   <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>줄 바꿈</value></data>
-  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>이름</value></data>
-  <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>하나 당 그룹</value></data>
-  <data name="Workbench.Playlists.Grouping" xml:space="preserve"><value>그룹화</value></data>
+  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>재생 목록 이름</value></data>
+  <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>그룹당 재생 목록 하나</value></data>
+  <data name="Workbench.Playlists.Grouping" xml:space="preserve"><value>재생 목록 그룹화 기준</value></data>
   <data name="Workbench.Playlists.PathStyle" xml:space="preserve"><value>경로 형식</value></data>
   <data name="Workbench.Playlists.Reviewed" xml:space="preserve"><value>검토됨</value></data>
   <data name="Workbench.Playlists.Safety" xml:space="preserve"><value>재생 목록 출력은 메타데이터 변경과 별개이며 검토한 후에만 기록됩니다.</value></data>
   <data name="Workbench.Playlists.Title" xml:space="preserve"><value>재생 목록</value></data>
-  <data name="Workbench.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>불러오는 중 아트워크 미리 보기 이미지 {0:N0} 의 {1:N0}</value></data>
-  <data name="Workbench.Progress.ReadingFile" xml:space="preserve"><value>읽는 중 {0}</value></data>
-  <data name="Workbench.Progress.Restored.One" xml:space="preserve"><value>복원됨 {0:N0} 파일</value></data>
-  <data name="Workbench.Progress.Restored.Other" xml:space="preserve"><value>복원됨 {0:N0} 파일</value></data>
+  <data name="Workbench.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>아트워크 미리 보기 이미지 불러오는 중({0:N0}/{1:N0})</value></data>
+  <data name="Workbench.Progress.ReadingFile" xml:space="preserve"><value>{0} 읽는 중</value></data>
+  <data name="Workbench.Progress.Restored.One" xml:space="preserve"><value>{0:N0}개 파일 복원됨</value></data>
+  <data name="Workbench.Progress.Restored.Other" xml:space="preserve"><value>{0:N0}개 파일 복원됨</value></data>
   <data name="Workbench.Reports.Action.AddCustom" xml:space="preserve"><value>사용자 지정 필드 추가</value></data>
   <data name="Workbench.Reports.Action.Preview" xml:space="preserve"><value>미리 보기</value></data>
   <data name="Workbench.Reports.Action.Write" xml:space="preserve"><value>쓰기</value></data>
@@ -5440,23 +5442,23 @@
   <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>음악 라이브러리 보고서</value></data>
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>내림차순</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>필드, 그룹화 및 정렬을 선택한 다음 각 출력 대상을 검토하세요.</value></data>
-  <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>비트 당 샘플</value></data>
+  <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>샘플당 비트 수</value></data>
   <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>코덱 유형</value></data>
-  <data name="Workbench.Reports.Field.File" xml:space="preserve"><value>파일 - {0}</value></data>
+  <data name="Workbench.Reports.Field.File" xml:space="preserve"><value>파일 – {0}</value></data>
   <data name="Workbench.Reports.Field.FileName" xml:space="preserve"><value>파일 이름</value></data>
   <data name="Workbench.Reports.Field.FileSize" xml:space="preserve"><value>파일 크기</value></data>
   <data name="Workbench.Reports.Field.MaximumBitrate" xml:space="preserve"><value>최대 비트 전송률</value></data>
-  <data name="Workbench.Reports.Field.Metadata" xml:space="preserve"><value>메타데이터 - {0}</value></data>
+  <data name="Workbench.Reports.Field.Metadata" xml:space="preserve"><value>메타데이터 – {0}</value></data>
   <data name="Workbench.Reports.Field.SampleRate" xml:space="preserve"><value>샘플 레이트</value></data>
-  <data name="Workbench.Reports.Field.Technical" xml:space="preserve"><value>기술 - {0}</value></data>
+  <data name="Workbench.Reports.Field.Technical" xml:space="preserve"><value>기술 – {0}</value></data>
   <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>그룹화 기준</value></data>
   <data name="Workbench.Reports.GroupFileNamePattern" xml:space="preserve"><value>그룹 파일 이름 패턴</value></data>
   <data name="Workbench.Reports.GroupFileNameHelp" xml:space="preserve"><value>선택한 그룹 값에는 {Group}, 보고서 파일 확장자에는 {Format}을 사용하세요.</value></data>
-  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>이름</value></data>
+  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>보고서 이름</value></data>
   <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>그룹화 안 함</value></data>
-  <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>하나 당 그룹</value></data>
+  <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>그룹당 파일 하나</value></data>
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>검토됨</value></data>
-  <data name="Workbench.Reports.Safety" xml:space="preserve"><value>보고서 출력 안 함 변경 사항 미디어 파일.</value></data>
+  <data name="Workbench.Reports.Safety" xml:space="preserve"><value>보고서 출력은 미디어 파일을 변경하지 않습니다.</value></data>
   <data name="Workbench.Reports.SortBy" xml:space="preserve"><value>정렬 기준</value></data>
   <data name="Workbench.Reports.SortType" xml:space="preserve"><value>정렬 유형</value></data>
   <data name="Workbench.Reports.Source.Custom" xml:space="preserve"><value>사용자 지정: {0}</value></data>
@@ -5465,21 +5467,21 @@
   <data name="Workbench.Reports.Source.Technical" xml:space="preserve"><value>기술 정보: {0}</value></data>
   <data name="Workbench.Reports.SourceOrder" xml:space="preserve"><value>원본 순서</value></data>
   <data name="Workbench.Reports.Title" xml:space="preserve"><value>보고서</value></data>
-  <data name="Workbench.Representative.Error.NoFile" xml:space="preserve"><value>해당 대표 미리 보기 반환됨 아니요 파일.</value></data>
+  <data name="Workbench.Representative.Error.NoFile" xml:space="preserve"><value>대표 미리 보기에서 파일을 반환하지 않았습니다.</value></data>
   <data name="Workbench.Representative.Missing" xml:space="preserve"><value>(누락)</value></data>
-  <data name="Workbench.Representative.Status.Blocked" xml:space="preserve"><value>초안 미리 보기 차단됨.</value></data>
-  <data name="Workbench.Representative.Status.ChooseFile" xml:space="preserve"><value>선택 하나의 대표 파일 및 편집 하나의 작업.</value></data>
-  <data name="Workbench.Representative.Status.NoChanges" xml:space="preserve"><value>{0}: 아니요 메타데이터 변경 사항.</value></data>
-  <data name="Workbench.Representative.Status.Ready.One" xml:space="preserve"><value>{1} / {0:N0} 제안됨 필드 변경</value></data>
-  <data name="Workbench.Representative.Status.Ready.Other" xml:space="preserve"><value>{1} / {0:N0} 제안됨 필드 변경 사항</value></data>
-  <data name="Workbench.Representative.Status.Unavailable" xml:space="preserve"><value>초안 미리 보기 사용 불가.</value></data>
-  <data name="Workbench.Representative.Status.Updating" xml:space="preserve"><value>업데이트 초안 미리 보기 용 {0}...</value></data>
+  <data name="Workbench.Representative.Status.Blocked" xml:space="preserve"><value>초안 미리 보기가 차단되었습니다.</value></data>
+  <data name="Workbench.Representative.Status.ChooseFile" xml:space="preserve"><value>대표 파일을 선택하고 작업을 편집하세요.</value></data>
+  <data name="Workbench.Representative.Status.NoChanges" xml:space="preserve"><value>{0}: 메타데이터 변경 사항 없음.</value></data>
+  <data name="Workbench.Representative.Status.Ready.One" xml:space="preserve"><value>{1}: 제안된 필드 변경 {0:N0}건</value></data>
+  <data name="Workbench.Representative.Status.Ready.Other" xml:space="preserve"><value>{1}: 제안된 필드 변경 {0:N0}건</value></data>
+  <data name="Workbench.Representative.Status.Unavailable" xml:space="preserve"><value>초안 미리 보기를 사용할 수 없습니다.</value></data>
+  <data name="Workbench.Representative.Status.Updating" xml:space="preserve"><value>{0}의 초안 미리 보기 업데이트 중</value></data>
   <data name="Workbench.Representative.ValueSeparator" xml:space="preserve"><value> / </value></data>
   <data name="Workbench.Section.AllFields" xml:space="preserve"><value>모든 필드</value></data>
-  <data name="Workbench.Section.AllFieldsAutomation" xml:space="preserve"><value>모두 메타데이터 필드</value></data>
-  <data name="Workbench.Section.BulkOperation" xml:space="preserve"><value>일괄 작업</value></data>
+  <data name="Workbench.Section.AllFieldsAutomation" xml:space="preserve"><value>모든 메타데이터 필드</value></data>
+  <data name="Workbench.Section.BulkOperation" xml:space="preserve"><value>일괄 편집</value></data>
   <data name="Workbench.Section.BulkOperationAutomation" xml:space="preserve"><value>일괄 메타데이터 작업</value></data>
-  <data name="Workbench.Section.Files" xml:space="preserve"><value>파일</value></data>
+  <data name="Workbench.Section.Files" xml:space="preserve"><value>파일 작업</value></data>
   <data name="Workbench.Section.FilesAutomation" xml:space="preserve"><value>검토한 파일 작업</value></data>
   <data name="Workbench.Section.OnlineMetadata" xml:space="preserve"><value>온라인 메타데이터</value></data>
   <data name="Workbench.Section.OnlineMetadataAutomation" xml:space="preserve"><value>온라인 메타데이터</value></data>
@@ -5490,14 +5492,14 @@
   <data name="Workbench.Section.Session" xml:space="preserve"><value>세션</value></data>
   <data name="Workbench.Section.SessionAutomation" xml:space="preserve"><value>워크벤치 세션</value></data>
   <data name="Workbench.Section.Shortcuts" xml:space="preserve"><value>바로 가기</value></data>
-  <data name="Workbench.Section.ShortcutsAutomation" xml:space="preserve"><value>작업대 바로 가기</value></data>
-  <data name="Workbench.Section.Tools" xml:space="preserve"><value>도구</value></data>
+  <data name="Workbench.Section.ShortcutsAutomation" xml:space="preserve"><value>워크벤치 바로 가기</value></data>
+  <data name="Workbench.Section.Tools" xml:space="preserve"><value>외부 도구</value></data>
   <data name="Workbench.Section.ToolsAutomation" xml:space="preserve"><value>외부 도구</value></data>
-  <data name="Workbench.Selection.Files.One" xml:space="preserve"><value>{0:N0} 파일 선택됨</value></data>
-  <data name="Workbench.Selection.Files.Other" xml:space="preserve"><value>{0:N0} 파일 선택됨</value></data>
+  <data name="Workbench.Selection.Files.One" xml:space="preserve"><value>{0:N0}개 파일 선택됨</value></data>
+  <data name="Workbench.Selection.Files.Other" xml:space="preserve"><value>{0:N0}개 파일 선택됨</value></data>
   <data name="Workbench.Session.Action.Clear" xml:space="preserve"><value>세션 비우기</value></data>
   <data name="Workbench.Session.Action.RemoveSelected" xml:space="preserve"><value>세션에서 제거</value></data>
-  <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>수집으로 보내기</value></data>
+  <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>가져오기로 보내기</value></data>
   <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>아트워크 {0:N0}개</value></data>
   <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>아트워크 {0:N0}개</value></data>
   <data name="Workbench.Session.Columns" xml:space="preserve"><value>열</value></data>
@@ -5550,8 +5552,8 @@
   <data name="Workbench.Size.Kilobytes" xml:space="preserve"><value>KB</value></data>
   <data name="Workbench.Size.Megabytes" xml:space="preserve"><value>MB</value></data>
   <data name="Workbench.Size.Terabytes" xml:space="preserve"><value>TB</value></data>
-  <data name="Workbench.Source.AddAutomation" xml:space="preserve"><value>추가</value></data>
-  <data name="Workbench.Source.AddRecent" xml:space="preserve"><value>추가 최근 위치</value></data>
+  <data name="Workbench.Source.AddAutomation" xml:space="preserve"><value>워크벤치에 소스 추가</value></data>
+  <data name="Workbench.Source.AddRecent" xml:space="preserve"><value>최근 위치 추가</value></data>
   <data name="Workbench.Source.ChooseFiles" xml:space="preserve"><value>파일 선택</value></data>
   <data name="Workbench.Source.ChooseFilesAutomation" xml:space="preserve"><value>파일 선택</value></data>
   <data name="Workbench.Source.ChooseFolder" xml:space="preserve"><value>폴더 선택</value></data>
@@ -5560,132 +5562,132 @@
   <data name="Workbench.Source.IncludeSubfolders" xml:space="preserve"><value>하위 폴더 포함</value></data>
   <data name="Workbench.Source.RecentAutomation" xml:space="preserve"><value>최근 항목</value></data>
   <data name="Workbench.Source.RecentLocation" xml:space="preserve"><value>최근 위치</value></data>
-  <data name="Workbench.Source.RecentPlaceholder" xml:space="preserve"><value>선택 하나의 최근 위치</value></data>
+  <data name="Workbench.Source.RecentPlaceholder" xml:space="preserve"><value>최근 위치 선택</value></data>
   <data name="Workbench.Source.Title" xml:space="preserve"><value>원본 추가</value></data>
   <data name="Workbench.Split.Resize" xml:space="preserve"><value>크기 조정</value></data>
-  <data name="Workbench.Split.ResizeAutomation" xml:space="preserve"><value>크기 조정 작업대 및 검사기 창</value></data>
-  <data name="Workbench.Status.Applied.One" xml:space="preserve"><value>적용됨 {0:N0} 파일. 해당 원본 입니다 유지됨 에서 작업대 복구 및 가능 됨 복원됨 에서 작업.</value></data>
-  <data name="Workbench.Status.Applied.Other" xml:space="preserve"><value>적용됨 {0:N0} 파일. 원본 입니다 유지됨 에서 작업대 복구 및 가능 됨 복원됨 에서 작업.</value></data>
-  <data name="Workbench.Status.ApplyCancelled" xml:space="preserve"><value>적용 취소됨. 완료됨 변경 유지 복구 가능.</value></data>
-  <data name="Workbench.Status.ApplyFailed" xml:space="preserve"><value>적용 중지됨 안전하게.</value></data>
-  <data name="Workbench.Status.ArtworkExported" xml:space="preserve"><value>내보내기 {0} 아트워크 로 {1}.</value></data>
-  <data name="Workbench.Status.AudioIdentifiersPreviewed" xml:space="preserve"><value>오디오 식별자 이었음 추가됨 로 해당 일반 메타데이터 미리 보기. 검토 이전 적용 중.</value></data>
-  <data name="Workbench.Status.Cleared" xml:space="preserve"><value>작업대 지워짐. 파일 에서 디스크 이었음 아님 변경됨.</value></data>
-  <data name="Workbench.Status.ClipboardHasNoMetadata" xml:space="preserve"><value>해당 클립보드 수행 아님 포함 텍스트 메타데이터.</value></data>
-  <data name="Workbench.Status.CopiedFieldValues.One" xml:space="preserve"><value>복사됨 {0:N0} 순서 {1} 값 포함 태그 ID.</value></data>
-  <data name="Workbench.Status.CopiedFieldValues.Other" xml:space="preserve"><value>복사됨 {0:N0} 순서 {1} 값 포함 태그 ID.</value></data>
-  <data name="Workbench.Status.CoverArtCancelled" xml:space="preserve"><value>Cover Art Archive 조회 취소됨.</value></data>
-  <data name="Workbench.Status.CoverArtFailed" xml:space="preserve"><value>Cover Art Archive 조회 실패.</value></data>
-  <data name="Workbench.Status.CoverArtLoaded.One" xml:space="preserve"><value>불러옴 {0:N0} 아트워크 후보. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Workbench.Status.CoverArtLoaded.Other" xml:space="preserve"><value>불러옴 {0:N0} 아트워크 후보. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Workbench.Status.DiscogsArtworkPreviewed" xml:space="preserve"><value>해당 선택됨 Discogs 표지 이었음 추가됨 로 해당 일반 아트워크 미리 보기. 검토 모든 변경 이전 적용 중.</value></data>
-  <data name="Workbench.Status.DiscogsDetailsCancelled" xml:space="preserve"><value>Discogs 릴리스 세부 정보 조회 취소됨.</value></data>
-  <data name="Workbench.Status.DiscogsDetailsFailed" xml:space="preserve"><value>Discogs 릴리스 세부 정보 조회 실패.</value></data>
-  <data name="Workbench.Status.DiscogsDetailsLoaded.One" xml:space="preserve"><value>불러옴 Discogs 릴리스 {1} 포함 {0:N0} 트랙. 아니요 메타데이터 이었음 변경됨.</value></data>
-  <data name="Workbench.Status.DiscogsDetailsLoaded.Other" xml:space="preserve"><value>불러옴 Discogs 릴리스 {1} 포함 {0:N0} 트랙. 아니요 메타데이터 이었음 변경됨.</value></data>
-  <data name="Workbench.Status.DiscogsFound.One" xml:space="preserve"><value>Discogs에서 {0:N0}개의 릴리스 에디션을 찾았습니다. 선택하면 트랙 및 에디션의 전체 세부 정보를 불러옵니다.</value></data>
-  <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs에서 {0:N0}개의 릴리스 에디션을 찾았습니다. 하나를 선택하면 트랙 및 에디션의 전체 세부 정보를 불러옵니다.</value></data>
-  <data name="Workbench.Status.DiscogsMappingCancelled" xml:space="preserve"><value>Discogs 트랙 매핑 취소됨.</value></data>
-  <data name="Workbench.Status.DiscogsMappingFailed" xml:space="preserve"><value>Discogs 트랙 매핑 실패.</value></data>
-  <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>제안됨 {0:N0} 의 {1:N0} Discogs 파일-트랙 매핑; {2:N0} 필요 검토.</value></data>
-  <data name="Workbench.Status.DiscogsMetadataPreviewed" xml:space="preserve"><value>매핑됨 Discogs 필드 이었음 추가됨 로 해당 일반 메타데이터 미리 보기. 검토 모든 변경 이전 적용 중.</value></data>
-  <data name="Workbench.Status.DiscogsSearchCancelled" xml:space="preserve"><value>Discogs 릴리스 검색 취소됨.</value></data>
-  <data name="Workbench.Status.DiscogsSearchFailed" xml:space="preserve"><value>Discogs 릴리스 검색 실패.</value></data>
-  <data name="Workbench.Status.ExternalToolCancelled" xml:space="preserve"><value>외부 도구 취소됨. 해당 활성 프로세스 이었음 중지됨.</value></data>
-  <data name="Workbench.Status.ExternalToolFailed" xml:space="preserve"><value>외부 도구 중지됨.</value></data>
-  <data name="Workbench.Status.ExternalToolFinished" xml:space="preserve"><value>외부 도구 완료됨: {0:N0} 성공, {1:N0} 실패.</value></data>
-  <data name="Workbench.Status.ExternalToolPreviewBlocked.One" xml:space="preserve"><value>외부-도구 미리 보기 있음 {0:N0} 차단 요소. 없음 가능 실행.</value></data>
-  <data name="Workbench.Status.ExternalToolPreviewBlocked.Other" xml:space="preserve"><value>외부-도구 미리 보기 있음 {0:N0} 차단 요소. 없음 가능 실행.</value></data>
-  <data name="Workbench.Status.ExternalToolPreviewReady.One" xml:space="preserve"><value>미리 봄 {0:N0} 프로세스 호출. 외부 도구 실행 외부 MusicLibraryManager 복구.</value></data>
-  <data name="Workbench.Status.ExternalToolPreviewReady.Other" xml:space="preserve"><value>미리 봄 {0:N0} 프로세스 호출. 외부 도구 실행 외부 MusicLibraryManager 복구.</value></data>
-  <data name="Workbench.Status.FingerprintCancelled" xml:space="preserve"><value>오디오 지문 검색 취소됨.</value></data>
-  <data name="Workbench.Status.FingerprintDiscovery" xml:space="preserve"><value>지문 검색: {0:N0} 파일, {1:N0} 후보, {2:N0} 경고.</value></data>
-  <data name="Workbench.Status.FingerprintFailed" xml:space="preserve"><value>오디오 지문 검색 실패.</value></data>
-  <data name="Workbench.Status.ImportMapped" xml:space="preserve"><value>매핑됨 {0:N0} 의 {1:N0} 행.</value></data>
-  <data name="Workbench.Status.ImportMappedWithWarnings" xml:space="preserve"><value>매핑됨 {0:N0} 의 {1:N0} 행 포함 {2:N0} 경고.</value></data>
-  <data name="Workbench.Status.InspectorChangesReloaded.One" xml:space="preserve"><value>다시 불러오기 {0:N0} 파일 이후 검사기 변경 사항.</value></data>
-  <data name="Workbench.Status.InspectorChangesReloaded.Other" xml:space="preserve"><value>다시 불러오기 {0:N0} 파일 이후 검사기 변경 사항.</value></data>
-  <data name="Workbench.Status.InspectorReloadCancelled" xml:space="preserve"><value>다시 불러오기 이후 검사기 변경 사항 이었음 취소됨.</value></data>
-  <data name="Workbench.Status.InspectorReloadFailed" xml:space="preserve"><value>가능 아님 다시 불러오기 검사기 변경 사항.</value></data>
-  <data name="Workbench.Status.LoadingCancelled" xml:space="preserve"><value>불러오는 중 취소됨.</value></data>
-  <data name="Workbench.Status.LoadingFailed" xml:space="preserve"><value>가능 아님 불러오기 해당 선택됨 원본.</value></data>
-  <data name="Workbench.Status.MusicBrainzFound.One" xml:space="preserve"><value>MusicBrainz 찾음 {0:N0} 릴리스 에디션. 선택 해당 항목 및 빌드 하나의 파일-트랙 매핑.</value></data>
-  <data name="Workbench.Status.MusicBrainzFound.Other" xml:space="preserve"><value>MusicBrainz 찾음 {0:N0} 릴리스 에디션. 선택 하나 및 빌드 하나의 파일-트랙 매핑.</value></data>
-  <data name="Workbench.Status.MusicBrainzLookupCancelled" xml:space="preserve"><value>MusicBrainz 릴리스 조회 취소됨.</value></data>
-  <data name="Workbench.Status.MusicBrainzLookupFailed" xml:space="preserve"><value>MusicBrainz 릴리스 조회 실패.</value></data>
-  <data name="Workbench.Status.MusicBrainzMetadataPreviewed" xml:space="preserve"><value>매핑됨 MusicBrainz 필드 이었음 추가됨 로 해당 일반 메타데이터 미리 보기. 검토 모든 변경 이전 적용 중.</value></data>
-  <data name="Workbench.Status.MusicBrainzResolved.One" xml:space="preserve"><value>MusicBrainz 반환됨 {0:N0} 릴리스 에디션. 아니요 메타데이터 이었음 선택됨 또는 변경됨.</value></data>
-  <data name="Workbench.Status.MusicBrainzResolved.Other" xml:space="preserve"><value>MusicBrainz 반환됨 {0:N0} 릴리스 에디션. 아니요 메타데이터 이었음 선택됨 또는 변경됨.</value></data>
-  <data name="Workbench.Status.MusicBrainzSearchCancelled" xml:space="preserve"><value>MusicBrainz 릴리스 검색 취소됨.</value></data>
-  <data name="Workbench.Status.MusicBrainzSearchFailed" xml:space="preserve"><value>MusicBrainz 릴리스 검색 실패.</value></data>
-  <data name="Workbench.Status.NoApplicableChanges" xml:space="preserve"><value>해당 보류 중 편집 생성 아니요 적용 가능 파일 변경 사항.</value></data>
-  <data name="Workbench.Status.NoCoverArt" xml:space="preserve"><value>이 릴리스 있음 아니요 Cover Art Archive 이미지.</value></data>
-  <data name="Workbench.Status.NoPendingChanges" xml:space="preserve"><value>거기 입니다 아니요 보류 중 메타데이터 변경 사항 로 적용.</value></data>
-  <data name="Workbench.Status.PasteFailed" xml:space="preserve"><value>붙여넣기 실패.</value></data>
-  <data name="Workbench.Status.PendingChangesBlocked" xml:space="preserve"><value>보류 중인 변경 사항 할 수 없음 됨 적용됨.</value></data>
-  <data name="Workbench.Status.PendingReverted" xml:space="preserve"><value>보류 중 미리 보기 되돌리기. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Workbench.Status.PlaylistOutputCancelled" xml:space="preserve"><value>재생 목록 출력 취소됨.</value></data>
-  <data name="Workbench.Status.PlaylistOutputFailed" xml:space="preserve"><value>재생 목록 출력 실패.</value></data>
-  <data name="Workbench.Status.PlaylistPreviewBlocked.One" xml:space="preserve"><value>재생 목록 미리 보기 있음 {0:N0} 차단 요소. 아니요 출력 이었음 기록됨.</value></data>
-  <data name="Workbench.Status.PlaylistPreviewBlocked.Other" xml:space="preserve"><value>재생 목록 미리 보기 있음 {0:N0} 차단 요소. 아니요 출력 이었음 기록됨.</value></data>
-  <data name="Workbench.Status.PlaylistPreviewCancelled" xml:space="preserve"><value>재생 목록 미리 보기 취소됨.</value></data>
-  <data name="Workbench.Status.PlaylistPreviewFailed" xml:space="preserve"><value>재생 목록 미리 보기 실패.</value></data>
-  <data name="Workbench.Status.PlaylistPreviewReady.One" xml:space="preserve"><value>미리 봄 {0:N0} 재생 목록 파일. 검토 해당 대상 이전 적용 중.</value></data>
-  <data name="Workbench.Status.PlaylistPreviewReady.Other" xml:space="preserve"><value>미리 봄 {0:N0} 재생 목록 파일. 검토 해당 대상 이전 적용 중.</value></data>
-  <data name="Workbench.Status.PlaylistWritten.One" xml:space="preserve"><value>기록됨 {0:N0} 재생 목록 파일 포함 {1:N0} 트랙 참조.</value></data>
-  <data name="Workbench.Status.PlaylistWritten.Other" xml:space="preserve"><value>기록됨 {0:N0} 재생 목록 파일 포함 {1:N0} 트랙 참조.</value></data>
-  <data name="Workbench.Status.PreviewBlocked.One" xml:space="preserve"><value>미리 보기 있음 {0:N0} 차단 요소. 파일 없음 있음 됨 변경됨.</value></data>
-  <data name="Workbench.Status.PreviewBlocked.Other" xml:space="preserve"><value>미리 보기 있음 {0:N0} 차단 요소. 파일 없음 있음 됨 변경됨.</value></data>
-  <data name="Workbench.Status.PreviewCancelled" xml:space="preserve"><value>미리 보기 취소됨. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Workbench.Status.PreviewFailed" xml:space="preserve"><value>미리 보기 실패.</value></data>
-  <data name="Workbench.Status.PreviewReady.One" xml:space="preserve"><value>미리 보기: {0:N0} 메타데이터 변경 에서 {1:N0} 파일. 파일 없음 있음 됨 변경됨.</value></data>
-  <data name="Workbench.Status.PreviewReady.Other" xml:space="preserve"><value>미리 보기: {0:N0} 메타데이터 변경 사항 에서 {1:N0} 파일. 파일 없음 있음 됨 변경됨.</value></data>
-  <data name="Workbench.Status.Ready" xml:space="preserve"><value>파일 추가, 폴더, 재생 목록, 또는 큐 시트. 아니요 라이브러리 구성 입니다 필수.</value></data>
-  <data name="Workbench.Status.RecipeRegenerated" xml:space="preserve"><value>해당 최신 레시피 이었음 다시 생성됨 용 해당 현재 작업대 파일. 검토 이전 적용 중.</value></data>
-  <data name="Workbench.Status.RedoRegenerated" xml:space="preserve"><value>다시 실행 이었음 다시 생성됨 대상 해당 현재 파일. 검토 해당 미리 보기 이전 적용 중.</value></data>
-  <data name="Workbench.Status.ReleaseArtworkPreviewed" xml:space="preserve"><value>해당 선택됨 앞면 표지 이었음 추가됨 로 해당 일반 메타데이터 미리 보기. 검토 모든 아트워크 변경 이전 적용 중.</value></data>
-  <data name="Workbench.Status.ReleaseMappingCancelled" xml:space="preserve"><value>릴리스 트랙 매핑 취소됨.</value></data>
-  <data name="Workbench.Status.ReleaseMappingFailed" xml:space="preserve"><value>릴리스 트랙 매핑 실패.</value></data>
-  <data name="Workbench.Status.ReleaseMappingReady" xml:space="preserve"><value>제안됨 {0:N0} 의 {1:N0} 파일-트랙 매핑; {2:N0} 필요 검토.</value></data>
-  <data name="Workbench.Status.ReportOutputCancelled" xml:space="preserve"><value>보고서 출력 취소됨.</value></data>
-  <data name="Workbench.Status.ReportOutputFailed" xml:space="preserve"><value>보고서 출력 실패.</value></data>
-  <data name="Workbench.Status.ReportPreviewBlocked.One" xml:space="preserve"><value>보고서 미리 보기 있음 {0:N0} 차단 요소. 아니요 출력 이었음 기록됨.</value></data>
-  <data name="Workbench.Status.ReportPreviewBlocked.Other" xml:space="preserve"><value>보고서 미리 보기 있음 {0:N0} 차단 요소. 아니요 출력 이었음 기록됨.</value></data>
-  <data name="Workbench.Status.ReportPreviewCancelled" xml:space="preserve"><value>보고서 미리 보기 취소됨.</value></data>
-  <data name="Workbench.Status.ReportPreviewFailed" xml:space="preserve"><value>보고서 미리 보기 실패.</value></data>
-  <data name="Workbench.Status.ReportPreviewReady.One" xml:space="preserve"><value>미리 봄 {0:N0} 보고서 파일. 검토 해당 대상 이전 적용 중.</value></data>
-  <data name="Workbench.Status.ReportPreviewReady.Other" xml:space="preserve"><value>미리 봄 {0:N0} 보고서 파일. 검토 해당 대상 이전 적용 중.</value></data>
-  <data name="Workbench.Status.ReportWritten.One" xml:space="preserve"><value>기록됨 {0:N0} 보고서 파일 포함 {1:N0} 행.</value></data>
-  <data name="Workbench.Status.ReportWritten.Other" xml:space="preserve"><value>기록됨 {0:N0} 보고서 파일 포함 {1:N0} 행.</value></data>
-  <data name="Workbench.Status.RestoreCancelled" xml:space="preserve"><value>복원 취소됨. 모두 완료됨 복원 유지 복구 가능.</value></data>
-  <data name="Workbench.Status.Restored.One" xml:space="preserve"><value>복원됨 {0:N0} 파일 에서 해당 최신 작업대 작업.</value></data>
-  <data name="Workbench.Status.Restored.Other" xml:space="preserve"><value>복원됨 {0:N0} 파일 에서 해당 최신 작업대 작업.</value></data>
-  <data name="Workbench.Status.RestoreFailed" xml:space="preserve"><value>복원 실패.</value></data>
+  <data name="Workbench.Split.ResizeAutomation" xml:space="preserve"><value>워크벤치 및 검사기 창 크기 조정</value></data>
+  <data name="Workbench.Status.Applied.One" xml:space="preserve"><value>{0:N0}개 파일에 변경 사항을 적용했습니다. 원본은 워크벤치 복구에 보관되며 작업에서 복원할 수 있습니다.</value></data>
+  <data name="Workbench.Status.Applied.Other" xml:space="preserve"><value>{0:N0}개 파일에 변경 사항을 적용했습니다. 원본은 워크벤치 복구에 보관되며 작업에서 복원할 수 있습니다.</value></data>
+  <data name="Workbench.Status.ApplyCancelled" xml:space="preserve"><value>적용이 취소되었습니다. 완료된 변경 사항은 계속 복구할 수 있습니다.</value></data>
+  <data name="Workbench.Status.ApplyFailed" xml:space="preserve"><value>적용이 안전하게 중지되었습니다.</value></data>
+  <data name="Workbench.Status.ArtworkExported" xml:space="preserve"><value>아트워크 ‘{0}’을 ‘{1}’(으)로 내보냈습니다.</value></data>
+  <data name="Workbench.Status.AudioIdentifiersPreviewed" xml:space="preserve"><value>오디오 식별자가 일반 메타데이터 미리 보기에 추가되었습니다. 적용하기 전에 검토하세요.</value></data>
+  <data name="Workbench.Status.Cleared" xml:space="preserve"><value>워크벤치를 비웠습니다. 디스크의 파일은 변경되지 않았습니다.</value></data>
+  <data name="Workbench.Status.ClipboardHasNoMetadata" xml:space="preserve"><value>클립보드에 텍스트 메타데이터가 없습니다.</value></data>
+  <data name="Workbench.Status.CopiedFieldValues.One" xml:space="preserve"><value>태그 ID를 포함한 {1}의 정렬된 값 {0:N0}개를 복사했습니다.</value></data>
+  <data name="Workbench.Status.CopiedFieldValues.Other" xml:space="preserve"><value>태그 ID를 포함한 {1}의 정렬된 값 {0:N0}개를 복사했습니다.</value></data>
+  <data name="Workbench.Status.CoverArtCancelled" xml:space="preserve"><value>Cover Art Archive 검색이 취소되었습니다.</value></data>
+  <data name="Workbench.Status.CoverArtFailed" xml:space="preserve"><value>Cover Art Archive 검색에 실패했습니다.</value></data>
+  <data name="Workbench.Status.CoverArtLoaded.One" xml:space="preserve"><value>아트워크 후보 {0:N0}개를 불러왔습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Workbench.Status.CoverArtLoaded.Other" xml:space="preserve"><value>아트워크 후보 {0:N0}개를 불러왔습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Workbench.Status.DiscogsArtworkPreviewed" xml:space="preserve"><value>선택한 Discogs 표지가 일반 아트워크 미리 보기에 추가되었습니다. 적용하기 전에 모든 변경 사항을 검토하세요.</value></data>
+  <data name="Workbench.Status.DiscogsDetailsCancelled" xml:space="preserve"><value>Discogs 릴리스 세부 정보 조회가 취소되었습니다.</value></data>
+  <data name="Workbench.Status.DiscogsDetailsFailed" xml:space="preserve"><value>Discogs 릴리스 세부 정보 조회에 실패했습니다.</value></data>
+  <data name="Workbench.Status.DiscogsDetailsLoaded.One" xml:space="preserve"><value>Discogs 릴리스 {1}을(를) {0:N0}개 트랙과 함께 불러왔습니다. 메타데이터는 변경되지 않았습니다.</value></data>
+  <data name="Workbench.Status.DiscogsDetailsLoaded.Other" xml:space="preserve"><value>Discogs 릴리스 {1}을(를) {0:N0}개 트랙과 함께 불러왔습니다. 메타데이터는 변경되지 않았습니다.</value></data>
+  <data name="Workbench.Status.DiscogsFound.One" xml:space="preserve"><value>Discogs에서 릴리스 에디션 {0:N0}개를 찾았습니다. 전체 트랙 및 에디션 세부 정보를 불러오려면 선택하세요.</value></data>
+  <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs에서 릴리스 에디션 {0:N0}개를 찾았습니다. 전체 트랙 및 에디션 세부 정보를 불러오려면 하나를 선택하세요.</value></data>
+  <data name="Workbench.Status.DiscogsMappingCancelled" xml:space="preserve"><value>Discogs 트랙 매핑이 취소되었습니다.</value></data>
+  <data name="Workbench.Status.DiscogsMappingFailed" xml:space="preserve"><value>Discogs 트랙 매핑에 실패했습니다.</value></data>
+  <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>Discogs 파일-트랙 매핑 {1:N0}개 중 {0:N0}개를 제안했습니다. {2:N0}개는 검토가 필요합니다.</value></data>
+  <data name="Workbench.Status.DiscogsMetadataPreviewed" xml:space="preserve"><value>매핑된 Discogs 필드가 일반 메타데이터 미리 보기에 추가되었습니다. 적용하기 전에 모든 변경 사항을 검토하세요.</value></data>
+  <data name="Workbench.Status.DiscogsSearchCancelled" xml:space="preserve"><value>Discogs 릴리스 검색이 취소되었습니다.</value></data>
+  <data name="Workbench.Status.DiscogsSearchFailed" xml:space="preserve"><value>Discogs 릴리스 검색에 실패했습니다.</value></data>
+  <data name="Workbench.Status.ExternalToolCancelled" xml:space="preserve"><value>외부 도구가 취소되었습니다. 실행 중인 프로세스가 중지되었습니다.</value></data>
+  <data name="Workbench.Status.ExternalToolFailed" xml:space="preserve"><value>외부 도구가 오류로 중지되었습니다.</value></data>
+  <data name="Workbench.Status.ExternalToolFinished" xml:space="preserve"><value>외부 도구 완료: 성공 {0:N0}개, 실패 {1:N0}개.</value></data>
+  <data name="Workbench.Status.ExternalToolPreviewBlocked.One" xml:space="preserve"><value>외부 도구 미리 보기에 차단 요소가 {0:N0}개 있습니다. 실행할 수 없습니다.</value></data>
+  <data name="Workbench.Status.ExternalToolPreviewBlocked.Other" xml:space="preserve"><value>외부 도구 미리 보기에 차단 요소가 {0:N0}개 있습니다. 실행할 수 없습니다.</value></data>
+  <data name="Workbench.Status.ExternalToolPreviewReady.One" xml:space="preserve"><value>프로세스 호출 {0:N0}개를 미리 보았습니다. 외부 도구는 MusicLibraryManager 복구 대상이 아닙니다.</value></data>
+  <data name="Workbench.Status.ExternalToolPreviewReady.Other" xml:space="preserve"><value>프로세스 호출 {0:N0}개를 미리 보았습니다. 외부 도구는 MusicLibraryManager 복구 대상이 아닙니다.</value></data>
+  <data name="Workbench.Status.FingerprintCancelled" xml:space="preserve"><value>오디오 지문 검색이 취소되었습니다.</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery" xml:space="preserve"><value>지문 검색: 파일 {0:N0}개, 후보 {1:N0}개, 경고 {2:N0}개.</value></data>
+  <data name="Workbench.Status.FingerprintFailed" xml:space="preserve"><value>오디오 지문 검색에 실패했습니다.</value></data>
+  <data name="Workbench.Status.ImportMapped" xml:space="preserve"><value>{1:N0}개 행 중 {0:N0}개를 매핑했습니다.</value></data>
+  <data name="Workbench.Status.ImportMappedWithWarnings" xml:space="preserve"><value>{1:N0}개 행 중 {0:N0}개를 매핑했으며 경고가 {2:N0}개 있습니다.</value></data>
+  <data name="Workbench.Status.InspectorChangesReloaded.One" xml:space="preserve"><value>검사기 변경 후 {0:N0}개 파일을 다시 불러왔습니다.</value></data>
+  <data name="Workbench.Status.InspectorChangesReloaded.Other" xml:space="preserve"><value>검사기 변경 후 {0:N0}개 파일을 다시 불러왔습니다.</value></data>
+  <data name="Workbench.Status.InspectorReloadCancelled" xml:space="preserve"><value>검사기 변경 후 다시 불러오기가 취소되었습니다.</value></data>
+  <data name="Workbench.Status.InspectorReloadFailed" xml:space="preserve"><value>검사기 변경 사항을 다시 불러올 수 없습니다.</value></data>
+  <data name="Workbench.Status.LoadingCancelled" xml:space="preserve"><value>불러오기가 취소되었습니다.</value></data>
+  <data name="Workbench.Status.LoadingFailed" xml:space="preserve"><value>선택한 원본을 불러올 수 없습니다.</value></data>
+  <data name="Workbench.Status.MusicBrainzFound.One" xml:space="preserve"><value>MusicBrainz에서 릴리스 에디션 {0:N0}개를 찾았습니다. 선택한 후 파일-트랙 매핑을 만드세요.</value></data>
+  <data name="Workbench.Status.MusicBrainzFound.Other" xml:space="preserve"><value>MusicBrainz에서 릴리스 에디션 {0:N0}개를 찾았습니다. 하나를 선택한 후 파일-트랙 매핑을 만드세요.</value></data>
+  <data name="Workbench.Status.MusicBrainzLookupCancelled" xml:space="preserve"><value>MusicBrainz 릴리스 조회가 취소되었습니다.</value></data>
+  <data name="Workbench.Status.MusicBrainzLookupFailed" xml:space="preserve"><value>MusicBrainz 릴리스 조회에 실패했습니다.</value></data>
+  <data name="Workbench.Status.MusicBrainzMetadataPreviewed" xml:space="preserve"><value>매핑된 MusicBrainz 필드가 일반 메타데이터 미리 보기에 추가되었습니다. 적용하기 전에 모든 변경 사항을 검토하세요.</value></data>
+  <data name="Workbench.Status.MusicBrainzResolved.One" xml:space="preserve"><value>MusicBrainz에서 릴리스 에디션 {0:N0}개를 반환했습니다. 메타데이터는 선택되거나 변경되지 않았습니다.</value></data>
+  <data name="Workbench.Status.MusicBrainzResolved.Other" xml:space="preserve"><value>MusicBrainz에서 릴리스 에디션 {0:N0}개를 반환했습니다. 메타데이터는 선택되거나 변경되지 않았습니다.</value></data>
+  <data name="Workbench.Status.MusicBrainzSearchCancelled" xml:space="preserve"><value>MusicBrainz 릴리스 검색이 취소되었습니다.</value></data>
+  <data name="Workbench.Status.MusicBrainzSearchFailed" xml:space="preserve"><value>MusicBrainz 릴리스 검색에 실패했습니다.</value></data>
+  <data name="Workbench.Status.NoApplicableChanges" xml:space="preserve"><value>보류 중인 편집으로 적용 가능한 파일 변경 사항이 생성되지 않습니다.</value></data>
+  <data name="Workbench.Status.NoCoverArt" xml:space="preserve"><value>이 릴리스에는 Cover Art Archive 이미지가 없습니다.</value></data>
+  <data name="Workbench.Status.NoPendingChanges" xml:space="preserve"><value>적용할 보류 중인 메타데이터 변경 사항이 없습니다.</value></data>
+  <data name="Workbench.Status.PasteFailed" xml:space="preserve"><value>붙여넣기에 실패했습니다.</value></data>
+  <data name="Workbench.Status.PendingChangesBlocked" xml:space="preserve"><value>보류 중인 변경 사항을 적용할 수 없습니다.</value></data>
+  <data name="Workbench.Status.PendingReverted" xml:space="preserve"><value>보류 중인 미리 보기를 되돌렸습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Workbench.Status.PlaylistOutputCancelled" xml:space="preserve"><value>재생 목록 출력이 취소되었습니다.</value></data>
+  <data name="Workbench.Status.PlaylistOutputFailed" xml:space="preserve"><value>재생 목록 출력에 실패했습니다.</value></data>
+  <data name="Workbench.Status.PlaylistPreviewBlocked.One" xml:space="preserve"><value>재생 목록 미리 보기에 차단 요소가 {0:N0}개 있습니다. 출력이 기록되지 않았습니다.</value></data>
+  <data name="Workbench.Status.PlaylistPreviewBlocked.Other" xml:space="preserve"><value>재생 목록 미리 보기에 차단 요소가 {0:N0}개 있습니다. 출력이 기록되지 않았습니다.</value></data>
+  <data name="Workbench.Status.PlaylistPreviewCancelled" xml:space="preserve"><value>재생 목록 미리 보기가 취소되었습니다.</value></data>
+  <data name="Workbench.Status.PlaylistPreviewFailed" xml:space="preserve"><value>재생 목록 미리 보기에 실패했습니다.</value></data>
+  <data name="Workbench.Status.PlaylistPreviewReady.One" xml:space="preserve"><value>재생 목록 파일 {0:N0}개를 미리 보았습니다. 적용하기 전에 대상을 검토하세요.</value></data>
+  <data name="Workbench.Status.PlaylistPreviewReady.Other" xml:space="preserve"><value>재생 목록 파일 {0:N0}개를 미리 보았습니다. 적용하기 전에 대상을 검토하세요.</value></data>
+  <data name="Workbench.Status.PlaylistWritten.One" xml:space="preserve"><value>트랙 참조 {1:N0}개가 포함된 재생 목록 파일 {0:N0}개를 썼습니다.</value></data>
+  <data name="Workbench.Status.PlaylistWritten.Other" xml:space="preserve"><value>트랙 참조 {1:N0}개가 포함된 재생 목록 파일 {0:N0}개를 썼습니다.</value></data>
+  <data name="Workbench.Status.PreviewBlocked.One" xml:space="preserve"><value>미리 보기에 차단 요소가 {0:N0}개 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Workbench.Status.PreviewBlocked.Other" xml:space="preserve"><value>미리 보기에 차단 요소가 {0:N0}개 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Workbench.Status.PreviewCancelled" xml:space="preserve"><value>미리 보기가 취소되었습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Workbench.Status.PreviewFailed" xml:space="preserve"><value>미리 보기에 실패했습니다.</value></data>
+  <data name="Workbench.Status.PreviewReady.One" xml:space="preserve"><value>미리 보기: {1:N0}개 파일에 메타데이터 변경 {0:N0}개가 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Workbench.Status.PreviewReady.Other" xml:space="preserve"><value>미리 보기: {1:N0}개 파일에 메타데이터 변경 {0:N0}개가 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Workbench.Status.Ready" xml:space="preserve"><value>파일, 폴더, 재생 목록 또는 CUE 시트를 추가하세요. 라이브러리 구성은 필요하지 않습니다.</value></data>
+  <data name="Workbench.Status.RecipeRegenerated" xml:space="preserve"><value>현재 워크벤치 파일에 맞게 최근 레시피를 다시 생성했습니다. 적용하기 전에 검토하세요.</value></data>
+  <data name="Workbench.Status.RedoRegenerated" xml:space="preserve"><value>현재 파일에 맞게 다시 실행을 재생성했습니다. 적용하기 전에 미리 보기를 검토하세요.</value></data>
+  <data name="Workbench.Status.ReleaseArtworkPreviewed" xml:space="preserve"><value>선택한 앞표지가 일반 메타데이터 미리 보기에 추가되었습니다. 적용하기 전에 모든 아트워크 변경 사항을 검토하세요.</value></data>
+  <data name="Workbench.Status.ReleaseMappingCancelled" xml:space="preserve"><value>릴리스 트랙 매핑이 취소되었습니다.</value></data>
+  <data name="Workbench.Status.ReleaseMappingFailed" xml:space="preserve"><value>릴리스 트랙 매핑에 실패했습니다.</value></data>
+  <data name="Workbench.Status.ReleaseMappingReady" xml:space="preserve"><value>파일-트랙 매핑 {1:N0}개 중 {0:N0}개를 제안했습니다. {2:N0}개는 검토가 필요합니다.</value></data>
+  <data name="Workbench.Status.ReportOutputCancelled" xml:space="preserve"><value>보고서 출력이 취소되었습니다.</value></data>
+  <data name="Workbench.Status.ReportOutputFailed" xml:space="preserve"><value>보고서 출력에 실패했습니다.</value></data>
+  <data name="Workbench.Status.ReportPreviewBlocked.One" xml:space="preserve"><value>보고서 미리 보기에 차단 요소가 {0:N0}개 있습니다. 출력이 기록되지 않았습니다.</value></data>
+  <data name="Workbench.Status.ReportPreviewBlocked.Other" xml:space="preserve"><value>보고서 미리 보기에 차단 요소가 {0:N0}개 있습니다. 출력이 기록되지 않았습니다.</value></data>
+  <data name="Workbench.Status.ReportPreviewCancelled" xml:space="preserve"><value>보고서 미리 보기가 취소되었습니다.</value></data>
+  <data name="Workbench.Status.ReportPreviewFailed" xml:space="preserve"><value>보고서 미리 보기에 실패했습니다.</value></data>
+  <data name="Workbench.Status.ReportPreviewReady.One" xml:space="preserve"><value>보고서 파일 {0:N0}개를 미리 보았습니다. 적용하기 전에 대상을 검토하세요.</value></data>
+  <data name="Workbench.Status.ReportPreviewReady.Other" xml:space="preserve"><value>보고서 파일 {0:N0}개를 미리 보았습니다. 적용하기 전에 대상을 검토하세요.</value></data>
+  <data name="Workbench.Status.ReportWritten.One" xml:space="preserve"><value>{1:N0}개 행이 포함된 보고서 파일 {0:N0}개를 썼습니다.</value></data>
+  <data name="Workbench.Status.ReportWritten.Other" xml:space="preserve"><value>{1:N0}개 행이 포함된 보고서 파일 {0:N0}개를 썼습니다.</value></data>
+  <data name="Workbench.Status.RestoreCancelled" xml:space="preserve"><value>복원이 취소되었습니다. 완료된 복원은 계속 복구할 수 있습니다.</value></data>
+  <data name="Workbench.Status.Restored.One" xml:space="preserve"><value>최근 워크벤치 작업에서 {0:N0}개 파일을 복원했습니다.</value></data>
+  <data name="Workbench.Status.Restored.Other" xml:space="preserve"><value>최근 워크벤치 작업에서 {0:N0}개 파일을 복원했습니다.</value></data>
+  <data name="Workbench.Status.RestoreFailed" xml:space="preserve"><value>복원에 실패했습니다.</value></data>
   <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>일반 텍스트를 붙여넣기 전에 대상 필드를 선택하거나 이름을 지정하세요.</value></data>
-  <data name="Workbench.Status.SendToIngestFailed" xml:space="preserve"><value>해당 선택한 파일 가능 아님 됨 전송됨 로 수집.</value></data>
-  <data name="Workbench.Status.SentToIngest.One" xml:space="preserve"><value>전송됨 {0:N0} 선택됨 파일 로 수집.</value></data>
-  <data name="Workbench.Status.SentToIngest.Other" xml:space="preserve"><value>전송됨 {0:N0} 선택한 파일 로 수집.</value></data>
-  <data name="Workbench.Status.SessionFileCount.One" xml:space="preserve"><value>{0:N0} 파일 에서 이 작업대 세션.</value></data>
-  <data name="Workbench.Status.SessionFileCount.Other" xml:space="preserve"><value>{0:N0} 파일 에서 이 작업대 세션.</value></data>
-  <data name="Workbench.Status.ShortcutRecipeMissing" xml:space="preserve"><value>바로 가기 레시피 '{0}' 아니요 더 김 있음.</value></data>
-  <data name="Workbench.Status.ShortcutRecipeRegenerated" xml:space="preserve"><value>바로 가기 다시 생성됨 '{0}' 용 해당 현재 작업대 파일. 검토 이전 적용 중.</value></data>
-  <data name="Workbench.Status.SourcesAdded.One" xml:space="preserve"><value>추가됨 {0:N0} 파일; {1:N0} 에서 이 작업대 세션.</value></data>
-  <data name="Workbench.Status.SourcesAdded.Other" xml:space="preserve"><value>추가됨 {0:N0} 파일; {1:N0} 에서 이 작업대 세션.</value></data>
-  <data name="Workbench.Status.SourcesAddedWithWarnings.One" xml:space="preserve"><value>추가됨 {0:N0} 파일; {1:N0} 에서 이 작업대 세션, 포함 {2:N0} 경고.</value></data>
-  <data name="Workbench.Status.SourcesAddedWithWarnings.Other" xml:space="preserve"><value>추가됨 {0:N0} 파일; {1:N0} 에서 이 작업대 세션, 포함 {2:N0} 경고.</value></data>
-  <data name="Workbench.Subtitle" xml:space="preserve"><value>빌드 하나의 임시 편집 중 세션 없이 변경 라이브러리 구성.</value></data>
+  <data name="Workbench.Status.SendToIngestFailed" xml:space="preserve"><value>선택한 파일을 가져오기로 보낼 수 없습니다.</value></data>
+  <data name="Workbench.Status.SentToIngest.One" xml:space="preserve"><value>선택한 파일 {0:N0}개를 가져오기로 보냈습니다.</value></data>
+  <data name="Workbench.Status.SentToIngest.Other" xml:space="preserve"><value>선택한 파일 {0:N0}개를 가져오기로 보냈습니다.</value></data>
+  <data name="Workbench.Status.SessionFileCount.One" xml:space="preserve"><value>이 워크벤치 세션에 파일이 {0:N0}개 있습니다.</value></data>
+  <data name="Workbench.Status.SessionFileCount.Other" xml:space="preserve"><value>이 워크벤치 세션에 파일이 {0:N0}개 있습니다.</value></data>
+  <data name="Workbench.Status.ShortcutRecipeMissing" xml:space="preserve"><value>바로 가기 레시피 ‘{0}’이(가) 더 이상 없습니다.</value></data>
+  <data name="Workbench.Status.ShortcutRecipeRegenerated" xml:space="preserve"><value>현재 워크벤치 파일에 맞게 바로 가기 ‘{0}’을(를) 다시 생성했습니다. 적용하기 전에 검토하세요.</value></data>
+  <data name="Workbench.Status.SourcesAdded.One" xml:space="preserve"><value>파일 {0:N0}개를 추가했습니다. 이 워크벤치 세션에는 {1:N0}개가 있습니다.</value></data>
+  <data name="Workbench.Status.SourcesAdded.Other" xml:space="preserve"><value>파일 {0:N0}개를 추가했습니다. 이 워크벤치 세션에는 {1:N0}개가 있습니다.</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.One" xml:space="preserve"><value>파일 {0:N0}개를 추가했습니다. 이 워크벤치 세션에는 {1:N0}개가 있으며 경고가 {2:N0}개 있습니다.</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.Other" xml:space="preserve"><value>파일 {0:N0}개를 추가했습니다. 이 워크벤치 세션에는 {1:N0}개가 있으며 경고가 {2:N0}개 있습니다.</value></data>
+  <data name="Workbench.Subtitle" xml:space="preserve"><value>라이브러리 구성을 변경하지 않고 임시 편집 세션을 만듭니다.</value></data>
   <data name="Workbench.Title" xml:space="preserve"><value>작업대</value></data>
   <data name="Workbench.Tools.ApplicationDefault" xml:space="preserve"><value>(앱 기본값)</value></data>
   <data name="Workbench.Tools.ArgumentsLabel" xml:space="preserve"><value>인수</value></data>
   <data name="Workbench.Tools.BrowseExecutable" xml:space="preserve"><value>실행 파일 선택</value></data>
   <data name="Workbench.Tools.BrowseFolder" xml:space="preserve"><value>폴더 선택</value></data>
   <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>외부 도구</value></data>
-  <data name="Workbench.Tools.Delete" xml:space="preserve"><value>삭제 도구</value></data>
+  <data name="Workbench.Tools.Delete" xml:space="preserve"><value>도구 삭제</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>실행 파일</value></data>
   <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>호출 모드</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>불러오기</value></data>
   <data name="Workbench.Tools.MoreAutomation" xml:space="preserve"><value>더 보기</value></data>
-  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>이름</value></data>
+  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>도구 이름</value></data>
   <data name="Workbench.Tools.New" xml:space="preserve"><value>새 도구</value></data>
   <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>지원되는 자리 표시자: 선택 항목마다 하나의 프로세스를 실행할 때는 {Files}, 파일마다 실행할 때는 {File}, {Directory}, {FileName}, {FileNameWithoutExtension}, {Extension}, {Index}, {Count}. {Files}는 별도 인수여야 합니다.</value></data>
   <data name="Workbench.Tools.Preview" xml:space="preserve"><value>도구 미리 보기</value></data>
@@ -5694,10 +5696,10 @@
   <data name="Workbench.Tools.Safety" xml:space="preserve"><value>셸은 사용되지 않지만 선택한 실행 파일이 파일을 변경할 수 있습니다. 외부 도구는 MusicLibraryManager 복구 대상이 아니며 항상 확인이 필요합니다.</value></data>
   <data name="Workbench.Tools.Save" xml:space="preserve"><value>도구 저장</value></data>
   <data name="Workbench.Tools.SavedPlaceholder" xml:space="preserve"><value>저장됨</value></data>
-  <data name="Workbench.Tools.Status.Deleted" xml:space="preserve"><value>삭제됨 개인 도구 '{0}'.</value></data>
-  <data name="Workbench.Tools.Status.Loaded" xml:space="preserve"><value>불러옴 '{0}'.</value></data>
-  <data name="Workbench.Tools.Status.New" xml:space="preserve"><value>새로 만들기 저장 안 됨 도구.</value></data>
-  <data name="Workbench.Tools.Status.Saved" xml:space="preserve"><value>저장됨 '{0}' 으로 하나의 개인 도구.</value></data>
+  <data name="Workbench.Tools.Status.Deleted" xml:space="preserve"><value>개인 도구 ‘{0}’을(를) 삭제했습니다.</value></data>
+  <data name="Workbench.Tools.Status.Loaded" xml:space="preserve"><value>‘{0}’을(를) 불러왔습니다.</value></data>
+  <data name="Workbench.Tools.Status.New" xml:space="preserve"><value>저장되지 않은 새 도구입니다.</value></data>
+  <data name="Workbench.Tools.Status.Saved" xml:space="preserve"><value>‘{0}’을(를) 개인 도구로 저장했습니다.</value></data>
   <data name="Workbench.Tools.Title" xml:space="preserve"><value>외부 도구</value></data>
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>작업 디렉터리</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>

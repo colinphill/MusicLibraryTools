@@ -21,13 +21,13 @@
         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
           <StackPanel Classes="field">
             <TextBlock Classes="field-label"
-                       Text="{DynamicResource Loc.Workbench.Grid.Header.Formats}" />
+                       Text="{DynamicResource Loc.Workbench.Common.Format}" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding ReportEditor.FormatChoices}"
                       DisplayMemberBinding="{Binding Label}"
                       SelectedValueBinding="{Binding Value}"
                       SelectedValue="{Binding ReportEditor.Format, Mode=TwoWay}"
-                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Grid.Header.Formats}" />
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Common.Format}" />
           </StackPanel>
           <StackPanel Grid.Column="1"
                       Classes="field">

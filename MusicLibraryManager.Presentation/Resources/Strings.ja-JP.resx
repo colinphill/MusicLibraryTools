@@ -5057,36 +5057,36 @@
   <data name="Workbench.Action.Redo" xml:space="preserve"><value>やり直す</value></data>
   <data name="Workbench.Action.RepeatRecipe" xml:space="preserve"><value>レシピを繰り返す</value></data>
   <data name="Workbench.Action.Revert" xml:space="preserve"><value>保留中の変更をすべて破棄</value></data>
-  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>直前の適用を元に戻す</value></data>
-  <data name="Workbench.Activity.ApplyingReviewedChanges" xml:space="preserve"><value>レビューされたメタデータの変更を適用する</value></data>
-  <data name="Workbench.Activity.BuildingPlaylistPreview" xml:space="preserve"><value>プレイリストのプレビューを構築する</value></data>
-  <data name="Workbench.Activity.BuildingPreview" xml:space="preserve"><value>メタデータのプレビューを構築する</value></data>
-  <data name="Workbench.Activity.BuildingReportPreview" xml:space="preserve"><value>構築レポートのプレビュー</value></data>
-  <data name="Workbench.Activity.FindingCoverArt" xml:space="preserve"><value>Cover Art Archive の画像を検索中</value></data>
+  <data name="Workbench.Action.UndoLastApply" xml:space="preserve"><value>最後に適用した変更を元に戻す</value></data>
+  <data name="Workbench.Activity.ApplyingReviewedChanges" xml:space="preserve"><value>確認済みの変更を適用しています</value></data>
+  <data name="Workbench.Activity.BuildingPlaylistPreview" xml:space="preserve"><value>プレイリストのプレビューを作成しています</value></data>
+  <data name="Workbench.Activity.BuildingPreview" xml:space="preserve"><value>メタデータのプレビューを作成しています</value></data>
+  <data name="Workbench.Activity.BuildingReportPreview" xml:space="preserve"><value>レポートのプレビューを作成しています</value></data>
+  <data name="Workbench.Activity.FindingCoverArt" xml:space="preserve"><value>Cover Art Archive の画像を検索しています</value></data>
   <data name="Workbench.Activity.LoadingDiscogsDetails" xml:space="preserve"><value>Discogs リリースの詳細を読み込んでいます</value></data>
-  <data name="Workbench.Activity.MappingDiscogsTracks" xml:space="preserve"><value>ワークベンチのファイルを Discogs のトラックに照合しています</value></data>
-  <data name="Workbench.Activity.MappingReleaseTracks" xml:space="preserve"><value>ワークベンチのファイルをリリーストラックに照合中</value></data>
-  <data name="Workbench.Activity.PreparingFingerprint" xml:space="preserve"><value>音声指紋検出の準備</value></data>
-  <data name="Workbench.Activity.ReloadingInspectorChanges" xml:space="preserve"><value>インスペクターの変更を再ロードしています</value></data>
-  <data name="Workbench.Activity.ResolvingMusicBrainz" xml:space="preserve"><value>MusicBrainz のリリース版を解決中</value></data>
-  <data name="Workbench.Activity.RestoringLatest" xml:space="preserve"><value>最新のワークベンチ操作の復元</value></data>
+  <data name="Workbench.Activity.MappingDiscogsTracks" xml:space="preserve"><value>ワークベンチのファイルを Discogs のトラックと照合しています</value></data>
+  <data name="Workbench.Activity.MappingReleaseTracks" xml:space="preserve"><value>ワークベンチのファイルをリリースのトラックと照合しています</value></data>
+  <data name="Workbench.Activity.PreparingFingerprint" xml:space="preserve"><value>音声フィンガープリントの検出を準備しています</value></data>
+  <data name="Workbench.Activity.ReloadingInspectorChanges" xml:space="preserve"><value>インスペクターの変更を再読み込みしています</value></data>
+  <data name="Workbench.Activity.ResolvingMusicBrainz" xml:space="preserve"><value>MusicBrainz リリースの版を解決しています</value></data>
+  <data name="Workbench.Activity.RestoringLatest" xml:space="preserve"><value>最新のワークベンチ操作を復元しています</value></data>
   <data name="Workbench.Activity.RunningTool" xml:space="preserve"><value>実行中 {0}</value></data>
-  <data name="Workbench.Activity.ScanningSources" xml:space="preserve"><value>ワークベンチソースのスキャン</value></data>
+  <data name="Workbench.Activity.ScanningSources" xml:space="preserve"><value>ワークベンチのソースをスキャンしています</value></data>
   <data name="Workbench.Activity.SearchingDiscogs" xml:space="preserve"><value>Discogs リリースを検索しています</value></data>
   <data name="Workbench.Activity.SearchingMusicBrainz" xml:space="preserve"><value>MusicBrainz リリースを検索しています</value></data>
-  <data name="Workbench.Activity.WritingPlaylist" xml:space="preserve"><value>レビュー済みプレイリストの作成</value></data>
-  <data name="Workbench.Activity.WritingReport" xml:space="preserve"><value>レビュー済みレポートの作成</value></data>
+  <data name="Workbench.Activity.WritingPlaylist" xml:space="preserve"><value>確認済みのプレイリストを書き込んでいます</value></data>
+  <data name="Workbench.Activity.WritingReport" xml:space="preserve"><value>確認済みのレポートを書き込んでいます</value></data>
   <data name="Workbench.AllFields.Action.Copy" xml:space="preserve"><value>フィールドをコピー</value></data>
   <data name="Workbench.AllFields.Action.CopyTooltip" xml:space="preserve"><value>タグの識別情報を含めてフィールド値をコピー</value></data>
   <data name="Workbench.AllFields.Action.NewCustomField" xml:space="preserve"><value>新しいカスタムフィールド</value></data>
-  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>新しい既知のフィールド</value></data>
-  <data name="Workbench.AllFields.Action.PastePreview" xml:space="preserve"><value>貼り付け+プレビュー</value></data>
+  <data name="Workbench.AllFields.Action.NewKnownField" xml:space="preserve"><value>新しい標準メタデータフィールド</value></data>
+  <data name="Workbench.AllFields.Action.PastePreview" xml:space="preserve"><value>貼り付けてプレビュー</value></data>
   <data name="Workbench.AllFields.Action.PastePreviewTooltip" xml:space="preserve"><value>貼り付け+プレビュー</value></data>
   <data name="Workbench.AllFields.Action.Preview" xml:space="preserve"><value>プレビュー</value></data>
   <data name="Workbench.AllFields.Description" xml:space="preserve"><value>現在の選択項目に含まれる既知およびカスタムのメタデータを確認して編集します。</value></data>
   <data name="Workbench.AllFields.ExistingField" xml:space="preserve"><value>既存のフィールド</value></data>
   <data name="Workbench.AllFields.OrderedValues" xml:space="preserve"><value>順序付きの値</value></data>
-  <data name="Workbench.AllFields.Title" xml:space="preserve"><value>すべてのメタデータ フィールド</value></data>
+  <data name="Workbench.AllFields.Title" xml:space="preserve"><value>すべてのメタデータフィールド</value></data>
   <data name="Workbench.AllFields.ValueAction" xml:space="preserve"><value>値の操作</value></data>
   <data name="Workbench.Bulk.Action.AddToRecipe" xml:space="preserve"><value>レシピに追加</value></data>
   <data name="Workbench.Bulk.Action.DeleteRecipe" xml:space="preserve"><value>レシピを削除</value></data>
@@ -5101,40 +5101,41 @@
   <data name="Workbench.Bulk.Action.StepActionsAutomation" xml:space="preserve"><value>ステップ操作</value></data>
   <data name="Workbench.Bulk.AssignmentPlaceholder" xml:space="preserve"><value>割り当て</value></data>
   <data name="Workbench.Bulk.CaptureGroup" xml:space="preserve"><value>キャプチャグループ</value></data>
-  <data name="Workbench.Bulk.Case" xml:space="preserve"><value>大文字/小文字</value></data>
+  <data name="Workbench.Bulk.Case" xml:space="preserve"><value>文字の大文字/小文字</value></data>
   <data name="Workbench.Bulk.Condition" xml:space="preserve"><value>条件</value></data>
   <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>条件値</value></data>
   <data name="Workbench.Bulk.Description" xml:space="preserve"><value>再利用できるメタデータレシピを作成し、その結果をプレビューして、確認済みの変更だけを適用します。</value></data>
   <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>対象フィールド</value></data>
   <data name="Workbench.Bulk.EnableCondition" xml:space="preserve"><value>条件を有効にする</value></data>
   <data name="Workbench.Bulk.ExtractionPattern" xml:space="preserve"><value>抽出パターン</value></data>
-  <data name="Workbench.Bulk.ExtractionPatternPlaceholder" xml:space="preserve"><value>抽出 パターン</value></data>
+  <data name="Workbench.Bulk.ExtractionPatternPlaceholder" xml:space="preserve"><value>抽出パターン</value></data>
   <data name="Workbench.Bulk.Field" xml:space="preserve"><value>フィールド</value></data>
   <data name="Workbench.Bulk.Find" xml:space="preserve"><value>検索</value></data>
-  <data name="Workbench.Bulk.FindPlaceholder" xml:space="preserve"><value>検索</value></data>
+  <data name="Workbench.Bulk.FindPlaceholder" xml:space="preserve"><value>検索するテキスト</value></data>
   <data name="Workbench.Bulk.Operation" xml:space="preserve"><value>操作</value></data>
-  <data name="Workbench.Bulk.OrderedRecipe" xml:space="preserve"><value>順序 レシピ</value></data>
+  <data name="Workbench.Bulk.OrderedRecipe" xml:space="preserve"><value>レシピの下書き</value></data>
   <data name="Workbench.Bulk.ParentLevel" xml:space="preserve"><value>親階層</value></data>
   <data name="Workbench.Bulk.PathComponent" xml:space="preserve"><value>パス要素</value></data>
-  <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>保留中 操作</value></data>
-  <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>保留中 操作</value></data>
-  <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>個人 レシピ</value></data>
+  <data name="Workbench.Bulk.PendingOperations" xml:space="preserve"><value>プレビュー結果</value></data>
+  <data name="Workbench.Bulk.PendingOperationsAutomation" xml:space="preserve"><value>プレビュー結果</value></data>
+  <data name="Workbench.Bulk.PersonalRecipes" xml:space="preserve"><value>保存済みのレシピ</value></data>
   <data name="Workbench.Bulk.RecipeNamePlaceholder" xml:space="preserve"><value>レシピ名</value></data>
+  <data name="Workbench.Bulk.StepName" xml:space="preserve"><value>ステップ名</value></data>
   <data name="Workbench.Bulk.ReplaceWith" xml:space="preserve"><value>置換後</value></data>
-  <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>現在の操作を編集すると、軽量のドラフト プレビューが更新されます。</value></data>
-  <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>代表 下書き</value></data>
+  <data name="Workbench.Bulk.RepresentativeDescription" xml:space="preserve"><value>現在の操作を編集すると、簡易ドラフトプレビューが更新されます。</value></data>
+  <data name="Workbench.Bulk.RepresentativeDraft" xml:space="preserve"><value>代表プレビュー</value></data>
   <data name="Workbench.Bulk.ReviewedChanges" xml:space="preserve"><value>確認済みの変更</value></data>
   <data name="Workbench.Bulk.Safety" xml:space="preserve"><value>プレビューではファイルは変更されません。適用時には、古くなったファイルの検査、復旧ジャーナル、元に戻す機能が使用されます。</value></data>
   <data name="Workbench.Bulk.SavedRecipePlaceholder" xml:space="preserve"><value>保存済みレシピ</value></data>
-  <data name="Workbench.Bulk.SecondSourceField" xml:space="preserve"><value>2番目のソースフィールド</value></data>
+  <data name="Workbench.Bulk.SecondSourceField" xml:space="preserve"><value>2 番目のソースフィールド</value></data>
   <data name="Workbench.Bulk.Separator" xml:space="preserve"><value>区切り文字</value></data>
   <data name="Workbench.Bulk.Sequence" xml:space="preserve"><value>連番</value></data>
-  <data name="Workbench.Bulk.SequencePaddingAutomation" xml:space="preserve"><value>連番 パディング</value></data>
-  <data name="Workbench.Bulk.SequenceStartAutomation" xml:space="preserve"><value>連番 開始</value></data>
-  <data name="Workbench.Bulk.UseRegularExpression" xml:space="preserve"><value>正規表現を使用する</value></data>
+  <data name="Workbench.Bulk.SequencePaddingAutomation" xml:space="preserve"><value>連番の最小桁数</value></data>
+  <data name="Workbench.Bulk.SequenceStartAutomation" xml:space="preserve"><value>連番の開始番号</value></data>
+  <data name="Workbench.Bulk.UseRegularExpression" xml:space="preserve"><value>正規表現を使用</value></data>
   <data name="Workbench.Bulk.Value" xml:space="preserve"><value>値</value></data>
   <data name="Workbench.Bulk.ValueOrder" xml:space="preserve"><value>値の順序</value></data>
-  <data name="Workbench.Choice.ExternalToolInvocationMode.OnceForSelection" xml:space="preserve"><value>選択範囲に 1 回</value></data>
+  <data name="Workbench.Choice.ExternalToolInvocationMode.OnceForSelection" xml:space="preserve"><value>選択全体に対して 1 回</value></data>
   <data name="Workbench.Choice.ExternalToolInvocationMode.OncePerFile" xml:space="preserve"><value>ファイルごとに 1 回</value></data>
   <data name="Workbench.Choice.FieldEditMode.Append" xml:space="preserve"><value>追加</value></data>
   <data name="Workbench.Choice.FieldEditMode.RemoveField" xml:space="preserve"><value>フィールドを削除</value></data>
@@ -5142,10 +5143,10 @@
   <data name="Workbench.Choice.FieldEditMode.Replace" xml:space="preserve"><value>置換</value></data>
   <data name="Workbench.Choice.Id3EncodingPolicy.Automatic" xml:space="preserve"><value>自動</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>無視</value></data>
-  <data name="Workbench.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>空の値を保持する</value></data>
+  <data name="Workbench.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>明示的な空の値を維持</value></data>
   <data name="Workbench.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>フィールドを削除</value></data>
-  <data name="Workbench.Choice.MetadataGridFieldKind.Custom" xml:space="preserve"><value>カスタム</value></data>
-  <data name="Workbench.Choice.MetadataGridFieldKind.Known" xml:space="preserve"><value>既知</value></data>
+  <data name="Workbench.Choice.MetadataGridFieldKind.Custom" xml:space="preserve"><value>カスタムメタデータフィールド</value></data>
+  <data name="Workbench.Choice.MetadataGridFieldKind.Known" xml:space="preserve"><value>標準メタデータフィールド</value></data>
   <data name="Workbench.Choice.MetadataGridSortType.Date" xml:space="preserve"><value>日付</value></data>
   <data name="Workbench.Choice.MetadataGridSortType.Numeric" xml:space="preserve"><value>数値</value></data>
   <data name="Workbench.Choice.MetadataGridSortType.Text" xml:space="preserve"><value>テキスト</value></data>
@@ -5153,19 +5154,19 @@
   <data name="Workbench.Choice.OnlineProvider.MusicBrainz" xml:space="preserve"><value>MusicBrainz</value></data>
   <data name="Workbench.Choice.OnlineScope.AllFiles" xml:space="preserve"><value>すべてのファイル</value></data>
   <data name="Workbench.Choice.OnlineScope.SelectedFile" xml:space="preserve"><value>選択したファイル</value></data>
-  <data name="Workbench.Choice.PlaylistLineEnding.Platform" xml:space="preserve"><value>プラットフォーム</value></data>
-  <data name="Workbench.Choice.PlaylistPathStyle.Absolute" xml:space="preserve"><value>絶対</value></data>
-  <data name="Workbench.Choice.PlaylistPathStyle.AsProvided" xml:space="preserve"><value>として 提供済み</value></data>
-  <data name="Workbench.Choice.PlaylistPathStyle.Relative" xml:space="preserve"><value>相対</value></data>
+  <data name="Workbench.Choice.PlaylistLineEnding.Platform" xml:space="preserve"><value>オペレーティングシステムの既定値</value></data>
+  <data name="Workbench.Choice.PlaylistPathStyle.Absolute" xml:space="preserve"><value>絶対パス</value></data>
+  <data name="Workbench.Choice.PlaylistPathStyle.AsProvided" xml:space="preserve"><value>指定されたソースパスを維持</value></data>
+  <data name="Workbench.Choice.PlaylistPathStyle.Relative" xml:space="preserve"><value>相対パス</value></data>
   <data name="Workbench.Choice.ReportFormat.Text" xml:space="preserve"><value>テキスト</value></data>
-  <data name="Workbench.Choice.ReportSortType.DateTime" xml:space="preserve"><value>日付 時間</value></data>
-  <data name="Workbench.Choice.ReportSortType.Natural" xml:space="preserve"><value>自然</value></data>
+  <data name="Workbench.Choice.ReportSortType.DateTime" xml:space="preserve"><value>日時</value></data>
+  <data name="Workbench.Choice.ReportSortType.Natural" xml:space="preserve"><value>自然順</value></data>
   <data name="Workbench.Choice.ReportSortType.Numeric" xml:space="preserve"><value>数値</value></data>
   <data name="Workbench.Choice.ReportSortType.Text" xml:space="preserve"><value>テキスト</value></data>
   <data name="Workbench.Choice.ShortcutTargetKind.Command" xml:space="preserve"><value>コマンド</value></data>
   <data name="Workbench.Choice.ShortcutTargetKind.Recipe" xml:space="preserve"><value>レシピ</value></data>
   <data name="Workbench.Columns.Action.Save" xml:space="preserve"><value>列を保存</value></data>
-  <data name="Workbench.Columns.AllowInlineEditing" xml:space="preserve"><value>インライン編集を許可する</value></data>
+  <data name="Workbench.Columns.AllowInlineEditing" xml:space="preserve"><value>インライン編集を許可</value></data>
   <data name="Workbench.Columns.Close" xml:space="preserve"><value>閉じる</value></data>
   <data name="Workbench.Columns.Description" xml:space="preserve"><value>保存済みのメタデータを変更せずに、表示する列を選択したりメタデータ列を作成したりできます。</value></data>
   <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>インライン編集は、対応している既知のフィールドでのみ使用できます。</value></data>
@@ -5174,41 +5175,42 @@
   <data name="Workbench.Columns.Metadata" xml:space="preserve"><value>メタデータ</value></data>
   <data name="Workbench.Columns.Status.ChooseField" xml:space="preserve"><value>既知のフィールドを選択するか、カスタムフィールド名を入力してください。</value></data>
   <data name="Workbench.Columns.Status.EnterLabel" xml:space="preserve"><value>列のラベルを入力してください。</value></data>
-  <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>新しい未保存のメタデータ列。</value></data>
+  <data name="Workbench.Columns.Status.New" xml:space="preserve"><value>新しい未保存のメタデータ列です。</value></data>
   <data name="Workbench.Columns.Status.Removed" xml:space="preserve"><value>メタデータ列「{0}」を削除しました。</value></data>
   <data name="Workbench.Columns.Status.Saved" xml:space="preserve"><value>メタデータ列「{0}」を保存しました。</value></data>
   <data name="Workbench.Columns.Title" xml:space="preserve"><value>列の詳細</value></data>
   <data name="Workbench.Columns.Visible" xml:space="preserve"><value>表示</value></data>
   <data name="Workbench.Common.After" xml:space="preserve"><value>変更後</value></data>
   <data name="Workbench.Common.Before" xml:space="preserve"><value>変更前</value></data>
-  <data name="Workbench.Common.CustomFieldPlaceholder" xml:space="preserve"><value>カスタム フィールド</value></data>
-  <data name="Workbench.Common.OutputPathPlaceholder" xml:space="preserve"><value>出力 パス</value></data>
-  <data name="Workbench.Dialog.Clear.Message" xml:space="preserve"><value>これにより、現在のセッションとそのコミットされていない編集が削除されます。ディスク上のファイルは変更されません。</value></data>
+  <data name="Workbench.Common.CustomFieldPlaceholder" xml:space="preserve"><value>カスタムフィールド名</value></data>
+  <data name="Workbench.Common.Format" xml:space="preserve"><value>形式</value></data>
+  <data name="Workbench.Common.OutputPathPlaceholder" xml:space="preserve"><value>出力パス</value></data>
+  <data name="Workbench.Dialog.Clear.Message" xml:space="preserve"><value>現在のセッションと未適用の編集内容が削除されます。ディスク上のファイルは変更されません。</value></data>
   <data name="Workbench.Dialog.Clear.Title" xml:space="preserve"><value>ワークベンチをクリアしますか？</value></data>
-  <data name="Workbench.Dialog.Leave.Confirm" xml:space="preserve"><value>残す</value></data>
-  <data name="Workbench.Dialog.Leave.Message" xml:space="preserve"><value>現在のプレビューとインライン編集はこのセッションに残りますが、ディスクには適用されていません。</value></data>
-  <data name="Workbench.Dialog.Leave.Title" xml:space="preserve"><value>ワークベンチを離れますか?</value></data>
-  <data name="Workbench.Dialog.Restore.Message" xml:space="preserve"><value>現在のファイルは、保持されているオリジナルに置き換えられます。衝突バックアップは必要に応じて作成されます。</value></data>
-  <data name="Workbench.Dialog.Restore.Title" xml:space="preserve"><value>最後のワークベンチ操作を復元しますか?</value></data>
-  <data name="Workbench.Dialog.RunTool.Message" xml:space="preserve"><value>「{0}」を {1:N0} 回実行しますか?外部ツールはファイルを変更する可能性があり、MusicLibraryManager リカバリの対象外です。</value></data>
-  <data name="Workbench.Dialog.RunTool.Title" xml:space="preserve"><value>外部ツールを実行しますか?</value></data>
-  <data name="Workbench.Drawer.Automation" xml:space="preserve"><value>作業台サイドパネル</value></data>
+  <data name="Workbench.Dialog.Leave.Confirm" xml:space="preserve"><value>移動</value></data>
+  <data name="Workbench.Dialog.Leave.Message" xml:space="preserve"><value>現在のプレビューとインライン編集はこのセッションに残りますが、まだディスクには適用されていません。</value></data>
+  <data name="Workbench.Dialog.Leave.Title" xml:space="preserve"><value>ワークベンチを離れますか？</value></data>
+  <data name="Workbench.Dialog.Restore.Message" xml:space="preserve"><value>現在のファイルは保持されているオリジナルに置き換えられます。必要な場合は競合バックアップが作成されます。</value></data>
+  <data name="Workbench.Dialog.Restore.Title" xml:space="preserve"><value>最後のワークベンチ操作を復元しますか？</value></data>
+  <data name="Workbench.Dialog.RunTool.Message" xml:space="preserve"><value>「{0}」を実行しますか？呼び出し回数: {1:N0}。外部ツールはファイルを変更する可能性があり、MusicLibraryManager の復元対象外です。</value></data>
+  <data name="Workbench.Dialog.RunTool.Title" xml:space="preserve"><value>外部ツールを実行しますか？</value></data>
+  <data name="Workbench.Drawer.Automation" xml:space="preserve"><value>ワークベンチのサイドパネル</value></data>
   <data name="Workbench.Drawer.CloseAutomation" xml:space="preserve"><value>ワークベンチのサイドパネルを閉じる</value></data>
-  <data name="Workbench.Error.ChooseDiscogsRelease" xml:space="preserve"><value>Discogs リリースを選択します。</value></data>
-  <data name="Workbench.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>MusicBrainz リリースを選択します。</value></data>
+  <data name="Workbench.Error.ChooseDiscogsRelease" xml:space="preserve"><value>Discogs リリースを選択してください。</value></data>
+  <data name="Workbench.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>MusicBrainz リリースを選択してください。</value></data>
   <data name="Workbench.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs は利用できません。</value></data>
-  <data name="Workbench.Error.NoImportRowsMatched" xml:space="preserve"><value>このワークベンチ セッションに一致するインポート行はありません。</value></data>
-  <data name="Workbench.FileOperations.PendingMetadataPreflight" xml:space="preserve"><value>ファイルを移動する前に、現在のメタデータとアートワークの編集を適用または破棄します。</value></data>
+  <data name="Workbench.Error.NoImportRowsMatched" xml:space="preserve"><value>このワークベンチセッションに一致するインポート行はありません。</value></data>
+  <data name="Workbench.FileOperations.PendingMetadataPreflight" xml:space="preserve"><value>ファイルを移動する前に、現在のメタデータとアートワークの編集を適用するか破棄してください。</value></data>
   <data name="Workbench.Grid.Header.After" xml:space="preserve"><value>変更後</value></data>
   <data name="Workbench.Grid.Header.AppliesTo" xml:space="preserve"><value>適用先</value></data>
   <data name="Workbench.Grid.Header.Approved" xml:space="preserve"><value>承認済み</value></data>
-  <data name="Workbench.Grid.Header.ArchiveId" xml:space="preserve"><value>アーカイブID</value></data>
+  <data name="Workbench.Grid.Header.ArchiveId" xml:space="preserve"><value>Cover Art Archive ID</value></data>
   <data name="Workbench.Grid.Header.Arguments" xml:space="preserve"><value>引数</value></data>
-  <data name="Workbench.Grid.Header.ArtistCredit" xml:space="preserve"><value>アーティスト クレジット</value></data>
+  <data name="Workbench.Grid.Header.ArtistCredit" xml:space="preserve"><value>アーティストクレジット</value></data>
   <data name="Workbench.Grid.Header.Back" xml:space="preserve"><value>背面</value></data>
   <data name="Workbench.Grid.Header.Before" xml:space="preserve"><value>変更前</value></data>
   <data name="Workbench.Grid.Header.Bytes" xml:space="preserve"><value>バイト</value></data>
-  <data name="Workbench.Grid.Header.CatalogNumber" xml:space="preserve"><value>カタログ 番号</value></data>
+  <data name="Workbench.Grid.Header.CatalogNumber" xml:space="preserve"><value>カタログ番号</value></data>
   <data name="Workbench.Grid.Header.Comment" xml:space="preserve"><value>コメント</value></data>
   <data name="Workbench.Grid.Header.Confidence" xml:space="preserve"><value>信頼度</value></data>
   <data name="Workbench.Grid.Header.Country" xml:space="preserve"><value>国</value></data>
@@ -5226,9 +5228,9 @@
   <data name="Workbench.Grid.Header.Genres" xml:space="preserve"><value>ジャンル</value></data>
   <data name="Workbench.Grid.Header.Group" xml:space="preserve"><value>グループ</value></data>
   <data name="Workbench.Grid.Header.Kind" xml:space="preserve"><value>種類</value></data>
-  <data name="Workbench.Grid.Header.Label" xml:space="preserve"><value>ラベル</value></data>
-  <data name="Workbench.Grid.Header.Labels" xml:space="preserve"><value>ラベル</value></data>
-  <data name="Workbench.Grid.Header.MatchedPosition" xml:space="preserve"><value>一致 位置</value></data>
+  <data name="Workbench.Grid.Header.Label" xml:space="preserve"><value>レーベル</value></data>
+  <data name="Workbench.Grid.Header.Labels" xml:space="preserve"><value>レーベル</value></data>
+  <data name="Workbench.Grid.Header.MatchedPosition" xml:space="preserve"><value>一致した位置</value></data>
   <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>MusicBrainz 録音 ID</value></data>
   <data name="Workbench.Grid.Header.MusicBrainzReleaseId" xml:space="preserve"><value>MusicBrainz リリース ID</value></data>
   <data name="Workbench.Grid.Header.Operation" xml:space="preserve"><value>操作</value></data>
@@ -5236,44 +5238,44 @@
   <data name="Workbench.Grid.Header.Preview" xml:space="preserve"><value>プレビュー</value></data>
   <data name="Workbench.Grid.Header.Reason" xml:space="preserve"><value>理由</value></data>
   <data name="Workbench.Grid.Header.Release" xml:space="preserve"><value>リリース</value></data>
-  <data name="Workbench.Grid.Header.ReleaseTrack" xml:space="preserve"><value>リリース トラック</value></data>
+  <data name="Workbench.Grid.Header.ReleaseTrack" xml:space="preserve"><value>リリーストラック</value></data>
   <data name="Workbench.Grid.Header.Rows" xml:space="preserve"><value>行</value></data>
   <data name="Workbench.Grid.Header.SelectedFiles" xml:space="preserve"><value>選択したファイル</value></data>
   <data name="Workbench.Grid.Header.Source" xml:space="preserve"><value>ソース</value></data>
   <data name="Workbench.Grid.Header.Status" xml:space="preserve"><value>状態</value></data>
   <data name="Workbench.Grid.Header.Styles" xml:space="preserve"><value>スタイル</value></data>
-  <data name="Workbench.Grid.Header.TagLayers" xml:space="preserve"><value>タグ レイヤー</value></data>
+  <data name="Workbench.Grid.Header.TagLayers" xml:space="preserve"><value>タグレイヤー</value></data>
   <data name="Workbench.Grid.Header.TargetDetails" xml:space="preserve"><value>対象の詳細</value></data>
   <data name="Workbench.Grid.Header.Thumbnail" xml:space="preserve"><value>サムネイル</value></data>
   <data name="Workbench.Grid.Header.Tracks" xml:space="preserve"><value>トラック</value></data>
-  <data name="Workbench.Grid.Header.Types" xml:space="preserve"><value>種類</value></data>
-  <data name="Workbench.Grid.Header.Use" xml:space="preserve"><value>使用</value></data>
+  <data name="Workbench.Grid.Header.Types" xml:space="preserve"><value>アートワークの役割</value></data>
+  <data name="Workbench.Grid.Header.Use" xml:space="preserve"><value>含める</value></data>
   <data name="Workbench.Grid.Header.Values" xml:space="preserve"><value>値</value></data>
   <data name="Workbench.Grid.Header.WorkingDirectory" xml:space="preserve"><value>作業ディレクトリ</value></data>
   <data name="Workbench.Grid.Header.Year" xml:space="preserve"><value>年</value></data>
   <data name="Workbench.Inspector.AddApeV2Automation" xml:space="preserve"><value>APEv2 タグレイヤーを追加</value></data>
   <data name="Workbench.Inspector.AddId3v1Automation" xml:space="preserve"><value>ID3v1 タグレイヤーを追加</value></data>
   <data name="Workbench.Inspector.AddId3v2Automation" xml:space="preserve"><value>ID3v2 タグレイヤーを追加</value></data>
-  <data name="Workbench.Inspector.CopyPrimaryMetadata" xml:space="preserve"><value>プライマリメタデータをコピーする</value></data>
-  <data name="Workbench.Inspector.CopyV1ToV2" xml:space="preserve"><value>V1 から V2 へコピー</value></data>
-  <data name="Workbench.Inspector.CopyV1ToV2Automation" xml:space="preserve"><value>V1 から V2 へコピー</value></data>
-  <data name="Workbench.Inspector.CopyV2ToV1" xml:space="preserve"><value>V2 から V1 へコピー</value></data>
-  <data name="Workbench.Inspector.CopyV2ToV1Automation" xml:space="preserve"><value>V2 から V1 へコピー</value></data>
+  <data name="Workbench.Inspector.CopyPrimaryMetadata" xml:space="preserve"><value>プライマリメタデータをコピー</value></data>
+  <data name="Workbench.Inspector.CopyV1ToV2" xml:space="preserve"><value>ID3v1 から ID3v2 へコピー</value></data>
+  <data name="Workbench.Inspector.CopyV1ToV2Automation" xml:space="preserve"><value>ID3v1 から ID3v2 へコピー</value></data>
+  <data name="Workbench.Inspector.CopyV2ToV1" xml:space="preserve"><value>ID3v2 から ID3v1 へコピー</value></data>
+  <data name="Workbench.Inspector.CopyV2ToV1Automation" xml:space="preserve"><value>ID3v2 から ID3v1 へコピー</value></data>
   <data name="Workbench.Inspector.CurrentLayersFormat" xml:space="preserve"><value>現在のタグレイヤー: {0}</value></data>
   <data name="Workbench.Inspector.CurrentValueFormat" xml:space="preserve"><value>現在の ID3 バージョン: {0}</value></data>
-  <data name="Workbench.Inspector.DropUnsupportedFrames" xml:space="preserve"><value>サポートされていないフレームをドロップする</value></data>
+  <data name="Workbench.Inspector.DropUnsupportedFrames" xml:space="preserve"><value>未対応のフレームを破棄</value></data>
   <data name="Workbench.Inspector.Id3Conversion" xml:space="preserve"><value>ID3 変換</value></data>
   <data name="Workbench.Inspector.Id3EncodingAutomation" xml:space="preserve"><value>ID3 エンコーディング</value></data>
   <data name="Workbench.Inspector.JoinMultiValueText" xml:space="preserve"><value>複数値テキストを結合</value></data>
-  <data name="Workbench.Inspector.PreviewConversion" xml:space="preserve"><value>プレビュー 変換</value></data>
-  <data name="Workbench.Inspector.PreviewConversionAutomation" xml:space="preserve"><value>プレビュー 変換</value></data>
-  <data name="Workbench.Inspector.PreviewEncoding" xml:space="preserve"><value>プレビュー エンコーディング</value></data>
-  <data name="Workbench.Inspector.PreviewEncodingAutomation" xml:space="preserve"><value>プレビュー エンコーディング</value></data>
-  <data name="Workbench.Inspector.RemoveApeV2Automation" xml:space="preserve"><value>APEv2 タグ層を削除します</value></data>
-  <data name="Workbench.Inspector.RemoveId3v1Automation" xml:space="preserve"><value>ID3v1 タグ層を削除します</value></data>
-  <data name="Workbench.Inspector.RemoveId3v2Automation" xml:space="preserve"><value>ID3v2 タグ層を削除します</value></data>
-  <data name="Workbench.Inspector.TagLayers" xml:space="preserve"><value>タグ レイヤー</value></data>
-  <data name="Workbench.Inspector.TargetId3VersionAutomation" xml:space="preserve"><value>ターゲットID3のバージョン</value></data>
+  <data name="Workbench.Inspector.PreviewConversion" xml:space="preserve"><value>変換をプレビュー</value></data>
+  <data name="Workbench.Inspector.PreviewConversionAutomation" xml:space="preserve"><value>変換をプレビュー</value></data>
+  <data name="Workbench.Inspector.PreviewEncoding" xml:space="preserve"><value>エンコーディングをプレビュー</value></data>
+  <data name="Workbench.Inspector.PreviewEncodingAutomation" xml:space="preserve"><value>エンコーディングをプレビュー</value></data>
+  <data name="Workbench.Inspector.RemoveApeV2Automation" xml:space="preserve"><value>APEv2 タグレイヤーを削除</value></data>
+  <data name="Workbench.Inspector.RemoveId3v1Automation" xml:space="preserve"><value>ID3v1 タグレイヤーを削除</value></data>
+  <data name="Workbench.Inspector.RemoveId3v2Automation" xml:space="preserve"><value>ID3v2 タグレイヤーを削除</value></data>
+  <data name="Workbench.Inspector.TagLayers" xml:space="preserve"><value>タグレイヤー</value></data>
+  <data name="Workbench.Inspector.TargetId3VersionAutomation" xml:space="preserve"><value>変換先の ID3 バージョン</value></data>
   <data name="Workbench.Metadata.Coverage" xml:space="preserve"><value>{0:N0}/{1:N0} ファイル</value></data>
   <data name="Workbench.Metadata.Kind.Custom" xml:space="preserve"><value>カスタム</value></data>
   <data name="Workbench.Metadata.Kind.Known" xml:space="preserve"><value>既知</value></data>
@@ -5328,24 +5330,24 @@
   <data name="Workbench.Online.Field.ReleaseDetails" xml:space="preserve"><value>リリースの詳細</value></data>
   <data name="Workbench.Online.Field.Titles" xml:space="preserve"><value>タイトル</value></data>
   <data name="Workbench.Online.Field.TrackArtists" xml:space="preserve"><value>トラックアーティスト</value></data>
-  <data name="Workbench.Online.Field.TrackDiscNumbers" xml:space="preserve"><value>トラックディスク番号</value></data>
-  <data name="Workbench.Online.FindReleaseArtwork" xml:space="preserve"><value>リリースアートワークを探す</value></data>
-  <data name="Workbench.Online.FindReleaseEditions" xml:space="preserve"><value>リリース エディションを探す</value></data>
+  <data name="Workbench.Online.Field.TrackDiscNumbers" xml:space="preserve"><value>トラック番号とディスク番号</value></data>
+  <data name="Workbench.Online.FindReleaseArtwork" xml:space="preserve"><value>リリースのアートワークを検索</value></data>
+  <data name="Workbench.Online.FindReleaseEditions" xml:space="preserve"><value>リリースの版を検索</value></data>
   <data name="Workbench.Online.LoadDetails" xml:space="preserve"><value>詳細を読み込む</value></data>
   <data name="Workbench.Online.MappingReviewDescription" xml:space="preserve"><value>選択したフィールドを通常のプレビューに追加する前に、提案されたファイルとトラックの対応をすべて確認します。</value></data>
-  <data name="Workbench.Online.MaximumDimension" xml:space="preserve"><value>プレビュー/適用の最大幅または高さ (0 はサイズを維持)</value></data>
-  <data name="Workbench.Online.MoveArtworkDown" xml:space="preserve"><value>アートワークを下に移動</value></data>
-  <data name="Workbench.Online.MoveArtworkDownAutomation" xml:space="preserve"><value>アートワークを下に移動</value></data>
-  <data name="Workbench.Online.MoveArtworkUp" xml:space="preserve"><value>アートワークを上に移動</value></data>
-  <data name="Workbench.Online.MoveArtworkUpAutomation" xml:space="preserve"><value>アートワークを上に移動</value></data>
+  <data name="Workbench.Online.MaximumDimension" xml:space="preserve"><value>プレビュー/適用時の最大幅または高さ（0 でサイズを維持）</value></data>
+  <data name="Workbench.Online.MoveArtworkDown" xml:space="preserve"><value>アートワークを下へ移動</value></data>
+  <data name="Workbench.Online.MoveArtworkDownAutomation" xml:space="preserve"><value>アートワークを下へ移動</value></data>
+  <data name="Workbench.Online.MoveArtworkUp" xml:space="preserve"><value>アートワークを上へ移動</value></data>
+  <data name="Workbench.Online.MoveArtworkUpAutomation" xml:space="preserve"><value>アートワークを上へ移動</value></data>
   <data name="Workbench.Online.MusicBrainzReleaseIdPlaceholder" xml:space="preserve"><value>MusicBrainz リリース ID</value></data>
-  <data name="Workbench.Online.PreviewArtworkSet" xml:space="preserve"><value>アートワークセットのプレビュー</value></data>
+  <data name="Workbench.Online.PreviewArtworkSet" xml:space="preserve"><value>アートワークセットをプレビュー</value></data>
   <data name="Workbench.Online.PreviewCover" xml:space="preserve"><value>アートワークをプレビュー</value></data>
-  <data name="Workbench.Online.PreviewMappedMetadata" xml:space="preserve"><value>マップされたメタデータのプレビュー</value></data>
-  <data name="Workbench.Online.PreviewReleaseCover" xml:space="preserve"><value>プレビュー リリースの表紙</value></data>
+  <data name="Workbench.Online.PreviewMappedMetadata" xml:space="preserve"><value>マッピングしたメタデータをプレビュー</value></data>
+  <data name="Workbench.Online.PreviewReleaseCover" xml:space="preserve"><value>リリースの表紙をプレビュー</value></data>
   <data name="Workbench.Online.PreviewSelectedIds" xml:space="preserve"><value>選択した ID をプレビュー</value></data>
   <data name="Workbench.Online.ProviderAutomation" xml:space="preserve"><value>プロバイダー</value></data>
-  <data name="Workbench.Online.ReleaseArtworkCandidates" xml:space="preserve"><value>リリース作品候補</value></data>
+  <data name="Workbench.Online.ReleaseArtworkCandidates" xml:space="preserve"><value>リリースアートワークの候補</value></data>
   <data name="Workbench.Online.ReleaseEditions" xml:space="preserve"><value>リリースの版</value></data>
   <data name="Workbench.Online.RemoveArtwork" xml:space="preserve"><value>アートワークを削除</value></data>
   <data name="Workbench.Online.RemoveArtworkAutomation" xml:space="preserve"><value>アートワークを削除</value></data>
@@ -5364,30 +5366,30 @@
   <data name="Workbench.Online.Thumbnail.Cached" xml:space="preserve"><value>キャッシュ済み</value></data>
   <data name="Workbench.Online.TrackMapping" xml:space="preserve"><value>トラックの対応付け</value></data>
   <data name="Workbench.Online.TrackMappingDescription" xml:space="preserve"><value>リリースを選択し、提案されたファイルとトラックの対応をすべて確認して、プレビューするフィールドグループを選びます。</value></data>
-  <data name="Workbench.Operation.ConvertId3Version" xml:space="preserve"><value>ID3v2.{0} に変換します</value></data>
-  <data name="Workbench.Operation.ConvertTagLayer" xml:space="preserve"><value>{0} を {1} に変換します</value></data>
+  <data name="Workbench.Operation.ConvertId3Version" xml:space="preserve"><value>ID3v2.{0} に変換</value></data>
+  <data name="Workbench.Operation.ConvertTagLayer" xml:space="preserve"><value>{0} を {1} に変換</value></data>
   <data name="Workbench.Operation.CoverArtArchive" xml:space="preserve"><value>Cover Art Archive: {0}</value></data>
   <data name="Workbench.Operation.DiscogsArtwork" xml:space="preserve"><value>Discogs アートワーク: {0}</value></data>
   <data name="Workbench.Operation.DiscogsMetadata" xml:space="preserve"><value>Discogs: {0}</value></data>
-  <data name="Workbench.Operation.DraftRepresentativePreview" xml:space="preserve"><value>ドラフト代表プレビュー</value></data>
-  <data name="Workbench.Operation.EditEmbeddedArtwork" xml:space="preserve"><value>{0:N0} ファイルの埋め込みアートワークを編集する</value></data>
+  <data name="Workbench.Operation.DraftRepresentativePreview" xml:space="preserve"><value>代表プレビューの下書き</value></data>
+  <data name="Workbench.Operation.EditEmbeddedArtwork" xml:space="preserve"><value>{0:N0} ファイルの埋め込みアートワークを編集</value></data>
   <data name="Workbench.Operation.EditFieldValues" xml:space="preserve"><value>{1:N0} ファイルの {0} の値を編集</value></data>
-  <data name="Workbench.Operation.FieldEdits" xml:space="preserve"><value>ワークベンチフィールドの編集</value></data>
+  <data name="Workbench.Operation.FieldEdits" xml:space="preserve"><value>ワークベンチのフィールド編集</value></data>
   <data name="Workbench.Operation.GridAndInspectorEdits" xml:space="preserve"><value>ワークベンチのグリッドとインスペクターの編集</value></data>
-  <data name="Workbench.Operation.ImportMetadata" xml:space="preserve"><value>{0} からメタデータをインポートする</value></data>
-  <data name="Workbench.Operation.InspectorArtwork" xml:space="preserve"><value>ワークベンチ検査官のアートワーク</value></data>
+  <data name="Workbench.Operation.ImportMetadata" xml:space="preserve"><value>{0} からメタデータをインポート</value></data>
+  <data name="Workbench.Operation.InspectorArtwork" xml:space="preserve"><value>ワークベンチのインスペクターアートワーク</value></data>
   <data name="Workbench.Operation.MusicBrainzMetadata" xml:space="preserve"><value>MusicBrainz: {0}</value></data>
   <data name="Workbench.Operation.PasteFieldValues" xml:space="preserve"><value>{1:N0} ファイルの {0} の値を貼り付け</value></data>
-  <data name="Workbench.Operation.PendingChanges" xml:space="preserve"><value>ワークベンチ 保留中の変更</value></data>
-  <data name="Workbench.Operation.ReencodeId3" xml:space="preserve"><value>ID3 テキストを {0} として再エンコードします</value></data>
-  <data name="Workbench.Operation.RemoveAllArtwork" xml:space="preserve"><value>すべてのアートワークを削除する</value></data>
-  <data name="Workbench.Operation.RemoveFrontCover" xml:space="preserve"><value>フロントカバーを取り外します</value></data>
-  <data name="Workbench.Operation.ReplaceFrontCover" xml:space="preserve"><value>フロントカバーを交換する</value></data>
-  <data name="Workbench.Operation.TagLayer" xml:space="preserve"><value>{0}: {1} タグレイヤー</value></data>
+  <data name="Workbench.Operation.PendingChanges" xml:space="preserve"><value>ワークベンチの保留中の変更</value></data>
+  <data name="Workbench.Operation.ReencodeId3" xml:space="preserve"><value>ID3 テキストを {0} で再エンコード</value></data>
+  <data name="Workbench.Operation.RemoveAllArtwork" xml:space="preserve"><value>すべてのアートワークを削除</value></data>
+  <data name="Workbench.Operation.RemoveFrontCover" xml:space="preserve"><value>フロントカバーを削除</value></data>
+  <data name="Workbench.Operation.ReplaceFrontCover" xml:space="preserve"><value>フロントカバーを置換</value></data>
+  <data name="Workbench.Operation.TagLayer" xml:space="preserve"><value>{1} タグレイヤーを{0}</value></data>
   <data name="Workbench.PendingChanges.ApplyTooltip" xml:space="preserve"><value>適用</value></data>
   <data name="Workbench.PendingChanges.Close" xml:space="preserve"><value>閉じる</value></data>
-  <data name="Workbench.PendingChanges.Count.One" xml:space="preserve"><value>{0:N0} 編集保留中</value></data>
-  <data name="Workbench.PendingChanges.Count.Other" xml:space="preserve"><value>{0:N0} 保留中の編集</value></data>
+  <data name="Workbench.PendingChanges.Count.One" xml:space="preserve"><value>保留中の編集 {0:N0} 件</value></data>
+  <data name="Workbench.PendingChanges.Count.Other" xml:space="preserve"><value>保留中の編集 {0:N0} 件</value></data>
   <data name="Workbench.PendingChanges.Description" xml:space="preserve"><value>書き込み前に、保留中の編集とファイル操作をすべて確認します。</value></data>
   <data name="Workbench.PendingChanges.Empty" xml:space="preserve"><value>保留中の変更はありません。グリッド、インスペクター、ファイル操作、トランスコードでの編集はここに表示されます。</value></data>
   <data name="Workbench.PendingChanges.EmptyDescription" xml:space="preserve"><value>グリッド、インスペクター、ファイル操作、トランスコードでの編集は、書き込み前にここに表示されます。</value></data>
@@ -5401,8 +5403,8 @@
   <data name="Workbench.Picker.AddArtwork.Title" xml:space="preserve"><value>アートワークを追加</value></data>
   <data name="Workbench.Picker.AddFolder.Title" xml:space="preserve"><value>ソースフォルダーを追加</value></data>
   <data name="Workbench.Picker.AddSources.Title" xml:space="preserve"><value>ソースファイルを追加</value></data>
-  <data name="Workbench.Picker.ArtworkImages" xml:space="preserve"><value>アートワーク 画像</value></data>
-  <data name="Workbench.Picker.DelimitedMetadata" xml:space="preserve"><value>区切り メタデータ</value></data>
+  <data name="Workbench.Picker.ArtworkImages" xml:space="preserve"><value>アートワーク画像</value></data>
+  <data name="Workbench.Picker.DelimitedMetadata" xml:space="preserve"><value>区切り形式のメタデータ</value></data>
   <data name="Workbench.Picker.ExportArtwork.Title" xml:space="preserve"><value>アートワークをエクスポート</value></data>
   <data name="Workbench.Picker.ExternalTool.Title" xml:space="preserve"><value>ツールの実行ファイルを選択</value></data>
   <data name="Workbench.Picker.ExternalWorkingDirectory.Title" xml:space="preserve"><value>作業フォルダーを選択</value></data>
@@ -5413,7 +5415,7 @@
   <data name="Workbench.Picker.ReplaceArtwork.Title" xml:space="preserve"><value>アートワークを置換</value></data>
   <data name="Workbench.Picker.ReportFolder.Title" xml:space="preserve"><value>レポートフォルダーを選択</value></data>
   <data name="Workbench.Picker.ReportOutput.Title" xml:space="preserve"><value>レポートを保存</value></data>
-  <data name="Workbench.Picker.SupportedSources" xml:space="preserve"><value>対応 ソース</value></data>
+  <data name="Workbench.Picker.SupportedSources" xml:space="preserve"><value>対応しているソース</value></data>
   <data name="Workbench.Playlists.Action.Preview" xml:space="preserve"><value>プレイリストをプレビュー</value></data>
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>書き込む</value></data>
   <data name="Workbench.Playlists.DefaultName" xml:space="preserve"><value>音楽プレイリスト</value></data>
@@ -5421,15 +5423,15 @@
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>文字エンコーディング</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>拡張情報</value></data>
   <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>改行コード</value></data>
-  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>名前</value></data>
-  <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>グループごとに 1 つ</value></data>
-  <data name="Workbench.Playlists.Grouping" xml:space="preserve"><value>グループ化</value></data>
+  <data name="Workbench.Playlists.NamePlaceholder" xml:space="preserve"><value>プレイリスト名</value></data>
+  <data name="Workbench.Playlists.OnePerGroup" xml:space="preserve"><value>グループごとに 1 つのプレイリスト</value></data>
+  <data name="Workbench.Playlists.Grouping" xml:space="preserve"><value>プレイリストのグループ化基準</value></data>
   <data name="Workbench.Playlists.PathStyle" xml:space="preserve"><value>パス形式</value></data>
   <data name="Workbench.Playlists.Reviewed" xml:space="preserve"><value>確認済み</value></data>
   <data name="Workbench.Playlists.Safety" xml:space="preserve"><value>プレイリストの出力はメタデータの変更とは別に扱われ、確認後にのみ書き込まれます。</value></data>
   <data name="Workbench.Playlists.Title" xml:space="preserve"><value>プレイリスト</value></data>
-  <data name="Workbench.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>アートワークのサムネイルを読み込み中 ({0:N0}/{1:N0})</value></data>
-  <data name="Workbench.Progress.ReadingFile" xml:space="preserve"><value>読み取り中 {0}</value></data>
+  <data name="Workbench.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>アートワークのサムネイルを読み込み中（{0:N0}/{1:N0}）</value></data>
+  <data name="Workbench.Progress.ReadingFile" xml:space="preserve"><value>{0} を読み取っています</value></data>
   <data name="Workbench.Progress.Restored.One" xml:space="preserve"><value>{0:N0} ファイルを復元しました</value></data>
   <data name="Workbench.Progress.Restored.Other" xml:space="preserve"><value>{0:N0} ファイルを復元しました</value></data>
   <data name="Workbench.Reports.Action.AddCustom" xml:space="preserve"><value>カスタムフィールドを追加</value></data>
@@ -5452,11 +5454,11 @@
   <data name="Workbench.Reports.GroupBy" xml:space="preserve"><value>グループ化</value></data>
   <data name="Workbench.Reports.GroupFileNamePattern" xml:space="preserve"><value>グループのファイル名パターン</value></data>
   <data name="Workbench.Reports.GroupFileNameHelp" xml:space="preserve"><value>選択したグループ値には {Group}、レポートの拡張子には {Format} を使用します。</value></data>
-  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>名前</value></data>
+  <data name="Workbench.Reports.NamePlaceholder" xml:space="preserve"><value>レポート名</value></data>
   <data name="Workbench.Reports.NoGrouping" xml:space="preserve"><value>グループ化しない</value></data>
-  <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>グループごとに 1 つ</value></data>
+  <data name="Workbench.Reports.OnePerGroup" xml:space="preserve"><value>グループごとに 1 ファイル</value></data>
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>確認済み</value></data>
-  <data name="Workbench.Reports.Safety" xml:space="preserve"><value>レポート出力ではメディア ファイルが変更されることはありません。</value></data>
+  <data name="Workbench.Reports.Safety" xml:space="preserve"><value>レポートの出力でメディアファイルが変更されることはありません。</value></data>
   <data name="Workbench.Reports.SortBy" xml:space="preserve"><value>並べ替え</value></data>
   <data name="Workbench.Reports.SortType" xml:space="preserve"><value>並べ替えの種類</value></data>
   <data name="Workbench.Reports.Source.Custom" xml:space="preserve"><value>カスタム: {0}</value></data>
@@ -5465,21 +5467,21 @@
   <data name="Workbench.Reports.Source.Technical" xml:space="preserve"><value>技術情報: {0}</value></data>
   <data name="Workbench.Reports.SourceOrder" xml:space="preserve"><value>ソースの順序</value></data>
   <data name="Workbench.Reports.Title" xml:space="preserve"><value>レポート</value></data>
-  <data name="Workbench.Representative.Error.NoFile" xml:space="preserve"><value>代表的なプレビューではファイルが返されませんでした。</value></data>
-  <data name="Workbench.Representative.Missing" xml:space="preserve"><value>(不足)</value></data>
+  <data name="Workbench.Representative.Error.NoFile" xml:space="preserve"><value>代表プレビューからファイルが返されませんでした。</value></data>
+  <data name="Workbench.Representative.Missing" xml:space="preserve"><value>(なし)</value></data>
   <data name="Workbench.Representative.Status.Blocked" xml:space="preserve"><value>ドラフトプレビューがブロックされました。</value></data>
-  <data name="Workbench.Representative.Status.ChooseFile" xml:space="preserve"><value>代表的なファイルを選択し、操作を編集します。</value></data>
-  <data name="Workbench.Representative.Status.NoChanges" xml:space="preserve"><value>{0}: メタデータは変更されません。</value></data>
-  <data name="Workbench.Representative.Status.Ready.One" xml:space="preserve"><value>{1} / フィールド変更案 {0:N0} 件</value></data>
-  <data name="Workbench.Representative.Status.Ready.Other" xml:space="preserve"><value>{1} / フィールド変更案 {0:N0} 件</value></data>
+  <data name="Workbench.Representative.Status.ChooseFile" xml:space="preserve"><value>代表ファイルを選択して操作を編集してください。</value></data>
+  <data name="Workbench.Representative.Status.NoChanges" xml:space="preserve"><value>{0}: メタデータの変更はありません。</value></data>
+  <data name="Workbench.Representative.Status.Ready.One" xml:space="preserve"><value>{1}: フィールド変更案 {0:N0} 件</value></data>
+  <data name="Workbench.Representative.Status.Ready.Other" xml:space="preserve"><value>{1}: フィールド変更案 {0:N0} 件</value></data>
   <data name="Workbench.Representative.Status.Unavailable" xml:space="preserve"><value>ドラフトプレビューは利用できません。</value></data>
-  <data name="Workbench.Representative.Status.Updating" xml:space="preserve"><value>{0} のドラフトプレビューを更新しています…</value></data>
+  <data name="Workbench.Representative.Status.Updating" xml:space="preserve"><value>{0} のドラフトプレビューを更新しています</value></data>
   <data name="Workbench.Representative.ValueSeparator" xml:space="preserve"><value> / </value></data>
   <data name="Workbench.Section.AllFields" xml:space="preserve"><value>すべてのフィールド</value></data>
-  <data name="Workbench.Section.AllFieldsAutomation" xml:space="preserve"><value>すべてのメタデータ フィールド</value></data>
-  <data name="Workbench.Section.BulkOperation" xml:space="preserve"><value>一括 操作</value></data>
-  <data name="Workbench.Section.BulkOperationAutomation" xml:space="preserve"><value>バルクメタデータ操作</value></data>
-  <data name="Workbench.Section.Files" xml:space="preserve"><value>ファイル</value></data>
+  <data name="Workbench.Section.AllFieldsAutomation" xml:space="preserve"><value>すべてのメタデータフィールド</value></data>
+  <data name="Workbench.Section.BulkOperation" xml:space="preserve"><value>一括編集</value></data>
+  <data name="Workbench.Section.BulkOperationAutomation" xml:space="preserve"><value>メタデータの一括操作</value></data>
+  <data name="Workbench.Section.Files" xml:space="preserve"><value>ファイル操作</value></data>
   <data name="Workbench.Section.FilesAutomation" xml:space="preserve"><value>確認済みファイル操作</value></data>
   <data name="Workbench.Section.OnlineMetadata" xml:space="preserve"><value>オンラインメタデータ</value></data>
   <data name="Workbench.Section.OnlineMetadataAutomation" xml:space="preserve"><value>オンラインメタデータ</value></data>
@@ -5490,11 +5492,11 @@
   <data name="Workbench.Section.Session" xml:space="preserve"><value>セッション</value></data>
   <data name="Workbench.Section.SessionAutomation" xml:space="preserve"><value>ワークベンチセッション</value></data>
   <data name="Workbench.Section.Shortcuts" xml:space="preserve"><value>ショートカット</value></data>
-  <data name="Workbench.Section.ShortcutsAutomation" xml:space="preserve"><value>ワークベンチ ショートカット</value></data>
-  <data name="Workbench.Section.Tools" xml:space="preserve"><value>ツール</value></data>
+  <data name="Workbench.Section.ShortcutsAutomation" xml:space="preserve"><value>ワークベンチのショートカット</value></data>
+  <data name="Workbench.Section.Tools" xml:space="preserve"><value>外部ツール</value></data>
   <data name="Workbench.Section.ToolsAutomation" xml:space="preserve"><value>外部ツール</value></data>
-  <data name="Workbench.Selection.Files.One" xml:space="preserve"><value>{0:N0} ファイルが選択されました</value></data>
-  <data name="Workbench.Selection.Files.Other" xml:space="preserve"><value>{0:N0} ファイルが選択されました</value></data>
+  <data name="Workbench.Selection.Files.One" xml:space="preserve"><value>{0:N0} ファイルを選択</value></data>
+  <data name="Workbench.Selection.Files.Other" xml:space="preserve"><value>{0:N0} ファイルを選択</value></data>
   <data name="Workbench.Session.Action.Clear" xml:space="preserve"><value>セッションをクリア</value></data>
   <data name="Workbench.Session.Action.RemoveSelected" xml:space="preserve"><value>セッションから削除</value></data>
   <data name="Workbench.Session.Action.SendToIngest" xml:space="preserve"><value>取り込みへ送る</value></data>
@@ -5550,8 +5552,8 @@
   <data name="Workbench.Size.Kilobytes" xml:space="preserve"><value>KB</value></data>
   <data name="Workbench.Size.Megabytes" xml:space="preserve"><value>MB</value></data>
   <data name="Workbench.Size.Terabytes" xml:space="preserve"><value>TB</value></data>
-  <data name="Workbench.Source.AddAutomation" xml:space="preserve"><value>追加</value></data>
-  <data name="Workbench.Source.AddRecent" xml:space="preserve"><value>最近の場所を追加</value></data>
+  <data name="Workbench.Source.AddAutomation" xml:space="preserve"><value>ワークベンチにソースを追加</value></data>
+  <data name="Workbench.Source.AddRecent" xml:space="preserve"><value>最近使用した場所を追加</value></data>
   <data name="Workbench.Source.ChooseFiles" xml:space="preserve"><value>ファイルを選択</value></data>
   <data name="Workbench.Source.ChooseFilesAutomation" xml:space="preserve"><value>ファイルを選択</value></data>
   <data name="Workbench.Source.ChooseFolder" xml:space="preserve"><value>フォルダーを選択</value></data>
@@ -5560,132 +5562,132 @@
   <data name="Workbench.Source.IncludeSubfolders" xml:space="preserve"><value>サブフォルダーを含める</value></data>
   <data name="Workbench.Source.RecentAutomation" xml:space="preserve"><value>最近使用した場所</value></data>
   <data name="Workbench.Source.RecentLocation" xml:space="preserve"><value>最近使用した場所</value></data>
-  <data name="Workbench.Source.RecentPlaceholder" xml:space="preserve"><value>最近の場所を選択してください</value></data>
+  <data name="Workbench.Source.RecentPlaceholder" xml:space="preserve"><value>最近使用した場所を選択</value></data>
   <data name="Workbench.Source.Title" xml:space="preserve"><value>ソースを追加</value></data>
   <data name="Workbench.Split.Resize" xml:space="preserve"><value>サイズ変更</value></data>
-  <data name="Workbench.Split.ResizeAutomation" xml:space="preserve"><value>ワークベンチとインスペクター ペインのサイズを変更する</value></data>
-  <data name="Workbench.Status.Applied.One" xml:space="preserve"><value>{0:N0} ファイルを適用しました。オリジナルはワークベンチのリカバリに保持され、オペレーションから復元できます。</value></data>
-  <data name="Workbench.Status.Applied.Other" xml:space="preserve"><value>{0:N0} ファイルを適用しました。オリジナルはワークベンチのリカバリに保持され、オペレーションから復元できます。</value></data>
-  <data name="Workbench.Status.ApplyCancelled" xml:space="preserve"><value>申請がキャンセルされました。完了した突然変異は回復可能なままです。</value></data>
+  <data name="Workbench.Split.ResizeAutomation" xml:space="preserve"><value>ワークベンチとインスペクターのペインのサイズを変更</value></data>
+  <data name="Workbench.Status.Applied.One" xml:space="preserve"><value>{0:N0} ファイルに変更を適用しました。オリジナルはワークベンチの復元用に保持され、［操作］から復元できます。</value></data>
+  <data name="Workbench.Status.Applied.Other" xml:space="preserve"><value>{0:N0} ファイルに変更を適用しました。オリジナルはワークベンチの復元用に保持され、［操作］から復元できます。</value></data>
+  <data name="Workbench.Status.ApplyCancelled" xml:space="preserve"><value>適用をキャンセルしました。完了した変更は引き続き復元できます。</value></data>
   <data name="Workbench.Status.ApplyFailed" xml:space="preserve"><value>適用は安全に停止されました。</value></data>
-  <data name="Workbench.Status.ArtworkExported" xml:space="preserve"><value>{0} アートワークを {1} にエクスポートしました。</value></data>
-  <data name="Workbench.Status.AudioIdentifiersPreviewed" xml:space="preserve"><value>オーディオ識別子が通常のメタデータ プレビューに追加されました。申請する前に確認してください。</value></data>
-  <data name="Workbench.Status.Cleared" xml:space="preserve"><value>作業台をクリアしました。ディスク上のファイルは変更されませんでした。</value></data>
-  <data name="Workbench.Status.ClipboardHasNoMetadata" xml:space="preserve"><value>クリップボードにはテキストのメタデータが含まれていません。</value></data>
-  <data name="Workbench.Status.CopiedFieldValues.One" xml:space="preserve"><value>タグ ID を持つ {0:N0} 順序の {1} 値をコピーしました。</value></data>
-  <data name="Workbench.Status.CopiedFieldValues.Other" xml:space="preserve"><value>{0:N0} で順序付けされた {1} 値をタグ ID とともにコピーしました。</value></data>
-  <data name="Workbench.Status.CoverArtCancelled" xml:space="preserve"><value>Cover Art Archive ルックアップがキャンセルされました。</value></data>
+  <data name="Workbench.Status.ArtworkExported" xml:space="preserve"><value>アートワーク「{0}」を「{1}」にエクスポートしました。</value></data>
+  <data name="Workbench.Status.AudioIdentifiersPreviewed" xml:space="preserve"><value>音声識別子を通常のメタデータプレビューに追加しました。適用前に確認してください。</value></data>
+  <data name="Workbench.Status.Cleared" xml:space="preserve"><value>ワークベンチをクリアしました。ディスク上のファイルは変更されていません。</value></data>
+  <data name="Workbench.Status.ClipboardHasNoMetadata" xml:space="preserve"><value>クリップボードにテキスト形式のメタデータがありません。</value></data>
+  <data name="Workbench.Status.CopiedFieldValues.One" xml:space="preserve"><value>タグ ID を含む {1} の順序付き値を {0:N0} 件コピーしました。</value></data>
+  <data name="Workbench.Status.CopiedFieldValues.Other" xml:space="preserve"><value>タグ ID を含む {1} の順序付き値を {0:N0} 件コピーしました。</value></data>
+  <data name="Workbench.Status.CoverArtCancelled" xml:space="preserve"><value>Cover Art Archive の検索をキャンセルしました。</value></data>
   <data name="Workbench.Status.CoverArtFailed" xml:space="preserve"><value>Cover Art Archive の検索に失敗しました。</value></data>
-  <data name="Workbench.Status.CoverArtLoaded.One" xml:space="preserve"><value>{0:N0} アートワーク候補をロードしました。ファイルは変更されませんでした。</value></data>
-  <data name="Workbench.Status.CoverArtLoaded.Other" xml:space="preserve"><value>{0:N0} アートワーク候補をロードしました。ファイルは変更されませんでした。</value></data>
-  <data name="Workbench.Status.DiscogsArtworkPreviewed" xml:space="preserve"><value>選択した Discogs カバーが通常のアートワーク プレビューに追加されました。適用する前にすべての変更を確認してください。</value></data>
-  <data name="Workbench.Status.DiscogsDetailsCancelled" xml:space="preserve"><value>Discogs リリースの詳細検索がキャンセルされました。</value></data>
+  <data name="Workbench.Status.CoverArtLoaded.One" xml:space="preserve"><value>アートワーク候補を {0:N0} 件読み込みました。ファイルは変更されていません。</value></data>
+  <data name="Workbench.Status.CoverArtLoaded.Other" xml:space="preserve"><value>アートワーク候補を {0:N0} 件読み込みました。ファイルは変更されていません。</value></data>
+  <data name="Workbench.Status.DiscogsArtworkPreviewed" xml:space="preserve"><value>選択した Discogs の表紙を通常のアートワークプレビューに追加しました。適用前にすべての変更を確認してください。</value></data>
+  <data name="Workbench.Status.DiscogsDetailsCancelled" xml:space="preserve"><value>Discogs リリース詳細の検索をキャンセルしました。</value></data>
   <data name="Workbench.Status.DiscogsDetailsFailed" xml:space="preserve"><value>Discogs リリース詳細の検索に失敗しました。</value></data>
-  <data name="Workbench.Status.DiscogsDetailsLoaded.One" xml:space="preserve"><value>Discogs リリース {1} を {0:N0} トラックとともにロードしました。メタデータは変更されませんでした。</value></data>
-  <data name="Workbench.Status.DiscogsDetailsLoaded.Other" xml:space="preserve"><value>Discogs リリース {1} と {0:N0} トラックをロードしました。メタデータは変更されませんでした。</value></data>
-  <data name="Workbench.Status.DiscogsFound.One" xml:space="preserve"><value>Discogs が {0:N0} リリース エディションを見つけました。これを選択すると、完全なトラックとエディションの詳細がロードされます。</value></data>
-  <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs が {0:N0} リリース エディションを見つけました。 1 つを選択すると、完全なトラックとエディションの詳細がロードされます。</value></data>
-  <data name="Workbench.Status.DiscogsMappingCancelled" xml:space="preserve"><value>Discogs トラック マッピングがキャンセルされました。</value></data>
-  <data name="Workbench.Status.DiscogsMappingFailed" xml:space="preserve"><value>Discogs トラック マッピングが失敗しました。</value></data>
-  <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>提案された {0:N0} または {1:N0} Discogs ファイルとトラックのマッピング。 {2:N0} は見直しが必要です。</value></data>
-  <data name="Workbench.Status.DiscogsMetadataPreviewed" xml:space="preserve"><value>マップされた Discogs フィールドが通常のメタデータ プレビューに追加されました。適用する前にすべての変更を確認してください。</value></data>
-  <data name="Workbench.Status.DiscogsSearchCancelled" xml:space="preserve"><value>Discogs リリース検索がキャンセルされました。</value></data>
+  <data name="Workbench.Status.DiscogsDetailsLoaded.One" xml:space="preserve"><value>Discogs リリース {1} を {0:N0} トラックとともに読み込みました。メタデータは変更されていません。</value></data>
+  <data name="Workbench.Status.DiscogsDetailsLoaded.Other" xml:space="preserve"><value>Discogs リリース {1} を {0:N0} トラックとともに読み込みました。メタデータは変更されていません。</value></data>
+  <data name="Workbench.Status.DiscogsFound.One" xml:space="preserve"><value>Discogs でリリースの版が {0:N0} 件見つかりました。選択するとトラックと版の完全な詳細が読み込まれます。</value></data>
+  <data name="Workbench.Status.DiscogsFound.Other" xml:space="preserve"><value>Discogs でリリースの版が {0:N0} 件見つかりました。いずれかを選択するとトラックと版の完全な詳細が読み込まれます。</value></data>
+  <data name="Workbench.Status.DiscogsMappingCancelled" xml:space="preserve"><value>Discogs トラックのマッピングをキャンセルしました。</value></data>
+  <data name="Workbench.Status.DiscogsMappingFailed" xml:space="preserve"><value>Discogs トラックのマッピングに失敗しました。</value></data>
+  <data name="Workbench.Status.DiscogsMappingReady" xml:space="preserve"><value>Discogs のファイルとトラックの対応を {1:N0} 件中 {0:N0} 件提案しました。{2:N0} 件は確認が必要です。</value></data>
+  <data name="Workbench.Status.DiscogsMetadataPreviewed" xml:space="preserve"><value>マッピングした Discogs フィールドを通常のメタデータプレビューに追加しました。適用前にすべての変更を確認してください。</value></data>
+  <data name="Workbench.Status.DiscogsSearchCancelled" xml:space="preserve"><value>Discogs リリースの検索をキャンセルしました。</value></data>
   <data name="Workbench.Status.DiscogsSearchFailed" xml:space="preserve"><value>Discogs リリースの検索に失敗しました。</value></data>
-  <data name="Workbench.Status.ExternalToolCancelled" xml:space="preserve"><value>外部ツールがキャンセルされました。アクティブなプロセスが停止されました。</value></data>
-  <data name="Workbench.Status.ExternalToolFailed" xml:space="preserve"><value>外部ツールが停止しました。</value></data>
-  <data name="Workbench.Status.ExternalToolFinished" xml:space="preserve"><value>外部ツールが終了しました: {0:N0} は成功しました、{1:N0} は失敗しました。</value></data>
-  <data name="Workbench.Status.ExternalToolPreviewBlocked.One" xml:space="preserve"><value>外部ツールのプレビューには {0:N0} ブロッカーがあります。何も実行できません。</value></data>
-  <data name="Workbench.Status.ExternalToolPreviewBlocked.Other" xml:space="preserve"><value>外部ツールのプレビューには {0:N0} ブロッカーがあります。何も実行できません。</value></data>
-  <data name="Workbench.Status.ExternalToolPreviewReady.One" xml:space="preserve"><value>{0:N0} プロセス呼び出しをプレビューしました。外部ツールは MusicLibraryManager リカバリの外部で実行されます。</value></data>
-  <data name="Workbench.Status.ExternalToolPreviewReady.Other" xml:space="preserve"><value>プレビューされた {0:N0} プロセス呼び出し。外部ツールは MusicLibraryManager リカバリの外部で実行されます。</value></data>
-  <data name="Workbench.Status.FingerprintCancelled" xml:space="preserve"><value>音声指紋検出がキャンセルされました。</value></data>
-  <data name="Workbench.Status.FingerprintDiscovery" xml:space="preserve"><value>指紋検出: {0:N0} ファイル、{1:N0} 候補、{2:N0} 警告。</value></data>
+  <data name="Workbench.Status.ExternalToolCancelled" xml:space="preserve"><value>外部ツールをキャンセルしました。実行中のプロセスは停止されました。</value></data>
+  <data name="Workbench.Status.ExternalToolFailed" xml:space="preserve"><value>外部ツールがエラーで停止しました。</value></data>
+  <data name="Workbench.Status.ExternalToolFinished" xml:space="preserve"><value>外部ツールが完了しました: 成功 {0:N0}、失敗 {1:N0}。</value></data>
+  <data name="Workbench.Status.ExternalToolPreviewBlocked.One" xml:space="preserve"><value>外部ツールのプレビューにブロッカーが {0:N0} 件あります。実行できません。</value></data>
+  <data name="Workbench.Status.ExternalToolPreviewBlocked.Other" xml:space="preserve"><value>外部ツールのプレビューにブロッカーが {0:N0} 件あります。実行できません。</value></data>
+  <data name="Workbench.Status.ExternalToolPreviewReady.One" xml:space="preserve"><value>プロセス呼び出しを {0:N0} 件プレビューしました。外部ツールは MusicLibraryManager の復元対象外です。</value></data>
+  <data name="Workbench.Status.ExternalToolPreviewReady.Other" xml:space="preserve"><value>プロセス呼び出しを {0:N0} 件プレビューしました。外部ツールは MusicLibraryManager の復元対象外です。</value></data>
+  <data name="Workbench.Status.FingerprintCancelled" xml:space="preserve"><value>音声フィンガープリントの検出をキャンセルしました。</value></data>
+  <data name="Workbench.Status.FingerprintDiscovery" xml:space="preserve"><value>フィンガープリント検出: ファイル {0:N0} 件、候補 {1:N0} 件、警告 {2:N0} 件。</value></data>
   <data name="Workbench.Status.FingerprintFailed" xml:space="preserve"><value>音声フィンガープリントの検出に失敗しました。</value></data>
-  <data name="Workbench.Status.ImportMapped" xml:space="preserve"><value>{1:N0} 行の {0:N0} をマップしました。</value></data>
-  <data name="Workbench.Status.ImportMappedWithWarnings" xml:space="preserve"><value>{2:N0} 警告を含む {1:N0} 行の {0:N0} をマップしました。</value></data>
-  <data name="Workbench.Status.InspectorChangesReloaded.One" xml:space="preserve"><value>インスペクターの変更後に {0:N0} ファイルを再ロードしました。</value></data>
-  <data name="Workbench.Status.InspectorChangesReloaded.Other" xml:space="preserve"><value>インスペクターの変更後に {0:N0} ファイルを再ロードしました。</value></data>
-  <data name="Workbench.Status.InspectorReloadCancelled" xml:space="preserve"><value>インスペクタの変更がキャンセルされた後にリロードします。</value></data>
-  <data name="Workbench.Status.InspectorReloadFailed" xml:space="preserve"><value>インスペクターの変更をリロードできませんでした。</value></data>
-  <data name="Workbench.Status.LoadingCancelled" xml:space="preserve"><value>読み込みがキャンセルされました。</value></data>
-  <data name="Workbench.Status.LoadingFailed" xml:space="preserve"><value>選択したソースをロードできませんでした。</value></data>
-  <data name="Workbench.Status.MusicBrainzFound.One" xml:space="preserve"><value>MusicBrainz が {0:N0} リリース エディションを見つけました。それを選択し、ファイルとトラックのマッピングを構築します。</value></data>
-  <data name="Workbench.Status.MusicBrainzFound.Other" xml:space="preserve"><value>MusicBrainz が {0:N0} リリース エディションを見つけました。 1 つを選択し、ファイルとトラックのマッピングを構築します。</value></data>
-  <data name="Workbench.Status.MusicBrainzLookupCancelled" xml:space="preserve"><value>MusicBrainz リリース ルックアップがキャンセルされました。</value></data>
+  <data name="Workbench.Status.ImportMapped" xml:space="preserve"><value>{1:N0} 行中 {0:N0} 行をマッピングしました。</value></data>
+  <data name="Workbench.Status.ImportMappedWithWarnings" xml:space="preserve"><value>{1:N0} 行中 {0:N0} 行をマッピングしました（警告 {2:N0} 件）。</value></data>
+  <data name="Workbench.Status.InspectorChangesReloaded.One" xml:space="preserve"><value>インスペクターの変更後に {0:N0} ファイルを再読み込みしました。</value></data>
+  <data name="Workbench.Status.InspectorChangesReloaded.Other" xml:space="preserve"><value>インスペクターの変更後に {0:N0} ファイルを再読み込みしました。</value></data>
+  <data name="Workbench.Status.InspectorReloadCancelled" xml:space="preserve"><value>インスペクターの変更後の再読み込みをキャンセルしました。</value></data>
+  <data name="Workbench.Status.InspectorReloadFailed" xml:space="preserve"><value>インスペクターの変更を再読み込みできませんでした。</value></data>
+  <data name="Workbench.Status.LoadingCancelled" xml:space="preserve"><value>読み込みをキャンセルしました。</value></data>
+  <data name="Workbench.Status.LoadingFailed" xml:space="preserve"><value>選択したソースを読み込めませんでした。</value></data>
+  <data name="Workbench.Status.MusicBrainzFound.One" xml:space="preserve"><value>MusicBrainz でリリースの版が {0:N0} 件見つかりました。選択してファイルとトラックの対応を作成してください。</value></data>
+  <data name="Workbench.Status.MusicBrainzFound.Other" xml:space="preserve"><value>MusicBrainz でリリースの版が {0:N0} 件見つかりました。いずれかを選択してファイルとトラックの対応を作成してください。</value></data>
+  <data name="Workbench.Status.MusicBrainzLookupCancelled" xml:space="preserve"><value>MusicBrainz リリースの検索をキャンセルしました。</value></data>
   <data name="Workbench.Status.MusicBrainzLookupFailed" xml:space="preserve"><value>MusicBrainz リリースの検索に失敗しました。</value></data>
-  <data name="Workbench.Status.MusicBrainzMetadataPreviewed" xml:space="preserve"><value>マップされた MusicBrainz フィールドが通常のメタデータ プレビューに追加されました。適用する前にすべての変更を確認してください。</value></data>
-  <data name="Workbench.Status.MusicBrainzResolved.One" xml:space="preserve"><value>MusicBrainz は {0:N0} リリース エディションを返しました。メタデータが選択または変更されていません。</value></data>
-  <data name="Workbench.Status.MusicBrainzResolved.Other" xml:space="preserve"><value>MusicBrainz は {0:N0} リリース エディションを返しました。メタデータが選択または変更されていません。</value></data>
-  <data name="Workbench.Status.MusicBrainzSearchCancelled" xml:space="preserve"><value>MusicBrainz リリース検索がキャンセルされました。</value></data>
+  <data name="Workbench.Status.MusicBrainzMetadataPreviewed" xml:space="preserve"><value>マッピングした MusicBrainz フィールドを通常のメタデータプレビューに追加しました。適用前にすべての変更を確認してください。</value></data>
+  <data name="Workbench.Status.MusicBrainzResolved.One" xml:space="preserve"><value>MusicBrainz からリリースの版が {0:N0} 件返されました。メタデータは選択も変更もされていません。</value></data>
+  <data name="Workbench.Status.MusicBrainzResolved.Other" xml:space="preserve"><value>MusicBrainz からリリースの版が {0:N0} 件返されました。メタデータは選択も変更もされていません。</value></data>
+  <data name="Workbench.Status.MusicBrainzSearchCancelled" xml:space="preserve"><value>MusicBrainz リリースの検索をキャンセルしました。</value></data>
   <data name="Workbench.Status.MusicBrainzSearchFailed" xml:space="preserve"><value>MusicBrainz リリースの検索に失敗しました。</value></data>
-  <data name="Workbench.Status.NoApplicableChanges" xml:space="preserve"><value>保留中の編集では、該当するファイル変更は行われません。</value></data>
-  <data name="Workbench.Status.NoCoverArt" xml:space="preserve"><value>このリリースには Cover Art Archive イメージがありません。</value></data>
+  <data name="Workbench.Status.NoApplicableChanges" xml:space="preserve"><value>保留中の編集によって適用可能なファイル変更は生成されません。</value></data>
+  <data name="Workbench.Status.NoCoverArt" xml:space="preserve"><value>このリリースには Cover Art Archive の画像がありません。</value></data>
   <data name="Workbench.Status.NoPendingChanges" xml:space="preserve"><value>適用する保留中のメタデータ変更はありません。</value></data>
   <data name="Workbench.Status.PasteFailed" xml:space="preserve"><value>貼り付けに失敗しました。</value></data>
-  <data name="Workbench.Status.PendingChangesBlocked" xml:space="preserve"><value>保留中の変更は適用できません。</value></data>
-  <data name="Workbench.Status.PendingReverted" xml:space="preserve"><value>保留中のプレビューが元に戻りました。ファイルは変更されませんでした。</value></data>
-  <data name="Workbench.Status.PlaylistOutputCancelled" xml:space="preserve"><value>プレイリスト出力がキャンセルされました。</value></data>
+  <data name="Workbench.Status.PendingChangesBlocked" xml:space="preserve"><value>保留中の変更を適用できません。</value></data>
+  <data name="Workbench.Status.PendingReverted" xml:space="preserve"><value>保留中のプレビューを元に戻しました。ファイルは変更されていません。</value></data>
+  <data name="Workbench.Status.PlaylistOutputCancelled" xml:space="preserve"><value>プレイリストの出力をキャンセルしました。</value></data>
   <data name="Workbench.Status.PlaylistOutputFailed" xml:space="preserve"><value>プレイリストの出力に失敗しました。</value></data>
-  <data name="Workbench.Status.PlaylistPreviewBlocked.One" xml:space="preserve"><value>プレイリストのプレビューには {0:N0} ブロッカーが含まれています。出力は書き込まれませんでした。</value></data>
-  <data name="Workbench.Status.PlaylistPreviewBlocked.Other" xml:space="preserve"><value>プレイリストのプレビューには {0:N0} ブロッカーが含まれています。出力は書き込まれませんでした。</value></data>
-  <data name="Workbench.Status.PlaylistPreviewCancelled" xml:space="preserve"><value>プレイリストのプレビューがキャンセルされました。</value></data>
+  <data name="Workbench.Status.PlaylistPreviewBlocked.One" xml:space="preserve"><value>プレイリストのプレビューにブロッカーが {0:N0} 件あります。出力は書き込まれていません。</value></data>
+  <data name="Workbench.Status.PlaylistPreviewBlocked.Other" xml:space="preserve"><value>プレイリストのプレビューにブロッカーが {0:N0} 件あります。出力は書き込まれていません。</value></data>
+  <data name="Workbench.Status.PlaylistPreviewCancelled" xml:space="preserve"><value>プレイリストのプレビューをキャンセルしました。</value></data>
   <data name="Workbench.Status.PlaylistPreviewFailed" xml:space="preserve"><value>プレイリストのプレビューに失敗しました。</value></data>
-  <data name="Workbench.Status.PlaylistPreviewReady.One" xml:space="preserve"><value>{0:N0} プレイリスト ファイルをプレビューしました。申請前に送付先を確認してください。</value></data>
-  <data name="Workbench.Status.PlaylistPreviewReady.Other" xml:space="preserve"><value>{0:N0} プレイリスト ファイルをプレビューしました。申請する前に目的地を確認してください。</value></data>
-  <data name="Workbench.Status.PlaylistWritten.One" xml:space="preserve"><value>{1:N0} トラック参照を含む {0:N0} プレイリスト ファイルを作成しました。</value></data>
-  <data name="Workbench.Status.PlaylistWritten.Other" xml:space="preserve"><value>{1:N0} トラック参照を含む {0:N0} プレイリスト ファイルを作成しました。</value></data>
-  <data name="Workbench.Status.PreviewBlocked.One" xml:space="preserve"><value>プレビューには {0:N0} ブロッカーが含まれています。ファイルは変更されていません。</value></data>
-  <data name="Workbench.Status.PreviewBlocked.Other" xml:space="preserve"><value>プレビューには {0:N0} ブロッカーが含まれています。ファイルは変更されていません。</value></data>
-  <data name="Workbench.Status.PreviewCancelled" xml:space="preserve"><value>プレビューがキャンセルされました。ファイルは変更されませんでした。</value></data>
+  <data name="Workbench.Status.PlaylistPreviewReady.One" xml:space="preserve"><value>プレイリストファイルを {0:N0} 件プレビューしました。適用前に出力先を確認してください。</value></data>
+  <data name="Workbench.Status.PlaylistPreviewReady.Other" xml:space="preserve"><value>プレイリストファイルを {0:N0} 件プレビューしました。適用前に出力先を確認してください。</value></data>
+  <data name="Workbench.Status.PlaylistWritten.One" xml:space="preserve"><value>{1:N0} 件のトラック参照を含むプレイリストファイルを {0:N0} 件書き込みました。</value></data>
+  <data name="Workbench.Status.PlaylistWritten.Other" xml:space="preserve"><value>{1:N0} 件のトラック参照を含むプレイリストファイルを {0:N0} 件書き込みました。</value></data>
+  <data name="Workbench.Status.PreviewBlocked.One" xml:space="preserve"><value>プレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Workbench.Status.PreviewBlocked.Other" xml:space="preserve"><value>プレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Workbench.Status.PreviewCancelled" xml:space="preserve"><value>プレビューをキャンセルしました。ファイルは変更されていません。</value></data>
   <data name="Workbench.Status.PreviewFailed" xml:space="preserve"><value>プレビューに失敗しました。</value></data>
-  <data name="Workbench.Status.PreviewReady.One" xml:space="preserve"><value>プレビュー: {1:N0} ファイル内の {0:N0} メタデータの変更。ファイルは変更されていません。</value></data>
-  <data name="Workbench.Status.PreviewReady.Other" xml:space="preserve"><value>プレビュー: {1:N0} ファイル内の {0:N0} メタデータの変更。ファイルは変更されていません。</value></data>
-  <data name="Workbench.Status.Ready" xml:space="preserve"><value>ファイル、フォルダー、プレイリスト、またはキューシートを追加します。ライブラリの構成は必要ありません。</value></data>
-  <data name="Workbench.Status.RecipeRegenerated" xml:space="preserve"><value>最新のレシピが現在のワークベンチ ファイル用に再生成されました。申請する前に確認してください。</value></data>
-  <data name="Workbench.Status.RedoRegenerated" xml:space="preserve"><value>現在のファイルに対して「やり直し」を再生成しました。適用する前にプレビューを確認してください。</value></data>
-  <data name="Workbench.Status.ReleaseArtworkPreviewed" xml:space="preserve"><value>選択した表紙が通常のメタデータプレビューに追加されました。申請する前に、アートワークの変更をすべて確認してください。</value></data>
-  <data name="Workbench.Status.ReleaseMappingCancelled" xml:space="preserve"><value>リリーストラックマッピングがキャンセルされました。</value></data>
-  <data name="Workbench.Status.ReleaseMappingFailed" xml:space="preserve"><value>リリース トラック マッピングに失敗しました。</value></data>
-  <data name="Workbench.Status.ReleaseMappingReady" xml:space="preserve"><value>{0:N0} または {1:N0} ファイルとトラックのマッピングを提案。 {2:N0} は見直しが必要です。</value></data>
-  <data name="Workbench.Status.ReportOutputCancelled" xml:space="preserve"><value>レポート出力がキャンセルされました。</value></data>
-  <data name="Workbench.Status.ReportOutputFailed" xml:space="preserve"><value>レポート出力に失敗しました。</value></data>
-  <data name="Workbench.Status.ReportPreviewBlocked.One" xml:space="preserve"><value>レポートのプレビューには {0:N0} ブロッカーが含まれています。出力は書き込まれませんでした。</value></data>
-  <data name="Workbench.Status.ReportPreviewBlocked.Other" xml:space="preserve"><value>レポートのプレビューには {0:N0} ブロッカーが含まれています。出力は書き込まれませんでした。</value></data>
-  <data name="Workbench.Status.ReportPreviewCancelled" xml:space="preserve"><value>レポートのプレビューがキャンセルされました。</value></data>
+  <data name="Workbench.Status.PreviewReady.One" xml:space="preserve"><value>プレビュー: {1:N0} ファイルにメタデータ変更が {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Workbench.Status.PreviewReady.Other" xml:space="preserve"><value>プレビュー: {1:N0} ファイルにメタデータ変更が {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Workbench.Status.Ready" xml:space="preserve"><value>ファイル、フォルダー、プレイリスト、または CUE シートを追加してください。ライブラリの設定は不要です。</value></data>
+  <data name="Workbench.Status.RecipeRegenerated" xml:space="preserve"><value>現在のワークベンチファイルに対して最新のレシピを再生成しました。適用前に確認してください。</value></data>
+  <data name="Workbench.Status.RedoRegenerated" xml:space="preserve"><value>現在のファイルに対してやり直しを再生成しました。適用前にプレビューを確認してください。</value></data>
+  <data name="Workbench.Status.ReleaseArtworkPreviewed" xml:space="preserve"><value>選択したフロントカバーを通常のメタデータプレビューに追加しました。適用前にすべてのアートワーク変更を確認してください。</value></data>
+  <data name="Workbench.Status.ReleaseMappingCancelled" xml:space="preserve"><value>リリーストラックのマッピングをキャンセルしました。</value></data>
+  <data name="Workbench.Status.ReleaseMappingFailed" xml:space="preserve"><value>リリーストラックのマッピングに失敗しました。</value></data>
+  <data name="Workbench.Status.ReleaseMappingReady" xml:space="preserve"><value>ファイルとトラックの対応を {1:N0} 件中 {0:N0} 件提案しました。{2:N0} 件は確認が必要です。</value></data>
+  <data name="Workbench.Status.ReportOutputCancelled" xml:space="preserve"><value>レポートの出力をキャンセルしました。</value></data>
+  <data name="Workbench.Status.ReportOutputFailed" xml:space="preserve"><value>レポートの出力に失敗しました。</value></data>
+  <data name="Workbench.Status.ReportPreviewBlocked.One" xml:space="preserve"><value>レポートのプレビューにブロッカーが {0:N0} 件あります。出力は書き込まれていません。</value></data>
+  <data name="Workbench.Status.ReportPreviewBlocked.Other" xml:space="preserve"><value>レポートのプレビューにブロッカーが {0:N0} 件あります。出力は書き込まれていません。</value></data>
+  <data name="Workbench.Status.ReportPreviewCancelled" xml:space="preserve"><value>レポートのプレビューをキャンセルしました。</value></data>
   <data name="Workbench.Status.ReportPreviewFailed" xml:space="preserve"><value>レポートのプレビューに失敗しました。</value></data>
-  <data name="Workbench.Status.ReportPreviewReady.One" xml:space="preserve"><value>{0:N0} レポート ファイルをプレビューしました。申請前に送付先を確認してください。</value></data>
-  <data name="Workbench.Status.ReportPreviewReady.Other" xml:space="preserve"><value>{0:N0} レポート ファイルをプレビューしました。申請する前に目的地を確認してください。</value></data>
-  <data name="Workbench.Status.ReportWritten.One" xml:space="preserve"><value>{1:N0} 行を含む {0:N0} レポート ファイルを作成しました。</value></data>
-  <data name="Workbench.Status.ReportWritten.Other" xml:space="preserve"><value>{1:N0} 行を含む {0:N0} レポート ファイルを作成しました。</value></data>
-  <data name="Workbench.Status.RestoreCancelled" xml:space="preserve"><value>復元がキャンセルされました。完了した復元は引き続き回復可能です。</value></data>
+  <data name="Workbench.Status.ReportPreviewReady.One" xml:space="preserve"><value>レポートファイルを {0:N0} 件プレビューしました。適用前に出力先を確認してください。</value></data>
+  <data name="Workbench.Status.ReportPreviewReady.Other" xml:space="preserve"><value>レポートファイルを {0:N0} 件プレビューしました。適用前に出力先を確認してください。</value></data>
+  <data name="Workbench.Status.ReportWritten.One" xml:space="preserve"><value>{1:N0} 行を含むレポートファイルを {0:N0} 件書き込みました。</value></data>
+  <data name="Workbench.Status.ReportWritten.Other" xml:space="preserve"><value>{1:N0} 行を含むレポートファイルを {0:N0} 件書き込みました。</value></data>
+  <data name="Workbench.Status.RestoreCancelled" xml:space="preserve"><value>復元をキャンセルしました。完了した復元は引き続き回復できます。</value></data>
   <data name="Workbench.Status.Restored.One" xml:space="preserve"><value>最新のワークベンチ操作から {0:N0} ファイルを復元しました。</value></data>
   <data name="Workbench.Status.Restored.Other" xml:space="preserve"><value>最新のワークベンチ操作から {0:N0} ファイルを復元しました。</value></data>
   <data name="Workbench.Status.RestoreFailed" xml:space="preserve"><value>復元に失敗しました。</value></data>
-  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>プレーンテキストを貼り付ける前に、貼り付け先のフィールドを選択するか名前を指定してください。</value></data>
-  <data name="Workbench.Status.SendToIngestFailed" xml:space="preserve"><value>選択したファイルをインジェストに送信できませんでした。</value></data>
-  <data name="Workbench.Status.SentToIngest.One" xml:space="preserve"><value>選択した {0:N0} ファイルをインジェストに送信しました。</value></data>
-  <data name="Workbench.Status.SentToIngest.Other" xml:space="preserve"><value>選択した {0:N0} ファイルを取り込みに送信しました。</value></data>
-  <data name="Workbench.Status.SessionFileCount.One" xml:space="preserve"><value>このワークベンチ セッションの {0:N0} ファイル。</value></data>
-  <data name="Workbench.Status.SessionFileCount.Other" xml:space="preserve"><value>このワークベンチ セッションの {0:N0} ファイル。</value></data>
-  <data name="Workbench.Status.ShortcutRecipeMissing" xml:space="preserve"><value>ショートカット レシピ '{0}' は存在しません。</value></data>
-  <data name="Workbench.Status.ShortcutRecipeRegenerated" xml:space="preserve"><value>現在のワークベンチ ファイルのショートカット '{0}' が再生成されました。申請する前に確認してください。</value></data>
-  <data name="Workbench.Status.SourcesAdded.One" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチ セッションの {1:N0}。</value></data>
-  <data name="Workbench.Status.SourcesAdded.Other" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチ セッションの {1:N0}。</value></data>
-  <data name="Workbench.Status.SourcesAddedWithWarnings.One" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチ セッションでは {1:N0} が発生し、{2:N0} 警告が発生しました。</value></data>
-  <data name="Workbench.Status.SourcesAddedWithWarnings.Other" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチ セッションでは {1:N0} が発生し、{2:N0} 警告が発生しました。</value></data>
-  <data name="Workbench.Subtitle" xml:space="preserve"><value>ライブラリ構成を変更せずに、一時的な編集セッションを構築します。</value></data>
+  <data name="Workbench.Status.SelectPasteDestination" xml:space="preserve"><value>プレーンテキストを貼り付ける前に、貼り付け先のフィールドを選択するか名前を付けてください。</value></data>
+  <data name="Workbench.Status.SendToIngestFailed" xml:space="preserve"><value>選択したファイルを取り込みに送れませんでした。</value></data>
+  <data name="Workbench.Status.SentToIngest.One" xml:space="preserve"><value>選択した {0:N0} ファイルを取り込みに送りました。</value></data>
+  <data name="Workbench.Status.SentToIngest.Other" xml:space="preserve"><value>選択した {0:N0} ファイルを取り込みに送りました。</value></data>
+  <data name="Workbench.Status.SessionFileCount.One" xml:space="preserve"><value>このワークベンチセッションに {0:N0} ファイルあります。</value></data>
+  <data name="Workbench.Status.SessionFileCount.Other" xml:space="preserve"><value>このワークベンチセッションに {0:N0} ファイルあります。</value></data>
+  <data name="Workbench.Status.ShortcutRecipeMissing" xml:space="preserve"><value>ショートカットのレシピ「{0}」は存在しません。</value></data>
+  <data name="Workbench.Status.ShortcutRecipeRegenerated" xml:space="preserve"><value>現在のワークベンチファイルに対してショートカット「{0}」を再生成しました。適用前に確認してください。</value></data>
+  <data name="Workbench.Status.SourcesAdded.One" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチセッションには {1:N0} ファイルあります。</value></data>
+  <data name="Workbench.Status.SourcesAdded.Other" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチセッションには {1:N0} ファイルあります。</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.One" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチセッションには {1:N0} ファイルあり、警告は {2:N0} 件です。</value></data>
+  <data name="Workbench.Status.SourcesAddedWithWarnings.Other" xml:space="preserve"><value>{0:N0} ファイルを追加しました。このワークベンチセッションには {1:N0} ファイルあり、警告は {2:N0} 件です。</value></data>
+  <data name="Workbench.Subtitle" xml:space="preserve"><value>ライブラリの設定を変更せずに、一時的な編集セッションを作成します。</value></data>
   <data name="Workbench.Title" xml:space="preserve"><value>ワークベンチ</value></data>
   <data name="Workbench.Tools.ApplicationDefault" xml:space="preserve"><value>(アプリの既定値)</value></data>
   <data name="Workbench.Tools.ArgumentsLabel" xml:space="preserve"><value>引数</value></data>
   <data name="Workbench.Tools.BrowseExecutable" xml:space="preserve"><value>実行ファイルを選択</value></data>
   <data name="Workbench.Tools.BrowseFolder" xml:space="preserve"><value>フォルダーを選択</value></data>
   <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>外部ツール</value></data>
-  <data name="Workbench.Tools.Delete" xml:space="preserve"><value>削除 ツール</value></data>
+  <data name="Workbench.Tools.Delete" xml:space="preserve"><value>ツールを削除</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>実行ファイル</value></data>
   <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>呼び出しモード</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>読み込む</value></data>
   <data name="Workbench.Tools.MoreAutomation" xml:space="preserve"><value>その他</value></data>
-  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>名前</value></data>
+  <data name="Workbench.Tools.NamePlaceholder" xml:space="preserve"><value>ツール名</value></data>
   <data name="Workbench.Tools.New" xml:space="preserve"><value>新しいツール</value></data>
   <data name="Workbench.Tools.PlaceholderHelp" xml:space="preserve"><value>使用できるプレースホルダー: 選択項目ごとに 1 つのプロセスを実行する場合は {Files}、ファイルごとに実行する場合は {File}、{Directory}、{FileName}、{FileNameWithoutExtension}、{Extension}、{Index}、{Count}。{Files} は単独の引数にする必要があります。</value></data>
   <data name="Workbench.Tools.Preview" xml:space="preserve"><value>ツールをプレビュー</value></data>
@@ -5694,10 +5696,10 @@
   <data name="Workbench.Tools.Safety" xml:space="preserve"><value>シェルは使用されませんが、選択した実行ファイルはファイルを変更できます。外部ツールは MusicLibraryManager の復旧対象外であり、常に確認が必要です。</value></data>
   <data name="Workbench.Tools.Save" xml:space="preserve"><value>ツールを保存</value></data>
   <data name="Workbench.Tools.SavedPlaceholder" xml:space="preserve"><value>保存済み</value></data>
-  <data name="Workbench.Tools.Status.Deleted" xml:space="preserve"><value>個人ツール「{0}」を削除しました。</value></data>
-  <data name="Workbench.Tools.Status.Loaded" xml:space="preserve"><value>「{0}」をロードしました。</value></data>
-  <data name="Workbench.Tools.Status.New" xml:space="preserve"><value>新しい未保存のツール。</value></data>
-  <data name="Workbench.Tools.Status.Saved" xml:space="preserve"><value>「{0}」を個人ツールとして保存しました。</value></data>
+  <data name="Workbench.Tools.Status.Deleted" xml:space="preserve"><value>個人用ツール「{0}」を削除しました。</value></data>
+  <data name="Workbench.Tools.Status.Loaded" xml:space="preserve"><value>「{0}」を読み込みました。</value></data>
+  <data name="Workbench.Tools.Status.New" xml:space="preserve"><value>新しい未保存のツールです。</value></data>
+  <data name="Workbench.Tools.Status.Saved" xml:space="preserve"><value>「{0}」を個人用ツールとして保存しました。</value></data>
   <data name="Workbench.Tools.Title" xml:space="preserve"><value>外部ツール</value></data>
   <data name="Workbench.Tools.WorkingDirectoryPlaceholder" xml:space="preserve"><value>作業ディレクトリ</value></data>
   <data name="Workbench.Value.Bitrate" xml:space="preserve"><value>{0:N0} kbps</value></data>
