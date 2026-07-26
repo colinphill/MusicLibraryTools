@@ -2167,13 +2167,13 @@
     <value>设置</value>
   </data>
   <data name="Settings.Subtitle" xml:space="preserve">
-    <value>配置 库, 播放列表, 引入 工具, 和 应用程序 外观.</value>
+    <value>配置媒体库、播放列表、引入工具和应用外观。</value>
   </data>
   <data name="Settings.UnsavedChanges" xml:space="preserve">
-    <value>未保存 更改</value>
+    <value>未保存的更改</value>
   </data>
   <data name="Settings.Action.Browse" xml:space="preserve">
-    <value>浏览</value>
+    <value>浏览…</value>
   </data>
   <data name="Settings.Action.Clear" xml:space="preserve">
     <value>清除</value>
@@ -2182,10 +2182,10 @@
     <value>删除</value>
   </data>
   <data name="Settings.Action.Discard" xml:space="preserve">
-    <value>放弃</value>
+    <value>放弃更改</value>
   </data>
   <data name="Settings.Action.Duplicate" xml:space="preserve">
-    <value>重复</value>
+    <value>复制</value>
   </data>
   <data name="Settings.Action.New" xml:space="preserve">
     <value>新建</value>
@@ -2200,19 +2200,19 @@
     <value>保存</value>
   </data>
   <data name="Settings.Action.SaveAs" xml:space="preserve">
-    <value>保存 作为</value>
+    <value>另存为…</value>
   </data>
   <data name="Settings.Automation.Categories" xml:space="preserve">
-    <value>设置 类别</value>
+    <value>设置类别</value>
   </data>
   <data name="Settings.Automation.Category" xml:space="preserve">
-    <value>设置 类别</value>
+    <value>设置类别</value>
   </data>
   <data name="Settings.Automation.Error" xml:space="preserve">
     <value>错误</value>
   </data>
   <data name="Settings.Automation.FirstInvalidSetting" xml:space="preserve">
-    <value>转到 到 该 第一个 无效 设置</value>
+    <value>转到第一个无效设置</value>
   </data>
   <data name="Settings.Automation.Information" xml:space="preserve">
     <value>信息</value>
@@ -2224,16 +2224,16 @@
     <value>编解码器</value>
   </data>
   <data name="Settings.Common.CollisionBehavior" xml:space="preserve">
-    <value>冲突 行为</value>
+    <value>冲突处理方式</value>
   </data>
   <data name="Settings.Common.FileNameTemplate" xml:space="preserve">
     <value>文件名模板</value>
   </data>
   <data name="Settings.Common.FolderTemplate" xml:space="preserve">
-    <value>文件夹 模板</value>
+    <value>文件夹模板</value>
   </data>
   <data name="Settings.Common.MaximumBytes" xml:space="preserve">
-    <value>最大值 字节</value>
+    <value>最大字节数</value>
   </data>
   <data name="Settings.Common.MaximumDimension" xml:space="preserve">
     <value>最大尺寸</value>
@@ -2242,7 +2242,7 @@
     <value>名称</value>
   </data>
   <data name="Settings.Common.StableId" xml:space="preserve">
-    <value>稳定ID</value>
+    <value>稳定 ID</value>
   </data>
   <data name="Settings.Appearance.Description" xml:space="preserve">
     <value>主题更改会立即应用。“系统”会遵循操作系统设置；每种调色板的强调色仅用于选择、焦点、进度和安全操作。</value>
@@ -2284,184 +2284,184 @@
     <value>最近的配置</value>
   </data>
   <data name="Settings.LibraryRoots.Add" xml:space="preserve">
-    <value>添加 根</value>
+    <value>添加根目录</value>
   </data>
   <data name="Settings.LibraryRoots.AddSet" xml:space="preserve">
-    <value>添加 设置</value>
+    <value>添加扫描集</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensions" xml:space="preserve">
     <value>跨集比较扩展名</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensionsPlaceholder" xml:space="preserve">
-    <value>用于 示例: .flac, .m4a</value>
+    <value>例如：.flac、.m4a</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatterns" xml:space="preserve">
-    <value>排除 模式</value>
+    <value>排除模式</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsAutomation" xml:space="preserve">
-    <value>库 根 索引 排除 模式</value>
+    <value>音乐库根目录排除模式</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsPlaceholder" xml:space="preserve">
-    <value>无; 或 临时/**; *.tmp</value>
+    <value>例如：Temp/**；*.tmp</value>
   </data>
   <data name="Settings.LibraryRoots.Formats" xml:space="preserve">
-    <value>格式 到 索引</value>
+    <value>要索引的格式</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsAutomation" xml:space="preserve">
-    <value>库 根 格式 到 索引</value>
+    <value>在此音乐库根目录下索引的格式</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsPlaceholder" xml:space="preserve">
-    <value>全部 支持; 或 .flac, .m4a</value>
+    <value>所有支持的格式；或 .flac、.m4a</value>
   </data>
   <data name="Settings.LibraryRoots.GuidedStep" xml:space="preserve">
-    <value>步骤 1 的 2: 配置 根, 分配 每个 根 策略, 和 启用 仅 该 写入 您 打算.</value>
+    <value>第 1 步（共 2 步）：配置根目录，为每个根目录分配策略，并仅启用所需的写入操作。</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatterns" xml:space="preserve">
-    <value>包括 模式</value>
+    <value>包含模式</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsAutomation" xml:space="preserve">
-    <value>库 根 索引 包括 模式</value>
+    <value>音乐库根目录包含模式</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsPlaceholder" xml:space="preserve">
-    <value>全部; 或 音乐/**; *.flac</value>
+    <value>例如：Music/**；*.flac</value>
   </data>
   <data name="Settings.LibraryRoots.Path" xml:space="preserve">
-    <value>根 路径</value>
+    <value>根目录路径</value>
   </data>
   <data name="Settings.LibraryRoots.PathAutomation" xml:space="preserve">
-    <value>库 根 路径</value>
+    <value>音乐库根目录路径</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Artwork" xml:space="preserve">
     <value>封面</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Ingest" xml:space="preserve">
-    <value>引入 输出</value>
+    <value>导入输出</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Metadata" xml:space="preserve">
     <value>元数据</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Organize" xml:space="preserve">
-    <value>整理 文件</value>
+    <value>整理文件</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Sync" xml:space="preserve">
-    <value>同步 输出</value>
+    <value>同步输出</value>
   </data>
   <data name="Settings.LibraryRoots.Policy" xml:space="preserve">
-    <value>命名 和 根 策略</value>
+    <value>命名和根目录策略</value>
   </data>
   <data name="Settings.LibraryRoots.PolicyAutomation" xml:space="preserve">
-    <value>库 根 命名 配置文件</value>
+    <value>音乐库根目录策略配置文件</value>
   </data>
   <data name="Settings.LibraryRoots.ReviewPolicy" xml:space="preserve">
-    <value>审阅 策略</value>
+    <value>审阅策略</value>
   </data>
   <data name="Settings.LibraryRoots.SetNamesAutomation" xml:space="preserve">
-    <value>扫描 设置 名称</value>
+    <value>扫描集名称</value>
   </data>
   <data name="Settings.LibraryRoots.SetNamesPlaceholder" xml:space="preserve">
-    <value>设置 名称 (逗号 已分开)</value>
+    <value>集名称（以逗号分隔）</value>
   </data>
   <data name="Settings.LibraryRoots.SharedOffsetAutomation" xml:space="preserve">
-    <value>扫描 设置 共享 偏移</value>
+    <value>扫描集共享偏移</value>
   </data>
   <data name="Settings.LibraryRoots.SharedOffsetPlaceholder" xml:space="preserve">
-    <value>共享 偏移</value>
+    <value>共享偏移</value>
   </data>
   <data name="Settings.LibraryRoots.Title" xml:space="preserve">
-    <value>库 根 和 设置 成员关系</value>
+    <value>音乐库根目录和集成员关系</value>
   </data>
   <data name="Settings.LibraryRoots.WritePermissions" xml:space="preserve">
-    <value>写入 权限</value>
+    <value>写入权限</value>
   </data>
   <data name="Settings.Playlists.AddExport" xml:space="preserve">
-    <value>添加 导出</value>
+    <value>添加导出</value>
   </data>
   <data name="Settings.Playlists.AddPlaylist" xml:space="preserve">
-    <value>添加 播放列表</value>
+    <value>添加播放列表</value>
   </data>
   <data name="Settings.Playlists.AddSource" xml:space="preserve">
-    <value>添加 源</value>
+    <value>添加来源</value>
   </data>
   <data name="Settings.Playlists.AddTarget" xml:space="preserve">
-    <value>添加 目标</value>
+    <value>添加目标</value>
   </data>
   <data name="Settings.Playlists.BrowseDestination" xml:space="preserve">
-    <value>浏览 目标</value>
+    <value>选择目标…</value>
   </data>
   <data name="Settings.Playlists.BrowseFile" xml:space="preserve">
-    <value>浏览 文件</value>
+    <value>浏览…</value>
   </data>
   <data name="Settings.Playlists.CleanTargets" xml:space="preserve">
-    <value>清理 播放列表 导出 目标 之前 交叉-同步 播放列表</value>
+    <value>跨音乐库同步前清理播放列表导出目标</value>
   </data>
   <data name="Settings.Playlists.CleanupTitle" xml:space="preserve">
-    <value>交叉同步 清理</value>
+    <value>跨音乐库同步清理</value>
   </data>
   <data name="Settings.Playlists.Container" xml:space="preserve">
     <value>容器</value>
   </data>
   <data name="Settings.Playlists.DeleteStale" xml:space="preserve">
-    <value>永久 删除 已过期 交叉同步 音乐 文件 而是 的 隔离 它们</value>
+    <value>永久删除跨音乐库同步中的过期音乐文件，而不是将其隔离</value>
   </data>
   <data name="Settings.Playlists.EnableExportTooltip" xml:space="preserve">
-    <value>启用 导出 配置文件</value>
+    <value>启用导出配置文件</value>
   </data>
   <data name="Settings.Playlists.Encoding" xml:space="preserve">
     <value>编码</value>
   </data>
   <data name="Settings.Playlists.ExportProfilesDescription" xml:space="preserve">
-    <value>合并 选择, 转换, 命名, 封面/播放列表, 传输, 和 协调. 配置文件 保持 隐藏 直到 已启用 和 已配置.</value>
+    <value>组合选择、转换、命名、封面和播放列表、传输与协调设置。配置文件在启用并完成配置前保持隐藏。</value>
   </data>
   <data name="Settings.Playlists.ExportProfilesTitle" xml:space="preserve">
-    <value>导出 配置文件</value>
+    <value>导出配置文件</value>
   </data>
   <data name="Settings.Playlists.Extinf" xml:space="preserve">
     <value>EXTINF</value>
   </data>
   <data name="Settings.Playlists.FileNameTransform" xml:space="preserve">
-    <value>文件名 转换</value>
+    <value>文件名转换</value>
   </data>
   <data name="Settings.Playlists.FormatAutomation" xml:space="preserve">
-    <value>播放列表 导出 格式</value>
+    <value>播放列表导出格式</value>
   </data>
   <data name="Settings.Playlists.FrontCoverOnly" xml:space="preserve">
-    <value>正面 封面 仅</value>
+    <value>仅正面封面</value>
   </data>
   <data name="Settings.Playlists.GeneratedTransport" xml:space="preserve">
-    <value>生成 播放列表 和 传输</value>
+    <value>生成的播放列表和传输</value>
   </data>
   <data name="Settings.Playlists.GeneratePlaylists" xml:space="preserve">
-    <value>生成 播放列表</value>
+    <value>生成播放列表</value>
   </data>
   <data name="Settings.Playlists.LineEndings" xml:space="preserve">
-    <value>行 结尾</value>
+    <value>行尾</value>
   </data>
   <data name="Settings.Playlists.MaximumRemovals" xml:space="preserve">
-    <value>最大值 移除</value>
+    <value>最大移除数</value>
   </data>
   <data name="Settings.Playlists.MaximumTracks" xml:space="preserve">
-    <value>最大值 音轨</value>
+    <value>最大音轨数</value>
   </data>
   <data name="Settings.Playlists.MaxTracksPlaceholder" xml:space="preserve">
-    <value>最大 音轨</value>
+    <value>最大音轨数</value>
   </data>
   <data name="Settings.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>播放列表名称</value>
+    <value>例如：收藏</value>
   </data>
   <data name="Settings.Playlists.NamingArtwork" xml:space="preserve">
-    <value>命名 和 封面</value>
+    <value>命名和封面</value>
   </data>
   <data name="Settings.Playlists.NamingProfileId" xml:space="preserve">
-    <value>库 命名 配置文件 ID</value>
+    <value>音乐库命名配置文件 ID</value>
   </data>
   <data name="Settings.Playlists.PathStyle" xml:space="preserve">
-    <value>路径 样式</value>
+    <value>路径格式</value>
   </data>
   <data name="Settings.Playlists.PreserveArtworkEncoding" xml:space="preserve">
-    <value>保留 封面 编码</value>
+    <value>保留封面编码</value>
   </data>
   <data name="Settings.Playlists.PreserveSourceLayout" xml:space="preserve">
-    <value>保留 源 布局</value>
+    <value>保留源布局</value>
   </data>
   <data name="Settings.Playlists.RecipeId" xml:space="preserve">
     <value>方案 ID</value>
@@ -2473,13 +2473,13 @@
     <value>递归</value>
   </data>
   <data name="Settings.Playlists.RelativePaths" xml:space="preserve">
-    <value>相对 路径</value>
+    <value>相对路径</value>
   </data>
   <data name="Settings.Playlists.RemoveEmptyDirectories" xml:space="preserve">
-    <value>移除 空 目录</value>
+    <value>移除空目录</value>
   </data>
   <data name="Settings.Playlists.ReplaceChanged" xml:space="preserve">
-    <value>替换 已更改 文件</value>
+    <value>替换已更改的文件</value>
   </data>
   <data name="Settings.Playlists.SavedViewQuery" xml:space="preserve">
     <value>已保存视图查询</value>
@@ -2488,28 +2488,28 @@
     <value>选择</value>
   </data>
   <data name="Settings.Playlists.SelectionTransform" xml:space="preserve">
-    <value>选择 和 转换</value>
+    <value>选择和转换</value>
   </data>
   <data name="Settings.Playlists.SelectionValues" xml:space="preserve">
-    <value>值 (播放列表, 视图, 或 路径)</value>
+    <value>值（播放列表、视图或路径）</value>
   </data>
   <data name="Settings.Playlists.SetsAutomation" xml:space="preserve">
-    <value>播放列表 导出 设置</value>
+    <value>播放列表导出扫描集</value>
   </data>
   <data name="Settings.Playlists.SetsPlaceholder" xml:space="preserve">
-    <value>扫描 设置</value>
+    <value>例如：收藏、最近</value>
   </data>
   <data name="Settings.Playlists.SourceAutomation" xml:space="preserve">
-    <value>文件 播放列表 源</value>
+    <value>文件播放列表来源</value>
   </data>
   <data name="Settings.Playlists.SourcePlaceholder" xml:space="preserve">
-    <value>播放列表 文件 或 目录</value>
+    <value>例如：playlists/favorites.m3u8</value>
   </data>
   <data name="Settings.Playlists.SourcesDescription" xml:space="preserve">
-    <value>使用 M3U/M3U8 文件 或 目录 当 否 iTunes 目录 是 已配置.</value>
+    <value>未配置 iTunes 目录时，请使用 M3U/M3U8 文件或目录。</value>
   </data>
   <data name="Settings.Playlists.SourcesTitle" xml:space="preserve">
-    <value>文件 播放列表 源</value>
+    <value>文件播放列表来源</value>
   </data>
   <data name="Settings.Playlists.SyncNameAutomation" xml:space="preserve">
     <value>要同步的播放列表名称</value>
@@ -2524,31 +2524,37 @@
     <value>跨音乐库同步目标</value>
   </data>
   <data name="Settings.Playlists.SyncTitle" xml:space="preserve">
-    <value>同步 播放列表</value>
+    <value>同步播放列表</value>
   </data>
   <data name="Settings.Playlists.TargetAutomation" xml:space="preserve">
-    <value>播放列表 导出 目标</value>
+    <value>播放列表导出目标</value>
   </data>
   <data name="Settings.Playlists.TargetPlaceholder" xml:space="preserve">
-    <value>目标</value>
+    <value>例如：播放列表</value>
   </data>
   <data name="Settings.Playlists.TargetsTitle" xml:space="preserve">
-    <value>播放列表 导出 目标</value>
+    <value>播放列表导出目标</value>
   </data>
   <data name="Settings.Playlists.Transform" xml:space="preserve">
     <value>转换</value>
   </data>
   <data name="Settings.Playlists.TransformProvider" xml:space="preserve">
-    <value>转换 提供商</value>
+    <value>转换提供程序</value>
+  </data>
+  <data name="Settings.Playlists.TransportProvider" xml:space="preserve">
+    <value>传输提供程序</value>
+  </data>
+  <data name="Settings.Playlists.TransportOptions" xml:space="preserve">
+    <value>传输选项</value>
   </data>
   <data name="Settings.Playlists.TransportDestinationPlaceholder" xml:space="preserve">
-    <value>传输目标</value>
+    <value>例如：音乐</value>
   </data>
   <data name="Settings.Playlists.TransportOptionsPlaceholder" xml:space="preserve">
-    <value>选项=值; 选项2=值</value>
+    <value>option=value; option2=value</value>
   </data>
   <data name="Settings.Playlists.TransportProviderPlaceholder" xml:space="preserve">
-    <value>传输提供程序（本地文件系统）</value>
+    <value>例如：local-filesystem</value>
   </data>
   <data name="Settings.Playlists.UseNamingCollision" xml:space="preserve">
     <value>使用命名配置文件的冲突规则</value>
@@ -2560,31 +2566,31 @@
     <value>写入 EXTINF</value>
   </data>
   <data name="Settings.Playlists.WritePlaylistBom" xml:space="preserve">
-    <value>写入 播放列表 BOM</value>
+    <value>写入播放列表 BOM</value>
   </data>
   <data name="Settings.Tools.AcoustIdDescription" xml:space="preserve">
     <value>AcoustID 查找需要应用程序客户端密钥。此个人设置不会保存到便携式库 XML 中。查找不会提交指纹。</value>
   </data>
   <data name="Settings.Tools.AcoustIdKey" xml:space="preserve">
-    <value>AcoustID 应用程序 客户端 键</value>
+    <value>AcoustID 应用程序客户端密钥</value>
   </data>
   <data name="Settings.Tools.Bindings" xml:space="preserve">
-    <value>计算机特定的绑定辅助文件（可选）</value>
+    <value>本机绑定文件（可选）</value>
   </data>
   <data name="Settings.Tools.BindingsAutomation" xml:space="preserve">
-    <value>计算机特定的绑定辅助文件</value>
+    <value>本机绑定文件</value>
   </data>
   <data name="Settings.Tools.BindingsPlaceholder" xml:space="preserve">
-    <value>保留 便携 策略 分开 从 根 和 工具 路径</value>
+    <value>library.bindings.xml</value>
   </data>
   <data name="Settings.Tools.Database" xml:space="preserve">
-    <value>元数据 数据库</value>
+    <value>元数据数据库</value>
   </data>
   <data name="Settings.Tools.DiscogsDescription" xml:space="preserve">
     <value>Discogs 搜索需要个人访问令牌。可用时会存入操作系统凭据服务；否则只在当前会话中保存。</value>
   </data>
   <data name="Settings.Tools.DiscogsToken" xml:space="preserve">
-    <value>Discogs 个人 访问 标记</value>
+    <value>Discogs 个人访问令牌</value>
   </data>
   <data name="Settings.Tools.DiscogsTokenPlaceholder" xml:space="preserve">
     <value>输入要保存的新令牌</value>
@@ -2596,37 +2602,37 @@
     <value>FFmpeg 可执行文件</value>
   </data>
   <data name="Settings.Tools.Fpcalc" xml:space="preserve">
-    <value>Chromaprint fpcalc (个人 计算机 设置)</value>
+    <value>Chromaprint fpcalc（本机）</value>
   </data>
   <data name="Settings.Tools.FpcalcAutomation" xml:space="preserve">
     <value>Chromaprint fpcalc 可执行文件</value>
   </data>
   <data name="Settings.Tools.Itunes" xml:space="preserve">
-    <value>iTunes 库</value>
+    <value>iTunes 资料库</value>
   </data>
   <data name="Settings.Tools.OfflineMode" xml:space="preserve">
-    <value>离线 模式 — 使用 已缓存 提供商 数据 仅</value>
+    <value>离线模式 — 仅使用已缓存的提供商数据</value>
   </data>
   <data name="Settings.Tools.OfflineModeAutomation" xml:space="preserve">
-    <value>使用 已缓存 元数据 提供商 离线</value>
+    <value>离线时使用已缓存的提供商数据</value>
   </data>
   <data name="Settings.Tools.OnlineMetadata" xml:space="preserve">
     <value>在线元数据</value>
   </data>
   <data name="Settings.Tools.OptimFrog" xml:space="preserve">
-    <value>OptimFROG 工具 目录 (可选 指纹 解码器)</value>
+    <value>OptimFROG 工具目录（可选指纹解码器）</value>
   </data>
   <data name="Settings.Tools.OptimFrogAutomation" xml:space="preserve">
-    <value>OptimFROG 工具 目录</value>
+    <value>OptimFROG 工具目录</value>
   </data>
   <data name="Settings.Tools.OptimFrogPlaceholder" xml:space="preserve">
-    <value>目录 包含 ofr, ofs, 和 off</value>
+    <value>包含 ofr、ofs 和 off 的文件夹</value>
   </data>
   <data name="Settings.Tools.StoreToken" xml:space="preserve">
-    <value>存储 标记</value>
+    <value>保存令牌</value>
   </data>
   <data name="Settings.Tools.Title" xml:space="preserve">
-    <value>缓存 和 工具 路径</value>
+    <value>缓存和工具路径</value>
   </data>
   <data name="Settings.Tools.Wavpack" xml:space="preserve">
     <value>WavPack</value>
@@ -2674,43 +2680,43 @@
     <value>自动修复目标</value>
   </data>
   <data name="Settings.RootPolicy.AddSidecarRule" xml:space="preserve">
-    <value>添加 伴随文件 规则</value>
+    <value>添加伴随文件规则</value>
   </data>
   <data name="Settings.RootPolicy.Apply" xml:space="preserve">
-    <value>应用</value>
+    <value>应用修复</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkRoles" xml:space="preserve">
-    <value>角色</value>
+    <value>封面角色</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkStorage" xml:space="preserve">
-    <value>存储</value>
+    <value>封面存储</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
     <value>内置策略受保护。要自定义，请先复制一份。请在“音乐库根目录”选项卡中为根目录分配策略。</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
-    <value>这些 设置 更改 命名, 元数据, 封面, 健康状况, 和 伴随文件 行为 用于 每个 根 使用 此 配置文件. 现有 预览 变为 无效 和 必须 为 已重新生成.</value>
+    <value>这些设置会更改使用此配置文件的所有根目录的命名、元数据、封面、健康检查和伴随文件行为。现有预览将失效，必须重新生成。</value>
   </data>
   <data name="Settings.RootPolicy.CompilationToken" xml:space="preserve">
-    <value>合辑令牌</value>
+    <value>合辑名称</value>
   </data>
   <data name="Settings.RootPolicy.CompletePathLimit" xml:space="preserve">
-    <value>完整路径限制（留空 = 平台默认值）</value>
+    <value>完整路径最大长度（留空 = 平台默认值）</value>
   </data>
   <data name="Settings.RootPolicy.ComponentLimit" xml:space="preserve">
-    <value>组件 限制 (旧版 LengthLimit)</value>
+    <value>路径组件最大长度（旧版标识符：LengthLimit）</value>
   </data>
   <data name="Settings.RootPolicy.DiscAlbumLimit" xml:space="preserve">
-    <value>光盘-专辑 限制 (旧版 DiscNumLengthLimit)</value>
+    <value>光盘专辑名称最大长度（旧版标识符：DiscNumLengthLimit）</value>
   </data>
   <data name="Settings.RootPolicy.DiscIdentityTitle" xml:space="preserve">
-    <value>光盘 和 专辑 标识</value>
+    <value>光盘和专辑标识</value>
   </data>
   <data name="Settings.RootPolicy.DiscPadding" xml:space="preserve">
-    <value>光盘 填充</value>
+    <value>光盘编号补位</value>
   </data>
   <data name="Settings.RootPolicy.DiscStrategy" xml:space="preserve">
-    <value>光盘 策略</value>
+    <value>光盘策略</value>
   </data>
   <data name="Settings.RootPolicy.DiscStrategyDescription" xml:space="preserve">
     <value>光盘策略决定目标中的表示方式：“保留标签”会保留光盘元数据；其他策略会移除这些标签，并通过专辑、文件夹、文件名或连续音轨编号表示光盘。</value>
@@ -2719,10 +2725,13 @@
     <value>配置文件的文件名模板</value>
   </data>
   <data name="Settings.RootPolicy.FolderTemplateAutomation" xml:space="preserve">
-    <value>配置文件 文件夹 模板</value>
+    <value>配置文件的文件夹模板</value>
   </data>
   <data name="Settings.RootPolicy.HealthRules" xml:space="preserve">
-    <value>健康状况 规则</value>
+    <value>健康规则</value>
+  </data>
+  <data name="Settings.RootPolicy.HealthSeverity" xml:space="preserve">
+    <value>严重性</value>
   </data>
   <data name="Settings.RootPolicy.HighResolutionBitDepth" xml:space="preserve">
     <value>高分辨率位深</value>
@@ -2731,55 +2740,55 @@
     <value>高分辨率采样率 (Hz)</value>
   </data>
   <data name="Settings.RootPolicy.IdentityIncludesYear" xml:space="preserve">
-    <value>标识 包括 发行版 年份</value>
+    <value>标识中包括发行年份</value>
   </data>
   <data name="Settings.RootPolicy.IdentityStripsDisc" xml:space="preserve">
-    <value>标识 移除 光盘 N 后缀</value>
+    <value>标识中移除“Disc N”后缀</value>
   </data>
   <data name="Settings.RootPolicy.IdentityStripsFormat" xml:space="preserve">
-    <value>标识 移除 格式 后缀</value>
+    <value>标识中移除格式后缀</value>
   </data>
   <data name="Settings.RootPolicy.IdentityUsesAlbumArtist" xml:space="preserve">
-    <value>标识 使用 专辑艺术家</value>
+    <value>标识使用专辑艺术家</value>
   </data>
   <data name="Settings.RootPolicy.InferLegacySuffixes" xml:space="preserve">
-    <value>推断 旧版 专辑 后缀</value>
+    <value>推断旧版专辑后缀</value>
   </data>
   <data name="Settings.RootPolicy.InvalidCharacterReplacement" xml:space="preserve">
     <value>无效字符替换</value>
   </data>
   <data name="Settings.RootPolicy.ItunesCanonicalNaming" xml:space="preserve">
-    <value>iTunes 规范 命名</value>
+    <value>iTunes 规范命名</value>
   </data>
   <data name="Settings.RootPolicy.JpegQuality" xml:space="preserve">
     <value>JPEG 质量</value>
   </data>
   <data name="Settings.RootPolicy.MaximumBytesUnlimited" xml:space="preserve">
-    <value>最大值 字节 (0 = 无限制)</value>
+    <value>最大字节数（0 = 无限制）</value>
   </data>
   <data name="Settings.RootPolicy.MaximumDimensionUnlimited" xml:space="preserve">
-    <value>最大尺寸 (0 = 无限制)</value>
+    <value>最大尺寸（0 = 无限制）</value>
   </data>
   <data name="Settings.RootPolicy.MetadataTitle" xml:space="preserve">
-    <value>元数据 保真度</value>
+    <value>元数据保真度</value>
   </data>
   <data name="Settings.RootPolicy.MissingAlbum" xml:space="preserve">
-    <value>缺失 专辑</value>
+    <value>缺少专辑时的后备值</value>
   </data>
   <data name="Settings.RootPolicy.MissingArtist" xml:space="preserve">
-    <value>缺失 艺术家</value>
+    <value>缺少艺术家时的后备值</value>
   </data>
   <data name="Settings.RootPolicy.MissingTitle" xml:space="preserve">
-    <value>缺失 标题</value>
+    <value>缺少标题时的后备值</value>
   </data>
   <data name="Settings.RootPolicy.NamingTitle" xml:space="preserve">
-    <value>命名 和 冲突</value>
+    <value>命名和冲突</value>
   </data>
   <data name="Settings.RootPolicy.PreserveCompilation" xml:space="preserve">
-    <value>保留 合辑 语义</value>
+    <value>保留合辑语义</value>
   </data>
   <data name="Settings.RootPolicy.PreserveCustomFields" xml:space="preserve">
-    <value>保留 自定义 字段</value>
+    <value>保留自定义字段</value>
   </data>
   <data name="Settings.RootPolicy.PreserveMusicBrainz" xml:space="preserve">
     <value>保留 MusicBrainz 标识符</value>
@@ -2794,25 +2803,25 @@
     <value>配置文件名称</value>
   </data>
   <data name="Settings.RootPolicy.ProfileTitle" xml:space="preserve">
-    <value>根 策略 配置文件</value>
+    <value>音乐库策略配置文件</value>
   </data>
   <data name="Settings.RootPolicy.Propose" xml:space="preserve">
-    <value>建议</value>
+    <value>建议修复</value>
   </data>
   <data name="Settings.RootPolicy.QualityTitle" xml:space="preserve">
-    <value>质量 分类</value>
+    <value>质量分类</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkAtIndex" xml:space="preserve">
-    <value>读取 嵌入式 封面 期间 正在索引</value>
+    <value>索引时读取嵌入式封面</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkDescription" xml:space="preserve">
     <value>启用后，索引时间会更长，缓存会占用更多空间，但浏览和审核时可以立即使用封面。禁用后，仅在查看或审核封面时读取它。</value>
   </data>
   <data name="Settings.RootPolicy.SelectAutomation" xml:space="preserve">
-    <value>根/命名 策略 配置文件</value>
+    <value>音乐库策略配置文件</value>
   </data>
   <data name="Settings.RootPolicy.SelectLabel" xml:space="preserve">
-    <value>根/命名 策略</value>
+    <value>音乐库策略配置文件</value>
   </data>
   <data name="Settings.RootPolicy.SidecarPatternsPlaceholder" xml:space="preserve">
     <value>*.cue, *.pdf</value>
@@ -2821,13 +2830,13 @@
     <value>伴随文件和未知文件规则</value>
   </data>
   <data name="Settings.RootPolicy.SidecarTemplate" xml:space="preserve">
-    <value>伴随文件 模板</value>
+    <value>封面伴随文件模板</value>
   </data>
   <data name="Settings.RootPolicy.SummaryAutomation" xml:space="preserve">
-    <value>有效 库 策略 摘要</value>
+    <value>有效音乐库策略摘要</value>
   </data>
   <data name="Settings.RootPolicy.TrackPadding" xml:space="preserve">
-    <value>音轨 填充</value>
+    <value>音轨编号补位</value>
   </data>
   <data name="Settings.RootPolicy.TrackTotalScope" xml:space="preserve">
     <value>音轨总数范围</value>
@@ -2839,49 +2848,49 @@
     <value>未知文件处理方式</value>
   </data>
   <data name="Settings.Ingest.AcceptedExtensions" xml:space="preserve">
-    <value>已接受 扩展名</value>
+    <value>源文件扩展名</value>
   </data>
   <data name="Settings.Ingest.Action" xml:space="preserve">
     <value>操作</value>
   </data>
   <data name="Settings.Ingest.ActiveProfile" xml:space="preserve">
-    <value>活动 引入 配置文件</value>
+    <value>活动的引入配置文件</value>
   </data>
   <data name="Settings.Ingest.AddRecipe" xml:space="preserve">
-    <value>添加 方案</value>
+    <value>添加方案</value>
   </data>
   <data name="Settings.Ingest.AddToCatalog" xml:space="preserve">
-    <value>添加 输出 到 已配置 媒体 目录</value>
+    <value>将输出添加到已配置的媒体目录</value>
   </data>
   <data name="Settings.Ingest.AlbumMatch" xml:space="preserve">
-    <value>专辑 匹配</value>
+    <value>专辑匹配</value>
   </data>
   <data name="Settings.Ingest.Bitrate" xml:space="preserve">
-    <value>比特率 (kbps; 每 方案)</value>
+    <value>比特率（kbps；每个方案）</value>
   </data>
   <data name="Settings.Ingest.CleanupDescription" xml:space="preserve">
     <value>上面的源文件处置设置控制如何处理源音频。这些兼容性选项仅在引入成功后应用。</value>
   </data>
   <data name="Settings.Ingest.CleanupTitle" xml:space="preserve">
-    <value>清理 之后 引入</value>
+    <value>引入后清理</value>
   </data>
   <data name="Settings.Ingest.DeleteSourceMusic" xml:space="preserve">
-    <value>删除 源 音乐 之后 成功 引入</value>
+    <value>引入成功后删除源音乐</value>
   </data>
   <data name="Settings.Ingest.DestinationRoot" xml:space="preserve">
-    <value>目标 根</value>
+    <value>目标根目录</value>
   </data>
   <data name="Settings.Ingest.DestinationRootAutomation" xml:space="preserve">
-    <value>引入 方案 目标 根</value>
+    <value>引入方案的目标根目录</value>
   </data>
   <data name="Settings.Ingest.DisplayNamePlaceholder" xml:space="preserve">
     <value>显示名称</value>
   </data>
   <data name="Settings.Ingest.EnableRecipes" xml:space="preserve">
-    <value>启用 引入 方案</value>
+    <value>启用引入方案</value>
   </data>
   <data name="Settings.Ingest.EnableRecipeTooltip" xml:space="preserve">
-    <value>启用 方案</value>
+    <value>匹配源文件时包含此方案。</value>
   </data>
   <data name="Settings.Ingest.Encoder" xml:space="preserve">
     <value>编码器 (空白 = 自动)</value>
@@ -2890,79 +2899,79 @@
     <value>.flac, .m4a</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegAutomation" xml:space="preserve">
-    <value>额外 FFmpeg 选项</value>
+    <value>其他 FFmpeg 选项</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegOptions" xml:space="preserve">
-    <value>额外 FFmpeg 选项 (转码 仅)</value>
+    <value>其他 FFmpeg 选项（仅转码）</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegPlaceholder" xml:space="preserve">
-    <value>用于 示例: -af "loudnorm=I=-16:LRA=11"</value>
+    <value>示例：-af "loudnorm=I=-16:LRA=11"</value>
   </data>
   <data name="Settings.Ingest.InputChannels" xml:space="preserve">
     <value>输入声道</value>
   </data>
   <data name="Settings.Ingest.LosslessMatch" xml:space="preserve">
-    <value>无损 匹配 (不确定 = 任意)</value>
+    <value>无损要求（混合状态 = 任意）</value>
   </data>
   <data name="Settings.Ingest.MatchedSourceSelection" xml:space="preserve">
-    <value>已匹配 源 选择</value>
+    <value>匹配源选择</value>
   </data>
   <data name="Settings.Ingest.MatchEitherQuality" xml:space="preserve">
-    <value>匹配 任一 质量 最小值</value>
+    <value>匹配采样率或位深度最低值</value>
   </data>
   <data name="Settings.Ingest.MinimumBitDepth" xml:space="preserve">
-    <value>最小值 位 深度</value>
+    <value>最低位深度</value>
   </data>
   <data name="Settings.Ingest.MinimumSampleRate" xml:space="preserve">
-    <value>最小值 采样率</value>
+    <value>最低采样率</value>
   </data>
   <data name="Settings.Ingest.OutputBitDepth" xml:space="preserve">
-    <value>输出 位 深度</value>
+    <value>输出位深度</value>
   </data>
   <data name="Settings.Ingest.OutputChannels" xml:space="preserve">
-    <value>输出 声道</value>
+    <value>输出声道</value>
   </data>
   <data name="Settings.Ingest.OutputExtension" xml:space="preserve">
     <value>输出扩展名</value>
   </data>
   <data name="Settings.Ingest.OutputExtensionPlaceholder" xml:space="preserve">
-    <value>用于 示例 .flac</value>
+    <value>示例：.flac</value>
   </data>
   <data name="Settings.Ingest.OutputSampleRate" xml:space="preserve">
-    <value>输出 采样率</value>
+    <value>输出采样率</value>
   </data>
   <data name="Settings.Ingest.PreserveArtwork" xml:space="preserve">
-    <value>保留 封面</value>
+    <value>保留封面</value>
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
-    <value>保留 元数据</value>
+    <value>保留元数据</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
-    <value>保留 伴随文件 按 默认</value>
+    <value>默认保留伴随文件</value>
   </data>
   <data name="Settings.Ingest.ProfileName" xml:space="preserve">
     <value>引入配置文件名称</value>
   </data>
   <data name="Settings.Ingest.RecipeIdPlaceholder" xml:space="preserve">
-    <value>稳定 方案 ID</value>
+    <value>稳定的方案 ID</value>
   </data>
   <data name="Settings.Ingest.RemoveNonMusic" xml:space="preserve">
-    <value>移除 非音乐 文件 之后 成功 引入</value>
+    <value>引入成功后移除非音乐文件</value>
   </data>
   <data name="Settings.Ingest.RequireFallbackApproval" xml:space="preserve">
-    <value>需要 批准 当 已匹配 CD 是 缺失</value>
+    <value>缺少匹配的 CD 音质源时需要批准</value>
   </data>
   <data name="Settings.Ingest.RequireLossless" xml:space="preserve">
-    <value>需要 无损</value>
+    <value>要求无损格式</value>
   </data>
   <data name="Settings.Ingest.SourceDisposition" xml:space="preserve">
     <value>源文件处置</value>
   </data>
   <data name="Settings.Ingest.Title" xml:space="preserve">
-    <value>引入 配置文件 和 方案</value>
+    <value>引入配置文件和方案</value>
   </data>
   <data name="Settings.Ingest.UseRootCollision" xml:space="preserve">
-    <value>使用 目标 根 冲突 行为</value>
+    <value>使用目标根目录的冲突处理方式</value>
   </data>
   <data name="Settings.EffectivePolicy.Description" xml:space="preserve">
     <value>检查每次预览将采用的行为。离线路径会产生警告；无效的策略引用和相互冲突的权限会阻止保存。</value>
@@ -3019,148 +3028,148 @@
     <value>规范字段到原生字段的映射</value>
   </data>
   <data name="Settings.DestinationRoot.Missing" xml:space="preserve">
-    <value>缺失 根 ({0:D})</value>
+    <value>缺失的根目录 ({0:D})</value>
   </data>
   <data name="Settings.DestinationRoot.NewRoot" xml:space="preserve">
-    <value>新建 库 根</value>
+    <value>新建资料库根目录</value>
   </data>
   <data name="Settings.DestinationRoot.None" xml:space="preserve">
-    <value>否 直接 根</value>
+    <value>无直接根目录</value>
   </data>
   <data name="Settings.SyncTarget.NewRoot" xml:space="preserve">
-    <value>新建 库 根</value>
+    <value>新建资料库根目录</value>
   </data>
   <data name="Settings.SyncTarget.None" xml:space="preserve">
-    <value>否 同步 目标</value>
+    <value>无同步目标</value>
   </data>
   <data name="Settings.Permissions.Action.Artwork" xml:space="preserve">
-    <value>编辑 封面</value>
+    <value>编辑封面</value>
   </data>
   <data name="Settings.Permissions.Action.Ingest" xml:space="preserve">
-    <value>写入 引入 结果</value>
+    <value>写入导入结果</value>
   </data>
   <data name="Settings.Permissions.Action.Metadata" xml:space="preserve">
-    <value>编辑 元数据</value>
+    <value>编辑元数据</value>
   </data>
   <data name="Settings.Permissions.Action.Organize" xml:space="preserve">
-    <value>重命名 和 移动 文件</value>
+    <value>重命名和移动文件</value>
   </data>
   <data name="Settings.Permissions.Action.Sync" xml:space="preserve">
-    <value>写入 同步 复制</value>
+    <value>写入同步副本</value>
   </data>
   <data name="Settings.Permissions.Artwork" xml:space="preserve">
     <value>封面</value>
   </data>
   <data name="Settings.Permissions.CatalogOnly" xml:space="preserve">
-    <value>仅目录（只读）</value>
+    <value>仅编目（只读）</value>
   </data>
   <data name="Settings.Permissions.Description.ReadOnly" xml:space="preserve">
-    <value>该 应用 仅 目录 此 文件夹 和 将 不 更改 其 文件.</value>
+    <value>应用仅对此文件夹编目，不会更改其中的文件。</value>
   </data>
   <data name="Settings.Permissions.Description.Writable" xml:space="preserve">
-    <value>该 应用 可能 {0} 在 此 文件夹.</value>
+    <value>应用可以在此文件夹中执行以下操作：{0}。</value>
   </data>
   <data name="Settings.Permissions.IngestOutput" xml:space="preserve">
-    <value>引入 输出</value>
+    <value>导入输出</value>
   </data>
   <data name="Settings.Permissions.Metadata" xml:space="preserve">
     <value>元数据</value>
   </data>
   <data name="Settings.Permissions.Organization" xml:space="preserve">
-    <value>组织</value>
+    <value>文件整理</value>
   </data>
   <data name="Settings.Permissions.Summary.Allowed" xml:space="preserve">
-    <value>允许 更改: {0}</value>
+    <value>允许的更改：{0}</value>
   </data>
   <data name="Settings.Permissions.Summary.ReadOnly" xml:space="preserve">
     <value>仅目录：此根目录为只读。</value>
   </data>
   <data name="Settings.Permissions.SyncOutput" xml:space="preserve">
-    <value>同步 输出</value>
+    <value>同步输出</value>
   </data>
   <data name="Settings.Discogs.Checking" xml:space="preserve">
-    <value>正在检查 安全 凭据 存储…</value>
+    <value>正在检查安全凭据存储…</value>
   </data>
   <data name="Settings.Discogs.ClearFailed" xml:space="preserve">
-    <value>可以 不 清除 该 Discogs 标记: {0}</value>
+    <value>无法清除 Discogs 令牌：{0}</value>
   </data>
   <data name="Settings.Discogs.EnterToken" xml:space="preserve">
     <value>请输入 Discogs 个人访问令牌。</value>
   </data>
   <data name="Settings.Discogs.ExistsPersistent" xml:space="preserve">
-    <value>一个 Discogs 标记 是 已存储 在 {0}.</value>
+    <value>Discogs 令牌已存储在 {0} 中。</value>
   </data>
   <data name="Settings.Discogs.ExistsSession" xml:space="preserve">
-    <value>一个 Discogs 标记 是 已存储 用于 此 应用程序 会话 仅.</value>
+    <value>Discogs 令牌仅在此应用程序会话期间存储。</value>
   </data>
   <data name="Settings.Discogs.NoneStored" xml:space="preserve">
-    <value>否 Discogs 标记 是 已存储.</value>
+    <value>未存储 Discogs 令牌。</value>
   </data>
   <data name="Settings.Discogs.StoredPersistent" xml:space="preserve">
-    <value>Discogs 标记 已存储 在 {0}.</value>
+    <value>Discogs 令牌已存储在 {0} 中。</value>
   </data>
   <data name="Settings.Discogs.StoredSession" xml:space="preserve">
-    <value>Discogs 标记 已存储 用于 此 应用程序 会话 仅.</value>
+    <value>Discogs 令牌仅在此应用程序会话期间存储。</value>
   </data>
   <data name="Settings.Discogs.StoreFailed" xml:space="preserve">
-    <value>可以 不 存储 该 Discogs 标记: {0}</value>
+    <value>无法存储 Discogs 令牌：{0}</value>
   </data>
   <data name="Settings.Discogs.Unavailable" xml:space="preserve">
-    <value>安全 凭据 存储 是 不可用: {0}</value>
+    <value>安全凭据存储不可用：{0}</value>
   </data>
   <data name="Settings.Dialog.Discard.Accept" xml:space="preserve">
-    <value>放弃 更改</value>
+    <value>放弃更改</value>
   </data>
   <data name="Settings.Dialog.Discard.Message" xml:space="preserve">
-    <value>该 库 配置 有 更改 该 有 不 已经 已保存.</value>
+    <value>音乐库配置包含尚未保存的更改。</value>
   </data>
   <data name="Settings.Dialog.Discard.Title" xml:space="preserve">
-    <value>放弃 未保存 配置 更改?</value>
+    <value>是否放弃未保存的配置更改？</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Accept" xml:space="preserve">
-    <value>删除 配置文件</value>
+    <value>删除配置文件</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Message" xml:space="preserve">
-    <value>{0} 此 无法 为 已撤销 之后 保存.</value>
+    <value>{0} 保存后无法撤销。</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.NoReferences" xml:space="preserve">
-    <value>它 有 否 已配置 引用.</value>
+    <value>没有已配置的引用。</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Reassignment" xml:space="preserve">
-    <value>{0} 和 {1} 将 为 已重新分配 到 '{2}'.</value>
+    <value>{0}和{1}将重新分配给“{2}”。</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.RootReferences.One" xml:space="preserve">
-    <value>{0:N0} 根 引用</value>
+    <value>{0:N0} 个根目录引用</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.RootReferences.Other" xml:space="preserve">
-    <value>{0:N0} 根 引用</value>
+    <value>{0:N0} 个根目录引用</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Title" xml:space="preserve">
-    <value>删除 配置文件 '{0}'?</value>
+    <value>是否删除配置文件“{0}”？</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.WorkflowReferences.One" xml:space="preserve">
-    <value>{0:N0} 工作流 引用</value>
+    <value>{0:N0} 个工作流引用</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.WorkflowReferences.Other" xml:space="preserve">
-    <value>{0:N0} 工作流 引用</value>
+    <value>{0:N0} 个工作流引用</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Accept" xml:space="preserve">
-    <value>删除 引入 配置文件</value>
+    <value>删除导入配置文件</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Message" xml:space="preserve">
-    <value>该 活动 引入 工作流 将 更改 到 '{0}'. 此 无法 为 已撤销 之后 保存.</value>
+    <value>活动导入工作流将更改为“{0}”。保存后无法撤销。</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Title" xml:space="preserve">
-    <value>删除 引入 配置文件 '{0}'?</value>
+    <value>是否删除导入配置文件“{0}”？</value>
   </data>
   <data name="Settings.Dialog.SaveFailed.Title" xml:space="preserve">
-    <value>配置 曾是 不 已保存</value>
+    <value>配置未保存</value>
   </data>
   <data name="Settings.FilePicker.ConfigurationType" xml:space="preserve">
-    <value>库 配置</value>
+    <value>音乐库配置</value>
   </data>
   <data name="Settings.FilePicker.ExportDestination" xml:space="preserve">
-    <value>选择 一个 导出 目标</value>
+    <value>选择导出目标</value>
   </data>
   <data name="Settings.FilePicker.Ffmpeg" xml:space="preserve">
     <value>选择 FFmpeg 可执行文件</value>
@@ -3169,106 +3178,106 @@
     <value>选择 fpcalc 可执行文件</value>
   </data>
   <data name="Settings.FilePicker.ItunesLibrary" xml:space="preserve">
-    <value>选择 iTunes 库</value>
+    <value>选择 iTunes 资料库</value>
   </data>
   <data name="Settings.FilePicker.ItunesLibraryType" xml:space="preserve">
-    <value>iTunes 库</value>
+    <value>iTunes 资料库</value>
   </data>
   <data name="Settings.FilePicker.LibraryRoot" xml:space="preserve">
-    <value>选择 一个 音乐库 根</value>
+    <value>选择音乐库根目录</value>
   </data>
   <data name="Settings.FilePicker.MachineBindings" xml:space="preserve">
-    <value>选择 计算机-本地 绑定 文件</value>
+    <value>选择本机绑定文件</value>
   </data>
   <data name="Settings.FilePicker.MetadataCache" xml:space="preserve">
-    <value>选择 元数据 缓存</value>
+    <value>选择元数据数据库</value>
   </data>
   <data name="Settings.FilePicker.OpenConfiguration" xml:space="preserve">
-    <value>打开 库 配置</value>
+    <value>打开音乐库配置</value>
   </data>
   <data name="Settings.FilePicker.OptimFrog" xml:space="preserve">
-    <value>选择 OptimFROG 工具 目录</value>
+    <value>选择 OptimFROG 工具目录</value>
   </data>
   <data name="Settings.FilePicker.PlaylistExportFolder" xml:space="preserve">
-    <value>选择 一个 播放列表 导出 文件夹</value>
+    <value>选择播放列表导出文件夹</value>
   </data>
   <data name="Settings.FilePicker.PlaylistSource" xml:space="preserve">
-    <value>选择 一个 M3U/M3U8 播放列表 源</value>
+    <value>选择 M3U/M3U8 播放列表源</value>
   </data>
   <data name="Settings.FilePicker.PlaylistType" xml:space="preserve">
-    <value>文件 播放列表</value>
+    <value>播放列表文件</value>
   </data>
   <data name="Settings.FilePicker.SaveConfiguration" xml:space="preserve">
-    <value>保存 库 配置</value>
+    <value>保存音乐库配置</value>
   </data>
   <data name="Settings.FilePicker.Wavpack" xml:space="preserve">
     <value>选择 WavPack 可执行文件</value>
   </data>
   <data name="Settings.Profile.CopySuffix" xml:space="preserve">
-    <value> 复制</value>
+    <value> 副本</value>
   </data>
   <data name="Settings.Profile.NewName" xml:space="preserve">
-    <value>新建 配置文件</value>
+    <value>新建配置文件</value>
   </data>
   <data name="Settings.IngestProfile.NewName" xml:space="preserve">
-    <value>新建 引入 配置文件</value>
+    <value>新建导入配置文件</value>
   </data>
   <data name="Settings.Status.ActiveConfigurationChanged" xml:space="preserve">
     <value>活动配置已更改，但编辑器中未保存的更改已保留。在编辑活动配置之前，请将这些更改另存为文件或将其放弃。</value>
   </data>
   <data name="Settings.Status.ChangesDiscarded" xml:space="preserve">
-    <value>未保存 配置 更改 曾是 放弃.</value>
+    <value>已放弃未保存的配置更改。</value>
   </data>
   <data name="Settings.Status.ChooseConfiguration" xml:space="preserve">
-    <value>选择 一个 现有 配置 或 创建 一个 新建 一个.</value>
+    <value>选择现有配置或创建新配置。</value>
   </data>
   <data name="Settings.Status.ConfigurationEditFailed" xml:space="preserve">
-    <value>可以 不 编辑 配置: {0}</value>
+    <value>无法编辑配置：{0}</value>
   </data>
   <data name="Settings.Status.ConfigurationLoaded" xml:space="preserve">
-    <value>配置 已加载. 已缓存 浏览 是 可用 期间 根 是 离线.</value>
+    <value>配置已加载。根目录离线时仍可浏览缓存数据。</value>
   </data>
   <data name="Settings.Status.ConfigurationLoadFailed" xml:space="preserve">
-    <value>可以 不 加载 配置: {0}</value>
+    <value>无法加载配置：{0}</value>
   </data>
   <data name="Settings.Status.ConfigurationSaved" xml:space="preserve">
-    <value>配置 已保存 和 已加载.</value>
+    <value>配置已保存并加载。</value>
   </data>
   <data name="Settings.Status.ConfigurationSaveFailed" xml:space="preserve">
-    <value>可以 不 保存 配置: {0}</value>
+    <value>无法保存配置：{0}</value>
   </data>
   <data name="Settings.Status.GuidedSetup" xml:space="preserve">
     <value>引导式设置：选择保留优先的配置文件，添加音乐库根目录，然后审阅有效策略。</value>
   </data>
   <data name="Settings.Status.IngestProfileCreated" xml:space="preserve">
-    <value>已创建 引入 配置文件 '{0}'.</value>
+    <value>已创建导入配置文件“{0}”。</value>
   </data>
   <data name="Settings.Status.IngestProfileDeleted" xml:space="preserve">
-    <value>已删除 引入 配置文件 '{0}'.</value>
+    <value>已删除导入配置文件“{0}”。</value>
   </data>
   <data name="Settings.Status.IngestProfileDuplicated" xml:space="preserve">
-    <value>重复 引入 配置文件 '{0}'.</value>
+    <value>已将导入配置文件复制为“{0}”。</value>
   </data>
   <data name="Settings.Status.NewConfiguration" xml:space="preserve">
-    <value>新建 配置. 添加 在 至少 一个 库 根, 然后 保存 作为.</value>
+    <value>新配置。请至少添加一个音乐库根目录，然后选择“另存为…”。</value>
   </data>
   <data name="Settings.Status.ProfileCreated" xml:space="preserve">
-    <value>已创建 配置文件 '{0}'.</value>
+    <value>已创建配置文件“{0}”。</value>
   </data>
   <data name="Settings.Status.ProfileDeleted" xml:space="preserve">
-    <value>已删除 配置文件 '{0}' 和 已重新分配 其 引用.</value>
+    <value>已删除配置文件“{0}”并重新分配其引用。</value>
   </data>
   <data name="Settings.Status.ProfileDuplicated" xml:space="preserve">
-    <value>重复 '{0}' 作为 '{1}'.</value>
+    <value>已将“{0}”复制为“{1}”。</value>
   </data>
   <data name="Settings.Status.RecentConfigurationsCleared" xml:space="preserve">
-    <value>最近 配置 历史记录 已清除.</value>
+    <value>已清除最近的配置历史记录。</value>
   </data>
   <data name="Settings.Status.ResolveSetupIssues" xml:space="preserve">
-    <value>解决 该 已突出显示 设置 问题 之前 保存.</value>
+    <value>请先解决突出显示的设置问题，然后再保存。</value>
   </data>
   <data name="Settings.Status.ResolveValidationIssues" xml:space="preserve">
-    <value>解决 该 验证 问题 之前 保存.</value>
+    <value>请先解决验证问题，然后再保存。</value>
   </data>
   <data name="Settings.Validation.AddLibraryRoot" xml:space="preserve">
     <value>请至少添加一个库根目录。</value>
@@ -3346,85 +3355,85 @@
     <value>库根目录“{0}”引用了未知的配置文件“{1}”。</value>
   </data>
   <data name="Settings.PolicySummary.NoRootPolicy" xml:space="preserve">
-    <value>否 根 策略 配置文件 是 已选择.</value>
+    <value>未选择根目录策略配置文件。</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Itunes" xml:space="preserve">
-    <value>iTunes-兼容 路径</value>
+    <value>iTunes 兼容路径</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Preserved" xml:space="preserve">
-    <value>现有 路径 是 已保留</value>
+    <value>保留现有路径</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Template" xml:space="preserve">
     <value>{0}/{1}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Enabled" xml:space="preserve">
-    <value>已启用; 源 {0}</value>
+    <value>已启用；源文件处置方式：{0}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Disabled" xml:space="preserve">
-    <value>已禁用; 源 已保留</value>
+    <value>已禁用；保留源文件</value>
   </data>
   <data name="Settings.PolicySummary.None" xml:space="preserve">
     <value>无</value>
   </data>
   <data name="Settings.PolicySummary.RootPolicy" xml:space="preserve">
-    <value>根 策略 正在 编辑: {0}</value>
+    <value>正在编辑的根目录策略：{0}</value>
   </data>
   <data name="Settings.PolicySummary.Permissions" xml:space="preserve">
-    <value>新建-根 权限: {0}</value>
+    <value>新根目录权限：{0}</value>
   </data>
   <data name="Settings.PolicySummary.Naming" xml:space="preserve">
-    <value>命名: {0}</value>
+    <value>命名：{0}</value>
   </data>
   <data name="Settings.PolicySummary.Discs" xml:space="preserve">
-    <value>光盘: {0}</value>
+    <value>碟片：{0}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest" xml:space="preserve">
-    <value>引入 配置文件: {0}; {1}</value>
+    <value>导入配置文件：{0}；{1}</value>
   </data>
   <data name="Settings.PolicySummary.RootCounts" xml:space="preserve">
-    <value>已配置 根: {0:N0}; 根 允许 更改: {1:N0}; 根 策略 覆盖: {2:N0}</value>
+    <value>已配置根目录：{0:N0}；允许更改的根目录：{1:N0}；策略覆盖：{2:N0}</value>
   </data>
   <data name="Settings.PolicyDetails.NoActivePolicy" xml:space="preserve">
-    <value>否 活动 策略 是 可用.</value>
+    <value>没有可用的活动策略。</value>
   </data>
   <data name="Settings.PolicyDetails.NoRoots" xml:space="preserve">
-    <value>否 音乐 文件夹 是 已配置 尚未.</value>
+    <value>尚未配置音乐文件夹。</value>
   </data>
   <data name="Settings.PolicyDetails.UnsetPath" xml:space="preserve">
-    <value>一个 文件夹 其 路径 有 不 已经 设置</value>
+    <value>路径尚未设置的文件夹</value>
   </data>
   <data name="Settings.PolicyDetails.RootOffline" xml:space="preserve">
-    <value> 它 是 当前 离线 或 无法 为 已达到.</value>
+    <value> 该文件夹当前离线或无法访问。</value>
   </data>
   <data name="Settings.PolicyDetails.AllIncluded" xml:space="preserve">
-    <value>每个 匹配 音乐 文件 是 包括.</value>
+    <value>包括所有匹配的音乐文件。</value>
   </data>
   <data name="Settings.PolicyDetails.PatternsIncluded" xml:space="preserve">
-    <value>仅 文件 匹配 {0} 是 包括.</value>
+    <value>仅包括匹配 {0} 的文件。</value>
   </data>
   <data name="Settings.PolicyDetails.PatternsExcluded" xml:space="preserve">
-    <value> 文件 匹配 {0} 是 排除.</value>
+    <value> 排除匹配 {0} 的文件。</value>
   </data>
   <data name="Settings.PolicyDetails.AllFormats" xml:space="preserve">
-    <value>全部 已识别 音乐 格式</value>
+    <value>所有支持的音乐格式</value>
   </data>
   <data name="Settings.PolicyDetails.RootLine" xml:space="preserve">
-    <value>• 在 {0}, 该 应用 索引 {1}. {2} {3}{4}{5}</value>
+    <value>• 在 {0} 中，应用索引 {1}。{2} {3}{4}{5}</value>
   </data>
   <data name="Settings.PolicyDetails.Example.MusicFolder" xml:space="preserve">
     <value>音乐</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Artist" xml:space="preserve">
-    <value>示例 艺术家</value>
+    <value>示例艺术家</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Album" xml:space="preserve">
-    <value>示例 专辑</value>
+    <value>示例专辑</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Song" xml:space="preserve">
-    <value>示例 歌曲</value>
+    <value>示例歌曲</value>
   </data>
   <data name="Settings.PolicyDetails.Example.FileName" xml:space="preserve">
-    <value>03 示例 歌曲</value>
+    <value>03 示例歌曲</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Genre" xml:space="preserve">
     <value>摇滚</value>
@@ -3439,37 +3448,37 @@
     <value>{0} ({1}{2})</value>
   </data>
   <data name="Settings.PolicyDetails.Repair.Apply" xml:space="preserve">
-    <value>, 应用</value>
+    <value>，应用</value>
   </data>
   <data name="Settings.PolicyDetails.Repair.Propose" xml:space="preserve">
-    <value>, 建议</value>
+    <value>，建议</value>
   </data>
   <data name="Settings.PolicyDetails.Repair.None" xml:space="preserve">
-    <value>否 自动 修复 是 已启用.</value>
+    <value>未启用自动修复。</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Disabled" xml:space="preserve">
     <value>已禁用</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.NoRecipes" xml:space="preserve">
-    <value>已启用, 但是 否 输出 方案</value>
+    <value>已启用，但没有输出方案</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Recipe" xml:space="preserve">
-    <value>{0}: {1} 到 {2}</value>
+    <value>方案“{0}”：操作 — {1}；目标 — {2}</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.MissingRoot" xml:space="preserve">
-    <value>缺失 根</value>
+    <value>缺少目标根目录</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.NoDirectRoot" xml:space="preserve">
-    <value>否 直接 根</value>
+    <value>无直接目标根目录</value>
   </data>
   <data name="Settings.PolicyDetails.Integrations.NoCatalog" xml:space="preserve">
-    <value>文件 播放列表 (M3U/M3U8); 否 媒体 目录 集成 已配置</value>
+    <value>文件播放列表 (M3U/M3U8)；未配置媒体目录集成</value>
   </data>
   <data name="Settings.PolicyDetails.Integrations.Itunes" xml:space="preserve">
-    <value>文件 播放列表 (M3U/M3U8); iTunes 目录: {0}</value>
+    <value>文件播放列表 (M3U/M3U8)；iTunes 目录：{0}</value>
   </data>
   <data name="Settings.PolicyDetails.Exports.None" xml:space="preserve">
-    <value>无 已配置</value>
+    <value>未配置</value>
   </data>
   <data name="Settings.PolicyDetails.Export" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -3481,67 +3490,67 @@
     <value>已禁用</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.CatalogOnly" xml:space="preserve">
-    <value>该 应用 保留 文件 和 文件夹 名称 位置 它们 是.</value>
+    <value>应用保留文件和文件夹的当前名称与位置。</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.Organized" xml:space="preserve">
     <value>整理文件时，将按“{0}”的格式命名。如果该名称已存在，应用将使用 {1} 规则。</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Eager" xml:space="preserve">
-    <value>封面 是 读取 和 已缓存 期间 正在索引, 因此 浏览 和 封面 审核 是 立即 完成. 正在索引 将 采用 更长 和 该 缓存 将 使用 更多 空间.</value>
+    <value>索引时读取并缓存封面，因此浏览和封面审核可以立即获得完整信息。索引时间会更长，缓存也会占用更多空间。</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Lazy" xml:space="preserve">
-    <value>封面 是 不 读取 期间 正在索引. 它 是 已加载 和 已缓存 稍后 当 您 视图 它 或 运行 一个 封面 审核, 其中 保留 正在索引 更快 和 该 初始 缓存 更小.</value>
+    <value>索引时不读取封面。以后查看或审核时才加载并缓存，因此索引更快，初始缓存也更小。</value>
   </data>
   <data name="Settings.PolicyDetails.Discs.Preserve" xml:space="preserve">
-    <value>光盘 编号 保留 在 该 标签.</value>
+    <value>光盘编号保留在标签中。</value>
   </data>
   <data name="Settings.PolicyDetails.Discs.Transform" xml:space="preserve">
-    <value>光盘 编号 是 已表示 使用 {0}, 和 该 光盘 标签 是 已移除.</value>
+    <value>光盘编号使用 {0} 表示，并移除光盘标签。</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Enabled" xml:space="preserve">
-    <value>引入 是 已启用 通过 “{0}”. 该 活动 方案 是 {1}, 和 源 文件 是 {2} 之后 一个 成功 引入.</value>
+    <value>已通过“{0}”启用引入。活动方案：{1}。引入成功后的源文件处理方式：{2}。</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Preserved" xml:space="preserve">
-    <value>自动 引入 是 已禁用, 因此 源 文件 是 已保留.</value>
+    <value>自动引入已禁用，因此会保留源文件。</value>
   </data>
   <data name="Settings.PolicyDetails.Introduction" xml:space="preserve">
-    <value>此 策略 是 “{0}” ({1}). 该 索引器 识别: {2}.</value>
+    <value>此策略为“{0}”({1})。索引器可识别：{2}。</value>
   </data>
   <data name="Settings.PolicyDetails.Unicode.Kept" xml:space="preserve">
     <value>已保留</value>
   </data>
   <data name="Settings.PolicyDetails.Unicode.Normalized" xml:space="preserve">
-    <value>规范化 或 已替换</value>
+    <value>规范化或替换</value>
   </data>
   <data name="Settings.PolicyDetails.NamingParagraph" xml:space="preserve">
-    <value>Unicode 字符 {0} 会按 {1} 处理。除非输入了替代值，否则路径长度使用应用和平台默认值。</value>
+    <value>{0} Unicode 字符按 {1} 处理。除非输入了替代值，否则路径长度使用应用和平台默认值。</value>
   </data>
   <data name="Settings.PolicyDetails.QualityParagraph" xml:space="preserve">
-    <value>{0} 一个 录音 是 已考虑 高 分辨率 在 {1:N0} Hz 或 {2}-bit.</value>
+    <value>{0} 录音达到 {1:N0} Hz 或 {2}-bit 时视为高分辨率。</value>
   </data>
   <data name="Settings.PolicyDetails.Preserved" xml:space="preserve">
     <value>已保留</value>
   </data>
   <data name="Settings.PolicyDetails.NotCopied" xml:space="preserve">
-    <value>不 已复制</value>
+    <value>不复制</value>
   </data>
   <data name="Settings.PolicyDetails.MetadataParagraph" xml:space="preserve">
-    <value>当 元数据 是 已复制, ReplayGain 是 {0}, MusicBrainz 标识符 是 {1}, 自定义 字段 是 {2}, 和 合辑 信息 是 {3}.</value>
+    <value>元数据复制：ReplayGain — {0}；MusicBrainz 标识符 — {1}；自定义字段 — {2}；合辑信息 — {3}。</value>
   </data>
   <data name="Settings.PolicyDetails.ArtworkParagraph" xml:space="preserve">
-    <value>{0} 已写入 封面 使用 {1} 存储, {2}, 和 {3} 编码.</value>
+    <value>{0} 封面写入：存储 — {1}；角色 — {2}；编码 — {3}。</value>
   </data>
   <data name="Settings.PolicyDetails.HealthParagraph" xml:space="preserve">
-    <value>健康状况 检查 当前 已启用: {0}. 文件 该 执行 不 匹配 一个 伴随文件 规则 是 {1}.</value>
+    <value>当前启用的健康检查：{0}。不匹配任何伴随文件规则的文件将按 {1} 处理。</value>
   </data>
   <data name="Settings.PolicyDetails.ConnectionsParagraph" xml:space="preserve">
-    <value>播放列表 和 目录 连接: {0}. 导出 配置文件: {1}.</value>
+    <value>播放列表和目录连接：{0}。导出配置文件：{1}。</value>
   </data>
   <data name="Settings.PolicyDetails.RootsParagraph" xml:space="preserve">
-    <value>已配置 音乐 文件夹:{0}{1}</value>
+    <value>已配置的音乐文件夹：{0}{1}</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.StoredDirectly" xml:space="preserve">
-    <value>文件夹 路径 是 已存储 直接 在 此 配置.</value>
+    <value>文件夹路径直接存储在此配置中。</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.MachineBindings" xml:space="preserve">
     <value>计算机特定的文件夹路径来自“{0}”。</value>
@@ -3559,16 +3568,16 @@
     <value>深色</value>
   </data>
   <data name="Settings.Choice.Theme.Steel_Blue" xml:space="preserve">
-    <value>钢 蓝色</value>
+    <value>钢蓝</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.LegacyMusicLibraryTools" xml:space="preserve">
     <value>旧版 MusicLibraryTools</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.CatalogOnly" xml:space="preserve">
-    <value>目录 仅</value>
+    <value>仅加入目录</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.PreserveLayoutAndTags" xml:space="preserve">
-    <value>保留 布局 和 标签</value>
+    <value>保留布局和标签</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.ArtistAlbum" xml:space="preserve">
     <value>艺术家/专辑</value>
@@ -3583,49 +3592,49 @@
     <value>停止</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.Suffix" xml:space="preserve">
-    <value>添加 一个 后缀</value>
+    <value>添加后缀</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.Hash" xml:space="preserve">
-    <value>添加 一个 哈希</value>
+    <value>添加哈希值</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.PreserveExisting" xml:space="preserve">
-    <value>保留 现有 文件</value>
+    <value>保留现有文件</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.None" xml:space="preserve">
     <value>无</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormC" xml:space="preserve">
-    <value>规范 组合 (形式 C)</value>
+    <value>规范组合（形式 C）</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormD" xml:space="preserve">
-    <value>规范 分解 (形式 D)</value>
+    <value>规范分解（形式 D）</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormKC" xml:space="preserve">
-    <value>兼容性 组合 (形式 KC)</value>
+    <value>兼容组合（形式 KC）</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormKD" xml:space="preserve">
-    <value>兼容性 分解 (形式 KD)</value>
+    <value>兼容分解（形式 KD）</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.PreserveTags" xml:space="preserve">
-    <value>保留 标签</value>
+    <value>保留标签</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.AlbumSuffix" xml:space="preserve">
     <value>专辑后缀</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.DiscFolder" xml:space="preserve">
-    <value>光盘 文件夹</value>
+    <value>按光盘分文件夹</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FileNamePrefix" xml:space="preserve">
     <value>文件名前缀</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FlattenContinuous" xml:space="preserve">
-    <value>连续 音轨 编号</value>
+    <value>连续音轨编号</value>
   </data>
   <data name="Settings.Choice.LibraryTrackTotalScope.PerDisc" xml:space="preserve">
-    <value>每 光盘</value>
+    <value>每张光盘</value>
   </data>
   <data name="Settings.Choice.LibraryTrackTotalScope.Album" xml:space="preserve">
-    <value>整个 专辑</value>
+    <value>整张专辑</value>
   </data>
   <data name="Settings.Choice.LibraryHealthSeverity.Information" xml:space="preserve">
     <value>信息</value>
@@ -3655,19 +3664,19 @@
     <value>转码</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.Any" xml:space="preserve">
-    <value>任意 专辑</value>
+    <value>任意专辑</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.HasHighResolution" xml:space="preserve">
-    <value>有 高-分辨率 音频</value>
+    <value>包含高解析度音频</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.HasNoHighResolution" xml:space="preserve">
-    <value>有 否 高-分辨率 音频</value>
+    <value>不含高解析度音频</value>
   </data>
   <data name="Settings.Choice.LibraryIngestSourceSelection.HighestQuality" xml:space="preserve">
-    <value>最高 质量</value>
+    <value>最高质量</value>
   </data>
   <data name="Settings.Choice.LibraryIngestSourceSelection.PreferCdQuality" xml:space="preserve">
-    <value>首选 CD 质量</value>
+    <value>优先 CD 音质</value>
   </data>
   <data name="Settings.Choice.LibraryChannelSelection.Stereo" xml:space="preserve">
     <value>立体声</value>
@@ -3685,16 +3694,16 @@
     <value>伴随文件</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkStorage.Both" xml:space="preserve">
-    <value>嵌入式 和 伴随文件</value>
+    <value>嵌入并保存为伴随文件</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkRoleSelection.FrontCoverOnly" xml:space="preserve">
-    <value>正面 封面 仅</value>
+    <value>仅正面封面</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkRoleSelection.AllRoles" xml:space="preserve">
-    <value>全部 封面 角色</value>
+    <value>所有封面类型</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkEncoding.PreserveSource" xml:space="preserve">
-    <value>保留 源 编码</value>
+    <value>保留源编码</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkEncoding.Jpeg" xml:space="preserve">
     <value>JPEG</value>
@@ -3712,16 +3721,16 @@
     <value>删除</value>
   </data>
   <data name="Settings.Choice.LibrarySidecarDisposition.FollowSourceDisposition" xml:space="preserve">
-    <value>跟随 源处置</value>
+    <value>跟随源文件处置</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.EntireLibrary" xml:space="preserve">
-    <value>整个 库</value>
+    <value>整个媒体库</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.Playlists" xml:space="preserve">
     <value>播放列表</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.SavedView" xml:space="preserve">
-    <value>已保存 视图</value>
+    <value>已保存的视图</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.ExplicitTracks" xml:space="preserve">
     <value>所选音轨</value>
@@ -3739,7 +3748,7 @@
     <value>转码</value>
   </data>
   <data name="Settings.Choice.ExportTransformMode.SpecializedProvider" xml:space="preserve">
-    <value>专用 提供商</value>
+    <value>专用提供程序</value>
   </data>
   <data name="Settings.Choice.ExportArtworkMode.None" xml:space="preserve">
     <value>无</value>
@@ -3751,7 +3760,7 @@
     <value>伴随文件</value>
   </data>
   <data name="Settings.Choice.ExportArtworkMode.EmbeddedAndSidecar" xml:space="preserve">
-    <value>嵌入式 和 伴随文件</value>
+    <value>嵌入并保存为伴随文件</value>
   </data>
   <data name="Settings.Choice.ExportExtraFileDisposition.Preserve" xml:space="preserve">
     <value>保留</value>
@@ -3766,7 +3775,7 @@
     <value>旧版</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.provided" xml:space="preserve">
-    <value>作为 已提供</value>
+    <value>按原样</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.absolute" xml:space="preserve">
     <value>绝对</value>
@@ -3775,7 +3784,7 @@
     <value>相对</value>
   </data>
   <data name="Settings.Choice.PlaylistLineEnding.platform" xml:space="preserve">
-    <value>平台 默认</value>
+    <value>平台默认值</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.legacy" xml:space="preserve">
     <value>旧版</value>
@@ -3784,7 +3793,7 @@
     <value>保留</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.sanitize" xml:space="preserve">
-    <value>净化</value>
+    <value>清理文件名</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.sonos" xml:space="preserve">
     <value>Sonos-兼容</value>
@@ -3850,10 +3859,10 @@
     <value>专辑艺术家</value>
   </data>
   <data name="Settings.Choice.TagFields.AlbumArtistSort" xml:space="preserve">
-    <value>专辑艺术家 排序</value>
+    <value>专辑艺术家排序</value>
   </data>
   <data name="Settings.Choice.TagFields.AlbumSort" xml:space="preserve">
-    <value>专辑 排序</value>
+    <value>专辑排序</value>
   </data>
   <data name="Settings.Choice.TagFields.Arranger" xml:space="preserve">
     <value>编曲者</value>
@@ -3862,7 +3871,7 @@
     <value>艺术家</value>
   </data>
   <data name="Settings.Choice.TagFields.ArtistSort" xml:space="preserve">
-    <value>艺术家 排序</value>
+    <value>艺术家排序</value>
   </data>
   <data name="Settings.Choice.TagFields.Artists" xml:space="preserve">
     <value>艺术家</value>
@@ -3877,7 +3886,7 @@
     <value>BPM</value>
   </data>
   <data name="Settings.Choice.TagFields.CatalogNumber" xml:space="preserve">
-    <value>目录 编号</value>
+    <value>目录编号</value>
   </data>
   <data name="Settings.Choice.TagFields.Comment" xml:space="preserve">
     <value>备注</value>
@@ -3889,7 +3898,7 @@
     <value>作曲家</value>
   </data>
   <data name="Settings.Choice.TagFields.ComposerSort" xml:space="preserve">
-    <value>作曲家 排序</value>
+    <value>作曲家排序</value>
   </data>
   <data name="Settings.Choice.TagFields.Conductor" xml:space="preserve">
     <value>指挥</value>
@@ -3898,16 +3907,16 @@
     <value>版权</value>
   </data>
   <data name="Settings.Choice.TagFields.DiscNumber" xml:space="preserve">
-    <value>光盘 编号</value>
+    <value>光盘编号</value>
   </data>
   <data name="Settings.Choice.TagFields.DiscSubtitle" xml:space="preserve">
-    <value>光盘 副标题</value>
+    <value>光盘副标题</value>
   </data>
   <data name="Settings.Choice.TagFields.EncodedBy" xml:space="preserve">
-    <value>已编码 按</value>
+    <value>编码者</value>
   </data>
   <data name="Settings.Choice.TagFields.EncoderSettings" xml:space="preserve">
-    <value>编码器 设置</value>
+    <value>编码器设置</value>
   </data>
   <data name="Settings.Choice.TagFields.Engineer" xml:space="preserve">
     <value>工程师</value>
@@ -3922,7 +3931,7 @@
     <value>分组</value>
   </data>
   <data name="Settings.Choice.TagFields.Key" xml:space="preserve">
-    <value>键</value>
+    <value>调性</value>
   </data>
   <data name="Settings.Choice.TagFields.ISRC" xml:space="preserve">
     <value>ISRC</value>
@@ -3943,7 +3952,7 @@
     <value>媒体</value>
   </data>
   <data name="Settings.Choice.TagFields.DJMixer" xml:space="preserve">
-    <value>DJ 混音器</value>
+    <value>DJ 混音师</value>
   </data>
   <data name="Settings.Choice.TagFields.Mixer" xml:space="preserve">
     <value>混音器</value>
@@ -3955,10 +3964,10 @@
     <value>乐章</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementTotal" xml:space="preserve">
-    <value>乐章 总计</value>
+    <value>乐章总数</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementNumber" xml:space="preserve">
-    <value>乐章 编号</value>
+    <value>乐章编号</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_ArtistID" xml:space="preserve">
     <value>MusicBrainz 艺术家 ID</value>
@@ -3967,7 +3976,7 @@
     <value>MusicBrainz 光盘 ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_OriginalArtistID" xml:space="preserve">
-    <value>MusicBrainz 原始 艺术家 ID</value>
+    <value>MusicBrainz 原始艺术家 ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_OriginalAlbumID" xml:space="preserve">
     <value>MusicBrainz 原始专辑 ID</value>
@@ -3979,7 +3988,7 @@
     <value>MusicBrainz 专辑艺术家 ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_ReleaseGroupID" xml:space="preserve">
-    <value>MusicBrainz 发行版 组 ID</value>
+    <value>MusicBrainz 发行组 ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_AlbumID" xml:space="preserve">
     <value>MusicBrainz 专辑 ID</value>
@@ -3994,7 +4003,7 @@
     <value>原始专辑</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalArtist" xml:space="preserve">
-    <value>原始 艺术家</value>
+    <value>原始艺术家</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalFileName" xml:space="preserve">
     <value>原始文件名</value>
@@ -4003,7 +4012,7 @@
     <value>原始日期</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalYear" xml:space="preserve">
-    <value>原始 年份</value>
+    <value>原始年份</value>
   </data>
   <data name="Settings.Choice.TagFields.Performer" xml:space="preserve">
     <value>表演者</value>
@@ -4021,55 +4030,55 @@
     <value>评分</value>
   </data>
   <data name="Settings.Choice.TagFields.Label" xml:space="preserve">
-    <value>标签</value>
+    <value>唱片公司</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseCountry" xml:space="preserve">
-    <value>发行版 国家</value>
+    <value>发行国家或地区</value>
   </data>
   <data name="Settings.Choice.TagFields.Date" xml:space="preserve">
     <value>日期</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseStatus" xml:space="preserve">
-    <value>发行版 状态</value>
+    <value>发行状态</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseType" xml:space="preserve">
-    <value>发行版 类型</value>
+    <value>发行类型</value>
   </data>
   <data name="Settings.Choice.TagFields.Remixer" xml:space="preserve">
     <value>混音师</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Album_Gain" xml:space="preserve">
-    <value>ReplayGain 专辑 增益</value>
+    <value>ReplayGain 专辑增益</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Album_Peak" xml:space="preserve">
-    <value>ReplayGain 专辑 峰值</value>
+    <value>ReplayGain 专辑峰值</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Album_Range" xml:space="preserve">
-    <value>ReplayGain 专辑 范围</value>
+    <value>ReplayGain 专辑范围</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Reference_Loudness" xml:space="preserve">
-    <value>ReplayGain 引用 响度</value>
+    <value>ReplayGain 参考响度</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Gain" xml:space="preserve">
-    <value>ReplayGain 音轨 增益</value>
+    <value>ReplayGain 音轨增益</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Peak" xml:space="preserve">
-    <value>ReplayGain 音轨 峰值</value>
+    <value>ReplayGain 音轨峰值</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Range" xml:space="preserve">
-    <value>ReplayGain 音轨 范围</value>
+    <value>ReplayGain 音轨范围</value>
   </data>
   <data name="Settings.Choice.TagFields.Script" xml:space="preserve">
-    <value>脚本</value>
+    <value>文字体系</value>
   </data>
   <data name="Settings.Choice.TagFields.Show" xml:space="preserve">
-    <value>显示</value>
+    <value>节目</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowSort" xml:space="preserve">
-    <value>显示 排序</value>
+    <value>节目排序标题</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowMovement" xml:space="preserve">
-    <value>显示 乐章</value>
+    <value>显示乐章</value>
   </data>
   <data name="Settings.Choice.TagFields.Subtitle" xml:space="preserve">
     <value>副标题</value>
@@ -4081,13 +4090,13 @@
     <value>音轨总数</value>
   </data>
   <data name="Settings.Choice.TagFields.TrackNumber" xml:space="preserve">
-    <value>音轨 编号</value>
+    <value>音轨编号</value>
   </data>
   <data name="Settings.Choice.TagFields.Title" xml:space="preserve">
     <value>标题</value>
   </data>
   <data name="Settings.Choice.TagFields.TitleSort" xml:space="preserve">
-    <value>标题 排序</value>
+    <value>标题排序</value>
   </data>
   <data name="Settings.Choice.TagFields.Website" xml:space="preserve">
     <value>网站</value>
@@ -6098,13 +6107,13 @@
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.RecordingId" xml:space="preserve"><value>精确的 MusicBrainz 录音 ID</value></data>
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.Unmatched" xml:space="preserve"><value>未找到可靠的发行版曲目匹配项。</value></data>
   <data name="OnlineMetadata.MusicBrainz.Validation.InvalidReleaseId" xml:space="preserve"><value>MusicBrainz 发行版 ID 不是有效的 GUID。</value></data>
-  <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>已配置 媒体 目录</value></data>
-  <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>否 目标</value></data>
-  <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} 到 {2}</value></data>
+  <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>已配置的媒体目录</value></data>
+  <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>无目标位置</value></data>
+  <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} → {2}</value></data>
   <data name="Workbench.Online.Thumbnail.Failed" xml:space="preserve"><value>缩略图不可用</value></data>
   <data name="Dialog.DefaultExportFileName" xml:space="preserve"><value>导出</value></data>
   <data name="Dialog.FileType.Format" xml:space="preserve"><value>{0} 文件</value></data>
-  <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>新建 导出</value></data>
+  <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>新建导出</value></data>
   <data name="Navigation.About" xml:space="preserve"><value>关于</value></data>
   <data name="About.Title" xml:space="preserve"><value>关于</value></data>
   <data name="About.Subtitle" xml:space="preserve"><value>产品详情、致谢和许可协议。</value></data>

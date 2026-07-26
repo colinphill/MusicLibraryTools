@@ -2167,13 +2167,13 @@
     <value>설정</value>
   </data>
   <data name="Settings.Subtitle" xml:space="preserve">
-    <value>구성 라이브러리, 재생 목록, 수집 도구, 및 응용 프로그램 모양.</value>
+    <value>라이브러리, 재생 목록, 수집 도구 및 앱 모양을 구성합니다.</value>
   </data>
   <data name="Settings.UnsavedChanges" xml:space="preserve">
-    <value>저장 안 됨 변경 사항</value>
+    <value>저장하지 않은 변경 사항</value>
   </data>
   <data name="Settings.Action.Browse" xml:space="preserve">
-    <value>찾아보기</value>
+    <value>찾아보기…</value>
   </data>
   <data name="Settings.Action.Clear" xml:space="preserve">
     <value>지우기</value>
@@ -2182,10 +2182,10 @@
     <value>삭제</value>
   </data>
   <data name="Settings.Action.Discard" xml:space="preserve">
-    <value>버리기</value>
+    <value>변경 내용 취소</value>
   </data>
   <data name="Settings.Action.Duplicate" xml:space="preserve">
-    <value>중복</value>
+    <value>복제</value>
   </data>
   <data name="Settings.Action.New" xml:space="preserve">
     <value>새로 만들기</value>
@@ -2200,7 +2200,7 @@
     <value>저장</value>
   </data>
   <data name="Settings.Action.SaveAs" xml:space="preserve">
-    <value>저장 으로</value>
+    <value>다른 이름으로 저장…</value>
   </data>
   <data name="Settings.Automation.Categories" xml:space="preserve">
     <value>설정 범주</value>
@@ -2212,7 +2212,7 @@
     <value>오류</value>
   </data>
   <data name="Settings.Automation.FirstInvalidSetting" xml:space="preserve">
-    <value>이동 로 해당 첫 번째 잘못됨 설정</value>
+    <value>첫 번째 잘못된 설정으로 이동</value>
   </data>
   <data name="Settings.Automation.Information" xml:space="preserve">
     <value>정보</value>
@@ -2224,7 +2224,7 @@
     <value>코덱</value>
   </data>
   <data name="Settings.Common.CollisionBehavior" xml:space="preserve">
-    <value>충돌 동작</value>
+    <value>충돌 처리</value>
   </data>
   <data name="Settings.Common.FileNameTemplate" xml:space="preserve">
     <value>파일 이름 템플릿</value>
@@ -2233,7 +2233,7 @@
     <value>폴더 템플릿</value>
   </data>
   <data name="Settings.Common.MaximumBytes" xml:space="preserve">
-    <value>최대 바이트</value>
+    <value>최대 바이트 수</value>
   </data>
   <data name="Settings.Common.MaximumDimension" xml:space="preserve">
     <value>최대 크기</value>
@@ -2284,46 +2284,46 @@
     <value>최근 구성</value>
   </data>
   <data name="Settings.LibraryRoots.Add" xml:space="preserve">
-    <value>추가 루트</value>
+    <value>루트 추가</value>
   </data>
   <data name="Settings.LibraryRoots.AddSet" xml:space="preserve">
-    <value>추가 설정</value>
+    <value>스캔 세트 추가</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensions" xml:space="preserve">
     <value>세트 간 비교 확장자</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensionsPlaceholder" xml:space="preserve">
-    <value>용 예: .flac, .m4a</value>
+    <value>예: .flac, .m4a</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatterns" xml:space="preserve">
     <value>제외 패턴</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsAutomation" xml:space="preserve">
-    <value>라이브러리 루트 인덱스 제외 패턴</value>
+    <value>라이브러리 루트 제외 패턴</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsPlaceholder" xml:space="preserve">
-    <value>없음; 또는 임시/**; *.tmp</value>
+    <value>예: Temp/**; *.tmp</value>
   </data>
   <data name="Settings.LibraryRoots.Formats" xml:space="preserve">
-    <value>형식 로 인덱스</value>
+    <value>인덱싱할 형식</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsAutomation" xml:space="preserve">
-    <value>라이브러리 루트 형식 로 인덱스</value>
+    <value>이 라이브러리 루트에서 인덱싱할 형식</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsPlaceholder" xml:space="preserve">
-    <value>모두 지원됨; 또는 .flac, .m4a</value>
+    <value>지원되는 모든 형식 또는 .flac, .m4a</value>
   </data>
   <data name="Settings.LibraryRoots.GuidedStep" xml:space="preserve">
-    <value>단계 1 의 2: 구성 루트, 할당 각 루트 정책, 및 사용 전용 해당 쓰기 사용자 의도.</value>
+    <value>2단계 중 1단계: 루트를 구성하고 각 루트에 정책을 할당한 다음 필요한 쓰기 작업만 사용하도록 설정하세요.</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatterns" xml:space="preserve">
     <value>포함 패턴</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsAutomation" xml:space="preserve">
-    <value>라이브러리 루트 인덱스 포함 패턴</value>
+    <value>라이브러리 루트 포함 패턴</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsPlaceholder" xml:space="preserve">
-    <value>모두; 또는 음악/**; *.flac</value>
+    <value>예: Music/**; *.flac</value>
   </data>
   <data name="Settings.LibraryRoots.Path" xml:space="preserve">
     <value>루트 경로</value>
@@ -2341,7 +2341,7 @@
     <value>메타데이터</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Organize" xml:space="preserve">
-    <value>정리 파일</value>
+    <value>파일 정리</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Sync" xml:space="preserve">
     <value>동기화 출력</value>
@@ -2350,67 +2350,67 @@
     <value>이름 지정 및 루트 정책</value>
   </data>
   <data name="Settings.LibraryRoots.PolicyAutomation" xml:space="preserve">
-    <value>라이브러리 루트 이름 지정 프로필</value>
+    <value>라이브러리 루트 정책 프로필</value>
   </data>
   <data name="Settings.LibraryRoots.ReviewPolicy" xml:space="preserve">
-    <value>검토 정책</value>
+    <value>정책 검토</value>
   </data>
   <data name="Settings.LibraryRoots.SetNamesAutomation" xml:space="preserve">
-    <value>스캔 설정 이름</value>
+    <value>스캔 세트 이름</value>
   </data>
   <data name="Settings.LibraryRoots.SetNamesPlaceholder" xml:space="preserve">
-    <value>설정 이름 (쉼표 분리됨)</value>
+    <value>세트 이름(쉼표로 구분)</value>
   </data>
   <data name="Settings.LibraryRoots.SharedOffsetAutomation" xml:space="preserve">
-    <value>스캔 설정 공유 오프셋</value>
+    <value>스캔 세트 공유 오프셋</value>
   </data>
   <data name="Settings.LibraryRoots.SharedOffsetPlaceholder" xml:space="preserve">
     <value>공유 오프셋</value>
   </data>
   <data name="Settings.LibraryRoots.Title" xml:space="preserve">
-    <value>라이브러리 루트 및 설정 구성원</value>
+    <value>라이브러리 루트 및 세트 구성원</value>
   </data>
   <data name="Settings.LibraryRoots.WritePermissions" xml:space="preserve">
     <value>쓰기 권한</value>
   </data>
   <data name="Settings.Playlists.AddExport" xml:space="preserve">
-    <value>추가 내보내기</value>
+    <value>내보내기 추가</value>
   </data>
   <data name="Settings.Playlists.AddPlaylist" xml:space="preserve">
-    <value>추가 재생 목록</value>
+    <value>재생 목록 추가</value>
   </data>
   <data name="Settings.Playlists.AddSource" xml:space="preserve">
-    <value>추가 원본</value>
+    <value>원본 추가</value>
   </data>
   <data name="Settings.Playlists.AddTarget" xml:space="preserve">
-    <value>추가 대상</value>
+    <value>대상 추가</value>
   </data>
   <data name="Settings.Playlists.BrowseDestination" xml:space="preserve">
-    <value>찾아보기 대상</value>
+    <value>대상 선택…</value>
   </data>
   <data name="Settings.Playlists.BrowseFile" xml:space="preserve">
-    <value>찾아보기 파일</value>
+    <value>찾아보기…</value>
   </data>
   <data name="Settings.Playlists.CleanTargets" xml:space="preserve">
-    <value>정리 재생 목록 내보내기 대상 이전 교차-동기화 재생 목록</value>
+    <value>라이브러리 간 동기화 전에 재생 목록 내보내기 대상 정리</value>
   </data>
   <data name="Settings.Playlists.CleanupTitle" xml:space="preserve">
-    <value>교차 동기화 정리</value>
+    <value>라이브러리 간 동기화 정리</value>
   </data>
   <data name="Settings.Playlists.Container" xml:space="preserve">
     <value>컨테이너</value>
   </data>
   <data name="Settings.Playlists.DeleteStale" xml:space="preserve">
-    <value>영구적으로 삭제 오래됨 교차 동기화 음악 파일 대신 의 격리 해당 항목</value>
+    <value>라이브러리 간 동기화에서 더 이상 필요 없는 음악 파일을 격리하지 않고 영구 삭제</value>
   </data>
   <data name="Settings.Playlists.EnableExportTooltip" xml:space="preserve">
-    <value>사용 내보내기 프로필</value>
+    <value>내보내기 프로필 사용</value>
   </data>
   <data name="Settings.Playlists.Encoding" xml:space="preserve">
     <value>인코딩</value>
   </data>
   <data name="Settings.Playlists.ExportProfilesDescription" xml:space="preserve">
-    <value>결합 선택, 변환, 이름 지정, 아트워크/재생 목록, 전송, 및 조정. 프로필 유지 숨김 까지 사용 및 구성됨.</value>
+    <value>선택, 변환, 이름 지정, 아트워크와 재생 목록, 전송 및 조정을 결합합니다. 프로필은 사용하고 구성할 때까지 숨겨집니다.</value>
   </data>
   <data name="Settings.Playlists.ExportProfilesTitle" xml:space="preserve">
     <value>내보내기 프로필</value>
@@ -2425,43 +2425,43 @@
     <value>재생 목록 내보내기 형식</value>
   </data>
   <data name="Settings.Playlists.FrontCoverOnly" xml:space="preserve">
-    <value>앞면 표지 전용</value>
+    <value>앞표지만</value>
   </data>
   <data name="Settings.Playlists.GeneratedTransport" xml:space="preserve">
-    <value>생성 재생 목록 및 전송</value>
+    <value>생성된 재생 목록 및 전송</value>
   </data>
   <data name="Settings.Playlists.GeneratePlaylists" xml:space="preserve">
-    <value>생성 재생 목록</value>
+    <value>재생 목록 생성</value>
   </data>
   <data name="Settings.Playlists.LineEndings" xml:space="preserve">
-    <value>줄 줄 끝</value>
+    <value>줄 바꿈</value>
   </data>
   <data name="Settings.Playlists.MaximumRemovals" xml:space="preserve">
-    <value>최대 제거</value>
+    <value>최대 제거 수</value>
   </data>
   <data name="Settings.Playlists.MaximumTracks" xml:space="preserve">
-    <value>최대 트랙</value>
+    <value>최대 트랙 수</value>
   </data>
   <data name="Settings.Playlists.MaxTracksPlaceholder" xml:space="preserve">
-    <value>최대 트랙</value>
+    <value>최대 트랙 수</value>
   </data>
   <data name="Settings.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>재생 목록 이름</value>
+    <value>예: 즐겨찾기</value>
   </data>
   <data name="Settings.Playlists.NamingArtwork" xml:space="preserve">
     <value>이름 지정 및 아트워크</value>
   </data>
   <data name="Settings.Playlists.NamingProfileId" xml:space="preserve">
-    <value>라이브러리 이름 지정 프로필 ID</value>
+    <value>라이브러리 명명 프로필 ID</value>
   </data>
   <data name="Settings.Playlists.PathStyle" xml:space="preserve">
-    <value>경로 스타일</value>
+    <value>경로 형식</value>
   </data>
   <data name="Settings.Playlists.PreserveArtworkEncoding" xml:space="preserve">
-    <value>유지 아트워크 인코딩</value>
+    <value>아트워크 인코딩 유지</value>
   </data>
   <data name="Settings.Playlists.PreserveSourceLayout" xml:space="preserve">
-    <value>유지 원본 레이아웃</value>
+    <value>원본 구조 유지</value>
   </data>
   <data name="Settings.Playlists.RecipeId" xml:space="preserve">
     <value>레시피 ID</value>
@@ -2476,10 +2476,10 @@
     <value>상대 경로</value>
   </data>
   <data name="Settings.Playlists.RemoveEmptyDirectories" xml:space="preserve">
-    <value>제거 비어 있음 디렉터리</value>
+    <value>빈 디렉터리 제거</value>
   </data>
   <data name="Settings.Playlists.ReplaceChanged" xml:space="preserve">
-    <value>바꾸기 변경됨 파일</value>
+    <value>변경된 파일 바꾸기</value>
   </data>
   <data name="Settings.Playlists.SavedViewQuery" xml:space="preserve">
     <value>저장된 보기 쿼리</value>
@@ -2491,25 +2491,25 @@
     <value>선택 및 변환</value>
   </data>
   <data name="Settings.Playlists.SelectionValues" xml:space="preserve">
-    <value>값 (재생 목록, 보기, 또는 경로)</value>
+    <value>값(재생 목록, 보기 또는 경로)</value>
   </data>
   <data name="Settings.Playlists.SetsAutomation" xml:space="preserve">
-    <value>재생 목록 내보내기 설정</value>
+    <value>재생 목록 내보내기 스캔 세트</value>
   </data>
   <data name="Settings.Playlists.SetsPlaceholder" xml:space="preserve">
-    <value>스캔 설정</value>
+    <value>예: 즐겨찾기, 최근</value>
   </data>
   <data name="Settings.Playlists.SourceAutomation" xml:space="preserve">
-    <value>파일 재생 목록 원본</value>
+    <value>파일 기반 재생 목록 원본</value>
   </data>
   <data name="Settings.Playlists.SourcePlaceholder" xml:space="preserve">
-    <value>재생 목록 파일 또는 디렉터리</value>
+    <value>예: playlists/favorites.m3u8</value>
   </data>
   <data name="Settings.Playlists.SourcesDescription" xml:space="preserve">
-    <value>사용 M3U/M3U8 파일 또는 디렉터리 때 아니요 iTunes 카탈로그 입니다 구성됨.</value>
+    <value>iTunes 카탈로그가 구성되지 않은 경우 M3U/M3U8 파일 또는 디렉터리를 사용합니다.</value>
   </data>
   <data name="Settings.Playlists.SourcesTitle" xml:space="preserve">
-    <value>파일 재생 목록 원본</value>
+    <value>파일 기반 재생 목록 원본</value>
   </data>
   <data name="Settings.Playlists.SyncNameAutomation" xml:space="preserve">
     <value>동기화할 재생 목록 이름</value>
@@ -2524,13 +2524,13 @@
     <value>라이브러리 간 동기화 대상</value>
   </data>
   <data name="Settings.Playlists.SyncTitle" xml:space="preserve">
-    <value>동기화 재생 목록</value>
+    <value>재생 목록 동기화</value>
   </data>
   <data name="Settings.Playlists.TargetAutomation" xml:space="preserve">
     <value>재생 목록 내보내기 대상</value>
   </data>
   <data name="Settings.Playlists.TargetPlaceholder" xml:space="preserve">
-    <value>대상</value>
+    <value>예: 재생 목록</value>
   </data>
   <data name="Settings.Playlists.TargetsTitle" xml:space="preserve">
     <value>재생 목록 내보내기 대상</value>
@@ -2541,41 +2541,47 @@
   <data name="Settings.Playlists.TransformProvider" xml:space="preserve">
     <value>변환 공급자</value>
   </data>
+  <data name="Settings.Playlists.TransportProvider" xml:space="preserve">
+    <value>전송 공급자</value>
+  </data>
+  <data name="Settings.Playlists.TransportOptions" xml:space="preserve">
+    <value>전송 옵션</value>
+  </data>
   <data name="Settings.Playlists.TransportDestinationPlaceholder" xml:space="preserve">
-    <value>전송 대상</value>
+    <value>예: 음악</value>
   </data>
   <data name="Settings.Playlists.TransportOptionsPlaceholder" xml:space="preserve">
-    <value>옵션=값; 옵션2=값</value>
+    <value>option=value; option2=value</value>
   </data>
   <data name="Settings.Playlists.TransportProviderPlaceholder" xml:space="preserve">
-    <value>전송 공급자(로컬 파일 시스템)</value>
+    <value>예: local-filesystem</value>
   </data>
   <data name="Settings.Playlists.UseNamingCollision" xml:space="preserve">
     <value>명명 프로필의 충돌 규칙 사용</value>
   </data>
   <data name="Settings.Playlists.WriteBom" xml:space="preserve">
-    <value>쓰기 BOM</value>
+    <value>BOM 쓰기</value>
   </data>
   <data name="Settings.Playlists.WriteExtinf" xml:space="preserve">
-    <value>쓰기 EXTINF</value>
+    <value>EXTINF 쓰기</value>
   </data>
   <data name="Settings.Playlists.WritePlaylistBom" xml:space="preserve">
-    <value>쓰기 재생 목록 BOM</value>
+    <value>재생 목록에 BOM 쓰기</value>
   </data>
   <data name="Settings.Tools.AcoustIdDescription" xml:space="preserve">
     <value>AcoustID 조회에는 애플리케이션 클라이언트 키가 필요합니다. 이 개인 설정은 휴대용 라이브러리 XML 외부에 유지됩니다. 조회할 때 지문은 제출되지 않습니다.</value>
   </data>
   <data name="Settings.Tools.AcoustIdKey" xml:space="preserve">
-    <value>AcoustID 응용 프로그램 클라이언트 키</value>
+    <value>AcoustID 애플리케이션 클라이언트 키</value>
   </data>
   <data name="Settings.Tools.Bindings" xml:space="preserve">
-    <value>컴퓨터별 바인딩 보조 파일(선택 사항)</value>
+    <value>컴퓨터별 바인딩 파일(선택 사항)</value>
   </data>
   <data name="Settings.Tools.BindingsAutomation" xml:space="preserve">
-    <value>컴퓨터별 바인딩 보조 파일</value>
+    <value>컴퓨터별 바인딩 파일</value>
   </data>
   <data name="Settings.Tools.BindingsPlaceholder" xml:space="preserve">
-    <value>유지 휴대용 정책 분리 에서 루트 및 도구 경로</value>
+    <value>library.bindings.xml</value>
   </data>
   <data name="Settings.Tools.Database" xml:space="preserve">
     <value>메타데이터 데이터베이스</value>
@@ -2596,7 +2602,7 @@
     <value>FFmpeg 실행 파일</value>
   </data>
   <data name="Settings.Tools.Fpcalc" xml:space="preserve">
-    <value>Chromaprint fpcalc (개인 컴퓨터 설정)</value>
+    <value>Chromaprint fpcalc(컴퓨터별)</value>
   </data>
   <data name="Settings.Tools.FpcalcAutomation" xml:space="preserve">
     <value>Chromaprint fpcalc 실행 파일</value>
@@ -2605,25 +2611,25 @@
     <value>iTunes 라이브러리</value>
   </data>
   <data name="Settings.Tools.OfflineMode" xml:space="preserve">
-    <value>오프라인 모드 — 사용 캐시됨 공급자 데이터 전용</value>
+    <value>오프라인 모드 — 캐시된 공급자 데이터만 사용</value>
   </data>
   <data name="Settings.Tools.OfflineModeAutomation" xml:space="preserve">
-    <value>사용 캐시됨 메타데이터 공급자 오프라인</value>
+    <value>오프라인일 때 캐시된 공급자 데이터 사용</value>
   </data>
   <data name="Settings.Tools.OnlineMetadata" xml:space="preserve">
     <value>온라인 메타데이터</value>
   </data>
   <data name="Settings.Tools.OptimFrog" xml:space="preserve">
-    <value>OptimFROG 도구 디렉터리 (선택 사항 지문 디코더)</value>
+    <value>OptimFROG 도구 폴더(선택적 지문 디코더)</value>
   </data>
   <data name="Settings.Tools.OptimFrogAutomation" xml:space="preserve">
-    <value>OptimFROG 도구 디렉터리</value>
+    <value>OptimFROG 도구 폴더</value>
   </data>
   <data name="Settings.Tools.OptimFrogPlaceholder" xml:space="preserve">
-    <value>디렉터리 포함 ofr, ofs, 및 off</value>
+    <value>ofr, ofs 및 off가 있는 폴더</value>
   </data>
   <data name="Settings.Tools.StoreToken" xml:space="preserve">
-    <value>저장 토큰</value>
+    <value>토큰 저장</value>
   </data>
   <data name="Settings.Tools.Title" xml:space="preserve">
     <value>캐시 및 도구 경로</value>
@@ -2674,40 +2680,40 @@
     <value>자동 복구 목표</value>
   </data>
   <data name="Settings.RootPolicy.AddSidecarRule" xml:space="preserve">
-    <value>추가 사이드카 규칙</value>
+    <value>사이드카 규칙 추가</value>
   </data>
   <data name="Settings.RootPolicy.Apply" xml:space="preserve">
-    <value>적용</value>
+    <value>복구 적용</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkRoles" xml:space="preserve">
-    <value>역할</value>
+    <value>아트워크 역할</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkStorage" xml:space="preserve">
-    <value>저장소</value>
+    <value>아트워크 저장 방식</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
     <value>기본 제공 정책은 보호됩니다. 사용자 지정하려면 복제하세요. 정책은 라이브러리 루트 탭에서 루트에 할당합니다.</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
-    <value>이러한 설정 변경 이름 지정, 메타데이터, 아트워크, 상태, 및 사이드카 동작 용 모든 루트 사용 이 프로필. 기존 미리 보기 됨 잘못됨 및 해야 함 됨 다시 생성됨.</value>
+    <value>이 설정은 이 프로필을 사용하는 모든 루트의 이름 지정, 메타데이터, 아트워크, 상태 검사 및 사이드카 동작을 변경합니다. 기존 미리 보기는 무효가 되므로 다시 생성해야 합니다.</value>
   </data>
   <data name="Settings.RootPolicy.CompilationToken" xml:space="preserve">
-    <value>컴필레이션 토큰</value>
+    <value>컴필레이션 이름</value>
   </data>
   <data name="Settings.RootPolicy.CompletePathLimit" xml:space="preserve">
-    <value>전체 경로 제한(비워 두면 플랫폼 기본값)</value>
+    <value>전체 경로 최대 길이(비워 두면 플랫폼 기본값)</value>
   </data>
   <data name="Settings.RootPolicy.ComponentLimit" xml:space="preserve">
-    <value>구성 요소 제한 (레거시 LengthLimit)</value>
+    <value>경로 구성 요소 최대 길이(레거시 식별자: LengthLimit)</value>
   </data>
   <data name="Settings.RootPolicy.DiscAlbumLimit" xml:space="preserve">
-    <value>디스크-앨범 제한 (레거시 DiscNumLengthLimit)</value>
+    <value>디스크 앨범 이름 최대 길이(레거시 식별자: DiscNumLengthLimit)</value>
   </data>
   <data name="Settings.RootPolicy.DiscIdentityTitle" xml:space="preserve">
-    <value>디스크 및 앨범 ID</value>
+    <value>디스크 및 앨범 식별</value>
   </data>
   <data name="Settings.RootPolicy.DiscPadding" xml:space="preserve">
-    <value>디스크 채움</value>
+    <value>디스크 번호 채움</value>
   </data>
   <data name="Settings.RootPolicy.DiscStrategy" xml:space="preserve">
     <value>디스크 전략</value>
@@ -2724,6 +2730,9 @@
   <data name="Settings.RootPolicy.HealthRules" xml:space="preserve">
     <value>상태 규칙</value>
   </data>
+  <data name="Settings.RootPolicy.HealthSeverity" xml:space="preserve">
+    <value>심각도</value>
+  </data>
   <data name="Settings.RootPolicy.HighResolutionBitDepth" xml:space="preserve">
     <value>고해상도 비트 심도</value>
   </data>
@@ -2731,88 +2740,88 @@
     <value>고해상도 샘플 레이트(Hz)</value>
   </data>
   <data name="Settings.RootPolicy.IdentityIncludesYear" xml:space="preserve">
-    <value>ID 포함함 릴리스 연도</value>
+    <value>식별 정보에 발매 연도 포함</value>
   </data>
   <data name="Settings.RootPolicy.IdentityStripsDisc" xml:space="preserve">
-    <value>ID 제거 디스크 N 접미사</value>
+    <value>식별 정보에서 “Disc N” 접미사 제거</value>
   </data>
   <data name="Settings.RootPolicy.IdentityStripsFormat" xml:space="preserve">
-    <value>ID 제거 형식 접미사</value>
+    <value>식별 정보에서 형식 접미사 제거</value>
   </data>
   <data name="Settings.RootPolicy.IdentityUsesAlbumArtist" xml:space="preserve">
-    <value>ID 사용함 앨범 아티스트</value>
+    <value>식별 정보에 앨범 아티스트 사용</value>
   </data>
   <data name="Settings.RootPolicy.InferLegacySuffixes" xml:space="preserve">
-    <value>추론 레거시 앨범 접미사</value>
+    <value>기존 앨범 접미사 추론</value>
   </data>
   <data name="Settings.RootPolicy.InvalidCharacterReplacement" xml:space="preserve">
     <value>잘못된 문자 대체</value>
   </data>
   <data name="Settings.RootPolicy.ItunesCanonicalNaming" xml:space="preserve">
-    <value>iTunes 정규 이름 지정</value>
+    <value>iTunes 표준 이름 지정</value>
   </data>
   <data name="Settings.RootPolicy.JpegQuality" xml:space="preserve">
     <value>JPEG 품질</value>
   </data>
   <data name="Settings.RootPolicy.MaximumBytesUnlimited" xml:space="preserve">
-    <value>최대 바이트 (0 = 무제한)</value>
+    <value>최대 바이트 수(0 = 무제한)</value>
   </data>
   <data name="Settings.RootPolicy.MaximumDimensionUnlimited" xml:space="preserve">
-    <value>최대 크기 (0 = 무제한)</value>
+    <value>최대 크기(0 = 무제한)</value>
   </data>
   <data name="Settings.RootPolicy.MetadataTitle" xml:space="preserve">
     <value>메타데이터 충실도</value>
   </data>
   <data name="Settings.RootPolicy.MissingAlbum" xml:space="preserve">
-    <value>누락 앨범</value>
+    <value>앨범 누락 시 대체 값</value>
   </data>
   <data name="Settings.RootPolicy.MissingArtist" xml:space="preserve">
-    <value>누락 아티스트</value>
+    <value>아티스트 누락 시 대체 값</value>
   </data>
   <data name="Settings.RootPolicy.MissingTitle" xml:space="preserve">
-    <value>누락 제목</value>
+    <value>제목 누락 시 대체 값</value>
   </data>
   <data name="Settings.RootPolicy.NamingTitle" xml:space="preserve">
     <value>이름 지정 및 충돌</value>
   </data>
   <data name="Settings.RootPolicy.PreserveCompilation" xml:space="preserve">
-    <value>유지 컴필레이션 의미</value>
+    <value>컴필레이션 의미 유지</value>
   </data>
   <data name="Settings.RootPolicy.PreserveCustomFields" xml:space="preserve">
-    <value>유지 사용자 지정 필드</value>
+    <value>사용자 지정 필드 유지</value>
   </data>
   <data name="Settings.RootPolicy.PreserveMusicBrainz" xml:space="preserve">
-    <value>유지 MusicBrainz 식별자</value>
+    <value>MusicBrainz 식별자 유지</value>
   </data>
   <data name="Settings.RootPolicy.PreserveReplayGain" xml:space="preserve">
-    <value>유지 ReplayGain</value>
+    <value>ReplayGain 유지</value>
   </data>
   <data name="Settings.RootPolicy.PreserveUnicode" xml:space="preserve">
-    <value>유지 Unicode</value>
+    <value>Unicode 유지</value>
   </data>
   <data name="Settings.RootPolicy.ProfileName" xml:space="preserve">
     <value>프로필 이름</value>
   </data>
   <data name="Settings.RootPolicy.ProfileTitle" xml:space="preserve">
-    <value>루트 정책 프로필</value>
+    <value>라이브러리 정책 프로필</value>
   </data>
   <data name="Settings.RootPolicy.Propose" xml:space="preserve">
-    <value>제안</value>
+    <value>복구 제안</value>
   </data>
   <data name="Settings.RootPolicy.QualityTitle" xml:space="preserve">
     <value>품질 분류</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkAtIndex" xml:space="preserve">
-    <value>읽기 포함됨 아트워크 중 인덱싱 중</value>
+    <value>인덱싱 중 포함된 아트워크 읽기</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkDescription" xml:space="preserve">
     <value>사용하면 인덱싱 시간이 길어지고 캐시가 더 많은 공간을 사용하지만 탐색과 감사에서 아트워크를 즉시 사용할 수 있습니다. 사용하지 않으면 아트워크를 보거나 감사할 때만 읽습니다.</value>
   </data>
   <data name="Settings.RootPolicy.SelectAutomation" xml:space="preserve">
-    <value>루트/이름 지정 정책 프로필</value>
+    <value>라이브러리 정책 프로필</value>
   </data>
   <data name="Settings.RootPolicy.SelectLabel" xml:space="preserve">
-    <value>루트/이름 지정 정책</value>
+    <value>라이브러리 정책 프로필</value>
   </data>
   <data name="Settings.RootPolicy.SidecarPatternsPlaceholder" xml:space="preserve">
     <value>*.cue, *.pdf</value>
@@ -2821,13 +2830,13 @@
     <value>사이드카 및 알 수 없는 파일 규칙</value>
   </data>
   <data name="Settings.RootPolicy.SidecarTemplate" xml:space="preserve">
-    <value>사이드카 템플릿</value>
+    <value>아트워크 사이드카 템플릿</value>
   </data>
   <data name="Settings.RootPolicy.SummaryAutomation" xml:space="preserve">
     <value>유효 라이브러리 정책 요약</value>
   </data>
   <data name="Settings.RootPolicy.TrackPadding" xml:space="preserve">
-    <value>트랙 채움</value>
+    <value>트랙 번호 채움</value>
   </data>
   <data name="Settings.RootPolicy.TrackTotalScope" xml:space="preserve">
     <value>트랙 총수 범위</value>
@@ -2839,7 +2848,7 @@
     <value>알 수 없는 파일 처리</value>
   </data>
   <data name="Settings.Ingest.AcceptedExtensions" xml:space="preserve">
-    <value>허용됨 확장자</value>
+    <value>원본 파일 확장자</value>
   </data>
   <data name="Settings.Ingest.Action" xml:space="preserve">
     <value>작업</value>
@@ -2848,25 +2857,25 @@
     <value>활성 수집 프로필</value>
   </data>
   <data name="Settings.Ingest.AddRecipe" xml:space="preserve">
-    <value>추가 레시피</value>
+    <value>레시피 추가</value>
   </data>
   <data name="Settings.Ingest.AddToCatalog" xml:space="preserve">
-    <value>추가 출력 로 구성됨 미디어 카탈로그</value>
+    <value>출력을 구성된 미디어 카탈로그에 추가</value>
   </data>
   <data name="Settings.Ingest.AlbumMatch" xml:space="preserve">
-    <value>앨범 일치</value>
+    <value>앨범 일치 조건</value>
   </data>
   <data name="Settings.Ingest.Bitrate" xml:space="preserve">
-    <value>비트 전송률 (kbps; 당 레시피)</value>
+    <value>비트 전송률(kbps, 레시피별)</value>
   </data>
   <data name="Settings.Ingest.CleanupDescription" xml:space="preserve">
     <value>위의 원본 처리 설정은 원본 오디오를 다루는 방식을 제어합니다. 이러한 호환성 옵션은 수집이 성공한 후에만 적용됩니다.</value>
   </data>
   <data name="Settings.Ingest.CleanupTitle" xml:space="preserve">
-    <value>정리 이후 수집</value>
+    <value>수집 후 정리</value>
   </data>
   <data name="Settings.Ingest.DeleteSourceMusic" xml:space="preserve">
-    <value>삭제 원본 음악 이후 성공 수집</value>
+    <value>수집 성공 후 원본 음악 삭제</value>
   </data>
   <data name="Settings.Ingest.DestinationRoot" xml:space="preserve">
     <value>대상 루트</value>
@@ -2878,10 +2887,10 @@
     <value>표시 이름</value>
   </data>
   <data name="Settings.Ingest.EnableRecipes" xml:space="preserve">
-    <value>사용 수집 레시피</value>
+    <value>수집 레시피 사용</value>
   </data>
   <data name="Settings.Ingest.EnableRecipeTooltip" xml:space="preserve">
-    <value>사용 레시피</value>
+    <value>원본 파일을 일치시킬 때 이 레시피를 포함합니다.</value>
   </data>
   <data name="Settings.Ingest.Encoder" xml:space="preserve">
     <value>인코더 (비어 있음 = 자동)</value>
@@ -2893,22 +2902,22 @@
     <value>추가 FFmpeg 옵션</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegOptions" xml:space="preserve">
-    <value>추가 FFmpeg 옵션 (트랜스코딩 전용)</value>
+    <value>추가 FFmpeg 옵션(트랜스코딩 전용)</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegPlaceholder" xml:space="preserve">
-    <value>용 예: -af "loudnorm=I=-16:LRA=11"</value>
+    <value>예: -af "loudnorm=I=-16:LRA=11"</value>
   </data>
   <data name="Settings.Ingest.InputChannels" xml:space="preserve">
     <value>입력 채널</value>
   </data>
   <data name="Settings.Ingest.LosslessMatch" xml:space="preserve">
-    <value>무손실 일치 (확정되지 않음 = 모두)</value>
+    <value>무손실 요구 사항(혼합 상태 = 모두)</value>
   </data>
   <data name="Settings.Ingest.MatchedSourceSelection" xml:space="preserve">
-    <value>일치함 원본 선택</value>
+    <value>일치하는 원본 선택</value>
   </data>
   <data name="Settings.Ingest.MatchEitherQuality" xml:space="preserve">
-    <value>일치 둘 중 하나 품질 최소</value>
+    <value>샘플링 속도 또는 비트 깊이 최솟값 일치</value>
   </data>
   <data name="Settings.Ingest.MinimumBitDepth" xml:space="preserve">
     <value>최소 비트 깊이</value>
@@ -2926,34 +2935,34 @@
     <value>출력 확장자</value>
   </data>
   <data name="Settings.Ingest.OutputExtensionPlaceholder" xml:space="preserve">
-    <value>용 예 .flac</value>
+    <value>예: .flac</value>
   </data>
   <data name="Settings.Ingest.OutputSampleRate" xml:space="preserve">
     <value>출력 샘플링 속도</value>
   </data>
   <data name="Settings.Ingest.PreserveArtwork" xml:space="preserve">
-    <value>유지 아트워크</value>
+    <value>아트워크 유지</value>
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
-    <value>유지 메타데이터</value>
+    <value>메타데이터 유지</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
-    <value>유지 사이드카 기준 기본값</value>
+    <value>기본적으로 사이드카 파일 유지</value>
   </data>
   <data name="Settings.Ingest.ProfileName" xml:space="preserve">
     <value>수집 프로필 이름</value>
   </data>
   <data name="Settings.Ingest.RecipeIdPlaceholder" xml:space="preserve">
-    <value>안정 레시피 ID</value>
+    <value>안정적인 레시피 ID</value>
   </data>
   <data name="Settings.Ingest.RemoveNonMusic" xml:space="preserve">
-    <value>제거 비음악 파일 이후 성공 수집</value>
+    <value>수집 성공 후 음악이 아닌 파일 제거</value>
   </data>
   <data name="Settings.Ingest.RequireFallbackApproval" xml:space="preserve">
-    <value>필요 승인 때 일치함 CD 입니다 누락</value>
+    <value>일치하는 CD 음질 원본이 없으면 승인 필요</value>
   </data>
   <data name="Settings.Ingest.RequireLossless" xml:space="preserve">
-    <value>필요 무손실</value>
+    <value>무손실 형식 필요</value>
   </data>
   <data name="Settings.Ingest.SourceDisposition" xml:space="preserve">
     <value>원본 처리</value>
@@ -2962,7 +2971,7 @@
     <value>수집 프로필 및 레시피</value>
   </data>
   <data name="Settings.Ingest.UseRootCollision" xml:space="preserve">
-    <value>사용 대상 루트 충돌 동작</value>
+    <value>대상 루트의 충돌 처리 방식 사용</value>
   </data>
   <data name="Settings.EffectivePolicy.Description" xml:space="preserve">
     <value>모든 미리 보기에 적용되는 동작을 검토합니다. 오프라인 경로는 경고로 표시되며, 잘못된 정책 참조나 서로 충돌하는 권한이 있으면 저장할 수 없습니다.</value>
@@ -3019,34 +3028,34 @@
     <value>표준 필드와 네이티브 필드 매핑</value>
   </data>
   <data name="Settings.DestinationRoot.Missing" xml:space="preserve">
-    <value>누락 루트 ({0:D})</value>
+    <value>누락된 루트 ({0:D})</value>
   </data>
   <data name="Settings.DestinationRoot.NewRoot" xml:space="preserve">
-    <value>새로 만들기 라이브러리 루트</value>
+    <value>새 라이브러리 루트</value>
   </data>
   <data name="Settings.DestinationRoot.None" xml:space="preserve">
-    <value>아니요 직접 루트</value>
+    <value>직접 루트 없음</value>
   </data>
   <data name="Settings.SyncTarget.NewRoot" xml:space="preserve">
-    <value>새로 만들기 라이브러리 루트</value>
+    <value>새 라이브러리 루트</value>
   </data>
   <data name="Settings.SyncTarget.None" xml:space="preserve">
-    <value>아니요 동기화 대상</value>
+    <value>동기화 대상 없음</value>
   </data>
   <data name="Settings.Permissions.Action.Artwork" xml:space="preserve">
-    <value>편집 아트워크</value>
+    <value>아트워크 편집</value>
   </data>
   <data name="Settings.Permissions.Action.Ingest" xml:space="preserve">
-    <value>쓰기 수집 결과</value>
+    <value>수집 결과 쓰기</value>
   </data>
   <data name="Settings.Permissions.Action.Metadata" xml:space="preserve">
-    <value>편집 메타데이터</value>
+    <value>메타데이터 편집</value>
   </data>
   <data name="Settings.Permissions.Action.Organize" xml:space="preserve">
-    <value>이름 바꾸기 및 이동 파일</value>
+    <value>파일 이름 변경 및 이동</value>
   </data>
   <data name="Settings.Permissions.Action.Sync" xml:space="preserve">
-    <value>쓰기 동기화 복사</value>
+    <value>동기화된 복사본 쓰기</value>
   </data>
   <data name="Settings.Permissions.Artwork" xml:space="preserve">
     <value>아트워크</value>
@@ -3055,10 +3064,10 @@
     <value>카탈로그만(읽기 전용)</value>
   </data>
   <data name="Settings.Permissions.Description.ReadOnly" xml:space="preserve">
-    <value>해당 앱 전용 카탈로그 이 폴더 및 예정 아님 변경 해당 파일.</value>
+    <value>앱은 이 폴더를 카탈로그에만 추가하며 파일을 변경하지 않습니다.</value>
   </data>
   <data name="Settings.Permissions.Description.Writable" xml:space="preserve">
-    <value>해당 앱 가능 {0} 에서 이 폴더.</value>
+    <value>앱이 이 폴더에서 다음 작업을 수행할 수 있습니다: {0}.</value>
   </data>
   <data name="Settings.Permissions.IngestOutput" xml:space="preserve">
     <value>수집 출력</value>
@@ -3067,10 +3076,10 @@
     <value>메타데이터</value>
   </data>
   <data name="Settings.Permissions.Organization" xml:space="preserve">
-    <value>구성</value>
+    <value>파일 정리</value>
   </data>
   <data name="Settings.Permissions.Summary.Allowed" xml:space="preserve">
-    <value>허용 변경 사항: {0}</value>
+    <value>허용되는 변경 사항: {0}</value>
   </data>
   <data name="Settings.Permissions.Summary.ReadOnly" xml:space="preserve">
     <value>카탈로그만: 이 루트는 읽기 전용입니다.</value>
@@ -3079,196 +3088,196 @@
     <value>동기화 출력</value>
   </data>
   <data name="Settings.Discogs.Checking" xml:space="preserve">
-    <value>확인 중 보안 자격 증명 저장소…</value>
+    <value>보안 자격 증명 저장소 확인 중…</value>
   </data>
   <data name="Settings.Discogs.ClearFailed" xml:space="preserve">
-    <value>가능 아님 지우기 해당 Discogs 토큰: {0}</value>
+    <value>Discogs 토큰을 지울 수 없습니다: {0}</value>
   </data>
   <data name="Settings.Discogs.EnterToken" xml:space="preserve">
     <value>Discogs 개인 액세스 토큰을 입력하세요.</value>
   </data>
   <data name="Settings.Discogs.ExistsPersistent" xml:space="preserve">
-    <value>하나의 Discogs 토큰 입니다 저장됨 에서 {0}.</value>
+    <value>Discogs 토큰이 {0}에 저장되어 있습니다.</value>
   </data>
   <data name="Settings.Discogs.ExistsSession" xml:space="preserve">
-    <value>하나의 Discogs 토큰 입니다 저장됨 용 이 응용 프로그램 세션 전용.</value>
+    <value>Discogs 토큰이 이 애플리케이션 세션 동안만 저장됩니다.</value>
   </data>
   <data name="Settings.Discogs.NoneStored" xml:space="preserve">
-    <value>아니요 Discogs 토큰 입니다 저장됨.</value>
+    <value>저장된 Discogs 토큰이 없습니다.</value>
   </data>
   <data name="Settings.Discogs.StoredPersistent" xml:space="preserve">
-    <value>Discogs 토큰 저장됨 에서 {0}.</value>
+    <value>Discogs 토큰을 {0}에 저장했습니다.</value>
   </data>
   <data name="Settings.Discogs.StoredSession" xml:space="preserve">
-    <value>Discogs 토큰 저장됨 용 이 응용 프로그램 세션 전용.</value>
+    <value>Discogs 토큰을 이 애플리케이션 세션 동안만 저장했습니다.</value>
   </data>
   <data name="Settings.Discogs.StoreFailed" xml:space="preserve">
-    <value>가능 아님 저장 해당 Discogs 토큰: {0}</value>
+    <value>Discogs 토큰을 저장할 수 없습니다: {0}</value>
   </data>
   <data name="Settings.Discogs.Unavailable" xml:space="preserve">
-    <value>보안 자격 증명 저장소 입니다 사용 불가: {0}</value>
+    <value>보안 자격 증명 저장소를 사용할 수 없습니다: {0}</value>
   </data>
   <data name="Settings.Dialog.Discard.Accept" xml:space="preserve">
-    <value>버리기 변경 사항</value>
+    <value>변경 내용 취소</value>
   </data>
   <data name="Settings.Dialog.Discard.Message" xml:space="preserve">
-    <value>해당 라이브러리 구성 있음 변경 사항 해당 있음 아님 됨 저장됨.</value>
+    <value>라이브러리 구성에 저장되지 않은 변경 내용이 있습니다.</value>
   </data>
   <data name="Settings.Dialog.Discard.Title" xml:space="preserve">
-    <value>버리기 저장 안 됨 구성 변경 사항?</value>
+    <value>저장되지 않은 구성 변경 내용을 취소할까요?</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Accept" xml:space="preserve">
-    <value>삭제 프로필</value>
+    <value>프로필 삭제</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Message" xml:space="preserve">
-    <value>{0} 이 할 수 없음 됨 실행 취소됨 이후 저장.</value>
+    <value>{0} 저장한 후에는 실행 취소할 수 없습니다.</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.NoReferences" xml:space="preserve">
-    <value>해당 항목 있음 아니요 구성됨 참조.</value>
+    <value>구성된 참조가 없습니다.</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Reassignment" xml:space="preserve">
-    <value>{0} 및 {1} 예정 됨 다시 할당됨 로 '{2}'.</value>
+    <value>{0} 및 {1}이(가) '{2}'에 다시 할당됩니다.</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.RootReferences.One" xml:space="preserve">
-    <value>{0:N0} 루트 참조</value>
+    <value>루트 참조 {0:N0}개</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.RootReferences.Other" xml:space="preserve">
-    <value>{0:N0} 루트 참조</value>
+    <value>루트 참조 {0:N0}개</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Title" xml:space="preserve">
-    <value>삭제 프로필 '{0}'?</value>
+    <value>프로필 '{0}'을(를) 삭제할까요?</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.WorkflowReferences.One" xml:space="preserve">
-    <value>{0:N0} 워크플로 참조</value>
+    <value>워크플로 참조 {0:N0}개</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.WorkflowReferences.Other" xml:space="preserve">
-    <value>{0:N0} 워크플로 참조</value>
+    <value>워크플로 참조 {0:N0}개</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Accept" xml:space="preserve">
-    <value>삭제 수집 프로필</value>
+    <value>수집 프로필 삭제</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Message" xml:space="preserve">
-    <value>해당 활성 수집 워크플로 예정 변경 로 '{0}'. 이 할 수 없음 됨 실행 취소됨 이후 저장.</value>
+    <value>활성 수집 워크플로를 '{0}'(으)로 변경합니다. 저장한 후에는 실행 취소할 수 없습니다.</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Title" xml:space="preserve">
-    <value>삭제 수집 프로필 '{0}'?</value>
+    <value>수집 프로필 '{0}'을(를) 삭제할까요?</value>
   </data>
   <data name="Settings.Dialog.SaveFailed.Title" xml:space="preserve">
-    <value>구성 이었음 아님 저장됨</value>
+    <value>구성이 저장되지 않았습니다</value>
   </data>
   <data name="Settings.FilePicker.ConfigurationType" xml:space="preserve">
     <value>라이브러리 구성</value>
   </data>
   <data name="Settings.FilePicker.ExportDestination" xml:space="preserve">
-    <value>선택 하나의 내보내기 대상</value>
+    <value>내보내기 대상 선택</value>
   </data>
   <data name="Settings.FilePicker.Ffmpeg" xml:space="preserve">
-    <value>선택 FFmpeg 실행 파일</value>
+    <value>FFmpeg 실행 파일 선택</value>
   </data>
   <data name="Settings.FilePicker.Fpcalc" xml:space="preserve">
-    <value>선택 fpcalc 실행 파일</value>
+    <value>fpcalc 실행 파일 선택</value>
   </data>
   <data name="Settings.FilePicker.ItunesLibrary" xml:space="preserve">
-    <value>선택 iTunes 라이브러리</value>
+    <value>iTunes 라이브러리 선택</value>
   </data>
   <data name="Settings.FilePicker.ItunesLibraryType" xml:space="preserve">
     <value>iTunes 라이브러리</value>
   </data>
   <data name="Settings.FilePicker.LibraryRoot" xml:space="preserve">
-    <value>선택 하나의 음악 라이브러리 루트</value>
+    <value>음악 라이브러리 루트 선택</value>
   </data>
   <data name="Settings.FilePicker.MachineBindings" xml:space="preserve">
-    <value>선택 컴퓨터-로컬 바인딩 파일</value>
+    <value>컴퓨터별 바인딩 파일 선택</value>
   </data>
   <data name="Settings.FilePicker.MetadataCache" xml:space="preserve">
-    <value>선택 메타데이터 캐시</value>
+    <value>메타데이터 데이터베이스 선택</value>
   </data>
   <data name="Settings.FilePicker.OpenConfiguration" xml:space="preserve">
-    <value>열기 라이브러리 구성</value>
+    <value>라이브러리 구성 열기</value>
   </data>
   <data name="Settings.FilePicker.OptimFrog" xml:space="preserve">
-    <value>선택 OptimFROG 도구 디렉터리</value>
+    <value>OptimFROG 도구 폴더 선택</value>
   </data>
   <data name="Settings.FilePicker.PlaylistExportFolder" xml:space="preserve">
-    <value>선택 하나의 재생 목록 내보내기 폴더</value>
+    <value>재생 목록 내보내기 폴더 선택</value>
   </data>
   <data name="Settings.FilePicker.PlaylistSource" xml:space="preserve">
-    <value>선택 하나의 M3U/M3U8 재생 목록 원본</value>
+    <value>M3U/M3U8 재생 목록 원본 선택</value>
   </data>
   <data name="Settings.FilePicker.PlaylistType" xml:space="preserve">
-    <value>파일 재생 목록</value>
+    <value>재생 목록 파일</value>
   </data>
   <data name="Settings.FilePicker.SaveConfiguration" xml:space="preserve">
-    <value>저장 라이브러리 구성</value>
+    <value>라이브러리 구성 저장</value>
   </data>
   <data name="Settings.FilePicker.Wavpack" xml:space="preserve">
-    <value>선택 WavPack 실행 파일</value>
+    <value>WavPack 실행 파일 선택</value>
   </data>
   <data name="Settings.Profile.CopySuffix" xml:space="preserve">
-    <value> 복사</value>
+    <value> 복사본</value>
   </data>
   <data name="Settings.Profile.NewName" xml:space="preserve">
-    <value>새로 만들기 프로필</value>
+    <value>새 프로필</value>
   </data>
   <data name="Settings.IngestProfile.NewName" xml:space="preserve">
-    <value>새로 만들기 수집 프로필</value>
+    <value>새 수집 프로필</value>
   </data>
   <data name="Settings.Status.ActiveConfigurationChanged" xml:space="preserve">
     <value>활성 구성이 변경되었지만 편집기의 저장되지 않은 변경 내용은 유지되었습니다. 활성 구성을 편집하기 전에 변경 내용을 별도 파일로 저장하거나 버리세요.</value>
   </data>
   <data name="Settings.Status.ChangesDiscarded" xml:space="preserve">
-    <value>저장 안 됨 구성 변경 사항 이었음 버리기.</value>
+    <value>저장되지 않은 구성 변경 내용을 취소했습니다.</value>
   </data>
   <data name="Settings.Status.ChooseConfiguration" xml:space="preserve">
-    <value>선택 하나의 기존 구성 또는 만들기 하나의 새로 만들기 하나.</value>
+    <value>기존 구성을 선택하거나 새 구성을 만드세요.</value>
   </data>
   <data name="Settings.Status.ConfigurationEditFailed" xml:space="preserve">
-    <value>가능 아님 편집 구성: {0}</value>
+    <value>구성을 편집할 수 없습니다: {0}</value>
   </data>
   <data name="Settings.Status.ConfigurationLoaded" xml:space="preserve">
-    <value>구성 불러옴. 캐시됨 찾아보기 입니다 사용 가능 동안 루트 입니다 오프라인.</value>
+    <value>구성을 불러왔습니다. 루트가 오프라인이어도 캐시된 데이터를 탐색할 수 있습니다.</value>
   </data>
   <data name="Settings.Status.ConfigurationLoadFailed" xml:space="preserve">
-    <value>가능 아님 불러오기 구성: {0}</value>
+    <value>구성을 불러올 수 없습니다: {0}</value>
   </data>
   <data name="Settings.Status.ConfigurationSaved" xml:space="preserve">
-    <value>구성 저장됨 및 불러옴.</value>
+    <value>구성을 저장하고 불러왔습니다.</value>
   </data>
   <data name="Settings.Status.ConfigurationSaveFailed" xml:space="preserve">
-    <value>가능 아님 저장 구성: {0}</value>
+    <value>구성을 저장할 수 없습니다: {0}</value>
   </data>
   <data name="Settings.Status.GuidedSetup" xml:space="preserve">
     <value>안내 설정: 보존 우선 프로필을 선택하고 라이브러리 루트를 추가한 다음 적용 중인 정책을 검토하세요.</value>
   </data>
   <data name="Settings.Status.IngestProfileCreated" xml:space="preserve">
-    <value>만들어짐 수집 프로필 '{0}'.</value>
+    <value>수집 프로필 '{0}'을(를) 만들었습니다.</value>
   </data>
   <data name="Settings.Status.IngestProfileDeleted" xml:space="preserve">
-    <value>삭제됨 수집 프로필 '{0}'.</value>
+    <value>수집 프로필 '{0}'을(를) 삭제했습니다.</value>
   </data>
   <data name="Settings.Status.IngestProfileDuplicated" xml:space="preserve">
-    <value>중복 수집 프로필 '{0}'.</value>
+    <value>수집 프로필을 '{0}'(으)로 복제했습니다.</value>
   </data>
   <data name="Settings.Status.NewConfiguration" xml:space="preserve">
-    <value>새로 만들기 구성. 추가 에서 최소 하나 라이브러리 루트, 그런 다음 저장 으로.</value>
+    <value>새 구성입니다. 라이브러리 루트를 하나 이상 추가한 다음 다른 이름으로 저장…을 선택하세요.</value>
   </data>
   <data name="Settings.Status.ProfileCreated" xml:space="preserve">
-    <value>만들어짐 프로필 '{0}'.</value>
+    <value>프로필 '{0}'을(를) 만들었습니다.</value>
   </data>
   <data name="Settings.Status.ProfileDeleted" xml:space="preserve">
-    <value>삭제됨 프로필 '{0}' 및 다시 할당됨 해당 참조.</value>
+    <value>프로필 '{0}'을(를) 삭제하고 해당 참조를 다시 할당했습니다.</value>
   </data>
   <data name="Settings.Status.ProfileDuplicated" xml:space="preserve">
-    <value>중복 '{0}' 으로 '{1}'.</value>
+    <value>'{0}'을(를) '{1}'(으)로 복제했습니다.</value>
   </data>
   <data name="Settings.Status.RecentConfigurationsCleared" xml:space="preserve">
-    <value>최근 구성 기록 지워짐.</value>
+    <value>최근 구성 기록을 지웠습니다.</value>
   </data>
   <data name="Settings.Status.ResolveSetupIssues" xml:space="preserve">
-    <value>해결 해당 강조됨 설정 문제 이전 저장.</value>
+    <value>저장하기 전에 강조 표시된 설정 문제를 해결하세요.</value>
   </data>
   <data name="Settings.Status.ResolveValidationIssues" xml:space="preserve">
-    <value>해결 해당 검증 문제 이전 저장.</value>
+    <value>저장하기 전에 유효성 검사 문제를 해결하세요.</value>
   </data>
   <data name="Settings.Validation.AddLibraryRoot" xml:space="preserve">
     <value>라이브러리 루트를 하나 이상 추가하세요.</value>
@@ -3346,31 +3355,31 @@
     <value>라이브러리 루트 '{0}'에서 알 수 없는 프로필 '{1}'을(를) 참조합니다.</value>
   </data>
   <data name="Settings.PolicySummary.NoRootPolicy" xml:space="preserve">
-    <value>아니요 루트 정책 프로필 입니다 선택됨.</value>
+    <value>루트 정책 프로필이 선택되지 않았습니다.</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Itunes" xml:space="preserve">
-    <value>iTunes-호환 경로</value>
+    <value>iTunes 호환 경로</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Preserved" xml:space="preserve">
-    <value>기존 경로 입니다 유지됨</value>
+    <value>기존 경로 유지</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Template" xml:space="preserve">
     <value>{0}/{1}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Enabled" xml:space="preserve">
-    <value>사용; 원본 {0}</value>
+    <value>사용; 원본 처리: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Disabled" xml:space="preserve">
-    <value>사용 안 함; 원본 유지됨</value>
+    <value>사용 안 함; 원본 파일 유지</value>
   </data>
   <data name="Settings.PolicySummary.None" xml:space="preserve">
     <value>없음</value>
   </data>
   <data name="Settings.PolicySummary.RootPolicy" xml:space="preserve">
-    <value>루트 정책 중 편집: {0}</value>
+    <value>편집 중인 루트 정책: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Permissions" xml:space="preserve">
-    <value>새로 만들기-루트 권한: {0}</value>
+    <value>새 루트 권한: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Naming" xml:space="preserve">
     <value>이름 지정: {0}</value>
@@ -3382,49 +3391,49 @@
     <value>수집 프로필: {0}; {1}</value>
   </data>
   <data name="Settings.PolicySummary.RootCounts" xml:space="preserve">
-    <value>구성됨 루트: {0:N0}; 루트 허용 변경 사항: {1:N0}; 루트 정책 재정의: {2:N0}</value>
+    <value>구성된 루트: {0:N0}; 변경을 허용하는 루트: {1:N0}; 정책 재정의: {2:N0}</value>
   </data>
   <data name="Settings.PolicyDetails.NoActivePolicy" xml:space="preserve">
-    <value>아니요 활성 정책 입니다 사용 가능.</value>
+    <value>사용 가능한 활성 정책이 없습니다.</value>
   </data>
   <data name="Settings.PolicyDetails.NoRoots" xml:space="preserve">
-    <value>아니요 음악 폴더 입니다 구성됨 아직.</value>
+    <value>아직 음악 폴더가 구성되지 않았습니다.</value>
   </data>
   <data name="Settings.PolicyDetails.UnsetPath" xml:space="preserve">
-    <value>하나의 폴더 해당 경로 있음 아님 됨 설정</value>
+    <value>경로가 설정되지 않은 폴더</value>
   </data>
   <data name="Settings.PolicyDetails.RootOffline" xml:space="preserve">
-    <value> 해당 항목 입니다 현재 오프라인 또는 할 수 없음 됨 도달.</value>
+    <value> 현재 오프라인이거나 연결할 수 없습니다.</value>
   </data>
   <data name="Settings.PolicyDetails.AllIncluded" xml:space="preserve">
-    <value>모든 일치 음악 파일 입니다 포함.</value>
+    <value>일치하는 모든 음악 파일이 포함됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.PatternsIncluded" xml:space="preserve">
-    <value>전용 파일 일치 {0} 입니다 포함.</value>
+    <value>{0}과(와) 일치하는 파일만 포함됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.PatternsExcluded" xml:space="preserve">
-    <value> 파일 일치 {0} 입니다 제외.</value>
+    <value> {0}과(와) 일치하는 파일은 제외됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.AllFormats" xml:space="preserve">
-    <value>모두 인식됨 음악 형식</value>
+    <value>지원되는 모든 음악 형식</value>
   </data>
   <data name="Settings.PolicyDetails.RootLine" xml:space="preserve">
-    <value>• 에서 {0}, 해당 앱 인덱스 {1}. {2} {3}{4}{5}</value>
+    <value>• {0}에서 앱이 {1}을(를) 인덱싱합니다. {2} {3}{4}{5}</value>
   </data>
   <data name="Settings.PolicyDetails.Example.MusicFolder" xml:space="preserve">
     <value>음악</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Artist" xml:space="preserve">
-    <value>예 아티스트</value>
+    <value>예제 아티스트</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Album" xml:space="preserve">
-    <value>예 앨범</value>
+    <value>예제 앨범</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Song" xml:space="preserve">
-    <value>예 곡</value>
+    <value>예제 곡</value>
   </data>
   <data name="Settings.PolicyDetails.Example.FileName" xml:space="preserve">
-    <value>03 예 곡</value>
+    <value>03 예제 곡</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Genre" xml:space="preserve">
     <value>록</value>
@@ -3445,31 +3454,31 @@
     <value>, 제안</value>
   </data>
   <data name="Settings.PolicyDetails.Repair.None" xml:space="preserve">
-    <value>아니요 자동 복구 작업 입니다 사용.</value>
+    <value>사용 중인 자동 복구가 없습니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Disabled" xml:space="preserve">
     <value>사용 안 함</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.NoRecipes" xml:space="preserve">
-    <value>사용, 하지만 아니요 출력 레시피</value>
+    <value>사용 중이지만 출력 레시피 없음</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Recipe" xml:space="preserve">
-    <value>{0}: {1} 로 {2}</value>
+    <value>레시피 “{0}”: 작업 — {1}, 대상 — {2}</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.MissingRoot" xml:space="preserve">
-    <value>누락 루트</value>
+    <value>대상 루트 누락</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.NoDirectRoot" xml:space="preserve">
-    <value>아니요 직접 루트</value>
+    <value>직접 대상 루트 없음</value>
   </data>
   <data name="Settings.PolicyDetails.Integrations.NoCatalog" xml:space="preserve">
-    <value>파일 재생 목록 (M3U/M3U8); 아니요 미디어 카탈로그 통합 구성됨</value>
+    <value>파일 기반 재생 목록(M3U/M3U8), 미디어 카탈로그 통합이 구성되지 않음</value>
   </data>
   <data name="Settings.PolicyDetails.Integrations.Itunes" xml:space="preserve">
-    <value>파일 재생 목록 (M3U/M3U8); iTunes 카탈로그: {0}</value>
+    <value>파일 기반 재생 목록(M3U/M3U8), iTunes 카탈로그: {0}</value>
   </data>
   <data name="Settings.PolicyDetails.Exports.None" xml:space="preserve">
-    <value>없음 구성됨</value>
+    <value>구성된 항목 없음</value>
   </data>
   <data name="Settings.PolicyDetails.Export" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -3481,67 +3490,67 @@
     <value>사용 안 함</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.CatalogOnly" xml:space="preserve">
-    <value>해당 앱 유지 파일 및 폴더 이름 위치 해당 항목 입니다.</value>
+    <value>앱은 파일과 폴더의 현재 이름과 위치를 그대로 유지합니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.Organized" xml:space="preserve">
     <value>파일을 정리하면 “{0}”과 같은 이름이 지정됩니다. 해당 이름이 이미 있으면 앱에서 {1} 규칙을 사용합니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Eager" xml:space="preserve">
-    <value>아트워크 입니다 읽기 및 캐시됨 중 인덱싱 중, 따라서 찾아보기 및 아트워크 감사 입니다 즉시 완료. 인덱싱 중 예정 가져오기 더 김 및 해당 캐시 예정 사용 더 보기 공간.</value>
+    <value>인덱싱 중에 아트워크를 읽고 캐시하므로 탐색과 감사에서 즉시 완전한 정보를 사용할 수 있습니다. 인덱싱 시간이 길어지고 캐시가 더 많은 공간을 사용합니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Lazy" xml:space="preserve">
-    <value>아트워크 입니다 아님 읽기 중 인덱싱 중. 해당 항목 입니다 불러옴 및 캐시됨 나중에 때 사용자 보기 해당 항목 또는 실행 하나의 아트워크 감사, 해당 유지 인덱싱 중 더 빠름 및 해당 초기 캐시 더 작음.</value>
+    <value>인덱싱 중에는 아트워크를 읽지 않습니다. 아트워크를 보거나 감사할 때 나중에 불러와 캐시하므로 인덱싱이 더 빠르고 초기 캐시가 더 작습니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Discs.Preserve" xml:space="preserve">
-    <value>디스크 번호 유지 에서 해당 태그.</value>
+    <value>디스크 번호가 태그에 유지됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Discs.Transform" xml:space="preserve">
-    <value>디스크 번호 입니다 표현됨 사용 {0}, 및 해당 디스크 태그 입니다 제거됨.</value>
+    <value>디스크 번호는 {0}(으)로 표시되고 디스크 태그는 제거됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Enabled" xml:space="preserve">
-    <value>수집 입니다 사용 통해 “{0}”. 해당 활성 레시피 입니다 {1}, 및 원본 파일 입니다 {2} 이후 하나의 성공 수집.</value>
+    <value>“{0}”을(를) 통해 수집이 사용됩니다. 활성 레시피: {1}. 수집 성공 후 원본 파일 처리: {2}.</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Preserved" xml:space="preserve">
-    <value>자동 수집 입니다 사용 안 함, 따라서 원본 파일 입니다 유지됨.</value>
+    <value>자동 수집이 꺼져 있으므로 원본 파일이 유지됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Introduction" xml:space="preserve">
-    <value>이 정책 입니다 “{0}” ({1}). 해당 인덱서 인식: {2}.</value>
+    <value>이 정책은 “{0}”({1})입니다. 인덱서는 {2}을(를) 인식합니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Unicode.Kept" xml:space="preserve">
     <value>유지됨</value>
   </data>
   <data name="Settings.PolicyDetails.Unicode.Normalized" xml:space="preserve">
-    <value>정규화 또는 바뀜</value>
+    <value>정규화되거나 대체됨</value>
   </data>
   <data name="Settings.PolicyDetails.NamingParagraph" xml:space="preserve">
-    <value>Unicode 문자 {0}은(는) {1}(으)로 처리됩니다. 다른 값을 입력하지 않으면 경로 길이에 애플리케이션과 플랫폼의 기본값이 사용됩니다.</value>
+    <value>{0} Unicode 문자는 {1}(으)로 처리됩니다. 다른 값을 입력하지 않으면 경로 길이에 애플리케이션과 플랫폼의 기본값이 사용됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.QualityParagraph" xml:space="preserve">
-    <value>{0} 하나의 녹음 입니다 고려됨 높음 해상도 에서 {1:N0} Hz 또는 {2}-bit.</value>
+    <value>{0} 녹음은 {1:N0} Hz 또는 {2}-bit 이상일 때 고해상도로 간주됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Preserved" xml:space="preserve">
     <value>유지됨</value>
   </data>
   <data name="Settings.PolicyDetails.NotCopied" xml:space="preserve">
-    <value>아님 복사됨</value>
+    <value>복사 안 함</value>
   </data>
   <data name="Settings.PolicyDetails.MetadataParagraph" xml:space="preserve">
-    <value>때 메타데이터 입니다 복사됨, ReplayGain 입니다 {0}, MusicBrainz 식별자 입니다 {1}, 사용자 지정 필드 입니다 {2}, 및 컴필레이션 정보 입니다 {3}.</value>
+    <value>메타데이터 복사: ReplayGain — {0}, MusicBrainz 식별자 — {1}, 사용자 지정 필드 — {2}, 컴필레이션 정보 — {3}.</value>
   </data>
   <data name="Settings.PolicyDetails.ArtworkParagraph" xml:space="preserve">
-    <value>{0} 기록됨 아트워크 사용함 {1} 저장소, {2}, 및 {3} 인코딩.</value>
+    <value>{0} 아트워크 기록: 저장 방식 — {1}, 역할 — {2}, 인코딩 — {3}.</value>
   </data>
   <data name="Settings.PolicyDetails.HealthParagraph" xml:space="preserve">
-    <value>상태 검사 현재 사용: {0}. 파일 해당 실행 아님 일치 하나의 사이드카 규칙 입니다 {1}.</value>
+    <value>현재 사용 중인 상태 검사: {0}. 사이드카 규칙과 일치하지 않는 파일은 {1}(으)로 처리됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.ConnectionsParagraph" xml:space="preserve">
     <value>재생 목록 및 카탈로그 연결: {0}. 내보내기 프로필: {1}.</value>
   </data>
   <data name="Settings.PolicyDetails.RootsParagraph" xml:space="preserve">
-    <value>구성됨 음악 폴더:{0}{1}</value>
+    <value>구성된 음악 폴더:{0}{1}</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.StoredDirectly" xml:space="preserve">
-    <value>폴더 경로 입니다 저장됨 직접 에서 이 구성.</value>
+    <value>폴더 경로가 이 구성에 직접 저장됩니다.</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.MachineBindings" xml:space="preserve">
     <value>컴퓨터별 폴더 경로는 “{0}”에서 가져옵니다.</value>
@@ -3559,16 +3568,16 @@
     <value>어둡게</value>
   </data>
   <data name="Settings.Choice.Theme.Steel_Blue" xml:space="preserve">
-    <value>스틸 파랑</value>
+    <value>스틸 블루</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.LegacyMusicLibraryTools" xml:space="preserve">
     <value>레거시 MusicLibraryTools</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.CatalogOnly" xml:space="preserve">
-    <value>카탈로그 전용</value>
+    <value>카탈로그만</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.PreserveLayoutAndTags" xml:space="preserve">
-    <value>유지 레이아웃 및 태그</value>
+    <value>레이아웃 및 태그 유지</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.ArtistAlbum" xml:space="preserve">
     <value>아티스트/앨범</value>
@@ -3583,37 +3592,37 @@
     <value>중지</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.Suffix" xml:space="preserve">
-    <value>추가 하나의 접미사</value>
+    <value>접미사 추가</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.Hash" xml:space="preserve">
-    <value>추가 하나의 해시</value>
+    <value>해시 추가</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.PreserveExisting" xml:space="preserve">
-    <value>유지 기존 파일</value>
+    <value>기존 파일 유지</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.None" xml:space="preserve">
     <value>없음</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormC" xml:space="preserve">
-    <value>정규 구성 (형식 C)</value>
+    <value>정규 합성(형식 C)</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormD" xml:space="preserve">
-    <value>정규 분해 (형식 D)</value>
+    <value>정규 분해(형식 D)</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormKC" xml:space="preserve">
-    <value>호환성 구성 (형식 KC)</value>
+    <value>호환성 합성(형식 KC)</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormKD" xml:space="preserve">
-    <value>호환성 분해 (형식 KD)</value>
+    <value>호환성 분해(형식 KD)</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.PreserveTags" xml:space="preserve">
-    <value>유지 태그</value>
+    <value>태그 유지</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.AlbumSuffix" xml:space="preserve">
     <value>앨범 접미사</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.DiscFolder" xml:space="preserve">
-    <value>디스크 폴더</value>
+    <value>디스크별 폴더</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FileNamePrefix" xml:space="preserve">
     <value>파일 이름 접두사</value>
@@ -3622,7 +3631,7 @@
     <value>연속 트랙 번호</value>
   </data>
   <data name="Settings.Choice.LibraryTrackTotalScope.PerDisc" xml:space="preserve">
-    <value>당 디스크</value>
+    <value>디스크별</value>
   </data>
   <data name="Settings.Choice.LibraryTrackTotalScope.Album" xml:space="preserve">
     <value>전체 앨범</value>
@@ -3655,19 +3664,19 @@
     <value>트랜스코딩</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.Any" xml:space="preserve">
-    <value>모두 앨범</value>
+    <value>모든 앨범</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.HasHighResolution" xml:space="preserve">
-    <value>있음 높음-해상도 오디오</value>
+    <value>고해상도 오디오 포함</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.HasNoHighResolution" xml:space="preserve">
-    <value>있음 아니요 높음-해상도 오디오</value>
+    <value>고해상도 오디오 없음</value>
   </data>
   <data name="Settings.Choice.LibraryIngestSourceSelection.HighestQuality" xml:space="preserve">
     <value>최고 품질</value>
   </data>
   <data name="Settings.Choice.LibraryIngestSourceSelection.PreferCdQuality" xml:space="preserve">
-    <value>선호 CD 품질</value>
+    <value>CD 음질 우선</value>
   </data>
   <data name="Settings.Choice.LibraryChannelSelection.Stereo" xml:space="preserve">
     <value>스테레오</value>
@@ -3685,16 +3694,16 @@
     <value>사이드카</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkStorage.Both" xml:space="preserve">
-    <value>포함됨 및 사이드카</value>
+    <value>포함 및 사이드카 파일</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkRoleSelection.FrontCoverOnly" xml:space="preserve">
-    <value>앞면 표지 전용</value>
+    <value>앞 표지만</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkRoleSelection.AllRoles" xml:space="preserve">
-    <value>모두 아트워크 역할</value>
+    <value>모든 아트워크 역할</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkEncoding.PreserveSource" xml:space="preserve">
-    <value>유지 원본 인코딩</value>
+    <value>원본 인코딩 유지</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkEncoding.Jpeg" xml:space="preserve">
     <value>JPEG</value>
@@ -3712,7 +3721,7 @@
     <value>삭제</value>
   </data>
   <data name="Settings.Choice.LibrarySidecarDisposition.FollowSourceDisposition" xml:space="preserve">
-    <value>따르기 원본 처리</value>
+    <value>원본 처리 방식 따르기</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.EntireLibrary" xml:space="preserve">
     <value>전체 라이브러리</value>
@@ -3721,7 +3730,7 @@
     <value>재생 목록</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.SavedView" xml:space="preserve">
-    <value>저장됨 보기</value>
+    <value>저장된 보기</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.ExplicitTracks" xml:space="preserve">
     <value>선택한 트랙</value>
@@ -3739,7 +3748,7 @@
     <value>트랜스코딩</value>
   </data>
   <data name="Settings.Choice.ExportTransformMode.SpecializedProvider" xml:space="preserve">
-    <value>특수 공급자</value>
+    <value>전문 공급자</value>
   </data>
   <data name="Settings.Choice.ExportArtworkMode.None" xml:space="preserve">
     <value>없음</value>
@@ -3751,7 +3760,7 @@
     <value>사이드카</value>
   </data>
   <data name="Settings.Choice.ExportArtworkMode.EmbeddedAndSidecar" xml:space="preserve">
-    <value>포함됨 및 사이드카</value>
+    <value>포함 및 사이드카 파일</value>
   </data>
   <data name="Settings.Choice.ExportExtraFileDisposition.Preserve" xml:space="preserve">
     <value>유지</value>
@@ -3766,7 +3775,7 @@
     <value>레거시</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.provided" xml:space="preserve">
-    <value>으로 제공됨</value>
+    <value>제공된 형식</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.absolute" xml:space="preserve">
     <value>절대</value>
@@ -3784,7 +3793,7 @@
     <value>유지</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.sanitize" xml:space="preserve">
-    <value>정리</value>
+    <value>파일 이름 안전 처리</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.sonos" xml:space="preserve">
     <value>Sonos-호환</value>
@@ -3904,7 +3913,7 @@
     <value>디스크 부제</value>
   </data>
   <data name="Settings.Choice.TagFields.EncodedBy" xml:space="preserve">
-    <value>인코딩됨 기준</value>
+    <value>인코딩 담당</value>
   </data>
   <data name="Settings.Choice.TagFields.EncoderSettings" xml:space="preserve">
     <value>인코더 설정</value>
@@ -3922,7 +3931,7 @@
     <value>그룹화</value>
   </data>
   <data name="Settings.Choice.TagFields.Key" xml:space="preserve">
-    <value>키</value>
+    <value>조성</value>
   </data>
   <data name="Settings.Choice.TagFields.ISRC" xml:space="preserve">
     <value>ISRC</value>
@@ -3955,7 +3964,7 @@
     <value>악장</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementTotal" xml:space="preserve">
-    <value>악장 합계</value>
+    <value>총 악장 수</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementNumber" xml:space="preserve">
     <value>악장 번호</value>
@@ -4003,7 +4012,7 @@
     <value>원래 날짜</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalYear" xml:space="preserve">
-    <value>원본 연도</value>
+    <value>원래 연도</value>
   </data>
   <data name="Settings.Choice.TagFields.Performer" xml:space="preserve">
     <value>연주자</value>
@@ -4021,19 +4030,19 @@
     <value>평가</value>
   </data>
   <data name="Settings.Choice.TagFields.Label" xml:space="preserve">
-    <value>레이블</value>
+    <value>음반사</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseCountry" xml:space="preserve">
-    <value>릴리스 국가</value>
+    <value>발매 국가</value>
   </data>
   <data name="Settings.Choice.TagFields.Date" xml:space="preserve">
     <value>날짜</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseStatus" xml:space="preserve">
-    <value>릴리스 상태</value>
+    <value>발매 상태</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseType" xml:space="preserve">
-    <value>릴리스 유형</value>
+    <value>발매 유형</value>
   </data>
   <data name="Settings.Choice.TagFields.Remixer" xml:space="preserve">
     <value>리믹서</value>
@@ -4048,7 +4057,7 @@
     <value>ReplayGain 앨범 범위</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Reference_Loudness" xml:space="preserve">
-    <value>ReplayGain 참조 라우드니스</value>
+    <value>ReplayGain 기준 음량</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Gain" xml:space="preserve">
     <value>ReplayGain 트랙 게인</value>
@@ -4060,16 +4069,16 @@
     <value>ReplayGain 트랙 범위</value>
   </data>
   <data name="Settings.Choice.TagFields.Script" xml:space="preserve">
-    <value>스크립트</value>
+    <value>문자 체계</value>
   </data>
   <data name="Settings.Choice.TagFields.Show" xml:space="preserve">
-    <value>표시</value>
+    <value>프로그램</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowSort" xml:space="preserve">
-    <value>표시 정렬</value>
+    <value>프로그램 정렬 제목</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowMovement" xml:space="preserve">
-    <value>표시 악장</value>
+    <value>악장 표시</value>
   </data>
   <data name="Settings.Choice.TagFields.Subtitle" xml:space="preserve">
     <value>부제</value>
@@ -6098,13 +6107,13 @@
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.RecordingId" xml:space="preserve"><value>정확한 MusicBrainz 녹음 ID</value></data>
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.Unmatched" xml:space="preserve"><value>신뢰할 수 있는 릴리스 트랙 일치 항목을 찾지 못했습니다.</value></data>
   <data name="OnlineMetadata.MusicBrainz.Validation.InvalidReleaseId" xml:space="preserve"><value>MusicBrainz 릴리스 ID가 유효한 GUID가 아닙니다.</value></data>
-  <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>구성됨 미디어 카탈로그</value></data>
-  <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>아니요 대상</value></data>
-  <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} 로 {2}</value></data>
+  <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>구성된 미디어 카탈로그</value></data>
+  <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>대상 없음</value></data>
+  <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} → {2}</value></data>
   <data name="Workbench.Online.Thumbnail.Failed" xml:space="preserve"><value>미리 보기를 사용할 수 없음</value></data>
   <data name="Dialog.DefaultExportFileName" xml:space="preserve"><value>내보내기</value></data>
   <data name="Dialog.FileType.Format" xml:space="preserve"><value>{0} 파일</value></data>
-  <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>새로 만들기 내보내기</value></data>
+  <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>새 내보내기</value></data>
   <data name="Navigation.About" xml:space="preserve"><value>정보</value></data>
   <data name="About.Title" xml:space="preserve"><value>정보</value></data>
   <data name="About.Subtitle" xml:space="preserve"><value>제품 정보, 감사의 말 및 사용권 계약입니다.</value></data>
@@ -6257,7 +6266,7 @@
   <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>볼륨 {0:N0}개 · {1:N0}개 커밋됨</value></data>
   <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
   <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC 실행 파일</value></data>
-  <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>선택 Monkey's Audio MAC 실행 파일</value></data>
+  <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC 실행 파일 선택</value></data>
   <data name="Transcode.Format.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio</value></data>
   <data name="Transcode.Encoder.MonkeysAudioMac" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
   <data name="Shell.Navigation.Toggle" xml:space="preserve"><value>탐색 펼치기 또는 접기</value></data>
@@ -6273,7 +6282,7 @@
   <data name="Operations.Job.OutputLabel" xml:space="preserve"><value>출력 및 진단 로그</value></data>
   <data name="Operations.Job.PickerAutomation" xml:space="preserve"><value>작업 실행</value></data>
   <data name="Ingest.PreflightChecks.Title" xml:space="preserve"><value>사전 검사</value></data>
-  <data name="Settings.EffectivePolicy.ProvenanceTitle" xml:space="preserve"><value>기술적 출처</value></data>
+  <data name="Settings.EffectivePolicy.ProvenanceTitle" xml:space="preserve"><value>기술 출처</value></data>
   <data name="Settings.FieldMappings.SourceLabel" xml:space="preserve"><value>원본 필드</value></data>
   <data name="Settings.FieldMappings.TargetLabel" xml:space="preserve"><value>대상 필드</value></data>
   <data name="Inspector.View.ReviewChanges" xml:space="preserve"><value>변경 내용 검토</value></data>

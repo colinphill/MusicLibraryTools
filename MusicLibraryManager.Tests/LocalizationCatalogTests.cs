@@ -99,6 +99,8 @@ public sealed partial class LocalizationCatalogTests
             "M3U",
             "M3U8",
             "WPL",
+            "local-filesystem",
+            "Disc N",
             "CSV",
             "HTML",
             "RTF",
@@ -438,6 +440,29 @@ public sealed partial class LocalizationCatalogTests
             LocalizationProtectedTerms.FindMismatches(
                 source,
                 "Führen Sie die Prüfung aus, bevor Sie die Version anzeigen."));
+    }
+
+    [Fact]
+    public void Source_paths_assignments_and_stable_provider_identifiers_are_preserved()
+    {
+        const string source =
+            "Use Temp/**, Music/**, playlists/favorites.m3u8, option=value, option2=value, local-filesystem, and the \u201cDisc N\u201d suffix.";
+        IReadOnlyList<string> sourceDerived =
+            LocalizationProtectedTerms.SourceDerivedTokens(source);
+
+        Assert.Contains("Temp/**", sourceDerived);
+        Assert.Contains("Music/**", sourceDerived);
+        Assert.Contains("playlists/favorites.m3u8", sourceDerived);
+        Assert.Contains("option=value", sourceDerived);
+        Assert.Contains("option2=value", sourceDerived);
+        Assert.Empty(
+            LocalizationProtectedTerms.FindMismatches(
+                source,
+                "Nutzen: Temp/**, Music/**, playlists/favorites.m3u8, option=value, option2=value, local-filesystem und \u201cDisc N\u201d."));
+        Assert.NotEmpty(
+            LocalizationProtectedTerms.FindMismatches(
+                source,
+                "Nutzen: Temp/**, Musik/**, playlists/favoriten.m3u8, option=wert, option2=wert, localfilesystem und \u201cDatentraeger N\u201d."));
     }
 
     [Fact]

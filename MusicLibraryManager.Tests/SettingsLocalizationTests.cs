@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Presentation;
 using MusicLibraryTools;
@@ -25,6 +26,51 @@ public sealed partial class SettingsLocalizationTests
             .ToArray();
 
         Assert.Empty(literals);
+    }
+
+    [Fact]
+    public void Reused_settings_concepts_have_usage_specific_labels()
+    {
+        string xaml = File.ReadAllText(FindRepositoryFile(
+            Path.Combine("MusicLibraryManager", "Views",
+                "SettingsView.axaml")));
+        (string Key, int Count)[] expectedUsages =
+        [
+            ("Settings.Playlists.TransformProvider", 2),
+            ("Settings.Playlists.TransportProvider", 2),
+            ("Settings.Playlists.GeneratedTransport", 1),
+            ("Settings.Playlists.TransportOptions", 2),
+            ("Settings.RootPolicy.HealthRules", 1),
+            ("Settings.RootPolicy.HealthSeverity", 1),
+        ];
+
+        foreach ((string key, int expectedCount) in expectedUsages)
+            Assert.Equal(
+                expectedCount,
+                Regex.Matches(
+                    xaml,
+                    Regex.Escape(
+                        $"{{DynamicResource Loc.{key}}}"))
+                    .Count);
+
+        XDocument neutral = XDocument.Load(FindRepositoryFile(
+            Path.Combine("MusicLibraryManager.Presentation",
+                "Resources", "Strings.resx")));
+        Dictionary<string, string> values = neutral.Root!
+            .Elements("data")
+            .ToDictionary(
+                entry => (string)entry.Attribute("name")!,
+                entry => entry.Element("value")!.Value,
+                StringComparer.Ordinal);
+        Assert.Equal(
+            "Transport provider",
+            values["Settings.Playlists.TransportProvider"]);
+        Assert.Equal(
+            "Transport options",
+            values["Settings.Playlists.TransportOptions"]);
+        Assert.Equal(
+            "Severity",
+            values["Settings.RootPolicy.HealthSeverity"]);
     }
 
     [Fact]

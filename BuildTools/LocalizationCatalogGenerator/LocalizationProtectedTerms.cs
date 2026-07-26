@@ -131,6 +131,8 @@ public static class LocalizationProtectedTerms
         "DiscNumLengthLimit",
         "LengthLimit",
         "FileNameWithoutExtension",
+        "local-filesystem",
+        "Disc N",
         "iTunes Library.itl",
         "iTunes",
         "Monkey's Audio",
@@ -266,6 +268,16 @@ public static class LocalizationProtectedTerms
                 .Matches(value)
                 .Select(match => match.Value));
         results.UnionWith(
+            RelativePathPattern
+                .Matches(value)
+                .Select(match =>
+                    match.Groups["path"].Value));
+        results.UnionWith(
+            AssignmentPattern
+                .Matches(value)
+                .Select(match =>
+                    match.Groups["assignment"].Value));
+        results.UnionWith(
             QuotedIdentifierPattern
                 .Matches(value)
                 .Select(match =>
@@ -314,6 +326,23 @@ public static class LocalizationProtectedTerms
     private static Regex PathPattern { get; } =
         new(
             @"(?:[A-Za-z]:\\|(?<!\S)/)[^\s\r\n,;)]*",
+            RegexOptions.CultureInvariant);
+
+    private static Regex RelativePathPattern { get; } =
+        new(
+            @"(?<![\p{L}\p{N}])" +
+            @"(?<path>(?:[A-Za-z0-9._{}-]+[\\/])+" +
+            @"(?:\*{1,2}|[A-Za-z0-9._{}*-]*\." +
+            @"[A-Za-z0-9._{}*-]+))" +
+            @"(?![\p{L}\p{N}])",
+            RegexOptions.CultureInvariant);
+
+    private static Regex AssignmentPattern { get; } =
+        new(
+            @"(?<![\p{L}\p{N}])" +
+            @"(?<assignment>[A-Za-z][A-Za-z0-9._-]*=" +
+            @"[A-Za-z0-9._{}-]+)" +
+            @"(?![\p{L}\p{N}])",
             RegexOptions.CultureInvariant);
 
     private static Regex QuotedIdentifierPattern { get; } =

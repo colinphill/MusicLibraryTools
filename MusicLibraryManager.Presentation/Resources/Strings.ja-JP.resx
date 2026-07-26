@@ -2167,13 +2167,13 @@
     <value>設定</value>
   </data>
   <data name="Settings.Subtitle" xml:space="preserve">
-    <value>構成 ライブラリ, プレイリスト, 取り込み ツール, および アプリケーション 外観.</value>
+    <value>ライブラリ、プレイリスト、取り込みツール、アプリの外観を設定します。</value>
   </data>
   <data name="Settings.UnsavedChanges" xml:space="preserve">
-    <value>未保存 変更</value>
+    <value>未保存の変更</value>
   </data>
   <data name="Settings.Action.Browse" xml:space="preserve">
-    <value>参照</value>
+    <value>参照…</value>
   </data>
   <data name="Settings.Action.Clear" xml:space="preserve">
     <value>クリア</value>
@@ -2182,10 +2182,10 @@
     <value>削除</value>
   </data>
   <data name="Settings.Action.Discard" xml:space="preserve">
-    <value>破棄</value>
+    <value>変更を破棄</value>
   </data>
   <data name="Settings.Action.Duplicate" xml:space="preserve">
-    <value>重複</value>
+    <value>複製</value>
   </data>
   <data name="Settings.Action.New" xml:space="preserve">
     <value>新規</value>
@@ -2200,19 +2200,19 @@
     <value>保存</value>
   </data>
   <data name="Settings.Action.SaveAs" xml:space="preserve">
-    <value>保存 として</value>
+    <value>名前を付けて保存…</value>
   </data>
   <data name="Settings.Automation.Categories" xml:space="preserve">
-    <value>設定 カテゴリ</value>
+    <value>設定カテゴリ</value>
   </data>
   <data name="Settings.Automation.Category" xml:space="preserve">
-    <value>設定 カテゴリ</value>
+    <value>設定カテゴリ</value>
   </data>
   <data name="Settings.Automation.Error" xml:space="preserve">
     <value>エラー</value>
   </data>
   <data name="Settings.Automation.FirstInvalidSetting" xml:space="preserve">
-    <value>移動 へ 対象の 最初 無効 設定</value>
+    <value>最初の無効な設定に移動</value>
   </data>
   <data name="Settings.Automation.Information" xml:space="preserve">
     <value>情報</value>
@@ -2224,16 +2224,16 @@
     <value>コーデック</value>
   </data>
   <data name="Settings.Common.CollisionBehavior" xml:space="preserve">
-    <value>競合 動作</value>
+    <value>競合時の動作</value>
   </data>
   <data name="Settings.Common.FileNameTemplate" xml:space="preserve">
     <value>ファイル名テンプレート</value>
   </data>
   <data name="Settings.Common.FolderTemplate" xml:space="preserve">
-    <value>フォルダー テンプレート</value>
+    <value>フォルダーテンプレート</value>
   </data>
   <data name="Settings.Common.MaximumBytes" xml:space="preserve">
-    <value>最大 バイト</value>
+    <value>最大バイト数</value>
   </data>
   <data name="Settings.Common.MaximumDimension" xml:space="preserve">
     <value>最大寸法</value>
@@ -2242,7 +2242,7 @@
     <value>名前</value>
   </data>
   <data name="Settings.Common.StableId" xml:space="preserve">
-    <value>安定ID</value>
+    <value>安定 ID</value>
   </data>
   <data name="Settings.Appearance.Description" xml:space="preserve">
     <value>テーマの変更はすぐに適用されます。「システム」はオペレーティングシステムの設定に従います。各パレットのアクセント色は、選択、フォーカス、進行状況、安全な操作に使用されます。</value>
@@ -2284,184 +2284,184 @@
     <value>最近の構成</value>
   </data>
   <data name="Settings.LibraryRoots.Add" xml:space="preserve">
-    <value>追加 ルート</value>
+    <value>ルートを追加</value>
   </data>
   <data name="Settings.LibraryRoots.AddSet" xml:space="preserve">
-    <value>追加 設定</value>
+    <value>スキャンセットを追加</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensions" xml:space="preserve">
     <value>セット間で比較する拡張子</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensionsPlaceholder" xml:space="preserve">
-    <value>用 例: .flac, .m4a</value>
+    <value>例: .flac、.m4a</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatterns" xml:space="preserve">
-    <value>除外 パターン</value>
+    <value>除外パターン</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsAutomation" xml:space="preserve">
-    <value>ライブラリ ルート インデックス 除外 パターン</value>
+    <value>ライブラリルートの除外パターン</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsPlaceholder" xml:space="preserve">
-    <value>なし; または 一時/**; *.tmp</value>
+    <value>例: Temp/**、*.tmp</value>
   </data>
   <data name="Settings.LibraryRoots.Formats" xml:space="preserve">
-    <value>形式 へ インデックス</value>
+    <value>インデックス対象の形式</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsAutomation" xml:space="preserve">
-    <value>ライブラリ ルート 形式 へ インデックス</value>
+    <value>このライブラリルートでインデックス化する形式</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsPlaceholder" xml:space="preserve">
-    <value>すべて 対応; または .flac, .m4a</value>
+    <value>すべての対応形式、または .flac、.m4a</value>
   </data>
   <data name="Settings.LibraryRoots.GuidedStep" xml:space="preserve">
-    <value>ステップ 1 の 2: 構成 ルート, 割り当て 各 ルート ポリシー, および 有効化 のみ 対象の 書き込む ユーザー 意図.</value>
+    <value>ステップ 1/2: ルートを構成し、それぞれにポリシーを割り当て、必要な書き込みだけを有効にします。</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatterns" xml:space="preserve">
-    <value>含める パターン</value>
+    <value>包含パターン</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsAutomation" xml:space="preserve">
-    <value>ライブラリ ルート インデックス 含める パターン</value>
+    <value>ライブラリルートの包含パターン</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsPlaceholder" xml:space="preserve">
-    <value>すべて; または 音楽/**; *.flac</value>
+    <value>例: Music/**、*.flac</value>
   </data>
   <data name="Settings.LibraryRoots.Path" xml:space="preserve">
-    <value>ルート パス</value>
+    <value>ルートパス</value>
   </data>
   <data name="Settings.LibraryRoots.PathAutomation" xml:space="preserve">
-    <value>ライブラリ ルート パス</value>
+    <value>ライブラリルートのパス</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Artwork" xml:space="preserve">
     <value>アートワーク</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Ingest" xml:space="preserve">
-    <value>取り込み 出力</value>
+    <value>取り込み出力</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Metadata" xml:space="preserve">
     <value>メタデータ</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Organize" xml:space="preserve">
-    <value>整理 ファイル</value>
+    <value>ファイルを整理</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Sync" xml:space="preserve">
-    <value>同期 出力</value>
+    <value>同期出力</value>
   </data>
   <data name="Settings.LibraryRoots.Policy" xml:space="preserve">
-    <value>命名 および ルート ポリシー</value>
+    <value>命名とルートポリシー</value>
   </data>
   <data name="Settings.LibraryRoots.PolicyAutomation" xml:space="preserve">
-    <value>ライブラリ ルート 命名 プロファイル</value>
+    <value>ライブラリルートのポリシープロファイル</value>
   </data>
   <data name="Settings.LibraryRoots.ReviewPolicy" xml:space="preserve">
-    <value>確認 ポリシー</value>
+    <value>ポリシーを確認</value>
   </data>
   <data name="Settings.LibraryRoots.SetNamesAutomation" xml:space="preserve">
-    <value>スキャン 設定 名前</value>
+    <value>スキャンセット名</value>
   </data>
   <data name="Settings.LibraryRoots.SetNamesPlaceholder" xml:space="preserve">
-    <value>設定 名前 (カンマ 分離済み)</value>
+    <value>セット名（カンマ区切り）</value>
   </data>
   <data name="Settings.LibraryRoots.SharedOffsetAutomation" xml:space="preserve">
-    <value>スキャン 設定 共有 オフセット</value>
+    <value>スキャンセットの共有オフセット</value>
   </data>
   <data name="Settings.LibraryRoots.SharedOffsetPlaceholder" xml:space="preserve">
-    <value>共有 オフセット</value>
+    <value>共有オフセット</value>
   </data>
   <data name="Settings.LibraryRoots.Title" xml:space="preserve">
-    <value>ライブラリ ルート および 設定 所属</value>
+    <value>ライブラリルートとセット所属</value>
   </data>
   <data name="Settings.LibraryRoots.WritePermissions" xml:space="preserve">
-    <value>書き込む アクセス許可</value>
+    <value>書き込みアクセス許可</value>
   </data>
   <data name="Settings.Playlists.AddExport" xml:space="preserve">
-    <value>追加 エクスポート</value>
+    <value>エクスポートを追加</value>
   </data>
   <data name="Settings.Playlists.AddPlaylist" xml:space="preserve">
-    <value>追加 プレイリスト</value>
+    <value>プレイリストを追加</value>
   </data>
   <data name="Settings.Playlists.AddSource" xml:space="preserve">
-    <value>追加 ソース</value>
+    <value>ソースを追加</value>
   </data>
   <data name="Settings.Playlists.AddTarget" xml:space="preserve">
-    <value>追加 対象</value>
+    <value>出力先を追加</value>
   </data>
   <data name="Settings.Playlists.BrowseDestination" xml:space="preserve">
-    <value>参照 宛先</value>
+    <value>出力先を選択…</value>
   </data>
   <data name="Settings.Playlists.BrowseFile" xml:space="preserve">
-    <value>参照 ファイル</value>
+    <value>参照…</value>
   </data>
   <data name="Settings.Playlists.CleanTargets" xml:space="preserve">
-    <value>クリーン プレイリスト エクスポート 対象 変更前 クロス-同期 プレイリスト</value>
+    <value>ライブラリ間同期の前にプレイリストのエクスポート先を消去</value>
   </data>
   <data name="Settings.Playlists.CleanupTitle" xml:space="preserve">
-    <value>クロス同期 クリーンアップ</value>
+    <value>ライブラリ間同期のクリーンアップ</value>
   </data>
   <data name="Settings.Playlists.Container" xml:space="preserve">
     <value>コンテナー</value>
   </data>
   <data name="Settings.Playlists.DeleteStale" xml:space="preserve">
-    <value>完全に 削除 古い クロス同期 音楽 ファイル 代わりに の 隔離 それら</value>
+    <value>ライブラリ間同期で不要になった音楽ファイルを隔離せず完全に削除</value>
   </data>
   <data name="Settings.Playlists.EnableExportTooltip" xml:space="preserve">
-    <value>有効化 エクスポート プロファイル</value>
+    <value>エクスポートプロファイルを有効化</value>
   </data>
   <data name="Settings.Playlists.Encoding" xml:space="preserve">
     <value>エンコーディング</value>
   </data>
   <data name="Settings.Playlists.ExportProfilesDescription" xml:space="preserve">
-    <value>結合 選択, 変換, 命名, アートワーク/プレイリスト, 転送, および 照合. プロファイル 維持 非表示 まで 有効 および 構成済み.</value>
+    <value>選択、変換、命名、アートワークとプレイリスト、転送、照合を組み合わせます。プロファイルは有効にして設定するまで表示されません。</value>
   </data>
   <data name="Settings.Playlists.ExportProfilesTitle" xml:space="preserve">
-    <value>エクスポート プロファイル</value>
+    <value>エクスポートプロファイル</value>
   </data>
   <data name="Settings.Playlists.Extinf" xml:space="preserve">
     <value>EXTINF</value>
   </data>
   <data name="Settings.Playlists.FileNameTransform" xml:space="preserve">
-    <value>ファイル名 変換</value>
+    <value>ファイル名の変換</value>
   </data>
   <data name="Settings.Playlists.FormatAutomation" xml:space="preserve">
-    <value>プレイリスト エクスポート 形式</value>
+    <value>プレイリストのエクスポート形式</value>
   </data>
   <data name="Settings.Playlists.FrontCoverOnly" xml:space="preserve">
-    <value>前面 カバー のみ</value>
+    <value>フロントカバーのみ</value>
   </data>
   <data name="Settings.Playlists.GeneratedTransport" xml:space="preserve">
-    <value>生成 プレイリスト および 転送</value>
+    <value>生成するプレイリストと転送</value>
   </data>
   <data name="Settings.Playlists.GeneratePlaylists" xml:space="preserve">
-    <value>生成 プレイリスト</value>
+    <value>プレイリストを生成</value>
   </data>
   <data name="Settings.Playlists.LineEndings" xml:space="preserve">
-    <value>行 終端</value>
+    <value>改行コード</value>
   </data>
   <data name="Settings.Playlists.MaximumRemovals" xml:space="preserve">
-    <value>最大 削除</value>
+    <value>最大削除数</value>
   </data>
   <data name="Settings.Playlists.MaximumTracks" xml:space="preserve">
-    <value>最大 トラック</value>
+    <value>最大トラック数</value>
   </data>
   <data name="Settings.Playlists.MaxTracksPlaceholder" xml:space="preserve">
-    <value>最大 トラック</value>
+    <value>最大トラック数</value>
   </data>
   <data name="Settings.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>プレイリスト名</value>
+    <value>例: お気に入り</value>
   </data>
   <data name="Settings.Playlists.NamingArtwork" xml:space="preserve">
-    <value>命名 および アートワーク</value>
+    <value>命名とアートワーク</value>
   </data>
   <data name="Settings.Playlists.NamingProfileId" xml:space="preserve">
-    <value>ライブラリ 命名 プロファイル ID</value>
+    <value>ライブラリ命名プロファイル ID</value>
   </data>
   <data name="Settings.Playlists.PathStyle" xml:space="preserve">
-    <value>パス スタイル</value>
+    <value>パス形式</value>
   </data>
   <data name="Settings.Playlists.PreserveArtworkEncoding" xml:space="preserve">
-    <value>保持 アートワーク エンコーディング</value>
+    <value>アートワークのエンコーディングを保持</value>
   </data>
   <data name="Settings.Playlists.PreserveSourceLayout" xml:space="preserve">
-    <value>保持 ソース レイアウト</value>
+    <value>ソースの構成を保持</value>
   </data>
   <data name="Settings.Playlists.RecipeId" xml:space="preserve">
     <value>レシピ ID</value>
@@ -2473,13 +2473,13 @@
     <value>再帰的</value>
   </data>
   <data name="Settings.Playlists.RelativePaths" xml:space="preserve">
-    <value>相対 パス</value>
+    <value>相対パス</value>
   </data>
   <data name="Settings.Playlists.RemoveEmptyDirectories" xml:space="preserve">
-    <value>削除 空 ディレクトリ</value>
+    <value>空のディレクトリを削除</value>
   </data>
   <data name="Settings.Playlists.ReplaceChanged" xml:space="preserve">
-    <value>置換 変更済み ファイル</value>
+    <value>変更されたファイルを置換</value>
   </data>
   <data name="Settings.Playlists.SavedViewQuery" xml:space="preserve">
     <value>保存済みビューのクエリ</value>
@@ -2488,28 +2488,28 @@
     <value>選択</value>
   </data>
   <data name="Settings.Playlists.SelectionTransform" xml:space="preserve">
-    <value>選択 および 変換</value>
+    <value>選択と変換</value>
   </data>
   <data name="Settings.Playlists.SelectionValues" xml:space="preserve">
-    <value>値 (プレイリスト, ビュー, または パス)</value>
+    <value>値（プレイリスト、ビュー、パス）</value>
   </data>
   <data name="Settings.Playlists.SetsAutomation" xml:space="preserve">
-    <value>プレイリスト エクスポート 設定</value>
+    <value>プレイリストのエクスポートに使用するスキャンセット</value>
   </data>
   <data name="Settings.Playlists.SetsPlaceholder" xml:space="preserve">
-    <value>スキャン 設定</value>
+    <value>例: お気に入り、最近</value>
   </data>
   <data name="Settings.Playlists.SourceAutomation" xml:space="preserve">
-    <value>ファイル プレイリスト ソース</value>
+    <value>ファイルベースのプレイリストのソース</value>
   </data>
   <data name="Settings.Playlists.SourcePlaceholder" xml:space="preserve">
-    <value>プレイリスト ファイル または ディレクトリ</value>
+    <value>例: playlists/favorites.m3u8</value>
   </data>
   <data name="Settings.Playlists.SourcesDescription" xml:space="preserve">
-    <value>使用 M3U/M3U8 ファイル または ディレクトリ 場合 いいえ iTunes カタログ です 構成済み.</value>
+    <value>iTunes カタログが設定されていない場合は、M3U/M3U8 ファイルまたはディレクトリを使用します。</value>
   </data>
   <data name="Settings.Playlists.SourcesTitle" xml:space="preserve">
-    <value>ファイル プレイリスト ソース</value>
+    <value>ファイルベースのプレイリストのソース</value>
   </data>
   <data name="Settings.Playlists.SyncNameAutomation" xml:space="preserve">
     <value>同期するプレイリスト名</value>
@@ -2524,67 +2524,73 @@
     <value>ライブラリ間同期の出力先</value>
   </data>
   <data name="Settings.Playlists.SyncTitle" xml:space="preserve">
-    <value>同期 プレイリスト</value>
+    <value>プレイリストを同期</value>
   </data>
   <data name="Settings.Playlists.TargetAutomation" xml:space="preserve">
-    <value>プレイリスト エクスポート 対象</value>
+    <value>プレイリストのエクスポート先</value>
   </data>
   <data name="Settings.Playlists.TargetPlaceholder" xml:space="preserve">
-    <value>対象</value>
+    <value>例: プレイリスト</value>
   </data>
   <data name="Settings.Playlists.TargetsTitle" xml:space="preserve">
-    <value>プレイリスト エクスポート 対象</value>
+    <value>プレイリストのエクスポート先</value>
   </data>
   <data name="Settings.Playlists.Transform" xml:space="preserve">
     <value>変換</value>
   </data>
   <data name="Settings.Playlists.TransformProvider" xml:space="preserve">
-    <value>変換 プロバイダー</value>
+    <value>変換プロバイダー</value>
+  </data>
+  <data name="Settings.Playlists.TransportProvider" xml:space="preserve">
+    <value>転送プロバイダー</value>
+  </data>
+  <data name="Settings.Playlists.TransportOptions" xml:space="preserve">
+    <value>転送オプション</value>
   </data>
   <data name="Settings.Playlists.TransportDestinationPlaceholder" xml:space="preserve">
-    <value>転送先</value>
+    <value>例: 音楽</value>
   </data>
   <data name="Settings.Playlists.TransportOptionsPlaceholder" xml:space="preserve">
-    <value>オプション=値; オプション2=値</value>
+    <value>option=value; option2=value</value>
   </data>
   <data name="Settings.Playlists.TransportProviderPlaceholder" xml:space="preserve">
-    <value>転送プロバイダー（ローカルファイルシステム）</value>
+    <value>例: local-filesystem</value>
   </data>
   <data name="Settings.Playlists.UseNamingCollision" xml:space="preserve">
     <value>命名プロファイルの競合規則を使用</value>
   </data>
   <data name="Settings.Playlists.WriteBom" xml:space="preserve">
-    <value>書き込む BOM</value>
+    <value>BOM を書き込む</value>
   </data>
   <data name="Settings.Playlists.WriteExtinf" xml:space="preserve">
-    <value>書き込む EXTINF</value>
+    <value>EXTINF を書き込む</value>
   </data>
   <data name="Settings.Playlists.WritePlaylistBom" xml:space="preserve">
-    <value>書き込む プレイリスト BOM</value>
+    <value>プレイリストに BOM を書き込む</value>
   </data>
   <data name="Settings.Tools.AcoustIdDescription" xml:space="preserve">
     <value>AcoustID で検索するにはアプリケーションのクライアントキーが必要です。この個人設定はポータブルライブラリの XML には保存されません。検索時にフィンガープリントは送信されません。</value>
   </data>
   <data name="Settings.Tools.AcoustIdKey" xml:space="preserve">
-    <value>AcoustID アプリケーション クライアント キー</value>
+    <value>AcoustID アプリケーションクライアントキー</value>
   </data>
   <data name="Settings.Tools.Bindings" xml:space="preserve">
-    <value>コンピューター固有のバインディング補助ファイル（任意）</value>
+    <value>コンピューター固有のバインドファイル（任意）</value>
   </data>
   <data name="Settings.Tools.BindingsAutomation" xml:space="preserve">
-    <value>コンピューター固有のバインディング補助ファイル</value>
+    <value>コンピューター固有のバインドファイル</value>
   </data>
   <data name="Settings.Tools.BindingsPlaceholder" xml:space="preserve">
-    <value>保持 ポータブル ポリシー 分離 から ルート および ツール パス</value>
+    <value>library.bindings.xml</value>
   </data>
   <data name="Settings.Tools.Database" xml:space="preserve">
-    <value>メタデータ データベース</value>
+    <value>メタデータデータベース</value>
   </data>
   <data name="Settings.Tools.DiscogsDescription" xml:space="preserve">
     <value>Discogs の検索には個人用アクセストークンが必要です。利用可能な場合はオペレーティングシステムの資格情報サービスに保存され、利用できない場合はセッション中だけ保持されます。</value>
   </data>
   <data name="Settings.Tools.DiscogsToken" xml:space="preserve">
-    <value>Discogs 個人 アクセス トークン</value>
+    <value>Discogs 個人用アクセストークン</value>
   </data>
   <data name="Settings.Tools.DiscogsTokenPlaceholder" xml:space="preserve">
     <value>保存する新しいトークンを入力</value>
@@ -2596,7 +2602,7 @@
     <value>FFmpeg 実行ファイル</value>
   </data>
   <data name="Settings.Tools.Fpcalc" xml:space="preserve">
-    <value>Chromaprint fpcalc (個人 コンピューター 設定)</value>
+    <value>Chromaprint fpcalc（コンピューター固有）</value>
   </data>
   <data name="Settings.Tools.FpcalcAutomation" xml:space="preserve">
     <value>Chromaprint fpcalc 実行ファイル</value>
@@ -2605,28 +2611,28 @@
     <value>iTunes ライブラリ</value>
   </data>
   <data name="Settings.Tools.OfflineMode" xml:space="preserve">
-    <value>オフライン モード — 使用 キャッシュ済み プロバイダー データ のみ</value>
+    <value>オフラインモード — キャッシュ済みのプロバイダーデータのみ使用</value>
   </data>
   <data name="Settings.Tools.OfflineModeAutomation" xml:space="preserve">
-    <value>使用 キャッシュ済み メタデータ プロバイダー オフライン</value>
+    <value>オフライン時にキャッシュ済みのプロバイダーデータを使用</value>
   </data>
   <data name="Settings.Tools.OnlineMetadata" xml:space="preserve">
     <value>オンラインメタデータ</value>
   </data>
   <data name="Settings.Tools.OptimFrog" xml:space="preserve">
-    <value>OptimFROG ツール ディレクトリ (任意 フィンガープリント デコーダー)</value>
+    <value>OptimFROG ツールフォルダー（任意のフィンガープリントデコーダー）</value>
   </data>
   <data name="Settings.Tools.OptimFrogAutomation" xml:space="preserve">
-    <value>OptimFROG ツール ディレクトリ</value>
+    <value>OptimFROG ツールフォルダー</value>
   </data>
   <data name="Settings.Tools.OptimFrogPlaceholder" xml:space="preserve">
-    <value>ディレクトリ 含む ofr, ofs, および off</value>
+    <value>ofr、ofs、off を含むフォルダー</value>
   </data>
   <data name="Settings.Tools.StoreToken" xml:space="preserve">
-    <value>保存 トークン</value>
+    <value>トークンを保存</value>
   </data>
   <data name="Settings.Tools.Title" xml:space="preserve">
-    <value>キャッシュ および ツール パス</value>
+    <value>キャッシュとツールのパス</value>
   </data>
   <data name="Settings.Tools.Wavpack" xml:space="preserve">
     <value>WavPack</value>
@@ -2674,43 +2680,43 @@
     <value>自動修復の目標値</value>
   </data>
   <data name="Settings.RootPolicy.AddSidecarRule" xml:space="preserve">
-    <value>追加 サイドカー ルール</value>
+    <value>サイドカールールを追加</value>
   </data>
   <data name="Settings.RootPolicy.Apply" xml:space="preserve">
-    <value>適用</value>
+    <value>修復を適用</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkRoles" xml:space="preserve">
-    <value>役割</value>
+    <value>アートワークの役割</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkStorage" xml:space="preserve">
-    <value>ストレージ</value>
+    <value>アートワークの保存方法</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
     <value>組み込みポリシーは保護されています。カスタマイズするには複製してください。ポリシーは「ライブラリのルート」タブでルートに割り当てます。</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
-    <value>これら 設定 変更 命名, メタデータ, アートワーク, 健全性, および サイドカー 動作 用 すべての ルート 使用 この プロファイル. 既存 プレビュー なる 無効 および 必要です する 再生成済み.</value>
+    <value>この設定は、このプロファイルを使用するすべてのルートの命名、メタデータ、アートワーク、健全性チェック、サイドカーの動作を変更します。既存のプレビューは無効になり、再生成が必要です。</value>
   </data>
   <data name="Settings.RootPolicy.CompilationToken" xml:space="preserve">
-    <value>コンピレーショントークン</value>
+    <value>コンピレーション名</value>
   </data>
   <data name="Settings.RootPolicy.CompletePathLimit" xml:space="preserve">
-    <value>フルパスの制限（空欄 = プラットフォームの既定値）</value>
+    <value>フルパスの最大長（空欄 = プラットフォームの既定値）</value>
   </data>
   <data name="Settings.RootPolicy.ComponentLimit" xml:space="preserve">
-    <value>コンポーネント 制限 (従来 LengthLimit)</value>
+    <value>パス構成要素の最大長（従来の識別子: LengthLimit）</value>
   </data>
   <data name="Settings.RootPolicy.DiscAlbumLimit" xml:space="preserve">
-    <value>ディスク-アルバム 制限 (従来 DiscNumLengthLimit)</value>
+    <value>ディスク付きアルバム名の最大長（従来の識別子: DiscNumLengthLimit）</value>
   </data>
   <data name="Settings.RootPolicy.DiscIdentityTitle" xml:space="preserve">
-    <value>ディスク および アルバム 識別</value>
+    <value>ディスクとアルバムの識別</value>
   </data>
   <data name="Settings.RootPolicy.DiscPadding" xml:space="preserve">
-    <value>ディスク パディング</value>
+    <value>ディスク番号の桁埋め</value>
   </data>
   <data name="Settings.RootPolicy.DiscStrategy" xml:space="preserve">
-    <value>ディスク 方式</value>
+    <value>ディスク方式</value>
   </data>
   <data name="Settings.RootPolicy.DiscStrategyDescription" xml:space="preserve">
     <value>ディスク方式は出力先での表現方法です。「タグを保持」ではディスクのメタデータを維持します。それ以外の方式ではタグを削除し、アルバム、フォルダー、ファイル名、または連続したトラック番号でディスクを表します。</value>
@@ -2719,10 +2725,13 @@
     <value>プロファイルのファイル名テンプレート</value>
   </data>
   <data name="Settings.RootPolicy.FolderTemplateAutomation" xml:space="preserve">
-    <value>プロファイル フォルダー テンプレート</value>
+    <value>プロファイルのフォルダーテンプレート</value>
   </data>
   <data name="Settings.RootPolicy.HealthRules" xml:space="preserve">
-    <value>健全性 ルール</value>
+    <value>健全性ルール</value>
+  </data>
+  <data name="Settings.RootPolicy.HealthSeverity" xml:space="preserve">
+    <value>重大度</value>
   </data>
   <data name="Settings.RootPolicy.HighResolutionBitDepth" xml:space="preserve">
     <value>ハイレゾのビット深度</value>
@@ -2731,88 +2740,88 @@
     <value>ハイレゾのサンプルレート（Hz）</value>
   </data>
   <data name="Settings.RootPolicy.IdentityIncludesYear" xml:space="preserve">
-    <value>識別 含む リリース 年</value>
+    <value>識別情報にリリース年を含める</value>
   </data>
   <data name="Settings.RootPolicy.IdentityStripsDisc" xml:space="preserve">
-    <value>識別 除去 ディスク N 接尾辞</value>
+    <value>識別時に「Disc N」接尾辞を削除</value>
   </data>
   <data name="Settings.RootPolicy.IdentityStripsFormat" xml:space="preserve">
-    <value>識別 除去 形式 接尾辞</value>
+    <value>識別時に形式の接尾辞を削除</value>
   </data>
   <data name="Settings.RootPolicy.IdentityUsesAlbumArtist" xml:space="preserve">
-    <value>識別 使用します アルバムアーティスト</value>
+    <value>識別にアルバムアーティストを使用</value>
   </data>
   <data name="Settings.RootPolicy.InferLegacySuffixes" xml:space="preserve">
-    <value>推測 従来 アルバム 接尾辞</value>
+    <value>従来のアルバム接尾辞を推測</value>
   </data>
   <data name="Settings.RootPolicy.InvalidCharacterReplacement" xml:space="preserve">
     <value>無効な文字の置換</value>
   </data>
   <data name="Settings.RootPolicy.ItunesCanonicalNaming" xml:space="preserve">
-    <value>iTunes 正規 命名</value>
+    <value>iTunes の標準命名</value>
   </data>
   <data name="Settings.RootPolicy.JpegQuality" xml:space="preserve">
     <value>JPEG 品質</value>
   </data>
   <data name="Settings.RootPolicy.MaximumBytesUnlimited" xml:space="preserve">
-    <value>最大 バイト (0 = 無制限)</value>
+    <value>最大バイト数（0 = 無制限）</value>
   </data>
   <data name="Settings.RootPolicy.MaximumDimensionUnlimited" xml:space="preserve">
-    <value>最大寸法 (0 = 無制限)</value>
+    <value>最大寸法（0 = 無制限）</value>
   </data>
   <data name="Settings.RootPolicy.MetadataTitle" xml:space="preserve">
-    <value>メタデータ 忠実度</value>
+    <value>メタデータの忠実度</value>
   </data>
   <data name="Settings.RootPolicy.MissingAlbum" xml:space="preserve">
-    <value>不足 アルバム</value>
+    <value>アルバムがない場合の代替値</value>
   </data>
   <data name="Settings.RootPolicy.MissingArtist" xml:space="preserve">
-    <value>不足 アーティスト</value>
+    <value>アーティストがない場合の代替値</value>
   </data>
   <data name="Settings.RootPolicy.MissingTitle" xml:space="preserve">
-    <value>不足 タイトル</value>
+    <value>タイトルがない場合の代替値</value>
   </data>
   <data name="Settings.RootPolicy.NamingTitle" xml:space="preserve">
-    <value>命名 および 競合</value>
+    <value>命名と競合</value>
   </data>
   <data name="Settings.RootPolicy.PreserveCompilation" xml:space="preserve">
-    <value>保持 コンピレーション 意味</value>
+    <value>コンピレーションの意味を保持</value>
   </data>
   <data name="Settings.RootPolicy.PreserveCustomFields" xml:space="preserve">
-    <value>保持 カスタム フィールド</value>
+    <value>カスタムフィールドを保持</value>
   </data>
   <data name="Settings.RootPolicy.PreserveMusicBrainz" xml:space="preserve">
-    <value>保持 MusicBrainz 識別子</value>
+    <value>MusicBrainz 識別子を保持</value>
   </data>
   <data name="Settings.RootPolicy.PreserveReplayGain" xml:space="preserve">
-    <value>保持 ReplayGain</value>
+    <value>ReplayGain を保持</value>
   </data>
   <data name="Settings.RootPolicy.PreserveUnicode" xml:space="preserve">
-    <value>保持 Unicode</value>
+    <value>Unicode を保持</value>
   </data>
   <data name="Settings.RootPolicy.ProfileName" xml:space="preserve">
     <value>プロファイル名</value>
   </data>
   <data name="Settings.RootPolicy.ProfileTitle" xml:space="preserve">
-    <value>ルート ポリシー プロファイル</value>
+    <value>ライブラリポリシープロファイル</value>
   </data>
   <data name="Settings.RootPolicy.Propose" xml:space="preserve">
-    <value>提案</value>
+    <value>修復を提案</value>
   </data>
   <data name="Settings.RootPolicy.QualityTitle" xml:space="preserve">
-    <value>品質 分類</value>
+    <value>品質分類</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkAtIndex" xml:space="preserve">
-    <value>読み取る 埋め込み アートワーク 中 インデックス作成中</value>
+    <value>インデックス作成中に埋め込みアートワークを読み取る</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkDescription" xml:space="preserve">
     <value>有効にすると、インデックス作成に時間がかかり、キャッシュの使用量も増えますが、アートワークを参照や監査ですぐに利用できます。無効にすると、アートワークは表示または監査するときにだけ読み取られます。</value>
   </data>
   <data name="Settings.RootPolicy.SelectAutomation" xml:space="preserve">
-    <value>ルート/命名 ポリシー プロファイル</value>
+    <value>ライブラリポリシープロファイル</value>
   </data>
   <data name="Settings.RootPolicy.SelectLabel" xml:space="preserve">
-    <value>ルート/命名 ポリシー</value>
+    <value>ライブラリポリシープロファイル</value>
   </data>
   <data name="Settings.RootPolicy.SidecarPatternsPlaceholder" xml:space="preserve">
     <value>*.cue, *.pdf</value>
@@ -2821,13 +2830,13 @@
     <value>サイドカーと不明なファイルのルール</value>
   </data>
   <data name="Settings.RootPolicy.SidecarTemplate" xml:space="preserve">
-    <value>サイドカー テンプレート</value>
+    <value>アートワークのサイドカーテンプレート</value>
   </data>
   <data name="Settings.RootPolicy.SummaryAutomation" xml:space="preserve">
-    <value>有効 ライブラリ ポリシー 概要</value>
+    <value>有効なライブラリポリシーの概要</value>
   </data>
   <data name="Settings.RootPolicy.TrackPadding" xml:space="preserve">
-    <value>トラック パディング</value>
+    <value>トラック番号の桁埋め</value>
   </data>
   <data name="Settings.RootPolicy.TrackTotalScope" xml:space="preserve">
     <value>トラック総数の範囲</value>
@@ -2839,49 +2848,49 @@
     <value>不明なファイルの処理</value>
   </data>
   <data name="Settings.Ingest.AcceptedExtensions" xml:space="preserve">
-    <value>受け入れ済み 拡張子</value>
+    <value>ソースファイルの拡張子</value>
   </data>
   <data name="Settings.Ingest.Action" xml:space="preserve">
     <value>アクション</value>
   </data>
   <data name="Settings.Ingest.ActiveProfile" xml:space="preserve">
-    <value>有効 取り込み プロファイル</value>
+    <value>有効な取り込みプロファイル</value>
   </data>
   <data name="Settings.Ingest.AddRecipe" xml:space="preserve">
-    <value>追加 レシピ</value>
+    <value>レシピを追加</value>
   </data>
   <data name="Settings.Ingest.AddToCatalog" xml:space="preserve">
-    <value>追加 出力 へ 構成済み メディア カタログ</value>
+    <value>出力を設定済みのメディアカタログに追加</value>
   </data>
   <data name="Settings.Ingest.AlbumMatch" xml:space="preserve">
-    <value>アルバム 一致</value>
+    <value>アルバム条件</value>
   </data>
   <data name="Settings.Ingest.Bitrate" xml:space="preserve">
-    <value>ビットレート (kbps; あたり レシピ)</value>
+    <value>ビットレート (kbps、レシピごと)</value>
   </data>
   <data name="Settings.Ingest.CleanupDescription" xml:space="preserve">
     <value>上のソース処理設定は元のオーディオをどのように扱うかを制御します。これらの互換性オプションは、取り込みが正常に完了した後にのみ適用されます。</value>
   </data>
   <data name="Settings.Ingest.CleanupTitle" xml:space="preserve">
-    <value>クリーンアップ 変更後 取り込み</value>
+    <value>取り込み後のクリーンアップ</value>
   </data>
   <data name="Settings.Ingest.DeleteSourceMusic" xml:space="preserve">
-    <value>削除 ソース 音楽 変更後 成功 取り込み</value>
+    <value>取り込み成功後にソース音楽を削除</value>
   </data>
   <data name="Settings.Ingest.DestinationRoot" xml:space="preserve">
-    <value>宛先 ルート</value>
+    <value>保存先ルート</value>
   </data>
   <data name="Settings.Ingest.DestinationRootAutomation" xml:space="preserve">
-    <value>取り込み レシピ 宛先 ルート</value>
+    <value>取り込みレシピの保存先ルート</value>
   </data>
   <data name="Settings.Ingest.DisplayNamePlaceholder" xml:space="preserve">
     <value>表示名</value>
   </data>
   <data name="Settings.Ingest.EnableRecipes" xml:space="preserve">
-    <value>有効化 取り込み レシピ</value>
+    <value>取り込みレシピを有効化</value>
   </data>
   <data name="Settings.Ingest.EnableRecipeTooltip" xml:space="preserve">
-    <value>有効化 レシピ</value>
+    <value>ソースファイルの照合時にこのレシピを使用します。</value>
   </data>
   <data name="Settings.Ingest.Encoder" xml:space="preserve">
     <value>エンコーダー (空白 = 自動)</value>
@@ -2890,79 +2899,79 @@
     <value>.flac, .m4a</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegAutomation" xml:space="preserve">
-    <value>追加 FFmpeg オプション</value>
+    <value>追加の FFmpeg オプション</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegOptions" xml:space="preserve">
-    <value>追加 FFmpeg オプション (トランスコード のみ)</value>
+    <value>追加の FFmpeg オプション（トランスコードのみ）</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegPlaceholder" xml:space="preserve">
-    <value>用 例: -af "loudnorm=I=-16:LRA=11"</value>
+    <value>例: -af "loudnorm=I=-16:LRA=11"</value>
   </data>
   <data name="Settings.Ingest.InputChannels" xml:space="preserve">
     <value>入力チャンネル</value>
   </data>
   <data name="Settings.Ingest.LosslessMatch" xml:space="preserve">
-    <value>可逆 一致 (不確定 = 任意)</value>
+    <value>可逆圧縮の要件（混合状態 = 任意）</value>
   </data>
   <data name="Settings.Ingest.MatchedSourceSelection" xml:space="preserve">
-    <value>一致 ソース 選択</value>
+    <value>一致したソースの選択</value>
   </data>
   <data name="Settings.Ingest.MatchEitherQuality" xml:space="preserve">
-    <value>一致 いずれか 品質 最小</value>
+    <value>サンプルレートまたはビット深度の最小値に一致</value>
   </data>
   <data name="Settings.Ingest.MinimumBitDepth" xml:space="preserve">
-    <value>最小 ビット 深度</value>
+    <value>最小ビット深度</value>
   </data>
   <data name="Settings.Ingest.MinimumSampleRate" xml:space="preserve">
-    <value>最小 サンプルレート</value>
+    <value>最小サンプルレート</value>
   </data>
   <data name="Settings.Ingest.OutputBitDepth" xml:space="preserve">
-    <value>出力 ビット 深度</value>
+    <value>出力ビット深度</value>
   </data>
   <data name="Settings.Ingest.OutputChannels" xml:space="preserve">
-    <value>出力 チャンネル</value>
+    <value>出力チャンネル</value>
   </data>
   <data name="Settings.Ingest.OutputExtension" xml:space="preserve">
     <value>出力拡張子</value>
   </data>
   <data name="Settings.Ingest.OutputExtensionPlaceholder" xml:space="preserve">
-    <value>用 例 .flac</value>
+    <value>例: .flac</value>
   </data>
   <data name="Settings.Ingest.OutputSampleRate" xml:space="preserve">
-    <value>出力 サンプルレート</value>
+    <value>出力サンプルレート</value>
   </data>
   <data name="Settings.Ingest.PreserveArtwork" xml:space="preserve">
-    <value>保持 アートワーク</value>
+    <value>アートワークを保持</value>
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
-    <value>保持 メタデータ</value>
+    <value>メタデータを保持</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
-    <value>保持 サイドカー による 既定</value>
+    <value>既定でサイドカーファイルを保持</value>
   </data>
   <data name="Settings.Ingest.ProfileName" xml:space="preserve">
     <value>取り込みプロファイル名</value>
   </data>
   <data name="Settings.Ingest.RecipeIdPlaceholder" xml:space="preserve">
-    <value>安定 レシピ ID</value>
+    <value>固定レシピ ID</value>
   </data>
   <data name="Settings.Ingest.RemoveNonMusic" xml:space="preserve">
-    <value>削除 音楽以外 ファイル 変更後 成功 取り込み</value>
+    <value>取り込み成功後に音楽以外のファイルを削除</value>
   </data>
   <data name="Settings.Ingest.RequireFallbackApproval" xml:space="preserve">
-    <value>必須 承認 場合 一致 CD です 不足</value>
+    <value>一致する CD 音質のソースがない場合は承認を要求</value>
   </data>
   <data name="Settings.Ingest.RequireLossless" xml:space="preserve">
-    <value>必須 可逆</value>
+    <value>可逆圧縮を必須にする</value>
   </data>
   <data name="Settings.Ingest.SourceDisposition" xml:space="preserve">
     <value>ソースの処理</value>
   </data>
   <data name="Settings.Ingest.Title" xml:space="preserve">
-    <value>取り込み プロファイル および レシピ</value>
+    <value>取り込みプロファイルとレシピ</value>
   </data>
   <data name="Settings.Ingest.UseRootCollision" xml:space="preserve">
-    <value>使用 宛先 ルート 競合 動作</value>
+    <value>保存先ルートの競合処理を使用</value>
   </data>
   <data name="Settings.EffectivePolicy.Description" xml:space="preserve">
     <value>すべてのプレビューに適用される動作を確認します。オフラインのパスは警告になり、無効なポリシー参照や矛盾するアクセス許可があると保存できません。</value>
@@ -3019,34 +3028,34 @@
     <value>標準フィールドからネイティブフィールドへのマッピング</value>
   </data>
   <data name="Settings.DestinationRoot.Missing" xml:space="preserve">
-    <value>不足 ルート ({0:D})</value>
+    <value>見つからないルート ({0:D})</value>
   </data>
   <data name="Settings.DestinationRoot.NewRoot" xml:space="preserve">
-    <value>新規 ライブラリ ルート</value>
+    <value>新しいライブラリルート</value>
   </data>
   <data name="Settings.DestinationRoot.None" xml:space="preserve">
-    <value>いいえ 直接 ルート</value>
+    <value>直接ルートなし</value>
   </data>
   <data name="Settings.SyncTarget.NewRoot" xml:space="preserve">
-    <value>新規 ライブラリ ルート</value>
+    <value>新しいライブラリルート</value>
   </data>
   <data name="Settings.SyncTarget.None" xml:space="preserve">
-    <value>いいえ 同期 対象</value>
+    <value>同期先なし</value>
   </data>
   <data name="Settings.Permissions.Action.Artwork" xml:space="preserve">
-    <value>編集 アートワーク</value>
+    <value>アートワークの編集</value>
   </data>
   <data name="Settings.Permissions.Action.Ingest" xml:space="preserve">
-    <value>書き込む 取り込み 結果</value>
+    <value>取り込み結果の書き込み</value>
   </data>
   <data name="Settings.Permissions.Action.Metadata" xml:space="preserve">
-    <value>編集 メタデータ</value>
+    <value>メタデータの編集</value>
   </data>
   <data name="Settings.Permissions.Action.Organize" xml:space="preserve">
-    <value>名前変更 および 移動 ファイル</value>
+    <value>ファイル名の変更と移動</value>
   </data>
   <data name="Settings.Permissions.Action.Sync" xml:space="preserve">
-    <value>書き込む 同期 コピー</value>
+    <value>同期済みコピーの書き込み</value>
   </data>
   <data name="Settings.Permissions.Artwork" xml:space="preserve">
     <value>アートワーク</value>
@@ -3055,220 +3064,220 @@
     <value>カタログのみ（読み取り専用）</value>
   </data>
   <data name="Settings.Permissions.Description.ReadOnly" xml:space="preserve">
-    <value>対象の アプリ のみ カタログ この フォルダー および します ではない 変更 その ファイル.</value>
+    <value>このフォルダーはカタログに登録されるだけで、アプリがファイルを変更することはありません。</value>
   </data>
   <data name="Settings.Permissions.Description.Writable" xml:space="preserve">
-    <value>対象の アプリ 可能です {0} 内 この フォルダー.</value>
+    <value>アプリはこのフォルダー内で次の操作を実行できます: {0}。</value>
   </data>
   <data name="Settings.Permissions.IngestOutput" xml:space="preserve">
-    <value>取り込み 出力</value>
+    <value>取り込み出力</value>
   </data>
   <data name="Settings.Permissions.Metadata" xml:space="preserve">
     <value>メタデータ</value>
   </data>
   <data name="Settings.Permissions.Organization" xml:space="preserve">
-    <value>整理</value>
+    <value>ファイル整理</value>
   </data>
   <data name="Settings.Permissions.Summary.Allowed" xml:space="preserve">
-    <value>許可 変更: {0}</value>
+    <value>許可される変更: {0}</value>
   </data>
   <data name="Settings.Permissions.Summary.ReadOnly" xml:space="preserve">
     <value>カタログのみ: このルートは読み取り専用です。</value>
   </data>
   <data name="Settings.Permissions.SyncOutput" xml:space="preserve">
-    <value>同期 出力</value>
+    <value>同期出力</value>
   </data>
   <data name="Settings.Discogs.Checking" xml:space="preserve">
-    <value>確認中 安全 資格情報 ストレージ…</value>
+    <value>安全な資格情報ストレージを確認しています…</value>
   </data>
   <data name="Settings.Discogs.ClearFailed" xml:space="preserve">
-    <value>可能でした ではない クリア 対象の Discogs トークン: {0}</value>
+    <value>Discogs トークンを消去できませんでした: {0}</value>
   </data>
   <data name="Settings.Discogs.EnterToken" xml:space="preserve">
     <value>Discogs の個人用アクセストークンを入力してください。</value>
   </data>
   <data name="Settings.Discogs.ExistsPersistent" xml:space="preserve">
-    <value>1つの Discogs トークン です 保存済み 内 {0}.</value>
+    <value>Discogs トークンは {0} に保存されています。</value>
   </data>
   <data name="Settings.Discogs.ExistsSession" xml:space="preserve">
-    <value>1つの Discogs トークン です 保存済み 用 この アプリケーション セッション のみ.</value>
+    <value>Discogs トークンは、このアプリケーションセッション中だけ保存されます。</value>
   </data>
   <data name="Settings.Discogs.NoneStored" xml:space="preserve">
-    <value>いいえ Discogs トークン です 保存済み.</value>
+    <value>Discogs トークンは保存されていません。</value>
   </data>
   <data name="Settings.Discogs.StoredPersistent" xml:space="preserve">
-    <value>Discogs トークン 保存済み 内 {0}.</value>
+    <value>Discogs トークンを {0} に保存しました。</value>
   </data>
   <data name="Settings.Discogs.StoredSession" xml:space="preserve">
-    <value>Discogs トークン 保存済み 用 この アプリケーション セッション のみ.</value>
+    <value>Discogs トークンをこのアプリケーションセッション中だけ保存しました。</value>
   </data>
   <data name="Settings.Discogs.StoreFailed" xml:space="preserve">
-    <value>可能でした ではない 保存 対象の Discogs トークン: {0}</value>
+    <value>Discogs トークンを保存できませんでした: {0}</value>
   </data>
   <data name="Settings.Discogs.Unavailable" xml:space="preserve">
-    <value>安全 資格情報 ストレージ です 利用不可: {0}</value>
+    <value>安全な資格情報ストレージを利用できません: {0}</value>
   </data>
   <data name="Settings.Dialog.Discard.Accept" xml:space="preserve">
-    <value>破棄 変更</value>
+    <value>変更を破棄</value>
   </data>
   <data name="Settings.Dialog.Discard.Message" xml:space="preserve">
-    <value>対象の ライブラリ 構成 あります 変更 その あります ではない 済み 保存済み.</value>
+    <value>ライブラリ構成には未保存の変更があります。</value>
   </data>
   <data name="Settings.Dialog.Discard.Title" xml:space="preserve">
-    <value>破棄 未保存 構成 変更?</value>
+    <value>未保存の構成変更を破棄しますか？</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Accept" xml:space="preserve">
-    <value>削除 プロファイル</value>
+    <value>プロファイルを削除</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Message" xml:space="preserve">
-    <value>{0} この できません する 元に戻した 変更後 保存.</value>
+    <value>{0} 保存後は元に戻せません。</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.NoReferences" xml:space="preserve">
-    <value>それ あります いいえ 構成済み 参照.</value>
+    <value>構成済みの参照はありません。</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Reassignment" xml:space="preserve">
-    <value>{0} および {1} します する 再割り当て へ '{2}'.</value>
+    <value>{0} と {1} は「{2}」に再割り当てされます。</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.RootReferences.One" xml:space="preserve">
-    <value>{0:N0} ルート 参照</value>
+    <value>{0:N0} 件のルート参照</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.RootReferences.Other" xml:space="preserve">
-    <value>{0:N0} ルート 参照</value>
+    <value>{0:N0} 件のルート参照</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Title" xml:space="preserve">
-    <value>削除 プロファイル '{0}'?</value>
+    <value>プロファイル「{0}」を削除しますか？</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.WorkflowReferences.One" xml:space="preserve">
-    <value>{0:N0} ワークフロー 参照</value>
+    <value>{0:N0} 件のワークフロー参照</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.WorkflowReferences.Other" xml:space="preserve">
-    <value>{0:N0} ワークフロー 参照</value>
+    <value>{0:N0} 件のワークフロー参照</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Accept" xml:space="preserve">
-    <value>削除 取り込み プロファイル</value>
+    <value>取り込みプロファイルを削除</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Message" xml:space="preserve">
-    <value>対象の 有効 取り込み ワークフロー します 変更 へ '{0}'. この できません する 元に戻した 変更後 保存.</value>
+    <value>有効な取り込みワークフローは「{0}」に変更されます。保存後は元に戻せません。</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Title" xml:space="preserve">
-    <value>削除 取り込み プロファイル '{0}'?</value>
+    <value>取り込みプロファイル「{0}」を削除しますか？</value>
   </data>
   <data name="Settings.Dialog.SaveFailed.Title" xml:space="preserve">
-    <value>構成 でした ではない 保存済み</value>
+    <value>構成を保存できませんでした</value>
   </data>
   <data name="Settings.FilePicker.ConfigurationType" xml:space="preserve">
-    <value>ライブラリ 構成</value>
+    <value>ライブラリ構成</value>
   </data>
   <data name="Settings.FilePicker.ExportDestination" xml:space="preserve">
-    <value>選択 1つの エクスポート 宛先</value>
+    <value>エクスポート先を選択</value>
   </data>
   <data name="Settings.FilePicker.Ffmpeg" xml:space="preserve">
-    <value>選択 FFmpeg 実行ファイル</value>
+    <value>FFmpeg 実行ファイルを選択</value>
   </data>
   <data name="Settings.FilePicker.Fpcalc" xml:space="preserve">
-    <value>選択 fpcalc 実行ファイル</value>
+    <value>fpcalc 実行ファイルを選択</value>
   </data>
   <data name="Settings.FilePicker.ItunesLibrary" xml:space="preserve">
-    <value>選択 iTunes ライブラリ</value>
+    <value>iTunes ライブラリを選択</value>
   </data>
   <data name="Settings.FilePicker.ItunesLibraryType" xml:space="preserve">
     <value>iTunes ライブラリ</value>
   </data>
   <data name="Settings.FilePicker.LibraryRoot" xml:space="preserve">
-    <value>選択 1つの 音楽ライブラリ ルート</value>
+    <value>ミュージックライブラリのルートを選択</value>
   </data>
   <data name="Settings.FilePicker.MachineBindings" xml:space="preserve">
-    <value>選択 コンピューター-ローカル バインド ファイル</value>
+    <value>コンピューター固有のバインドファイルを選択</value>
   </data>
   <data name="Settings.FilePicker.MetadataCache" xml:space="preserve">
-    <value>選択 メタデータ キャッシュ</value>
+    <value>メタデータデータベースを選択</value>
   </data>
   <data name="Settings.FilePicker.OpenConfiguration" xml:space="preserve">
-    <value>開く ライブラリ 構成</value>
+    <value>ライブラリ構成を開く</value>
   </data>
   <data name="Settings.FilePicker.OptimFrog" xml:space="preserve">
-    <value>選択 OptimFROG ツール ディレクトリ</value>
+    <value>OptimFROG ツールフォルダーを選択</value>
   </data>
   <data name="Settings.FilePicker.PlaylistExportFolder" xml:space="preserve">
-    <value>選択 1つの プレイリスト エクスポート フォルダー</value>
+    <value>プレイリストのエクスポート先フォルダーを選択</value>
   </data>
   <data name="Settings.FilePicker.PlaylistSource" xml:space="preserve">
-    <value>選択 1つの M3U/M3U8 プレイリスト ソース</value>
+    <value>M3U/M3U8 プレイリストのソースを選択</value>
   </data>
   <data name="Settings.FilePicker.PlaylistType" xml:space="preserve">
-    <value>ファイル プレイリスト</value>
+    <value>プレイリストファイル</value>
   </data>
   <data name="Settings.FilePicker.SaveConfiguration" xml:space="preserve">
-    <value>保存 ライブラリ 構成</value>
+    <value>ライブラリ構成を保存</value>
   </data>
   <data name="Settings.FilePicker.Wavpack" xml:space="preserve">
-    <value>選択 WavPack 実行ファイル</value>
+    <value>WavPack 実行ファイルを選択</value>
   </data>
   <data name="Settings.Profile.CopySuffix" xml:space="preserve">
     <value> コピー</value>
   </data>
   <data name="Settings.Profile.NewName" xml:space="preserve">
-    <value>新規 プロファイル</value>
+    <value>新しいプロファイル</value>
   </data>
   <data name="Settings.IngestProfile.NewName" xml:space="preserve">
-    <value>新規 取り込み プロファイル</value>
+    <value>新しい取り込みプロファイル</value>
   </data>
   <data name="Settings.Status.ActiveConfigurationChanged" xml:space="preserve">
     <value>有効な構成が変更されましたが、エディターの未保存の変更は保持されています。有効な構成を編集する前に、変更を別のファイルとして保存するか破棄してください。</value>
   </data>
   <data name="Settings.Status.ChangesDiscarded" xml:space="preserve">
-    <value>未保存 構成 変更 でした 破棄.</value>
+    <value>未保存の構成変更を破棄しました。</value>
   </data>
   <data name="Settings.Status.ChooseConfiguration" xml:space="preserve">
-    <value>選択 1つの 既存 構成 または 作成 1つの 新規 1件.</value>
+    <value>既存の構成を選択するか、新しい構成を作成してください。</value>
   </data>
   <data name="Settings.Status.ConfigurationEditFailed" xml:space="preserve">
-    <value>可能でした ではない 編集 構成: {0}</value>
+    <value>構成を編集できませんでした: {0}</value>
   </data>
   <data name="Settings.Status.ConfigurationLoaded" xml:space="preserve">
-    <value>構成 読み込み済み. キャッシュ済み 参照 です 利用可能 間 ルート です オフライン.</value>
+    <value>構成を読み込みました。ルートがオフラインでも、キャッシュ済みデータを参照できます。</value>
   </data>
   <data name="Settings.Status.ConfigurationLoadFailed" xml:space="preserve">
-    <value>可能でした ではない 読み込む 構成: {0}</value>
+    <value>構成を読み込めませんでした: {0}</value>
   </data>
   <data name="Settings.Status.ConfigurationSaved" xml:space="preserve">
-    <value>構成 保存済み および 読み込み済み.</value>
+    <value>構成を保存して読み込みました。</value>
   </data>
   <data name="Settings.Status.ConfigurationSaveFailed" xml:space="preserve">
-    <value>可能でした ではない 保存 構成: {0}</value>
+    <value>構成を保存できませんでした: {0}</value>
   </data>
   <data name="Settings.Status.GuidedSetup" xml:space="preserve">
     <value>ガイド付き設定: 保存を優先するプロファイルを選び、ライブラリのルートを追加してから、有効なポリシーを確認します。</value>
   </data>
   <data name="Settings.Status.IngestProfileCreated" xml:space="preserve">
-    <value>作成済み 取り込み プロファイル '{0}'.</value>
+    <value>取り込みプロファイル「{0}」を作成しました。</value>
   </data>
   <data name="Settings.Status.IngestProfileDeleted" xml:space="preserve">
-    <value>削除済み 取り込み プロファイル '{0}'.</value>
+    <value>取り込みプロファイル「{0}」を削除しました。</value>
   </data>
   <data name="Settings.Status.IngestProfileDuplicated" xml:space="preserve">
-    <value>重複 取り込み プロファイル '{0}'.</value>
+    <value>取り込みプロファイルを「{0}」として複製しました。</value>
   </data>
   <data name="Settings.Status.NewConfiguration" xml:space="preserve">
-    <value>新規 構成. 追加 で 最小 1件 ライブラリ ルート, 次に 保存 として.</value>
+    <value>新しい構成です。ライブラリルートを少なくとも 1 つ追加し、名前を付けて保存… を選択してください。</value>
   </data>
   <data name="Settings.Status.ProfileCreated" xml:space="preserve">
-    <value>作成済み プロファイル '{0}'.</value>
+    <value>プロファイル「{0}」を作成しました。</value>
   </data>
   <data name="Settings.Status.ProfileDeleted" xml:space="preserve">
-    <value>削除済み プロファイル '{0}' および 再割り当て その 参照.</value>
+    <value>プロファイル「{0}」を削除し、その参照を再割り当てしました。</value>
   </data>
   <data name="Settings.Status.ProfileDuplicated" xml:space="preserve">
-    <value>重複 '{0}' として '{1}'.</value>
+    <value>「{0}」を「{1}」として複製しました。</value>
   </data>
   <data name="Settings.Status.RecentConfigurationsCleared" xml:space="preserve">
-    <value>最近 構成 履歴 クリア済み.</value>
+    <value>最近使用した構成の履歴を消去しました。</value>
   </data>
   <data name="Settings.Status.ResolveSetupIssues" xml:space="preserve">
-    <value>解決 対象の 強調表示 セットアップ 問題 変更前 保存.</value>
+    <value>保存する前に、強調表示されたセットアップの問題を解決してください。</value>
   </data>
   <data name="Settings.Status.ResolveValidationIssues" xml:space="preserve">
-    <value>解決 対象の 検証 問題 変更前 保存.</value>
+    <value>保存する前に検証の問題を解決してください。</value>
   </data>
   <data name="Settings.Validation.AddLibraryRoot" xml:space="preserve">
     <value>ライブラリルートを 1 つ以上追加してください。</value>
@@ -3346,31 +3355,31 @@
     <value>ライブラリルート「{0}」は、不明なプロファイル「{1}」を参照しています。</value>
   </data>
   <data name="Settings.PolicySummary.NoRootPolicy" xml:space="preserve">
-    <value>いいえ ルート ポリシー プロファイル です 選択済み.</value>
+    <value>ルートポリシープロファイルが選択されていません。</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Itunes" xml:space="preserve">
-    <value>iTunes-互換 パス</value>
+    <value>iTunes 互換パス</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Preserved" xml:space="preserve">
-    <value>既存 パス です 保持済み</value>
+    <value>既存のパスを保持</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Template" xml:space="preserve">
     <value>{0}/{1}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Enabled" xml:space="preserve">
-    <value>有効; ソース {0}</value>
+    <value>有効。ソースの処理: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Disabled" xml:space="preserve">
-    <value>無効; ソース 保持済み</value>
+    <value>無効。ソースファイルを保持</value>
   </data>
   <data name="Settings.PolicySummary.None" xml:space="preserve">
     <value>なし</value>
   </data>
   <data name="Settings.PolicySummary.RootPolicy" xml:space="preserve">
-    <value>ルート ポリシー 中 編集: {0}</value>
+    <value>編集中のルートポリシー: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Permissions" xml:space="preserve">
-    <value>新規-ルート アクセス許可: {0}</value>
+    <value>新しいルートのアクセス許可: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Naming" xml:space="preserve">
     <value>命名: {0}</value>
@@ -3379,52 +3388,52 @@
     <value>ディスク: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest" xml:space="preserve">
-    <value>取り込み プロファイル: {0}; {1}</value>
+    <value>取り込みプロファイル: {0}、{1}</value>
   </data>
   <data name="Settings.PolicySummary.RootCounts" xml:space="preserve">
-    <value>構成済み ルート: {0:N0}; ルート 許可 変更: {1:N0}; ルート ポリシー 上書き: {2:N0}</value>
+    <value>構成済みルート: {0:N0}、変更を許可するルート: {1:N0}、ポリシーの上書き: {2:N0}</value>
   </data>
   <data name="Settings.PolicyDetails.NoActivePolicy" xml:space="preserve">
-    <value>いいえ 有効 ポリシー です 利用可能.</value>
+    <value>有効なポリシーがありません。</value>
   </data>
   <data name="Settings.PolicyDetails.NoRoots" xml:space="preserve">
-    <value>いいえ 音楽 フォルダー です 構成済み まだ.</value>
+    <value>音楽フォルダーはまだ設定されていません。</value>
   </data>
   <data name="Settings.PolicyDetails.UnsetPath" xml:space="preserve">
-    <value>1つの フォルダー 対象の パス あります ではない 済み 設定</value>
+    <value>パスが設定されていないフォルダー</value>
   </data>
   <data name="Settings.PolicyDetails.RootOffline" xml:space="preserve">
-    <value> それ です 現在 オフライン または できません する 到達.</value>
+    <value> 現在オフラインか、アクセスできません。</value>
   </data>
   <data name="Settings.PolicyDetails.AllIncluded" xml:space="preserve">
-    <value>すべての 一致 音楽 ファイル です 含める.</value>
+    <value>一致するすべての音楽ファイルが含まれます。</value>
   </data>
   <data name="Settings.PolicyDetails.PatternsIncluded" xml:space="preserve">
-    <value>のみ ファイル 一致 {0} です 含める.</value>
+    <value>{0} に一致するファイルのみが含まれます。</value>
   </data>
   <data name="Settings.PolicyDetails.PatternsExcluded" xml:space="preserve">
-    <value> ファイル 一致 {0} です 除外.</value>
+    <value> {0} に一致するファイルは除外されます。</value>
   </data>
   <data name="Settings.PolicyDetails.AllFormats" xml:space="preserve">
-    <value>すべて 認識済み 音楽 形式</value>
+    <value>サポートされているすべての音楽形式</value>
   </data>
   <data name="Settings.PolicyDetails.RootLine" xml:space="preserve">
-    <value>• 内 {0}, 対象の アプリ インデックス {1}. {2} {3}{4}{5}</value>
+    <value>• {0} では、アプリが {1} をインデックス化します。{2} {3}{4}{5}</value>
   </data>
   <data name="Settings.PolicyDetails.Example.MusicFolder" xml:space="preserve">
     <value>音楽</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Artist" xml:space="preserve">
-    <value>例 アーティスト</value>
+    <value>サンプルアーティスト</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Album" xml:space="preserve">
-    <value>例 アルバム</value>
+    <value>サンプルアルバム</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Song" xml:space="preserve">
-    <value>例 曲</value>
+    <value>サンプル曲</value>
   </data>
   <data name="Settings.PolicyDetails.Example.FileName" xml:space="preserve">
-    <value>03 例 曲</value>
+    <value>03 サンプル曲</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Genre" xml:space="preserve">
     <value>ロック</value>
@@ -3439,37 +3448,37 @@
     <value>{0} ({1}{2})</value>
   </data>
   <data name="Settings.PolicyDetails.Repair.Apply" xml:space="preserve">
-    <value>, 適用</value>
+    <value>、適用</value>
   </data>
   <data name="Settings.PolicyDetails.Repair.Propose" xml:space="preserve">
-    <value>, 提案</value>
+    <value>、提案</value>
   </data>
   <data name="Settings.PolicyDetails.Repair.None" xml:space="preserve">
-    <value>いいえ 自動 修復 です 有効.</value>
+    <value>自動修復は有効になっていません。</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Disabled" xml:space="preserve">
     <value>無効</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.NoRecipes" xml:space="preserve">
-    <value>有効, ただし いいえ 出力 レシピ</value>
+    <value>有効ですが出力レシピはありません</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Recipe" xml:space="preserve">
-    <value>{0}: {1} へ {2}</value>
+    <value>レシピ「{0}」: 操作 — {1}、出力先 — {2}</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.MissingRoot" xml:space="preserve">
-    <value>不足 ルート</value>
+    <value>出力先ルートが見つかりません</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.NoDirectRoot" xml:space="preserve">
-    <value>いいえ 直接 ルート</value>
+    <value>直接の出力先ルートなし</value>
   </data>
   <data name="Settings.PolicyDetails.Integrations.NoCatalog" xml:space="preserve">
-    <value>ファイル プレイリスト (M3U/M3U8); いいえ メディア カタログ 統合 構成済み</value>
+    <value>ファイルベースのプレイリスト（M3U/M3U8）、メディアカタログ連携は未設定</value>
   </data>
   <data name="Settings.PolicyDetails.Integrations.Itunes" xml:space="preserve">
-    <value>ファイル プレイリスト (M3U/M3U8); iTunes カタログ: {0}</value>
+    <value>ファイルベースのプレイリスト（M3U/M3U8）、iTunes カタログ: {0}</value>
   </data>
   <data name="Settings.PolicyDetails.Exports.None" xml:space="preserve">
-    <value>なし 構成済み</value>
+    <value>未設定</value>
   </data>
   <data name="Settings.PolicyDetails.Export" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -3481,67 +3490,67 @@
     <value>無効</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.CatalogOnly" xml:space="preserve">
-    <value>対象の アプリ 残す ファイル および フォルダー 名前 場所 それら です.</value>
+    <value>アプリはファイル名とフォルダー名を現在の場所のまま変更しません。</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.Organized" xml:space="preserve">
     <value>ファイルを整理すると、「{0}」のような名前が付けられます。その名前が既に存在する場合は、{1} ルールが使用されます。</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Eager" xml:space="preserve">
-    <value>アートワーク です 読み取る および キャッシュ済み 中 インデックス作成中, そのため 参照 および アートワーク 監査 です すぐに 完了. インデックス作成中 します 取得 より長い および 対象の キャッシュ します 使用 その他 領域.</value>
+    <value>インデックス作成中にアートワークを読み取ってキャッシュするため、参照や監査ですぐに完全な情報を利用できます。インデックス作成には時間がかかり、キャッシュの使用量も増えます。</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Lazy" xml:space="preserve">
-    <value>アートワーク です ではない 読み取る 中 インデックス作成中. それ です 読み込み済み および キャッシュ済み 後で 場合 ユーザー ビュー それ または 実行 1つの アートワーク 監査, 対象 保持 インデックス作成中 高速 および 対象の 初期 キャッシュ 小さい.</value>
+    <value>インデックス作成中にはアートワークを読み取りません。表示または監査するときに読み込んでキャッシュするため、インデックス作成が速くなり、初期キャッシュも小さくなります。</value>
   </data>
   <data name="Settings.PolicyDetails.Discs.Preserve" xml:space="preserve">
-    <value>ディスク 番号 残る 内 対象の タグ.</value>
+    <value>ディスク番号はタグに残ります。</value>
   </data>
   <data name="Settings.PolicyDetails.Discs.Transform" xml:space="preserve">
-    <value>ディスク 番号 です 表現済み 使用 {0}, および 対象の ディスク タグ です 削除済み.</value>
+    <value>ディスク番号は {0} で表し、ディスクタグは削除します。</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Enabled" xml:space="preserve">
-    <value>取り込み です 有効 経由 “{0}”. 対象の 有効 レシピ です {1}, および ソース ファイル です {2} 変更後 1つの 成功 取り込み.</value>
+    <value>「{0}」で取り込みが有効です。有効なレシピ: {1}。正常な取り込み後のソースファイルの処理: {2}。</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Preserved" xml:space="preserve">
-    <value>自動 取り込み です 無効, そのため ソース ファイル です 保持済み.</value>
+    <value>自動取り込みが無効なため、ソースファイルは保持されます。</value>
   </data>
   <data name="Settings.PolicyDetails.Introduction" xml:space="preserve">
-    <value>この ポリシー です “{0}” ({1}). 対象の インデクサー 認識: {2}.</value>
+    <value>このポリシーは「{0}」（{1}）です。インデクサーは {2} を認識します。</value>
   </data>
   <data name="Settings.PolicyDetails.Unicode.Kept" xml:space="preserve">
     <value>保持</value>
   </data>
   <data name="Settings.PolicyDetails.Unicode.Normalized" xml:space="preserve">
-    <value>正規化 または 置換済み</value>
+    <value>正規化または置換</value>
   </data>
   <data name="Settings.PolicyDetails.NamingParagraph" xml:space="preserve">
-    <value>Unicode 文字 {0} は {1} として扱われます。別の値を入力しない限り、パス長にはアプリケーションとプラットフォームの既定値が使われます。</value>
+    <value>{0} Unicode 文字は {1} として扱われます。別の値を入力しない限り、パス長にはアプリケーションとプラットフォームの既定値が使われます。</value>
   </data>
   <data name="Settings.PolicyDetails.QualityParagraph" xml:space="preserve">
-    <value>{0} 1つの 録音 です 考慮済み 高 解像度 で {1:N0} Hz または {2}-bit.</value>
+    <value>{0} 録音は {1:N0} Hz または {2}-bit 以上でハイレゾと見なされます。</value>
   </data>
   <data name="Settings.PolicyDetails.Preserved" xml:space="preserve">
     <value>保持済み</value>
   </data>
   <data name="Settings.PolicyDetails.NotCopied" xml:space="preserve">
-    <value>ではない コピー済み</value>
+    <value>コピーしない</value>
   </data>
   <data name="Settings.PolicyDetails.MetadataParagraph" xml:space="preserve">
-    <value>場合 メタデータ です コピー済み, ReplayGain です {0}, MusicBrainz 識別子 です {1}, カスタム フィールド です {2}, および コンピレーション 情報 です {3}.</value>
+    <value>メタデータのコピー: ReplayGain — {0}、MusicBrainz 識別子 — {1}、カスタムフィールド — {2}、コンピレーション情報 — {3}。</value>
   </data>
   <data name="Settings.PolicyDetails.ArtworkParagraph" xml:space="preserve">
-    <value>{0} 書き込み済み アートワーク 使用します {1} ストレージ, {2}, および {3} エンコーディング.</value>
+    <value>{0} アートワークの書き込み: 保存方法 — {1}、役割 — {2}、エンコーディング — {3}。</value>
   </data>
   <data name="Settings.PolicyDetails.HealthParagraph" xml:space="preserve">
-    <value>健全性 チェック 現在 有効: {0}. ファイル その 実行 ではない 一致 1つの サイドカー ルール です {1}.</value>
+    <value>現在有効な健全性チェック: {0}。サイドカールールに一致しないファイルは {1} として処理します。</value>
   </data>
   <data name="Settings.PolicyDetails.ConnectionsParagraph" xml:space="preserve">
-    <value>プレイリスト および カタログ 接続: {0}. エクスポート プロファイル: {1}.</value>
+    <value>プレイリストとカタログの接続: {0}。エクスポートプロファイル: {1}。</value>
   </data>
   <data name="Settings.PolicyDetails.RootsParagraph" xml:space="preserve">
-    <value>構成済み 音楽 フォルダー:{0}{1}</value>
+    <value>設定済みの音楽フォルダー:{0}{1}</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.StoredDirectly" xml:space="preserve">
-    <value>フォルダー パス です 保存済み 直接 内 この 構成.</value>
+    <value>フォルダーのパスはこの構成に直接保存されます。</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.MachineBindings" xml:space="preserve">
     <value>コンピューター固有のフォルダーパスは「{0}」から取得されます。</value>
@@ -3559,16 +3568,16 @@
     <value>ダーク</value>
   </data>
   <data name="Settings.Choice.Theme.Steel_Blue" xml:space="preserve">
-    <value>スチール 青</value>
+    <value>スチールブルー</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.LegacyMusicLibraryTools" xml:space="preserve">
-    <value>従来 MusicLibraryTools</value>
+    <value>従来の MusicLibraryTools</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.CatalogOnly" xml:space="preserve">
-    <value>カタログ のみ</value>
+    <value>カタログのみ</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.PreserveLayoutAndTags" xml:space="preserve">
-    <value>保持 レイアウト および タグ</value>
+    <value>レイアウトとタグを保持</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.ArtistAlbum" xml:space="preserve">
     <value>アーティスト/アルバム</value>
@@ -3583,49 +3592,49 @@
     <value>停止</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.Suffix" xml:space="preserve">
-    <value>追加 1つの 接尾辞</value>
+    <value>サフィックスを追加</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.Hash" xml:space="preserve">
-    <value>追加 1つの ハッシュ</value>
+    <value>ハッシュを追加</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.PreserveExisting" xml:space="preserve">
-    <value>保持 既存 ファイル</value>
+    <value>既存のファイルを保持</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.None" xml:space="preserve">
     <value>なし</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormC" xml:space="preserve">
-    <value>正規 合成 (形式 C)</value>
+    <value>正規合成（形式 C）</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormD" xml:space="preserve">
-    <value>正規 分解 (形式 D)</value>
+    <value>正規分解（形式 D）</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormKC" xml:space="preserve">
-    <value>互換性 合成 (形式 KC)</value>
+    <value>互換合成（形式 KC）</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormKD" xml:space="preserve">
-    <value>互換性 分解 (形式 KD)</value>
+    <value>互換分解（形式 KD）</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.PreserveTags" xml:space="preserve">
-    <value>保持 タグ</value>
+    <value>タグを保持</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.AlbumSuffix" xml:space="preserve">
-    <value>アルバム接尾辞</value>
+    <value>アルバム名のサフィックス</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.DiscFolder" xml:space="preserve">
-    <value>ディスク フォルダー</value>
+    <value>ディスク別フォルダー</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FileNamePrefix" xml:space="preserve">
     <value>ファイル名の接頭辞</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FlattenContinuous" xml:space="preserve">
-    <value>連続 トラック 番号</value>
+    <value>通しのトラック番号</value>
   </data>
   <data name="Settings.Choice.LibraryTrackTotalScope.PerDisc" xml:space="preserve">
-    <value>あたり ディスク</value>
+    <value>ディスクごと</value>
   </data>
   <data name="Settings.Choice.LibraryTrackTotalScope.Album" xml:space="preserve">
-    <value>全体 アルバム</value>
+    <value>アルバム全体</value>
   </data>
   <data name="Settings.Choice.LibraryHealthSeverity.Information" xml:space="preserve">
     <value>情報</value>
@@ -3655,19 +3664,19 @@
     <value>トランスコード</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.Any" xml:space="preserve">
-    <value>任意 アルバム</value>
+    <value>すべてのアルバム</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.HasHighResolution" xml:space="preserve">
-    <value>あります 高-解像度 オーディオ</value>
+    <value>ハイレゾ音源を含む</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.HasNoHighResolution" xml:space="preserve">
-    <value>あります いいえ 高-解像度 オーディオ</value>
+    <value>ハイレゾ音源を含まない</value>
   </data>
   <data name="Settings.Choice.LibraryIngestSourceSelection.HighestQuality" xml:space="preserve">
-    <value>最高 品質</value>
+    <value>最高品質</value>
   </data>
   <data name="Settings.Choice.LibraryIngestSourceSelection.PreferCdQuality" xml:space="preserve">
-    <value>優先 CD 品質</value>
+    <value>CD音質を優先</value>
   </data>
   <data name="Settings.Choice.LibraryChannelSelection.Stereo" xml:space="preserve">
     <value>ステレオ</value>
@@ -3685,16 +3694,16 @@
     <value>サイドカー</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkStorage.Both" xml:space="preserve">
-    <value>埋め込み および サイドカー</value>
+    <value>埋め込みとサイドカーファイル</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkRoleSelection.FrontCoverOnly" xml:space="preserve">
-    <value>前面 カバー のみ</value>
+    <value>フロントカバーのみ</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkRoleSelection.AllRoles" xml:space="preserve">
-    <value>すべて アートワーク 役割</value>
+    <value>すべてのアートワーク役割</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkEncoding.PreserveSource" xml:space="preserve">
-    <value>保持 ソース エンコーディング</value>
+    <value>ソースのエンコード形式を保持</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkEncoding.Jpeg" xml:space="preserve">
     <value>JPEG</value>
@@ -3712,16 +3721,16 @@
     <value>削除</value>
   </data>
   <data name="Settings.Choice.LibrarySidecarDisposition.FollowSourceDisposition" xml:space="preserve">
-    <value>従う ソース処理</value>
+    <value>ソースと同じ処理</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.EntireLibrary" xml:space="preserve">
-    <value>全体 ライブラリ</value>
+    <value>ライブラリ全体</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.Playlists" xml:space="preserve">
     <value>プレイリスト</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.SavedView" xml:space="preserve">
-    <value>保存済み ビュー</value>
+    <value>保存済みビュー</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.ExplicitTracks" xml:space="preserve">
     <value>選択したトラック</value>
@@ -3739,7 +3748,7 @@
     <value>トランスコード</value>
   </data>
   <data name="Settings.Choice.ExportTransformMode.SpecializedProvider" xml:space="preserve">
-    <value>専用 プロバイダー</value>
+    <value>専用プロバイダー</value>
   </data>
   <data name="Settings.Choice.ExportArtworkMode.None" xml:space="preserve">
     <value>なし</value>
@@ -3751,7 +3760,7 @@
     <value>サイドカー</value>
   </data>
   <data name="Settings.Choice.ExportArtworkMode.EmbeddedAndSidecar" xml:space="preserve">
-    <value>埋め込み および サイドカー</value>
+    <value>埋め込みとサイドカーファイル</value>
   </data>
   <data name="Settings.Choice.ExportExtraFileDisposition.Preserve" xml:space="preserve">
     <value>保持</value>
@@ -3763,10 +3772,10 @@
     <value>削除</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.legacy" xml:space="preserve">
-    <value>従来</value>
+    <value>従来方式</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.provided" xml:space="preserve">
-    <value>として 提供済み</value>
+    <value>指定どおり</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.absolute" xml:space="preserve">
     <value>絶対</value>
@@ -3775,16 +3784,16 @@
     <value>相対</value>
   </data>
   <data name="Settings.Choice.PlaylistLineEnding.platform" xml:space="preserve">
-    <value>プラットフォーム 既定</value>
+    <value>プラットフォームの既定値</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.legacy" xml:space="preserve">
-    <value>従来</value>
+    <value>従来方式</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.preserve" xml:space="preserve">
     <value>保持</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.sanitize" xml:space="preserve">
-    <value>サニタイズ</value>
+    <value>ファイル名を安全化</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.sonos" xml:space="preserve">
     <value>Sonos-互換</value>
@@ -3850,10 +3859,10 @@
     <value>アルバムアーティスト</value>
   </data>
   <data name="Settings.Choice.TagFields.AlbumArtistSort" xml:space="preserve">
-    <value>アルバムアーティスト 並べ替え</value>
+    <value>アルバムアーティストの並べ替え</value>
   </data>
   <data name="Settings.Choice.TagFields.AlbumSort" xml:space="preserve">
-    <value>アルバム 並べ替え</value>
+    <value>アルバムの並べ替え</value>
   </data>
   <data name="Settings.Choice.TagFields.Arranger" xml:space="preserve">
     <value>編曲者</value>
@@ -3862,7 +3871,7 @@
     <value>アーティスト</value>
   </data>
   <data name="Settings.Choice.TagFields.ArtistSort" xml:space="preserve">
-    <value>アーティスト 並べ替え</value>
+    <value>アーティストの並べ替え</value>
   </data>
   <data name="Settings.Choice.TagFields.Artists" xml:space="preserve">
     <value>アーティスト</value>
@@ -3877,7 +3886,7 @@
     <value>BPM</value>
   </data>
   <data name="Settings.Choice.TagFields.CatalogNumber" xml:space="preserve">
-    <value>カタログ 番号</value>
+    <value>カタログ番号</value>
   </data>
   <data name="Settings.Choice.TagFields.Comment" xml:space="preserve">
     <value>コメント</value>
@@ -3889,7 +3898,7 @@
     <value>作曲者</value>
   </data>
   <data name="Settings.Choice.TagFields.ComposerSort" xml:space="preserve">
-    <value>作曲者 並べ替え</value>
+    <value>作曲者の並べ替え</value>
   </data>
   <data name="Settings.Choice.TagFields.Conductor" xml:space="preserve">
     <value>指揮者</value>
@@ -3898,16 +3907,16 @@
     <value>著作権</value>
   </data>
   <data name="Settings.Choice.TagFields.DiscNumber" xml:space="preserve">
-    <value>ディスク 番号</value>
+    <value>ディスク番号</value>
   </data>
   <data name="Settings.Choice.TagFields.DiscSubtitle" xml:space="preserve">
-    <value>ディスク サブタイトル</value>
+    <value>ディスクのサブタイトル</value>
   </data>
   <data name="Settings.Choice.TagFields.EncodedBy" xml:space="preserve">
-    <value>エンコード済み による</value>
+    <value>エンコード担当</value>
   </data>
   <data name="Settings.Choice.TagFields.EncoderSettings" xml:space="preserve">
-    <value>エンコーダー 設定</value>
+    <value>エンコーダー設定</value>
   </data>
   <data name="Settings.Choice.TagFields.Engineer" xml:space="preserve">
     <value>エンジニア</value>
@@ -3922,7 +3931,7 @@
     <value>グループ化</value>
   </data>
   <data name="Settings.Choice.TagFields.Key" xml:space="preserve">
-    <value>キー</value>
+    <value>調</value>
   </data>
   <data name="Settings.Choice.TagFields.ISRC" xml:space="preserve">
     <value>ISRC</value>
@@ -3943,7 +3952,7 @@
     <value>メディア</value>
   </data>
   <data name="Settings.Choice.TagFields.DJMixer" xml:space="preserve">
-    <value>DJ ミキサー</value>
+    <value>DJミキサー</value>
   </data>
   <data name="Settings.Choice.TagFields.Mixer" xml:space="preserve">
     <value>ミキサー</value>
@@ -3955,10 +3964,10 @@
     <value>楽章</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementTotal" xml:space="preserve">
-    <value>楽章 合計</value>
+    <value>楽章総数</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementNumber" xml:space="preserve">
-    <value>楽章 番号</value>
+    <value>楽章番号</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_ArtistID" xml:space="preserve">
     <value>MusicBrainz アーティスト ID</value>
@@ -3967,7 +3976,7 @@
     <value>MusicBrainz ディスク ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_OriginalArtistID" xml:space="preserve">
-    <value>MusicBrainz 元 アーティスト ID</value>
+    <value>MusicBrainz オリジナルアーティスト ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_OriginalAlbumID" xml:space="preserve">
     <value>MusicBrainz オリジナルアルバム ID</value>
@@ -3979,7 +3988,7 @@
     <value>MusicBrainz アルバムアーティスト ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_ReleaseGroupID" xml:space="preserve">
-    <value>MusicBrainz リリース グループ ID</value>
+    <value>MusicBrainz リリースグループ ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_AlbumID" xml:space="preserve">
     <value>MusicBrainz アルバム ID</value>
@@ -3994,7 +4003,7 @@
     <value>オリジナルアルバム</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalArtist" xml:space="preserve">
-    <value>元 アーティスト</value>
+    <value>オリジナルアーティスト</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalFileName" xml:space="preserve">
     <value>元のファイル名</value>
@@ -4003,7 +4012,7 @@
     <value>元の日付</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalYear" xml:space="preserve">
-    <value>元 年</value>
+    <value>オリジナル年</value>
   </data>
   <data name="Settings.Choice.TagFields.Performer" xml:space="preserve">
     <value>演奏者</value>
@@ -4021,55 +4030,55 @@
     <value>評価</value>
   </data>
   <data name="Settings.Choice.TagFields.Label" xml:space="preserve">
-    <value>ラベル</value>
+    <value>レーベル</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseCountry" xml:space="preserve">
-    <value>リリース 国</value>
+    <value>リリース国</value>
   </data>
   <data name="Settings.Choice.TagFields.Date" xml:space="preserve">
     <value>日付</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseStatus" xml:space="preserve">
-    <value>リリース 状態</value>
+    <value>リリースステータス</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseType" xml:space="preserve">
-    <value>リリース 種類</value>
+    <value>リリースタイプ</value>
   </data>
   <data name="Settings.Choice.TagFields.Remixer" xml:space="preserve">
     <value>リミキサー</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Album_Gain" xml:space="preserve">
-    <value>ReplayGain アルバム ゲイン</value>
+    <value>ReplayGain アルバムゲイン</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Album_Peak" xml:space="preserve">
-    <value>ReplayGain アルバム ピーク</value>
+    <value>ReplayGain アルバムピーク</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Album_Range" xml:space="preserve">
-    <value>ReplayGain アルバム 範囲</value>
+    <value>ReplayGain アルバム範囲</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Reference_Loudness" xml:space="preserve">
-    <value>ReplayGain 参照 ラウドネス</value>
+    <value>ReplayGain 基準ラウドネス</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Gain" xml:space="preserve">
-    <value>ReplayGain トラック ゲイン</value>
+    <value>ReplayGain トラックゲイン</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Peak" xml:space="preserve">
-    <value>ReplayGain トラック ピーク</value>
+    <value>ReplayGain トラックピーク</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Range" xml:space="preserve">
-    <value>ReplayGain トラック 範囲</value>
+    <value>ReplayGain トラック範囲</value>
   </data>
   <data name="Settings.Choice.TagFields.Script" xml:space="preserve">
-    <value>スクリプト</value>
+    <value>文字体系</value>
   </data>
   <data name="Settings.Choice.TagFields.Show" xml:space="preserve">
-    <value>表示</value>
+    <value>番組</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowSort" xml:space="preserve">
-    <value>表示 並べ替え</value>
+    <value>番組の並べ替え用タイトル</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowMovement" xml:space="preserve">
-    <value>表示 楽章</value>
+    <value>楽章を表示</value>
   </data>
   <data name="Settings.Choice.TagFields.Subtitle" xml:space="preserve">
     <value>サブタイトル</value>
@@ -4081,13 +4090,13 @@
     <value>トラック総数</value>
   </data>
   <data name="Settings.Choice.TagFields.TrackNumber" xml:space="preserve">
-    <value>トラック 番号</value>
+    <value>トラック番号</value>
   </data>
   <data name="Settings.Choice.TagFields.Title" xml:space="preserve">
     <value>タイトル</value>
   </data>
   <data name="Settings.Choice.TagFields.TitleSort" xml:space="preserve">
-    <value>タイトル 並べ替え</value>
+    <value>タイトルの並べ替え</value>
   </data>
   <data name="Settings.Choice.TagFields.Website" xml:space="preserve">
     <value>ウェブサイト</value>
@@ -6098,13 +6107,13 @@
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.RecordingId" xml:space="preserve"><value>完全一致する MusicBrainz 録音 ID</value></data>
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.Unmatched" xml:space="preserve"><value>信頼できるリリーストラックの一致が見つかりませんでした。</value></data>
   <data name="OnlineMetadata.MusicBrainz.Validation.InvalidReleaseId" xml:space="preserve"><value>MusicBrainz リリース ID は有効な GUID ではありません。</value></data>
-  <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>設定されたメディアカタログ</value></data>
-  <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>いいえ 宛先</value></data>
-  <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} から {2}</value></data>
+  <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>設定済みのメディアカタログ</value></data>
+  <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>保存先なし</value></data>
+  <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} → {2}</value></data>
   <data name="Workbench.Online.Thumbnail.Failed" xml:space="preserve"><value>サムネイルを取得できません</value></data>
   <data name="Dialog.DefaultExportFileName" xml:space="preserve"><value>エクスポート</value></data>
   <data name="Dialog.FileType.Format" xml:space="preserve"><value>{0} ファイル</value></data>
-  <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>新規 エクスポート</value></data>
+  <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>新しいエクスポート</value></data>
   <data name="Navigation.About" xml:space="preserve"><value>バージョン情報</value></data>
   <data name="About.Title" xml:space="preserve"><value>このアプリについて</value></data>
   <data name="About.Subtitle" xml:space="preserve"><value>製品情報、謝辞、使用許諾契約。</value></data>
@@ -6256,8 +6265,8 @@
   <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} ボリューム · {1:N0} コミット済み</value></data>
   <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} ボリューム · {1:N0} コミット済み</value></data>
   <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
-  <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC 実行可能ファイル</value></data>
-  <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC 実行可能ファイルを選択します</value></data>
+  <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC 実行ファイル</value></data>
+  <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC 実行ファイルを選択</value></data>
   <data name="Transcode.Format.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio</value></data>
   <data name="Transcode.Encoder.MonkeysAudioMac" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
   <data name="Shell.Navigation.Toggle" xml:space="preserve"><value>ナビゲーションを展開または折りたたむ</value></data>
@@ -6273,7 +6282,7 @@
   <data name="Operations.Job.OutputLabel" xml:space="preserve"><value>出力と診断ログ</value></data>
   <data name="Operations.Job.PickerAutomation" xml:space="preserve"><value>操作の実行</value></data>
   <data name="Ingest.PreflightChecks.Title" xml:space="preserve"><value>事前チェック</value></data>
-  <data name="Settings.EffectivePolicy.ProvenanceTitle" xml:space="preserve"><value>技術的な由来</value></data>
+  <data name="Settings.EffectivePolicy.ProvenanceTitle" xml:space="preserve"><value>技術的な出典</value></data>
   <data name="Settings.FieldMappings.SourceLabel" xml:space="preserve"><value>ソースフィールド</value></data>
   <data name="Settings.FieldMappings.TargetLabel" xml:space="preserve"><value>対象フィールド</value></data>
   <data name="Inspector.View.ReviewChanges" xml:space="preserve"><value>変更を確認</value></data>

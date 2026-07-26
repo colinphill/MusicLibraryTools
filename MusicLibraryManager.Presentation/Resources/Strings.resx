@@ -2173,7 +2173,7 @@
     <value>Unsaved changes</value>
   </data>
   <data name="Settings.Action.Browse" xml:space="preserve">
-    <value>Browse</value>
+    <value>Browse…</value>
   </data>
   <data name="Settings.Action.Clear" xml:space="preserve">
     <value>Clear</value>
@@ -2182,7 +2182,7 @@
     <value>Delete</value>
   </data>
   <data name="Settings.Action.Discard" xml:space="preserve">
-    <value>Discard</value>
+    <value>Discard changes</value>
   </data>
   <data name="Settings.Action.Duplicate" xml:space="preserve">
     <value>Duplicate</value>
@@ -2200,7 +2200,7 @@
     <value>Save</value>
   </data>
   <data name="Settings.Action.SaveAs" xml:space="preserve">
-    <value>Save as</value>
+    <value>Save as…</value>
   </data>
   <data name="Settings.Automation.Categories" xml:space="preserve">
     <value>Settings categories</value>
@@ -2287,7 +2287,7 @@
     <value>Add root</value>
   </data>
   <data name="Settings.LibraryRoots.AddSet" xml:space="preserve">
-    <value>Add set</value>
+    <value>Add scan set</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensions" xml:space="preserve">
     <value>Cross-set comparison extensions</value>
@@ -2299,19 +2299,19 @@
     <value>Exclude patterns</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsAutomation" xml:space="preserve">
-    <value>Library root index exclude patterns</value>
+    <value>Library root exclusion patterns</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsPlaceholder" xml:space="preserve">
-    <value>None; or Temp/**; *.tmp</value>
+    <value>For example: Temp/**; *.tmp</value>
   </data>
   <data name="Settings.LibraryRoots.Formats" xml:space="preserve">
     <value>Formats to index</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsAutomation" xml:space="preserve">
-    <value>Library root formats to index</value>
+    <value>Formats indexed under this library root</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsPlaceholder" xml:space="preserve">
-    <value>All supported; or .flac, .m4a</value>
+    <value>All supported formats; or .flac, .m4a</value>
   </data>
   <data name="Settings.LibraryRoots.GuidedStep" xml:space="preserve">
     <value>Step 1 of 2: configure roots, assign each root policy, and enable only the writes you intend.</value>
@@ -2320,10 +2320,10 @@
     <value>Include patterns</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsAutomation" xml:space="preserve">
-    <value>Library root index include patterns</value>
+    <value>Library root inclusion patterns</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsPlaceholder" xml:space="preserve">
-    <value>All; or Music/**; *.flac</value>
+    <value>For example: Music/**; *.flac</value>
   </data>
   <data name="Settings.LibraryRoots.Path" xml:space="preserve">
     <value>Root path</value>
@@ -2350,7 +2350,7 @@
     <value>Naming and root policy</value>
   </data>
   <data name="Settings.LibraryRoots.PolicyAutomation" xml:space="preserve">
-    <value>Library root naming profile</value>
+    <value>Library root policy profile</value>
   </data>
   <data name="Settings.LibraryRoots.ReviewPolicy" xml:space="preserve">
     <value>Review policy</value>
@@ -2386,10 +2386,10 @@
     <value>Add target</value>
   </data>
   <data name="Settings.Playlists.BrowseDestination" xml:space="preserve">
-    <value>Browse destination</value>
+    <value>Browse destination…</value>
   </data>
   <data name="Settings.Playlists.BrowseFile" xml:space="preserve">
-    <value>Browse file</value>
+    <value>Browse…</value>
   </data>
   <data name="Settings.Playlists.CleanTargets" xml:space="preserve">
     <value>Clean playlist export targets before cross-syncing playlists</value>
@@ -2419,7 +2419,7 @@
     <value>EXTINF</value>
   </data>
   <data name="Settings.Playlists.FileNameTransform" xml:space="preserve">
-    <value>Filename transform</value>
+    <value>File name transform</value>
   </data>
   <data name="Settings.Playlists.FormatAutomation" xml:space="preserve">
     <value>Playlist export format</value>
@@ -2446,7 +2446,7 @@
     <value>Max tracks</value>
   </data>
   <data name="Settings.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>Playlist name</value>
+    <value>e.g., Favorites</value>
   </data>
   <data name="Settings.Playlists.NamingArtwork" xml:space="preserve">
     <value>Naming and artwork</value>
@@ -2497,13 +2497,13 @@
     <value>Playlist export sets</value>
   </data>
   <data name="Settings.Playlists.SetsPlaceholder" xml:space="preserve">
-    <value>Scan sets</value>
+    <value>e.g., favorites, recent</value>
   </data>
   <data name="Settings.Playlists.SourceAutomation" xml:space="preserve">
     <value>File playlist source</value>
   </data>
   <data name="Settings.Playlists.SourcePlaceholder" xml:space="preserve">
-    <value>Playlist file or directory</value>
+    <value>e.g., playlists/favorites.m3u8</value>
   </data>
   <data name="Settings.Playlists.SourcesDescription" xml:space="preserve">
     <value>Use M3U/M3U8 files or directories when no iTunes catalog is configured.</value>
@@ -2530,7 +2530,7 @@
     <value>Playlist export target</value>
   </data>
   <data name="Settings.Playlists.TargetPlaceholder" xml:space="preserve">
-    <value>Target</value>
+    <value>e.g., Playlists</value>
   </data>
   <data name="Settings.Playlists.TargetsTitle" xml:space="preserve">
     <value>Playlist export targets</value>
@@ -2541,14 +2541,20 @@
   <data name="Settings.Playlists.TransformProvider" xml:space="preserve">
     <value>Transform provider</value>
   </data>
+  <data name="Settings.Playlists.TransportProvider" xml:space="preserve">
+    <value>Transport provider</value>
+  </data>
+  <data name="Settings.Playlists.TransportOptions" xml:space="preserve">
+    <value>Transport options</value>
+  </data>
   <data name="Settings.Playlists.TransportDestinationPlaceholder" xml:space="preserve">
-    <value>Transport destination</value>
+    <value>e.g., Music</value>
   </data>
   <data name="Settings.Playlists.TransportOptionsPlaceholder" xml:space="preserve">
     <value>option=value; option2=value</value>
   </data>
   <data name="Settings.Playlists.TransportProviderPlaceholder" xml:space="preserve">
-    <value>Transport provider (local-filesystem)</value>
+    <value>e.g., local-filesystem</value>
   </data>
   <data name="Settings.Playlists.UseNamingCollision" xml:space="preserve">
     <value>Use naming-profile collision rule</value>
@@ -2569,13 +2575,13 @@
     <value>AcoustID application client key</value>
   </data>
   <data name="Settings.Tools.Bindings" xml:space="preserve">
-    <value>Machine-local bindings companion (optional)</value>
+    <value>Machine-local bindings file (optional)</value>
   </data>
   <data name="Settings.Tools.BindingsAutomation" xml:space="preserve">
-    <value>Machine-local bindings companion</value>
+    <value>Machine-local bindings file</value>
   </data>
   <data name="Settings.Tools.BindingsPlaceholder" xml:space="preserve">
-    <value>Keep portable policy separate from root and tool paths</value>
+    <value>library.bindings.xml</value>
   </data>
   <data name="Settings.Tools.Database" xml:space="preserve">
     <value>Metadata database</value>
@@ -2596,7 +2602,7 @@
     <value>FFmpeg executable</value>
   </data>
   <data name="Settings.Tools.Fpcalc" xml:space="preserve">
-    <value>Chromaprint fpcalc (personal machine setting)</value>
+    <value>Chromaprint fpcalc (machine-local)</value>
   </data>
   <data name="Settings.Tools.FpcalcAutomation" xml:space="preserve">
     <value>Chromaprint fpcalc executable</value>
@@ -2608,7 +2614,7 @@
     <value>Offline mode — use cached provider data only</value>
   </data>
   <data name="Settings.Tools.OfflineModeAutomation" xml:space="preserve">
-    <value>Use cached metadata providers offline</value>
+    <value>Use cached provider data while offline</value>
   </data>
   <data name="Settings.Tools.OnlineMetadata" xml:space="preserve">
     <value>Online metadata</value>
@@ -2677,13 +2683,13 @@
     <value>Add sidecar rule</value>
   </data>
   <data name="Settings.RootPolicy.Apply" xml:space="preserve">
-    <value>Apply</value>
+    <value>Apply repair</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkRoles" xml:space="preserve">
-    <value>Roles</value>
+    <value>Artwork roles</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkStorage" xml:space="preserve">
-    <value>Storage</value>
+    <value>Artwork storage</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
     <value>Built-in policies are protected; duplicate one to customize it. Assign policies to roots on the Library roots tab.</value>
@@ -2692,16 +2698,16 @@
     <value>These settings alter naming, metadata, artwork, health, and sidecar behavior for every root using this profile. Existing previews become invalid and must be regenerated.</value>
   </data>
   <data name="Settings.RootPolicy.CompilationToken" xml:space="preserve">
-    <value>Compilation token</value>
+    <value>Compilation name</value>
   </data>
   <data name="Settings.RootPolicy.CompletePathLimit" xml:space="preserve">
-    <value>Complete-path limit (blank = platform default)</value>
+    <value>Maximum full-path length (blank = platform default)</value>
   </data>
   <data name="Settings.RootPolicy.ComponentLimit" xml:space="preserve">
-    <value>Component limit (legacy LengthLimit)</value>
+    <value>Maximum path-component length (legacy LengthLimit)</value>
   </data>
   <data name="Settings.RootPolicy.DiscAlbumLimit" xml:space="preserve">
-    <value>Disc-album limit (legacy DiscNumLengthLimit)</value>
+    <value>Maximum disc-album name length (legacy DiscNumLengthLimit)</value>
   </data>
   <data name="Settings.RootPolicy.DiscIdentityTitle" xml:space="preserve">
     <value>Disc and album identity</value>
@@ -2723,6 +2729,9 @@
   </data>
   <data name="Settings.RootPolicy.HealthRules" xml:space="preserve">
     <value>Health rules</value>
+  </data>
+  <data name="Settings.RootPolicy.HealthSeverity" xml:space="preserve">
+    <value>Severity</value>
   </data>
   <data name="Settings.RootPolicy.HighResolutionBitDepth" xml:space="preserve">
     <value>High-resolution bit depth</value>
@@ -2764,13 +2773,13 @@
     <value>Metadata fidelity</value>
   </data>
   <data name="Settings.RootPolicy.MissingAlbum" xml:space="preserve">
-    <value>Missing album</value>
+    <value>Fallback for missing album</value>
   </data>
   <data name="Settings.RootPolicy.MissingArtist" xml:space="preserve">
-    <value>Missing artist</value>
+    <value>Fallback for missing artist</value>
   </data>
   <data name="Settings.RootPolicy.MissingTitle" xml:space="preserve">
-    <value>Missing title</value>
+    <value>Fallback for missing title</value>
   </data>
   <data name="Settings.RootPolicy.NamingTitle" xml:space="preserve">
     <value>Naming and collisions</value>
@@ -2794,25 +2803,25 @@
     <value>Profile name</value>
   </data>
   <data name="Settings.RootPolicy.ProfileTitle" xml:space="preserve">
-    <value>Root policy profile</value>
+    <value>Library policy profile</value>
   </data>
   <data name="Settings.RootPolicy.Propose" xml:space="preserve">
-    <value>Propose</value>
+    <value>Propose repair</value>
   </data>
   <data name="Settings.RootPolicy.QualityTitle" xml:space="preserve">
     <value>Quality classification</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkAtIndex" xml:space="preserve">
-    <value>Read embedded artwork during indexing</value>
+    <value>Read embedded artwork while indexing</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkDescription" xml:space="preserve">
     <value>When enabled, indexing takes longer and the cache uses more space, but artwork is immediately available for browsing and audits. When disabled, artwork is read only when it is viewed or audited.</value>
   </data>
   <data name="Settings.RootPolicy.SelectAutomation" xml:space="preserve">
-    <value>Root/Naming policy profile</value>
+    <value>Library policy profile</value>
   </data>
   <data name="Settings.RootPolicy.SelectLabel" xml:space="preserve">
-    <value>Root/Naming policy</value>
+    <value>Library policy profile</value>
   </data>
   <data name="Settings.RootPolicy.SidecarPatternsPlaceholder" xml:space="preserve">
     <value>*.cue, *.pdf</value>
@@ -2821,7 +2830,7 @@
     <value>Sidecar and unknown-file rules</value>
   </data>
   <data name="Settings.RootPolicy.SidecarTemplate" xml:space="preserve">
-    <value>Sidecar template</value>
+    <value>Artwork sidecar template</value>
   </data>
   <data name="Settings.RootPolicy.SummaryAutomation" xml:space="preserve">
     <value>Effective library policy summary</value>
@@ -2839,7 +2848,7 @@
     <value>Unknown-file disposition</value>
   </data>
   <data name="Settings.Ingest.AcceptedExtensions" xml:space="preserve">
-    <value>Accepted extensions</value>
+    <value>Source file extensions</value>
   </data>
   <data name="Settings.Ingest.Action" xml:space="preserve">
     <value>Action</value>
@@ -2881,7 +2890,7 @@
     <value>Enable ingest recipes</value>
   </data>
   <data name="Settings.Ingest.EnableRecipeTooltip" xml:space="preserve">
-    <value>Enable recipe</value>
+    <value>Include this recipe when matching source files.</value>
   </data>
   <data name="Settings.Ingest.Encoder" xml:space="preserve">
     <value>Encoder (blank = automatic)</value>
@@ -2890,10 +2899,10 @@
     <value>.flac, .m4a</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegAutomation" xml:space="preserve">
-    <value>Extra FFmpeg options</value>
+    <value>Additional FFmpeg options</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegOptions" xml:space="preserve">
-    <value>Extra FFmpeg options (transcode only)</value>
+    <value>Additional FFmpeg options (transcode only)</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegPlaceholder" xml:space="preserve">
     <value>For example: -af &quot;loudnorm=I=-16:LRA=11&quot;</value>
@@ -2902,13 +2911,13 @@
     <value>Input channels</value>
   </data>
   <data name="Settings.Ingest.LosslessMatch" xml:space="preserve">
-    <value>Lossless match (indeterminate = any)</value>
+    <value>Lossless requirement (mixed state = any)</value>
   </data>
   <data name="Settings.Ingest.MatchedSourceSelection" xml:space="preserve">
     <value>Matched source selection</value>
   </data>
   <data name="Settings.Ingest.MatchEitherQuality" xml:space="preserve">
-    <value>Match either quality minimum</value>
+    <value>Match either sample-rate or bit-depth minimum</value>
   </data>
   <data name="Settings.Ingest.MinimumBitDepth" xml:space="preserve">
     <value>Minimum bit depth</value>
@@ -2950,7 +2959,7 @@
     <value>Remove non-music files after successful ingest</value>
   </data>
   <data name="Settings.Ingest.RequireFallbackApproval" xml:space="preserve">
-    <value>Require approval when matched CD is missing</value>
+    <value>Require approval when a matching CD-quality source is missing</value>
   </data>
   <data name="Settings.Ingest.RequireLossless" xml:space="preserve">
     <value>Require lossless</value>
@@ -3067,7 +3076,7 @@
     <value>metadata</value>
   </data>
   <data name="Settings.Permissions.Organization" xml:space="preserve">
-    <value>organization</value>
+    <value>file organization</value>
   </data>
   <data name="Settings.Permissions.Summary.Allowed" xml:space="preserve">
     <value>Allowed changes: {0}</value>
@@ -3178,10 +3187,10 @@
     <value>Choose a music library root</value>
   </data>
   <data name="Settings.FilePicker.MachineBindings" xml:space="preserve">
-    <value>Choose machine-local bindings file</value>
+    <value>Choose the machine-local bindings file</value>
   </data>
   <data name="Settings.FilePicker.MetadataCache" xml:space="preserve">
-    <value>Choose metadata cache</value>
+    <value>Choose the metadata database</value>
   </data>
   <data name="Settings.FilePicker.OpenConfiguration" xml:space="preserve">
     <value>Open library configuration</value>
@@ -3196,7 +3205,7 @@
     <value>Choose an M3U/M3U8 playlist source</value>
   </data>
   <data name="Settings.FilePicker.PlaylistType" xml:space="preserve">
-    <value>File playlists</value>
+    <value>Playlist files</value>
   </data>
   <data name="Settings.FilePicker.SaveConfiguration" xml:space="preserve">
     <value>Save library configuration</value>
@@ -3250,7 +3259,7 @@
     <value>Duplicated ingest profile &apos;{0}&apos;.</value>
   </data>
   <data name="Settings.Status.NewConfiguration" xml:space="preserve">
-    <value>New configuration. Add at least one library root, then Save as.</value>
+    <value>New configuration. Add at least one library root, then choose Save as…</value>
   </data>
   <data name="Settings.Status.ProfileCreated" xml:space="preserve">
     <value>Created profile &apos;{0}&apos;.</value>
@@ -3358,7 +3367,7 @@
     <value>{0}/{1}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Enabled" xml:space="preserve">
-    <value>enabled; sources {0}</value>
+    <value>enabled; source disposition: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Disabled" xml:space="preserve">
     <value>disabled; sources preserved</value>
@@ -3397,7 +3406,7 @@
     <value> It is currently offline or cannot be reached.</value>
   </data>
   <data name="Settings.PolicyDetails.AllIncluded" xml:space="preserve">
-    <value>Every matching music file is included.</value>
+    <value>All matching music files are included.</value>
   </data>
   <data name="Settings.PolicyDetails.PatternsIncluded" xml:space="preserve">
     <value>Only files matching {0} are included.</value>
@@ -3406,7 +3415,7 @@
     <value> Files matching {0} are excluded.</value>
   </data>
   <data name="Settings.PolicyDetails.AllFormats" xml:space="preserve">
-    <value>all recognized music formats</value>
+    <value>all supported music formats</value>
   </data>
   <data name="Settings.PolicyDetails.RootLine" xml:space="preserve">
     <value>• In {0}, the app indexes {1}. {2} {3}{4}{5}</value>
@@ -3454,13 +3463,13 @@
     <value>enabled, but no output recipes</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Recipe" xml:space="preserve">
-    <value>{0}: {1} to {2}</value>
+    <value>Recipe “{0}”: action — {1}; destination — {2}</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.MissingRoot" xml:space="preserve">
-    <value>missing root</value>
+    <value>missing destination root</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.NoDirectRoot" xml:space="preserve">
-    <value>no direct root</value>
+    <value>no direct destination root</value>
   </data>
   <data name="Settings.PolicyDetails.Integrations.NoCatalog" xml:space="preserve">
     <value>File playlists (M3U/M3U8); no media catalog integration configured</value>
@@ -3499,7 +3508,7 @@
     <value>Disc numbers are represented using {0}, and the disc tags are removed.</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Enabled" xml:space="preserve">
-    <value>Ingest is enabled through “{0}”. The active recipes are {1}, and source files are {2} after a successful ingest.</value>
+    <value>Ingest is enabled through “{0}”. Active recipes: {1}. After a successful ingest, source-file disposition: {2}.</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Preserved" xml:space="preserve">
     <value>Automatic ingest is disabled, so source files are preserved.</value>
@@ -3526,10 +3535,10 @@
     <value>not copied</value>
   </data>
   <data name="Settings.PolicyDetails.MetadataParagraph" xml:space="preserve">
-    <value>When metadata is copied, ReplayGain is {0}, MusicBrainz identifiers are {1}, custom fields are {2}, and compilation information is {3}.</value>
+    <value>Metadata copy: ReplayGain — {0}; MusicBrainz identifiers — {1}; custom fields — {2}; compilation information — {3}.</value>
   </data>
   <data name="Settings.PolicyDetails.ArtworkParagraph" xml:space="preserve">
-    <value>{0} Written artwork uses {1} storage, {2}, and {3} encoding.</value>
+    <value>{0} Artwork writing: storage — {1}; roles — {2}; encoding — {3}.</value>
   </data>
   <data name="Settings.PolicyDetails.HealthParagraph" xml:space="preserve">
     <value>Health checks currently enabled: {0}. Files that do not match a sidecar rule are {1}.</value>
@@ -3922,7 +3931,7 @@
     <value>Grouping</value>
   </data>
   <data name="Settings.Choice.TagFields.Key" xml:space="preserve">
-    <value>Key</value>
+    <value>Musical key</value>
   </data>
   <data name="Settings.Choice.TagFields.ISRC" xml:space="preserve">
     <value>ISRC</value>
@@ -3955,7 +3964,7 @@
     <value>Movement</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementTotal" xml:space="preserve">
-    <value>Movement total</value>
+    <value>Total movements</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementNumber" xml:space="preserve">
     <value>Movement number</value>
@@ -4021,7 +4030,7 @@
     <value>Rating</value>
   </data>
   <data name="Settings.Choice.TagFields.Label" xml:space="preserve">
-    <value>Label</value>
+    <value>Record label</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseCountry" xml:space="preserve">
     <value>Release country</value>
@@ -4060,13 +4069,13 @@
     <value>ReplayGain track range</value>
   </data>
   <data name="Settings.Choice.TagFields.Script" xml:space="preserve">
-    <value>Script</value>
+    <value>Writing system</value>
   </data>
   <data name="Settings.Choice.TagFields.Show" xml:space="preserve">
     <value>Show</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowSort" xml:space="preserve">
-    <value>Show sort</value>
+    <value>Show sort title</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowMovement" xml:space="preserve">
     <value>Show movement</value>

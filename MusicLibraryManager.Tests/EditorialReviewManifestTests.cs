@@ -19,9 +19,9 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
 
-        Assert.Equal(3_544, manifest.Records.Count);
+        Assert.Equal(3_547, manifest.Records.Count);
         Assert.Equal(
-            1_192,
+            635,
             Count(
                 manifest,
                 EditorialReviewStatus.Pending));
@@ -31,12 +31,12 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.InvariantApproved));
         Assert.Equal(
-            83,
+            182,
             Count(
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            2_154,
+            2_615,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -443,7 +443,7 @@ public sealed class EditorialReviewManifestTests
                     requireComplete: true));
 
         Assert.Equal(
-            "Strict editorial review failed: 1,192 resources remain Pending.",
+            "Strict editorial review failed: 635 resources remain Pending.",
             exception.Message);
         EditorialReviewManifest unchanged =
             EditorialReviewInfrastructure.LoadAndValidate(
@@ -452,7 +452,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
         Assert.Equal(
-            1_192,
+            635,
             Count(
                 unchanged,
                 EditorialReviewStatus.Pending));
@@ -513,7 +513,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                2_154,
+                2_615,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));
@@ -523,12 +523,12 @@ public sealed class EditorialReviewManifestTests
                     refreshed,
                     EditorialReviewStatus.InvariantApproved));
             Assert.Equal(
-                1_192,
+                635,
                 Count(
                     refreshed,
                     EditorialReviewStatus.Pending));
             Assert.Equal(
-                83,
+                182,
                 Count(
                     refreshed,
                     EditorialReviewStatus.GlossaryReviewed));
@@ -939,6 +939,122 @@ public sealed class EditorialReviewManifestTests
     }
 
     [Fact]
+    public void Settings_usage_split_batch_contains_exactly_the_new_resources()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: false);
+        const string batch =
+            "gui-usability-settings-usage-splits-editorial-2026-07-25";
+        EditorialReviewRecord[] records =
+            manifest.Records.Values
+                .Where(record =>
+                    string.Equals(
+                        record.Batch,
+                        batch,
+                        StringComparison.Ordinal))
+                .OrderBy(
+                    record => record.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        Assert.Equal(
+            [
+                "Settings.Playlists.TransportOptions",
+                "Settings.Playlists.TransportProvider",
+                "Settings.RootPolicy.HealthSeverity",
+            ],
+            records.Select(record => record.Key));
+        Assert.All(
+            records,
+            record =>
+            {
+                Assert.Equal(
+                    EditorialReviewStatus.EditorialReviewed,
+                    record.Status);
+                Assert.Equal(
+                    CatalogTranslationRoute.EditorialOverride,
+                    record.Route);
+                Assert.Equal(
+                    "Codex focused editorial review",
+                    record.Reviewer);
+                Assert.Equal("2026-07-25", record.Date);
+                Assert.StartsWith(
+                    "packet:v1:",
+                    record.Disposition,
+                    StringComparison.Ordinal);
+            });
+    }
+
+    [Fact]
+    public void Settings_review_batch_contains_the_exact_focused_domain()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: false);
+        const string batch =
+            "gui-usability-settings-editorial-2026-07-25";
+        EditorialReviewRecord[] records =
+            manifest.Records.Values
+                .Where(record =>
+                    string.Equals(
+                        record.Batch,
+                        batch,
+                        StringComparison.Ordinal))
+                .OrderBy(
+                    record => record.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        Assert.Equal(557, records.Length);
+        Assert.Equal(
+            458,
+            records.Count(record =>
+                record.Status ==
+                EditorialReviewStatus.EditorialReviewed));
+        Assert.Equal(
+            99,
+            records.Count(record =>
+                record.Status ==
+                EditorialReviewStatus.GlossaryReviewed));
+        Assert.Equal(
+            458,
+            records.Count(record =>
+                record.Route ==
+                CatalogTranslationRoute.EditorialOverride));
+        Assert.Equal(
+            99,
+            records.Count(record =>
+                record.Route ==
+                CatalogTranslationRoute.Glossary));
+        Assert.All(
+            records,
+            record =>
+            {
+                Assert.StartsWith(
+                    "Settings.",
+                    record.Key,
+                    StringComparison.Ordinal);
+                Assert.Equal(
+                    "Codex focused editorial review",
+                    record.Reviewer);
+                Assert.Equal("2026-07-25", record.Date);
+                Assert.StartsWith(
+                    "packet:v1:",
+                    record.Disposition,
+                    StringComparison.Ordinal);
+            });
+    }
+
+    [Fact]
     public void Git_seed_compares_parsed_values_and_binds_reviewed_neutral()
     {
         WithTemporaryDirectory(directory =>
@@ -1091,7 +1207,7 @@ public sealed class EditorialReviewManifestTests
                 File.ReadAllBytes(auditOne),
                 File.ReadAllBytes(auditTwo));
             Assert.Equal(
-                3_545,
+                3_548,
                 File.ReadLines(auditOne).Count());
 
             string packetOne = Path.Combine(directory, "packet-1.xml");

@@ -2167,76 +2167,76 @@
     <value>configuración</value>
   </data>
   <data name="Settings.Subtitle" xml:space="preserve">
-    <value>configurar biblioteca, listas de reproducción, ingesta herramientas, y aplicación apariencia.</value>
+    <value>Configura bibliotecas, listas de reproducción, herramientas de ingesta y la apariencia de la aplicación.</value>
   </data>
   <data name="Settings.UnsavedChanges" xml:space="preserve">
-    <value>sin guardar cambios</value>
+    <value>Cambios sin guardar</value>
   </data>
   <data name="Settings.Action.Browse" xml:space="preserve">
-    <value>examinar</value>
+    <value>Examinar…</value>
   </data>
   <data name="Settings.Action.Clear" xml:space="preserve">
-    <value>borrar</value>
+    <value>Borrar</value>
   </data>
   <data name="Settings.Action.Delete" xml:space="preserve">
-    <value>eliminar</value>
+    <value>Eliminar</value>
   </data>
   <data name="Settings.Action.Discard" xml:space="preserve">
-    <value>descartar</value>
+    <value>Descartar cambios</value>
   </data>
   <data name="Settings.Action.Duplicate" xml:space="preserve">
-    <value>duplicado</value>
+    <value>Duplicar</value>
   </data>
   <data name="Settings.Action.New" xml:space="preserve">
-    <value>nuevo</value>
+    <value>Nuevo</value>
   </data>
   <data name="Settings.Action.Remove" xml:space="preserve">
-    <value>quitar</value>
+    <value>Quitar</value>
   </data>
   <data name="Settings.Action.Review" xml:space="preserve">
-    <value>revisar</value>
+    <value>Revisar</value>
   </data>
   <data name="Settings.Action.Save" xml:space="preserve">
-    <value>guardar</value>
+    <value>Guardar</value>
   </data>
   <data name="Settings.Action.SaveAs" xml:space="preserve">
-    <value>guardar como</value>
+    <value>Guardar como…</value>
   </data>
   <data name="Settings.Automation.Categories" xml:space="preserve">
-    <value>configuración categorías</value>
+    <value>Categorías de configuración</value>
   </data>
   <data name="Settings.Automation.Category" xml:space="preserve">
-    <value>configuración categoría</value>
+    <value>Categoría de configuración</value>
   </data>
   <data name="Settings.Automation.Error" xml:space="preserve">
-    <value>error</value>
+    <value>Error</value>
   </data>
   <data name="Settings.Automation.FirstInvalidSetting" xml:space="preserve">
-    <value>ir a el primero no válido ajuste</value>
+    <value>Ir a la primera opción no válida</value>
   </data>
   <data name="Settings.Automation.Information" xml:space="preserve">
-    <value>información</value>
+    <value>Información</value>
   </data>
   <data name="Settings.Common.Artwork" xml:space="preserve">
-    <value>carátula</value>
+    <value>Carátula</value>
   </data>
   <data name="Settings.Common.Codec" xml:space="preserve">
-    <value>códec</value>
+    <value>Códec</value>
   </data>
   <data name="Settings.Common.CollisionBehavior" xml:space="preserve">
-    <value>conflicto comportamiento</value>
+    <value>Comportamiento ante conflictos</value>
   </data>
   <data name="Settings.Common.FileNameTemplate" xml:space="preserve">
     <value>Plantilla de nombre de archivo</value>
   </data>
   <data name="Settings.Common.FolderTemplate" xml:space="preserve">
-    <value>carpeta plantilla</value>
+    <value>Plantilla de carpeta</value>
   </data>
   <data name="Settings.Common.MaximumBytes" xml:space="preserve">
-    <value>máximo bytes</value>
+    <value>Máximo de bytes</value>
   </data>
   <data name="Settings.Common.MaximumDimension" xml:space="preserve">
-    <value>dimensión máxima</value>
+    <value>Dimensión máxima</value>
   </data>
   <data name="Settings.Common.Name" xml:space="preserve">
     <value>Nombre</value>
@@ -2284,232 +2284,232 @@
     <value>Configuraciones recientes</value>
   </data>
   <data name="Settings.LibraryRoots.Add" xml:space="preserve">
-    <value>añadir raíz</value>
+    <value>Añadir raíz</value>
   </data>
   <data name="Settings.LibraryRoots.AddSet" xml:space="preserve">
-    <value>añadir establecer</value>
+    <value>Añadir conjunto de análisis</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensions" xml:space="preserve">
     <value>Extensiones para comparar conjuntos</value>
   </data>
   <data name="Settings.LibraryRoots.CrossSetExtensionsPlaceholder" xml:space="preserve">
-    <value>para ejemplo: .flac, .m4a</value>
+    <value>Por ejemplo: .flac, .m4a</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatterns" xml:space="preserve">
-    <value>excluir patrón</value>
+    <value>Patrones de exclusión</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsAutomation" xml:space="preserve">
-    <value>biblioteca raíz indexar excluir patrón</value>
+    <value>Patrones de exclusión de la raíz de biblioteca</value>
   </data>
   <data name="Settings.LibraryRoots.ExcludePatternsPlaceholder" xml:space="preserve">
-    <value>ninguno; o temporal/**; *.tmp</value>
+    <value>Por ejemplo: Temp/**; *.tmp</value>
   </data>
   <data name="Settings.LibraryRoots.Formats" xml:space="preserve">
-    <value>formatos a indexar</value>
+    <value>Formatos para indexar</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsAutomation" xml:space="preserve">
-    <value>biblioteca raíz formatos a indexar</value>
+    <value>Formatos indexados en esta raíz de biblioteca</value>
   </data>
   <data name="Settings.LibraryRoots.FormatsPlaceholder" xml:space="preserve">
-    <value>todos compatible; o .flac, .m4a</value>
+    <value>Todos los formatos compatibles; o .flac, .m4a</value>
   </data>
   <data name="Settings.LibraryRoots.GuidedStep" xml:space="preserve">
-    <value>paso 1 de 2: configurar raíces, asignar cada raíz directiva, y habilitar solo el escribir usted pretender.</value>
+    <value>Paso 1 de 2: configura las raíces, asigna una directiva a cada una y habilita solo las escrituras que quieras permitir.</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatterns" xml:space="preserve">
-    <value>incluir patrón</value>
+    <value>Patrones de inclusión</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsAutomation" xml:space="preserve">
-    <value>biblioteca raíz indexar incluir patrón</value>
+    <value>Patrones de inclusión de la raíz de biblioteca</value>
   </data>
   <data name="Settings.LibraryRoots.IncludePatternsPlaceholder" xml:space="preserve">
-    <value>todos; o música/**; *.flac</value>
+    <value>Por ejemplo: Music/**; *.flac</value>
   </data>
   <data name="Settings.LibraryRoots.Path" xml:space="preserve">
-    <value>raíz ruta</value>
+    <value>Ruta de la raíz</value>
   </data>
   <data name="Settings.LibraryRoots.PathAutomation" xml:space="preserve">
-    <value>biblioteca raíz ruta</value>
+    <value>Ruta de la raíz de biblioteca</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Artwork" xml:space="preserve">
-    <value>carátula</value>
+    <value>Carátula</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Ingest" xml:space="preserve">
-    <value>ingesta salida</value>
+    <value>Salida de ingesta</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Metadata" xml:space="preserve">
-    <value>metadatos</value>
+    <value>Metadatos</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Organize" xml:space="preserve">
-    <value>organizar archivos</value>
+    <value>Organizar archivos</value>
   </data>
   <data name="Settings.LibraryRoots.Permission.Sync" xml:space="preserve">
-    <value>sincronizar salida</value>
+    <value>Salida de sincronización</value>
   </data>
   <data name="Settings.LibraryRoots.Policy" xml:space="preserve">
-    <value>nomenclatura y raíz directiva</value>
+    <value>Nomenclatura y directiva de raíz</value>
   </data>
   <data name="Settings.LibraryRoots.PolicyAutomation" xml:space="preserve">
-    <value>biblioteca raíz nomenclatura perfil</value>
+    <value>Perfil de directiva de la raíz de biblioteca</value>
   </data>
   <data name="Settings.LibraryRoots.ReviewPolicy" xml:space="preserve">
-    <value>revisar directiva</value>
+    <value>Revisar directiva</value>
   </data>
   <data name="Settings.LibraryRoots.SetNamesAutomation" xml:space="preserve">
-    <value>analizar establecer nombre</value>
+    <value>Nombres de conjuntos de análisis</value>
   </data>
   <data name="Settings.LibraryRoots.SetNamesPlaceholder" xml:space="preserve">
-    <value>establecer nombre (coma separado)</value>
+    <value>Nombres de conjuntos (separados por comas)</value>
   </data>
   <data name="Settings.LibraryRoots.SharedOffsetAutomation" xml:space="preserve">
-    <value>analizar establecer compartido desplazamiento</value>
+    <value>Desplazamiento compartido del conjunto de análisis</value>
   </data>
   <data name="Settings.LibraryRoots.SharedOffsetPlaceholder" xml:space="preserve">
-    <value>compartido desplazamiento</value>
+    <value>Desplazamiento compartido</value>
   </data>
   <data name="Settings.LibraryRoots.Title" xml:space="preserve">
-    <value>biblioteca raíces y establecer pertenencia</value>
+    <value>Raíces de biblioteca y pertenencia a conjuntos</value>
   </data>
   <data name="Settings.LibraryRoots.WritePermissions" xml:space="preserve">
-    <value>escribir permisos</value>
+    <value>Permisos de escritura</value>
   </data>
   <data name="Settings.Playlists.AddExport" xml:space="preserve">
-    <value>añadir exportar</value>
+    <value>Añadir exportación</value>
   </data>
   <data name="Settings.Playlists.AddPlaylist" xml:space="preserve">
-    <value>añadir lista de reproducción</value>
+    <value>Añadir lista de reproducción</value>
   </data>
   <data name="Settings.Playlists.AddSource" xml:space="preserve">
-    <value>añadir origen</value>
+    <value>Añadir origen</value>
   </data>
   <data name="Settings.Playlists.AddTarget" xml:space="preserve">
-    <value>añadir destino</value>
+    <value>Añadir destino</value>
   </data>
   <data name="Settings.Playlists.BrowseDestination" xml:space="preserve">
-    <value>examinar destino</value>
+    <value>Elegir destino…</value>
   </data>
   <data name="Settings.Playlists.BrowseFile" xml:space="preserve">
-    <value>examinar archivo</value>
+    <value>Examinar…</value>
   </data>
   <data name="Settings.Playlists.CleanTargets" xml:space="preserve">
-    <value>limpiar lista de reproducción exportar destino antes cruzado-sincronizar listas de reproducción</value>
+    <value>Limpiar los destinos de exportación de listas antes de la sincronización entre bibliotecas</value>
   </data>
   <data name="Settings.Playlists.CleanupTitle" xml:space="preserve">
-    <value>sincronización cruzada limpieza</value>
+    <value>Limpieza de la sincronización entre bibliotecas</value>
   </data>
   <data name="Settings.Playlists.Container" xml:space="preserve">
-    <value>contenedor</value>
+    <value>Contenedor</value>
   </data>
   <data name="Settings.Playlists.DeleteStale" xml:space="preserve">
-    <value>permanentemente eliminar obsoleto sincronización cruzada música archivos en su lugar de cuarentena ellos</value>
+    <value>Eliminar permanentemente los archivos de música obsoletos de la sincronización entre bibliotecas en vez de ponerlos en cuarentena</value>
   </data>
   <data name="Settings.Playlists.EnableExportTooltip" xml:space="preserve">
-    <value>habilitar exportar perfil</value>
+    <value>Activar perfil de exportación</value>
   </data>
   <data name="Settings.Playlists.Encoding" xml:space="preserve">
-    <value>codificación</value>
+    <value>Codificación</value>
   </data>
   <data name="Settings.Playlists.ExportProfilesDescription" xml:space="preserve">
-    <value>combinar selección, transformación, nomenclatura, carátula/listas de reproducción, transporte, y conciliación. perfil permanecer oculto hasta habilitado y configurado.</value>
+    <value>Combina la selección, las transformaciones, los nombres, las carátulas y listas, el transporte y la conciliación. Los perfiles permanecen ocultos hasta que se activan y configuran.</value>
   </data>
   <data name="Settings.Playlists.ExportProfilesTitle" xml:space="preserve">
-    <value>exportar perfil</value>
+    <value>Perfiles de exportación</value>
   </data>
   <data name="Settings.Playlists.Extinf" xml:space="preserve">
     <value>EXTINF</value>
   </data>
   <data name="Settings.Playlists.FileNameTransform" xml:space="preserve">
-    <value>nombre de archivo transformación</value>
+    <value>Transformación del nombre de archivo</value>
   </data>
   <data name="Settings.Playlists.FormatAutomation" xml:space="preserve">
-    <value>lista de reproducción exportar formato</value>
+    <value>Formato de exportación de la lista</value>
   </data>
   <data name="Settings.Playlists.FrontCoverOnly" xml:space="preserve">
-    <value>frontal carátula solo</value>
+    <value>Solo carátula frontal</value>
   </data>
   <data name="Settings.Playlists.GeneratedTransport" xml:space="preserve">
-    <value>generar listas de reproducción y transporte</value>
+    <value>Listas generadas y transporte</value>
   </data>
   <data name="Settings.Playlists.GeneratePlaylists" xml:space="preserve">
-    <value>generar listas de reproducción</value>
+    <value>Generar listas de reproducción</value>
   </data>
   <data name="Settings.Playlists.LineEndings" xml:space="preserve">
-    <value>línea finales</value>
+    <value>Finales de línea</value>
   </data>
   <data name="Settings.Playlists.MaximumRemovals" xml:space="preserve">
-    <value>máximo eliminaciones</value>
+    <value>Máximo de eliminaciones</value>
   </data>
   <data name="Settings.Playlists.MaximumTracks" xml:space="preserve">
-    <value>máximo pistas</value>
+    <value>Máximo de pistas</value>
   </data>
   <data name="Settings.Playlists.MaxTracksPlaceholder" xml:space="preserve">
-    <value>máximo pistas</value>
+    <value>Máximo de pistas</value>
   </data>
   <data name="Settings.Playlists.NamePlaceholder" xml:space="preserve">
-    <value>Nombre de la lista de reproducción</value>
+    <value>p. ej., Favoritos</value>
   </data>
   <data name="Settings.Playlists.NamingArtwork" xml:space="preserve">
-    <value>nomenclatura y carátula</value>
+    <value>Nombres y carátulas</value>
   </data>
   <data name="Settings.Playlists.NamingProfileId" xml:space="preserve">
-    <value>biblioteca nomenclatura perfil ID</value>
+    <value>ID del perfil de nombres de la biblioteca</value>
   </data>
   <data name="Settings.Playlists.PathStyle" xml:space="preserve">
-    <value>ruta estilo</value>
+    <value>Formato de ruta</value>
   </data>
   <data name="Settings.Playlists.PreserveArtworkEncoding" xml:space="preserve">
-    <value>conservar carátula codificación</value>
+    <value>Conservar la codificación de las carátulas</value>
   </data>
   <data name="Settings.Playlists.PreserveSourceLayout" xml:space="preserve">
-    <value>conservar origen diseño</value>
+    <value>Conservar la estructura de origen</value>
   </data>
   <data name="Settings.Playlists.RecipeId" xml:space="preserve">
-    <value>receta ID</value>
+    <value>ID de receta</value>
   </data>
   <data name="Settings.Playlists.Reconciliation" xml:space="preserve">
-    <value>conciliación</value>
+    <value>Conciliación</value>
   </data>
   <data name="Settings.Playlists.Recursive" xml:space="preserve">
-    <value>recursivo</value>
+    <value>Recursivo</value>
   </data>
   <data name="Settings.Playlists.RelativePaths" xml:space="preserve">
-    <value>relativo rutas</value>
+    <value>Rutas relativas</value>
   </data>
   <data name="Settings.Playlists.RemoveEmptyDirectories" xml:space="preserve">
-    <value>quitar vacío directorio</value>
+    <value>Quitar directorios vacíos</value>
   </data>
   <data name="Settings.Playlists.ReplaceChanged" xml:space="preserve">
-    <value>reemplazar cambiado archivos</value>
+    <value>Reemplazar archivos modificados</value>
   </data>
   <data name="Settings.Playlists.SavedViewQuery" xml:space="preserve">
     <value>Consulta de vista guardada</value>
   </data>
   <data name="Settings.Playlists.Selection" xml:space="preserve">
-    <value>selección</value>
+    <value>Selección</value>
   </data>
   <data name="Settings.Playlists.SelectionTransform" xml:space="preserve">
-    <value>selección y transformación</value>
+    <value>Selección y transformación</value>
   </data>
   <data name="Settings.Playlists.SelectionValues" xml:space="preserve">
-    <value>valores (listas de reproducción, vistas, o rutas)</value>
+    <value>Valores (listas, vistas o rutas)</value>
   </data>
   <data name="Settings.Playlists.SetsAutomation" xml:space="preserve">
-    <value>lista de reproducción exportar establecer</value>
+    <value>Conjuntos de análisis para exportar listas</value>
   </data>
   <data name="Settings.Playlists.SetsPlaceholder" xml:space="preserve">
-    <value>analizar establecer</value>
+    <value>p. ej., favoritos, recientes</value>
   </data>
   <data name="Settings.Playlists.SourceAutomation" xml:space="preserve">
-    <value>archivo lista de reproducción origen</value>
+    <value>Origen de listas basadas en archivos</value>
   </data>
   <data name="Settings.Playlists.SourcePlaceholder" xml:space="preserve">
-    <value>lista de reproducción archivo o directorio</value>
+    <value>p. ej., playlists/favorites.m3u8</value>
   </data>
   <data name="Settings.Playlists.SourcesDescription" xml:space="preserve">
-    <value>usar M3U/M3U8 archivos o directorio cuando no iTunes catálogo es configurado.</value>
+    <value>Usa archivos o directorios M3U/M3U8 cuando no haya un catálogo de iTunes configurado.</value>
   </data>
   <data name="Settings.Playlists.SourcesTitle" xml:space="preserve">
-    <value>archivo lista de reproducción orígenes</value>
+    <value>Orígenes de listas basadas en archivos</value>
   </data>
   <data name="Settings.Playlists.SyncNameAutomation" xml:space="preserve">
     <value>Nombre de la lista de reproducción que se sincronizará</value>
@@ -2524,67 +2524,73 @@
     <value>Destino de sincronización entre bibliotecas</value>
   </data>
   <data name="Settings.Playlists.SyncTitle" xml:space="preserve">
-    <value>sincronizar listas de reproducción</value>
+    <value>Sincronizar listas de reproducción</value>
   </data>
   <data name="Settings.Playlists.TargetAutomation" xml:space="preserve">
-    <value>lista de reproducción exportar destino</value>
+    <value>Destino de exportación de la lista</value>
   </data>
   <data name="Settings.Playlists.TargetPlaceholder" xml:space="preserve">
-    <value>destino</value>
+    <value>p. ej., Listas</value>
   </data>
   <data name="Settings.Playlists.TargetsTitle" xml:space="preserve">
-    <value>lista de reproducción exportar destino</value>
+    <value>Destinos de exportación de listas</value>
   </data>
   <data name="Settings.Playlists.Transform" xml:space="preserve">
-    <value>transformación</value>
+    <value>Transformación</value>
   </data>
   <data name="Settings.Playlists.TransformProvider" xml:space="preserve">
-    <value>transformación proveedor</value>
+    <value>Proveedor de transformación</value>
+  </data>
+  <data name="Settings.Playlists.TransportProvider" xml:space="preserve">
+    <value>Proveedor de transporte</value>
+  </data>
+  <data name="Settings.Playlists.TransportOptions" xml:space="preserve">
+    <value>Opciones de transporte</value>
   </data>
   <data name="Settings.Playlists.TransportDestinationPlaceholder" xml:space="preserve">
-    <value>destino de transporte</value>
+    <value>p. ej., Música</value>
   </data>
   <data name="Settings.Playlists.TransportOptionsPlaceholder" xml:space="preserve">
-    <value>opción=valor; opción2=valor</value>
+    <value>option=value; option2=value</value>
   </data>
   <data name="Settings.Playlists.TransportProviderPlaceholder" xml:space="preserve">
-    <value>Proveedor de transporte (sistema de archivos local)</value>
+    <value>p. ej., local-filesystem</value>
   </data>
   <data name="Settings.Playlists.UseNamingCollision" xml:space="preserve">
     <value>Usar la regla de conflicto del perfil de nombres</value>
   </data>
   <data name="Settings.Playlists.WriteBom" xml:space="preserve">
-    <value>escribir BOM</value>
+    <value>Escribir BOM</value>
   </data>
   <data name="Settings.Playlists.WriteExtinf" xml:space="preserve">
-    <value>escribir EXTINF</value>
+    <value>Escribir EXTINF</value>
   </data>
   <data name="Settings.Playlists.WritePlaylistBom" xml:space="preserve">
-    <value>escribir lista de reproducción BOM</value>
+    <value>Escribir el BOM de la lista</value>
   </data>
   <data name="Settings.Tools.AcoustIdDescription" xml:space="preserve">
     <value>Las consultas de AcoustID requieren una clave de cliente de aplicación. Este ajuste personal se mantiene fuera del XML de biblioteca portátil. Las consultas no envían huellas digitales.</value>
   </data>
   <data name="Settings.Tools.AcoustIdKey" xml:space="preserve">
-    <value>AcoustID aplicación cliente clave</value>
+    <value>Clave de cliente de la aplicación AcoustID</value>
   </data>
   <data name="Settings.Tools.Bindings" xml:space="preserve">
-    <value>Complemento de enlaces local del equipo (opcional)</value>
+    <value>Archivo de asignaciones específico del equipo (opcional)</value>
   </data>
   <data name="Settings.Tools.BindingsAutomation" xml:space="preserve">
-    <value>Complemento de enlaces local del equipo</value>
+    <value>Archivo de asignaciones específico del equipo</value>
   </data>
   <data name="Settings.Tools.BindingsPlaceholder" xml:space="preserve">
-    <value>conservar portátil directiva separado de raíz y herramienta rutas</value>
+    <value>library.bindings.xml</value>
   </data>
   <data name="Settings.Tools.Database" xml:space="preserve">
-    <value>metadatos base de datos</value>
+    <value>Base de datos de metadatos</value>
   </data>
   <data name="Settings.Tools.DiscogsDescription" xml:space="preserve">
     <value>La búsqueda en Discogs requiere un token de acceso personal. Cuando es posible, se guarda en el servicio de credenciales del sistema operativo; de lo contrario, solo durante la sesión.</value>
   </data>
   <data name="Settings.Tools.DiscogsToken" xml:space="preserve">
-    <value>Discogs personal acceso token</value>
+    <value>Token de acceso personal de Discogs</value>
   </data>
   <data name="Settings.Tools.DiscogsTokenPlaceholder" xml:space="preserve">
     <value>Escribe un token nuevo para guardarlo</value>
@@ -2593,46 +2599,46 @@
     <value>FFmpeg</value>
   </data>
   <data name="Settings.Tools.FfmpegAutomation" xml:space="preserve">
-    <value>FFmpeg ejecutable</value>
+    <value>Ejecutable de FFmpeg</value>
   </data>
   <data name="Settings.Tools.Fpcalc" xml:space="preserve">
-    <value>Chromaprint fpcalc (personal equipo ajuste)</value>
+    <value>Chromaprint fpcalc (específico del equipo)</value>
   </data>
   <data name="Settings.Tools.FpcalcAutomation" xml:space="preserve">
-    <value>Chromaprint fpcalc ejecutable</value>
+    <value>Ejecutable de Chromaprint fpcalc</value>
   </data>
   <data name="Settings.Tools.Itunes" xml:space="preserve">
-    <value>iTunes biblioteca</value>
+    <value>Biblioteca de iTunes</value>
   </data>
   <data name="Settings.Tools.OfflineMode" xml:space="preserve">
-    <value>sin conexión modo — usar en caché proveedor datos solo</value>
+    <value>Modo sin conexión — usar solo datos de proveedores almacenados en caché</value>
   </data>
   <data name="Settings.Tools.OfflineModeAutomation" xml:space="preserve">
-    <value>usar en caché metadatos proveedor sin conexión</value>
+    <value>Usar datos de proveedores en caché sin conexión</value>
   </data>
   <data name="Settings.Tools.OnlineMetadata" xml:space="preserve">
     <value>metadatos en línea</value>
   </data>
   <data name="Settings.Tools.OptimFrog" xml:space="preserve">
-    <value>OptimFROG herramientas directorio (opcional huella decodificador)</value>
+    <value>Carpeta de herramientas OptimFROG (decodificador de huellas opcional)</value>
   </data>
   <data name="Settings.Tools.OptimFrogAutomation" xml:space="preserve">
-    <value>OptimFROG herramientas directorio</value>
+    <value>Carpeta de herramientas OptimFROG</value>
   </data>
   <data name="Settings.Tools.OptimFrogPlaceholder" xml:space="preserve">
-    <value>directorio que contiene ofr, ofs, y off</value>
+    <value>Carpeta que contiene ofr, ofs y off</value>
   </data>
   <data name="Settings.Tools.StoreToken" xml:space="preserve">
-    <value>almacenar token</value>
+    <value>Guardar token</value>
   </data>
   <data name="Settings.Tools.Title" xml:space="preserve">
-    <value>caché y herramienta rutas</value>
+    <value>Rutas de caché y herramientas</value>
   </data>
   <data name="Settings.Tools.Wavpack" xml:space="preserve">
     <value>WavPack</value>
   </data>
   <data name="Settings.Tools.WavpackAutomation" xml:space="preserve">
-    <value>WavPack ejecutable</value>
+    <value>Ejecutable de WavPack</value>
   </data>
   <data name="Settings.Health.AnalysisDescription" xml:space="preserve">
     <value>La auditoría marca las carátulas que superan cualquiera de los dos límites.</value>
@@ -2674,43 +2680,43 @@
     <value>Objetivos de reparación automática</value>
   </data>
   <data name="Settings.RootPolicy.AddSidecarRule" xml:space="preserve">
-    <value>añadir archivo asociado regla</value>
+    <value>Añadir regla de archivo auxiliar</value>
   </data>
   <data name="Settings.RootPolicy.Apply" xml:space="preserve">
-    <value>aplicar</value>
+    <value>Aplicar reparación</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkRoles" xml:space="preserve">
-    <value>roles</value>
+    <value>Funciones de las carátulas</value>
   </data>
   <data name="Settings.RootPolicy.ArtworkStorage" xml:space="preserve">
-    <value>almacenamiento</value>
+    <value>Almacenamiento de carátulas</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
     <value>Las políticas integradas están protegidas. Duplica una para personalizarla. Asigna las políticas a las raíces en la pestaña Raíces de la biblioteca.</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
-    <value>estos configuración modificar nomenclatura, metadatos, carátula, estado, y archivo asociado comportamiento para cada raíz usando este perfil. existente vista previa convertirse no válido y debe ser regenerado.</value>
+    <value>Estos ajustes cambian los nombres y el comportamiento de los metadatos, las carátulas, las comprobaciones de estado y los archivos auxiliares de todas las raíces que usan este perfil. Las vistas previas existentes dejarán de ser válidas y deberán generarse de nuevo.</value>
   </data>
   <data name="Settings.RootPolicy.CompilationToken" xml:space="preserve">
-    <value>token de recopilación</value>
+    <value>Nombre de recopilación</value>
   </data>
   <data name="Settings.RootPolicy.CompletePathLimit" xml:space="preserve">
-    <value>Límite de ruta completa (en blanco = valor predeterminado de la plataforma)</value>
+    <value>Longitud máxima de la ruta completa (en blanco = valor predeterminado de la plataforma)</value>
   </data>
   <data name="Settings.RootPolicy.ComponentLimit" xml:space="preserve">
-    <value>componente límite (heredado LengthLimit)</value>
+    <value>Longitud máxima de cada componente de ruta (identificador heredado: LengthLimit)</value>
   </data>
   <data name="Settings.RootPolicy.DiscAlbumLimit" xml:space="preserve">
-    <value>disco-álbum límite (heredado DiscNumLengthLimit)</value>
+    <value>Longitud máxima del nombre de álbum con disco (identificador heredado: DiscNumLengthLimit)</value>
   </data>
   <data name="Settings.RootPolicy.DiscIdentityTitle" xml:space="preserve">
-    <value>disco y álbum identidad</value>
+    <value>Identidad de disco y álbum</value>
   </data>
   <data name="Settings.RootPolicy.DiscPadding" xml:space="preserve">
-    <value>disco relleno</value>
+    <value>Relleno del número de disco</value>
   </data>
   <data name="Settings.RootPolicy.DiscStrategy" xml:space="preserve">
-    <value>disco estrategia</value>
+    <value>Estrategia de disco</value>
   </data>
   <data name="Settings.RootPolicy.DiscStrategyDescription" xml:space="preserve">
     <value>La estrategia de disco determina cómo se representa el disco en el destino: Conservar etiquetas mantiene sus metadatos; las demás estrategias quitan esas etiquetas y representan el disco mediante el álbum, la carpeta, el nombre de archivo o la numeración continua de pistas.</value>
@@ -2719,10 +2725,13 @@
     <value>Plantilla de nombre de archivo del perfil</value>
   </data>
   <data name="Settings.RootPolicy.FolderTemplateAutomation" xml:space="preserve">
-    <value>perfil carpeta plantilla</value>
+    <value>Plantilla de carpeta del perfil</value>
   </data>
   <data name="Settings.RootPolicy.HealthRules" xml:space="preserve">
-    <value>estado reglas</value>
+    <value>Reglas de estado</value>
+  </data>
+  <data name="Settings.RootPolicy.HealthSeverity" xml:space="preserve">
+    <value>Gravedad</value>
   </data>
   <data name="Settings.RootPolicy.HighResolutionBitDepth" xml:space="preserve">
     <value>Profundidad de bits de alta resolución</value>
@@ -2731,88 +2740,88 @@
     <value>Frecuencia de muestreo de alta resolución (Hz)</value>
   </data>
   <data name="Settings.RootPolicy.IdentityIncludesYear" xml:space="preserve">
-    <value>identidad incluye lanzamiento año</value>
+    <value>La identidad incluye el año de publicación</value>
   </data>
   <data name="Settings.RootPolicy.IdentityStripsDisc" xml:space="preserve">
-    <value>identidad elimina disco N sufijos</value>
+    <value>La identidad quita los sufijos «Disc N»</value>
   </data>
   <data name="Settings.RootPolicy.IdentityStripsFormat" xml:space="preserve">
-    <value>identidad elimina formato sufijos</value>
+    <value>La identidad quita los sufijos de formato</value>
   </data>
   <data name="Settings.RootPolicy.IdentityUsesAlbumArtist" xml:space="preserve">
-    <value>identidad usa artista del álbum</value>
+    <value>La identidad usa el artista del álbum</value>
   </data>
   <data name="Settings.RootPolicy.InferLegacySuffixes" xml:space="preserve">
-    <value>inferir heredado álbum sufijos</value>
+    <value>Detectar sufijos de álbum heredados</value>
   </data>
   <data name="Settings.RootPolicy.InvalidCharacterReplacement" xml:space="preserve">
     <value>Sustitución de caracteres no válidos</value>
   </data>
   <data name="Settings.RootPolicy.ItunesCanonicalNaming" xml:space="preserve">
-    <value>iTunes canónico nomenclatura</value>
+    <value>Nombres canónicos de iTunes</value>
   </data>
   <data name="Settings.RootPolicy.JpegQuality" xml:space="preserve">
-    <value>JPEG calidad</value>
+    <value>Calidad JPEG</value>
   </data>
   <data name="Settings.RootPolicy.MaximumBytesUnlimited" xml:space="preserve">
-    <value>máximo bytes (0 = ilimitado)</value>
+    <value>Máximo de bytes (0 = ilimitado)</value>
   </data>
   <data name="Settings.RootPolicy.MaximumDimensionUnlimited" xml:space="preserve">
-    <value>dimensión máxima (0 = ilimitado)</value>
+    <value>Dimensión máxima (0 = ilimitada)</value>
   </data>
   <data name="Settings.RootPolicy.MetadataTitle" xml:space="preserve">
-    <value>metadatos fidelidad</value>
+    <value>Fidelidad de los metadatos</value>
   </data>
   <data name="Settings.RootPolicy.MissingAlbum" xml:space="preserve">
-    <value>ausente álbum</value>
+    <value>Valor alternativo para álbum ausente</value>
   </data>
   <data name="Settings.RootPolicy.MissingArtist" xml:space="preserve">
-    <value>ausente artista</value>
+    <value>Valor alternativo para artista ausente</value>
   </data>
   <data name="Settings.RootPolicy.MissingTitle" xml:space="preserve">
-    <value>ausente título</value>
+    <value>Valor alternativo para título ausente</value>
   </data>
   <data name="Settings.RootPolicy.NamingTitle" xml:space="preserve">
-    <value>nomenclatura y conflicto</value>
+    <value>Nombres y conflictos</value>
   </data>
   <data name="Settings.RootPolicy.PreserveCompilation" xml:space="preserve">
-    <value>conservar recopilación semántica</value>
+    <value>Conservar la semántica de recopilación</value>
   </data>
   <data name="Settings.RootPolicy.PreserveCustomFields" xml:space="preserve">
-    <value>conservar personalizado campos</value>
+    <value>Conservar los campos personalizados</value>
   </data>
   <data name="Settings.RootPolicy.PreserveMusicBrainz" xml:space="preserve">
-    <value>conservar MusicBrainz identificadores</value>
+    <value>Conservar los identificadores de MusicBrainz</value>
   </data>
   <data name="Settings.RootPolicy.PreserveReplayGain" xml:space="preserve">
-    <value>conservar ReplayGain</value>
+    <value>Conservar ReplayGain</value>
   </data>
   <data name="Settings.RootPolicy.PreserveUnicode" xml:space="preserve">
-    <value>conservar Unicode</value>
+    <value>Conservar Unicode</value>
   </data>
   <data name="Settings.RootPolicy.ProfileName" xml:space="preserve">
     <value>Nombre del perfil</value>
   </data>
   <data name="Settings.RootPolicy.ProfileTitle" xml:space="preserve">
-    <value>raíz directiva perfil</value>
+    <value>Perfil de política de biblioteca</value>
   </data>
   <data name="Settings.RootPolicy.Propose" xml:space="preserve">
-    <value>proponer</value>
+    <value>Proponer reparación</value>
   </data>
   <data name="Settings.RootPolicy.QualityTitle" xml:space="preserve">
-    <value>calidad clasificación</value>
+    <value>Clasificación de calidad</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkAtIndex" xml:space="preserve">
-    <value>leer incrustado carátula durante indexando</value>
+    <value>Leer las carátulas incrustadas durante la indexación</value>
   </data>
   <data name="Settings.RootPolicy.ReadArtworkDescription" xml:space="preserve">
     <value>Si se activa, la indexación tarda más y la caché ocupa más espacio, pero las carátulas quedan disponibles de inmediato para explorarlas y auditarlas. Si se desactiva, las carátulas solo se leen al verlas o auditarlas.</value>
   </data>
   <data name="Settings.RootPolicy.SelectAutomation" xml:space="preserve">
-    <value>raíz/nomenclatura directiva perfil</value>
+    <value>Perfil de política de biblioteca</value>
   </data>
   <data name="Settings.RootPolicy.SelectLabel" xml:space="preserve">
-    <value>raíz/nomenclatura directiva</value>
+    <value>Perfil de política de biblioteca</value>
   </data>
   <data name="Settings.RootPolicy.SidecarPatternsPlaceholder" xml:space="preserve">
     <value>*.cue, *.pdf</value>
@@ -2821,67 +2830,67 @@
     <value>Reglas de archivos auxiliares y desconocidos</value>
   </data>
   <data name="Settings.RootPolicy.SidecarTemplate" xml:space="preserve">
-    <value>archivo asociado plantilla</value>
+    <value>Plantilla de archivo auxiliar de carátula</value>
   </data>
   <data name="Settings.RootPolicy.SummaryAutomation" xml:space="preserve">
-    <value>efectivo biblioteca directiva resumen</value>
+    <value>Resumen de la política de biblioteca efectiva</value>
   </data>
   <data name="Settings.RootPolicy.TrackPadding" xml:space="preserve">
-    <value>pista relleno</value>
+    <value>Relleno del número de pista</value>
   </data>
   <data name="Settings.RootPolicy.TrackTotalScope" xml:space="preserve">
     <value>Ámbito del total de pistas</value>
   </data>
   <data name="Settings.RootPolicy.UnicodeNormalization" xml:space="preserve">
-    <value>Unicode normalización</value>
+    <value>Normalización Unicode</value>
   </data>
   <data name="Settings.RootPolicy.UnknownFileDisposition" xml:space="preserve">
     <value>Tratamiento de archivos desconocidos</value>
   </data>
   <data name="Settings.Ingest.AcceptedExtensions" xml:space="preserve">
-    <value>aceptado extensiones</value>
+    <value>Extensiones de archivo de origen</value>
   </data>
   <data name="Settings.Ingest.Action" xml:space="preserve">
     <value>acción</value>
   </data>
   <data name="Settings.Ingest.ActiveProfile" xml:space="preserve">
-    <value>activo ingesta perfil</value>
+    <value>Perfil de ingesta activo</value>
   </data>
   <data name="Settings.Ingest.AddRecipe" xml:space="preserve">
-    <value>añadir receta</value>
+    <value>Añadir receta</value>
   </data>
   <data name="Settings.Ingest.AddToCatalog" xml:space="preserve">
-    <value>añadir salida a configurado medios catálogo</value>
+    <value>Añadir la salida al catálogo multimedia configurado</value>
   </data>
   <data name="Settings.Ingest.AlbumMatch" xml:space="preserve">
-    <value>álbum coincidencia</value>
+    <value>Coincidencia de álbum</value>
   </data>
   <data name="Settings.Ingest.Bitrate" xml:space="preserve">
-    <value>tasa de bits (kbps; por receta)</value>
+    <value>Tasa de bits (kbps; por receta)</value>
   </data>
   <data name="Settings.Ingest.CleanupDescription" xml:space="preserve">
     <value>La disposición del origen indicada arriba controla el audio de origen. Estas opciones de compatibilidad solo se aplican después de completar correctamente la ingesta.</value>
   </data>
   <data name="Settings.Ingest.CleanupTitle" xml:space="preserve">
-    <value>limpieza después ingesta</value>
+    <value>Limpieza después de la ingesta</value>
   </data>
   <data name="Settings.Ingest.DeleteSourceMusic" xml:space="preserve">
-    <value>eliminar origen música después correcto ingesta</value>
+    <value>Eliminar la música de origen después de una ingesta correcta</value>
   </data>
   <data name="Settings.Ingest.DestinationRoot" xml:space="preserve">
-    <value>destino raíz</value>
+    <value>Raíz de destino</value>
   </data>
   <data name="Settings.Ingest.DestinationRootAutomation" xml:space="preserve">
-    <value>ingesta receta destino raíz</value>
+    <value>Raíz de destino de la receta de ingesta</value>
   </data>
   <data name="Settings.Ingest.DisplayNamePlaceholder" xml:space="preserve">
     <value>Nombre para mostrar</value>
   </data>
   <data name="Settings.Ingest.EnableRecipes" xml:space="preserve">
-    <value>habilitar ingesta recetas</value>
+    <value>Activar recetas de ingesta</value>
   </data>
   <data name="Settings.Ingest.EnableRecipeTooltip" xml:space="preserve">
-    <value>habilitar receta</value>
+    <value>Incluir esta receta al buscar coincidencias entre los archivos de origen.</value>
   </data>
   <data name="Settings.Ingest.Encoder" xml:space="preserve">
     <value>codificador (en blanco = automático)</value>
@@ -2890,79 +2899,79 @@
     <value>.flac, .m4a</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegAutomation" xml:space="preserve">
-    <value>adicional FFmpeg opciones</value>
+    <value>Opciones adicionales de FFmpeg</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegOptions" xml:space="preserve">
-    <value>adicional FFmpeg opciones (transcodificar solo)</value>
+    <value>Opciones adicionales de FFmpeg (solo transcodificación)</value>
   </data>
   <data name="Settings.Ingest.ExtraFfmpegPlaceholder" xml:space="preserve">
-    <value>para ejemplo: -af "loudnorm=I=-16:LRA=11"</value>
+    <value>Ejemplo: -af "loudnorm=I=-16:LRA=11"</value>
   </data>
   <data name="Settings.Ingest.InputChannels" xml:space="preserve">
     <value>Canales de entrada</value>
   </data>
   <data name="Settings.Ingest.LosslessMatch" xml:space="preserve">
-    <value>sin pérdida coincidencia (indeterminado = cualquiera)</value>
+    <value>Requisito sin pérdida (estado mixto = cualquiera)</value>
   </data>
   <data name="Settings.Ingest.MatchedSourceSelection" xml:space="preserve">
-    <value>coincidente origen selección</value>
+    <value>Selección de orígenes coincidentes</value>
   </data>
   <data name="Settings.Ingest.MatchEitherQuality" xml:space="preserve">
-    <value>coincidencia cualquiera calidad mínimo</value>
+    <value>Cumplir el mínimo de frecuencia de muestreo o de profundidad de bits</value>
   </data>
   <data name="Settings.Ingest.MinimumBitDepth" xml:space="preserve">
-    <value>mínimo bit profundidad</value>
+    <value>Profundidad de bits mínima</value>
   </data>
   <data name="Settings.Ingest.MinimumSampleRate" xml:space="preserve">
-    <value>mínimo frecuencia de muestreo</value>
+    <value>Frecuencia de muestreo mínima</value>
   </data>
   <data name="Settings.Ingest.OutputBitDepth" xml:space="preserve">
-    <value>salida bit profundidad</value>
+    <value>Profundidad de bits de salida</value>
   </data>
   <data name="Settings.Ingest.OutputChannels" xml:space="preserve">
-    <value>salida canales</value>
+    <value>Canales de salida</value>
   </data>
   <data name="Settings.Ingest.OutputExtension" xml:space="preserve">
     <value>Extensión de salida</value>
   </data>
   <data name="Settings.Ingest.OutputExtensionPlaceholder" xml:space="preserve">
-    <value>para ejemplo .flac</value>
+    <value>Por ejemplo: .flac</value>
   </data>
   <data name="Settings.Ingest.OutputSampleRate" xml:space="preserve">
-    <value>salida frecuencia de muestreo</value>
+    <value>Frecuencia de muestreo de salida</value>
   </data>
   <data name="Settings.Ingest.PreserveArtwork" xml:space="preserve">
-    <value>conservar carátula</value>
+    <value>Conservar las carátulas</value>
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
-    <value>conservar metadatos</value>
+    <value>Conservar los metadatos</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
-    <value>conservar archivo asociado por predeterminado</value>
+    <value>Conservar los archivos asociados de forma predeterminada</value>
   </data>
   <data name="Settings.Ingest.ProfileName" xml:space="preserve">
     <value>Nombre del perfil de ingesta</value>
   </data>
   <data name="Settings.Ingest.RecipeIdPlaceholder" xml:space="preserve">
-    <value>estable receta ID</value>
+    <value>ID estable de la receta</value>
   </data>
   <data name="Settings.Ingest.RemoveNonMusic" xml:space="preserve">
-    <value>quitar no musical archivos después correcto ingesta</value>
+    <value>Quitar los archivos que no sean de música después de una ingesta correcta</value>
   </data>
   <data name="Settings.Ingest.RequireFallbackApproval" xml:space="preserve">
-    <value>requerir aprobación cuando coincidente CD es ausente</value>
+    <value>Requerir aprobación si falta un origen coincidente con calidad de CD</value>
   </data>
   <data name="Settings.Ingest.RequireLossless" xml:space="preserve">
-    <value>requerir sin pérdida</value>
+    <value>Requerir formato sin pérdida</value>
   </data>
   <data name="Settings.Ingest.SourceDisposition" xml:space="preserve">
     <value>Disposición del origen</value>
   </data>
   <data name="Settings.Ingest.Title" xml:space="preserve">
-    <value>ingesta perfil y recetas</value>
+    <value>Perfiles y recetas de ingesta</value>
   </data>
   <data name="Settings.Ingest.UseRootCollision" xml:space="preserve">
-    <value>usar destino raíz conflicto comportamiento</value>
+    <value>Usar el comportamiento de colisiones de la raíz de destino</value>
   </data>
   <data name="Settings.EffectivePolicy.Description" xml:space="preserve">
     <value>Revise el comportamiento que se usará en cada vista previa. Las rutas sin conexión generan advertencias; las referencias de política no válidas y los permisos contradictorios impiden guardar.</value>
@@ -3019,34 +3028,34 @@
     <value>Asignación de campos canónicos a nativos</value>
   </data>
   <data name="Settings.DestinationRoot.Missing" xml:space="preserve">
-    <value>ausente raíz ({0:D})</value>
+    <value>Raíz que falta ({0:D})</value>
   </data>
   <data name="Settings.DestinationRoot.NewRoot" xml:space="preserve">
-    <value>nuevo biblioteca raíz</value>
+    <value>Nueva raíz de biblioteca</value>
   </data>
   <data name="Settings.DestinationRoot.None" xml:space="preserve">
-    <value>no directo raíz</value>
+    <value>Sin raíz directa</value>
   </data>
   <data name="Settings.SyncTarget.NewRoot" xml:space="preserve">
-    <value>nuevo biblioteca raíz</value>
+    <value>Nueva raíz de biblioteca</value>
   </data>
   <data name="Settings.SyncTarget.None" xml:space="preserve">
-    <value>no sincronizar destino</value>
+    <value>Sin destino de sincronización</value>
   </data>
   <data name="Settings.Permissions.Action.Artwork" xml:space="preserve">
-    <value>editar carátula</value>
+    <value>editar carátulas</value>
   </data>
   <data name="Settings.Permissions.Action.Ingest" xml:space="preserve">
-    <value>escribir ingesta resultados</value>
+    <value>escribir resultados de ingesta</value>
   </data>
   <data name="Settings.Permissions.Action.Metadata" xml:space="preserve">
     <value>editar metadatos</value>
   </data>
   <data name="Settings.Permissions.Action.Organize" xml:space="preserve">
-    <value>cambiar nombre y mover archivos</value>
+    <value>cambiar el nombre y mover archivos</value>
   </data>
   <data name="Settings.Permissions.Action.Sync" xml:space="preserve">
-    <value>escribir sincronizar copiar</value>
+    <value>escribir copias sincronizadas</value>
   </data>
   <data name="Settings.Permissions.Artwork" xml:space="preserve">
     <value>carátula</value>
@@ -3055,220 +3064,220 @@
     <value>Solo catálogo (solo lectura)</value>
   </data>
   <data name="Settings.Permissions.Description.ReadOnly" xml:space="preserve">
-    <value>el aplicación solo catálogo este carpeta y se no cambio su archivos.</value>
+    <value>La aplicación solo cataloga esta carpeta y no cambiará sus archivos.</value>
   </data>
   <data name="Settings.Permissions.Description.Writable" xml:space="preserve">
-    <value>el aplicación puede {0} en este carpeta.</value>
+    <value>La aplicación puede {0} en esta carpeta.</value>
   </data>
   <data name="Settings.Permissions.IngestOutput" xml:space="preserve">
-    <value>ingesta salida</value>
+    <value>salida de ingesta</value>
   </data>
   <data name="Settings.Permissions.Metadata" xml:space="preserve">
     <value>metadatos</value>
   </data>
   <data name="Settings.Permissions.Organization" xml:space="preserve">
-    <value>organización</value>
+    <value>organización de archivos</value>
   </data>
   <data name="Settings.Permissions.Summary.Allowed" xml:space="preserve">
-    <value>permitir cambios: {0}</value>
+    <value>Cambios permitidos: {0}</value>
   </data>
   <data name="Settings.Permissions.Summary.ReadOnly" xml:space="preserve">
     <value>Solo catálogo: esta raíz es de solo lectura.</value>
   </data>
   <data name="Settings.Permissions.SyncOutput" xml:space="preserve">
-    <value>sincronizar salida</value>
+    <value>salida de sincronización</value>
   </data>
   <data name="Settings.Discogs.Checking" xml:space="preserve">
-    <value>comprobando seguro credencial almacenamiento…</value>
+    <value>Comprobando el almacenamiento seguro de credenciales…</value>
   </data>
   <data name="Settings.Discogs.ClearFailed" xml:space="preserve">
-    <value>podría no borrar el Discogs token: {0}</value>
+    <value>No se pudo borrar el token de Discogs: {0}</value>
   </data>
   <data name="Settings.Discogs.EnterToken" xml:space="preserve">
     <value>Escribe un token de acceso personal de Discogs.</value>
   </data>
   <data name="Settings.Discogs.ExistsPersistent" xml:space="preserve">
-    <value>un Discogs token es almacenado en {0}.</value>
+    <value>Hay un token de Discogs almacenado en {0}.</value>
   </data>
   <data name="Settings.Discogs.ExistsSession" xml:space="preserve">
-    <value>un Discogs token es almacenado para este aplicación sesión solo.</value>
+    <value>Hay un token de Discogs almacenado solo durante esta sesión de la aplicación.</value>
   </data>
   <data name="Settings.Discogs.NoneStored" xml:space="preserve">
-    <value>no Discogs token es almacenado.</value>
+    <value>No hay ningún token de Discogs almacenado.</value>
   </data>
   <data name="Settings.Discogs.StoredPersistent" xml:space="preserve">
-    <value>Discogs token almacenado en {0}.</value>
+    <value>Token de Discogs almacenado en {0}.</value>
   </data>
   <data name="Settings.Discogs.StoredSession" xml:space="preserve">
-    <value>Discogs token almacenado para este aplicación sesión solo.</value>
+    <value>Token de Discogs almacenado solo durante esta sesión de la aplicación.</value>
   </data>
   <data name="Settings.Discogs.StoreFailed" xml:space="preserve">
-    <value>podría no almacenar el Discogs token: {0}</value>
+    <value>No se pudo almacenar el token de Discogs: {0}</value>
   </data>
   <data name="Settings.Discogs.Unavailable" xml:space="preserve">
-    <value>seguro credencial almacenamiento es no disponible: {0}</value>
+    <value>El almacenamiento seguro de credenciales no está disponible: {0}</value>
   </data>
   <data name="Settings.Dialog.Discard.Accept" xml:space="preserve">
-    <value>descartar cambios</value>
+    <value>Descartar cambios</value>
   </data>
   <data name="Settings.Dialog.Discard.Message" xml:space="preserve">
-    <value>el biblioteca configuración tiene cambios ese tener no sido guardado.</value>
+    <value>La configuración de biblioteca contiene cambios que aún no se han guardado.</value>
   </data>
   <data name="Settings.Dialog.Discard.Title" xml:space="preserve">
-    <value>descartar sin guardar configuración cambios?</value>
+    <value>¿Descartar los cambios de configuración no guardados?</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Accept" xml:space="preserve">
-    <value>eliminar perfil</value>
+    <value>Eliminar perfil</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Message" xml:space="preserve">
-    <value>{0} este no puede ser deshecho después guardar.</value>
+    <value>{0} Esto no se puede deshacer después de guardar.</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.NoReferences" xml:space="preserve">
-    <value>ello tiene no configurado referencias.</value>
+    <value>No tiene referencias configuradas.</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Reassignment" xml:space="preserve">
-    <value>{0} y {1} se ser reasignado a '{2}'.</value>
+    <value>{0} y {1} se reasignarán a «{2}».</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.RootReferences.One" xml:space="preserve">
-    <value>{0:N0} raíz referencia</value>
+    <value>{0:N0} referencia de raíz</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.RootReferences.Other" xml:space="preserve">
-    <value>{0:N0} raíz referencias</value>
+    <value>{0:N0} referencias de raíz</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.Title" xml:space="preserve">
-    <value>eliminar perfil '{0}'?</value>
+    <value>¿Eliminar el perfil «{0}»?</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.WorkflowReferences.One" xml:space="preserve">
-    <value>{0:N0} flujo de trabajo referencia</value>
+    <value>{0:N0} referencia de flujo de trabajo</value>
   </data>
   <data name="Settings.Dialog.DeleteProfile.WorkflowReferences.Other" xml:space="preserve">
-    <value>{0:N0} flujo de trabajo referencias</value>
+    <value>{0:N0} referencias de flujo de trabajo</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Accept" xml:space="preserve">
-    <value>eliminar ingesta perfil</value>
+    <value>Eliminar perfil de ingesta</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Message" xml:space="preserve">
-    <value>el activo ingesta flujo de trabajo se cambio a '{0}'. este no puede ser deshecho después guardar.</value>
+    <value>El flujo de trabajo de ingesta activo cambiará a «{0}». Esto no se puede deshacer después de guardar.</value>
   </data>
   <data name="Settings.Dialog.DeleteIngestProfile.Title" xml:space="preserve">
-    <value>eliminar ingesta perfil '{0}'?</value>
+    <value>¿Eliminar el perfil de ingesta «{0}»?</value>
   </data>
   <data name="Settings.Dialog.SaveFailed.Title" xml:space="preserve">
-    <value>configuración era no guardado</value>
+    <value>La configuración no se guardó</value>
   </data>
   <data name="Settings.FilePicker.ConfigurationType" xml:space="preserve">
-    <value>biblioteca configuración</value>
+    <value>Configuración de biblioteca</value>
   </data>
   <data name="Settings.FilePicker.ExportDestination" xml:space="preserve">
-    <value>elegir un exportar destino</value>
+    <value>Elegir un destino de exportación</value>
   </data>
   <data name="Settings.FilePicker.Ffmpeg" xml:space="preserve">
-    <value>elegir FFmpeg ejecutable</value>
+    <value>Elegir el ejecutable de FFmpeg</value>
   </data>
   <data name="Settings.FilePicker.Fpcalc" xml:space="preserve">
-    <value>elegir fpcalc ejecutable</value>
+    <value>Elegir el ejecutable de fpcalc</value>
   </data>
   <data name="Settings.FilePicker.ItunesLibrary" xml:space="preserve">
-    <value>elegir iTunes biblioteca</value>
+    <value>Elegir la biblioteca de iTunes</value>
   </data>
   <data name="Settings.FilePicker.ItunesLibraryType" xml:space="preserve">
-    <value>iTunes biblioteca</value>
+    <value>Biblioteca de iTunes</value>
   </data>
   <data name="Settings.FilePicker.LibraryRoot" xml:space="preserve">
-    <value>elegir un biblioteca musical raíz</value>
+    <value>Elegir una raíz de la biblioteca de música</value>
   </data>
   <data name="Settings.FilePicker.MachineBindings" xml:space="preserve">
-    <value>elegir equipo-local enlaces archivo</value>
+    <value>Elegir el archivo de asignaciones específico del equipo</value>
   </data>
   <data name="Settings.FilePicker.MetadataCache" xml:space="preserve">
-    <value>elegir metadatos caché</value>
+    <value>Elegir la base de datos de metadatos</value>
   </data>
   <data name="Settings.FilePicker.OpenConfiguration" xml:space="preserve">
-    <value>abrir biblioteca configuración</value>
+    <value>Abrir la configuración de biblioteca</value>
   </data>
   <data name="Settings.FilePicker.OptimFrog" xml:space="preserve">
-    <value>elegir OptimFROG herramientas directorio</value>
+    <value>Elegir la carpeta de herramientas de OptimFROG</value>
   </data>
   <data name="Settings.FilePicker.PlaylistExportFolder" xml:space="preserve">
-    <value>elegir un lista de reproducción exportar carpeta</value>
+    <value>Elegir una carpeta de exportación de listas de reproducción</value>
   </data>
   <data name="Settings.FilePicker.PlaylistSource" xml:space="preserve">
-    <value>elegir un M3U/M3U8 lista de reproducción origen</value>
+    <value>Elegir una lista de reproducción M3U/M3U8 de origen</value>
   </data>
   <data name="Settings.FilePicker.PlaylistType" xml:space="preserve">
-    <value>archivo listas de reproducción</value>
+    <value>Archivos de listas de reproducción</value>
   </data>
   <data name="Settings.FilePicker.SaveConfiguration" xml:space="preserve">
-    <value>guardar biblioteca configuración</value>
+    <value>Guardar la configuración de biblioteca</value>
   </data>
   <data name="Settings.FilePicker.Wavpack" xml:space="preserve">
-    <value>elegir WavPack ejecutable</value>
+    <value>Elegir el ejecutable de WavPack</value>
   </data>
   <data name="Settings.Profile.CopySuffix" xml:space="preserve">
-    <value> copiar</value>
+    <value> copia</value>
   </data>
   <data name="Settings.Profile.NewName" xml:space="preserve">
-    <value>nuevo perfil</value>
+    <value>Nuevo perfil</value>
   </data>
   <data name="Settings.IngestProfile.NewName" xml:space="preserve">
-    <value>nuevo ingesta perfil</value>
+    <value>Nuevo perfil de ingesta</value>
   </data>
   <data name="Settings.Status.ActiveConfigurationChanged" xml:space="preserve">
     <value>La configuración activa ha cambiado, pero se conservaron los cambios sin guardar del editor. Guárdelos como un archivo independiente o descártelos antes de editar la configuración activa.</value>
   </data>
   <data name="Settings.Status.ChangesDiscarded" xml:space="preserve">
-    <value>sin guardar configuración cambios eran descartar.</value>
+    <value>Se descartaron los cambios de configuración no guardados.</value>
   </data>
   <data name="Settings.Status.ChooseConfiguration" xml:space="preserve">
-    <value>elegir un existente configuración o crear un nuevo uno.</value>
+    <value>Elige una configuración existente o crea una nueva.</value>
   </data>
   <data name="Settings.Status.ConfigurationEditFailed" xml:space="preserve">
-    <value>podría no editar configuración: {0}</value>
+    <value>No se pudo editar la configuración: {0}</value>
   </data>
   <data name="Settings.Status.ConfigurationLoaded" xml:space="preserve">
-    <value>configuración cargado. en caché examinar es disponible mientras raíces son sin conexión.</value>
+    <value>Configuración cargada. Los datos almacenados en caché se pueden explorar mientras las raíces están sin conexión.</value>
   </data>
   <data name="Settings.Status.ConfigurationLoadFailed" xml:space="preserve">
-    <value>podría no cargar configuración: {0}</value>
+    <value>No se pudo cargar la configuración: {0}</value>
   </data>
   <data name="Settings.Status.ConfigurationSaved" xml:space="preserve">
-    <value>configuración guardado y cargado.</value>
+    <value>Configuración guardada y cargada.</value>
   </data>
   <data name="Settings.Status.ConfigurationSaveFailed" xml:space="preserve">
-    <value>podría no guardar configuración: {0}</value>
+    <value>No se pudo guardar la configuración: {0}</value>
   </data>
   <data name="Settings.Status.GuidedSetup" xml:space="preserve">
     <value>Configuración guiada: elige un perfil centrado en la conservación, añade la raíz de la biblioteca y revisa la política efectiva.</value>
   </data>
   <data name="Settings.Status.IngestProfileCreated" xml:space="preserve">
-    <value>creado ingesta perfil '{0}'.</value>
+    <value>Se creó el perfil de ingesta «{0}».</value>
   </data>
   <data name="Settings.Status.IngestProfileDeleted" xml:space="preserve">
-    <value>eliminado ingesta perfil '{0}'.</value>
+    <value>Se eliminó el perfil de ingesta «{0}».</value>
   </data>
   <data name="Settings.Status.IngestProfileDuplicated" xml:space="preserve">
-    <value>duplicado ingesta perfil '{0}'.</value>
+    <value>Se duplicó el perfil de ingesta como «{0}».</value>
   </data>
   <data name="Settings.Status.NewConfiguration" xml:space="preserve">
-    <value>nuevo configuración. añadir en mínimo uno biblioteca raíz, entonces guardar como.</value>
+    <value>Nueva configuración. Añade al menos una raíz de biblioteca y elige Guardar como…</value>
   </data>
   <data name="Settings.Status.ProfileCreated" xml:space="preserve">
-    <value>creado perfil '{0}'.</value>
+    <value>Se creó el perfil «{0}».</value>
   </data>
   <data name="Settings.Status.ProfileDeleted" xml:space="preserve">
-    <value>eliminado perfil '{0}' y reasignado su referencias.</value>
+    <value>Se eliminó el perfil «{0}» y se reasignaron sus referencias.</value>
   </data>
   <data name="Settings.Status.ProfileDuplicated" xml:space="preserve">
-    <value>duplicado '{0}' como '{1}'.</value>
+    <value>Se duplicó «{0}» como «{1}».</value>
   </data>
   <data name="Settings.Status.RecentConfigurationsCleared" xml:space="preserve">
-    <value>reciente configuración historial borrado.</value>
+    <value>Se borró el historial de configuraciones recientes.</value>
   </data>
   <data name="Settings.Status.ResolveSetupIssues" xml:space="preserve">
-    <value>resolver el resaltado configuración problemas antes guardar.</value>
+    <value>Resuelve los problemas de configuración resaltados antes de guardar.</value>
   </data>
   <data name="Settings.Status.ResolveValidationIssues" xml:space="preserve">
-    <value>resolver el validación problemas antes guardar.</value>
+    <value>Resuelve los problemas de validación antes de guardar.</value>
   </data>
   <data name="Settings.Validation.AddLibraryRoot" xml:space="preserve">
     <value>Añada al menos una raíz de biblioteca.</value>
@@ -3346,85 +3355,85 @@
     <value>La raíz de biblioteca «{0}» hace referencia al perfil desconocido «{1}».</value>
   </data>
   <data name="Settings.PolicySummary.NoRootPolicy" xml:space="preserve">
-    <value>no raíz directiva perfil es seleccionado.</value>
+    <value>No se ha seleccionado un perfil de directiva de raíz.</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Itunes" xml:space="preserve">
-    <value>iTunes-compatible rutas</value>
+    <value>rutas compatibles con iTunes</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Preserved" xml:space="preserve">
-    <value>existente rutas son conservado</value>
+    <value>se conservan las rutas existentes</value>
   </data>
   <data name="Settings.PolicySummary.Naming.Template" xml:space="preserve">
     <value>{0}/{1}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Enabled" xml:space="preserve">
-    <value>habilitado; orígenes {0}</value>
+    <value>Habilitado; disposición de origen: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest.Disabled" xml:space="preserve">
-    <value>deshabilitado; orígenes conservado</value>
+    <value>Deshabilitado; se conservan los archivos de origen</value>
   </data>
   <data name="Settings.PolicySummary.None" xml:space="preserve">
     <value>ninguno</value>
   </data>
   <data name="Settings.PolicySummary.RootPolicy" xml:space="preserve">
-    <value>raíz directiva siendo editar: {0}</value>
+    <value>Perfil de directiva de raíz en edición: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Permissions" xml:space="preserve">
-    <value>nuevo-raíz permisos: {0}</value>
+    <value>Permisos de nuevas raíces: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Naming" xml:space="preserve">
-    <value>nomenclatura: {0}</value>
+    <value>Nomenclatura: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Discs" xml:space="preserve">
-    <value>discos: {0}</value>
+    <value>Discos: {0}</value>
   </data>
   <data name="Settings.PolicySummary.Ingest" xml:space="preserve">
-    <value>ingesta perfil: {0}; {1}</value>
+    <value>Perfil de ingesta: {0}; {1}</value>
   </data>
   <data name="Settings.PolicySummary.RootCounts" xml:space="preserve">
-    <value>configurado raíces: {0:N0}; raíces permitiendo cambios: {1:N0}; raíz directiva anulaciones: {2:N0}</value>
+    <value>Raíces configuradas: {0:N0}; raíces que permiten cambios: {1:N0}; anulaciones de directiva: {2:N0}</value>
   </data>
   <data name="Settings.PolicyDetails.NoActivePolicy" xml:space="preserve">
-    <value>no activo directiva es disponible.</value>
+    <value>No hay ninguna política activa disponible.</value>
   </data>
   <data name="Settings.PolicyDetails.NoRoots" xml:space="preserve">
-    <value>no música carpetas son configurado todavía.</value>
+    <value>Todavía no se ha configurado ninguna carpeta de música.</value>
   </data>
   <data name="Settings.PolicyDetails.UnsetPath" xml:space="preserve">
-    <value>un carpeta cuyo ruta tiene no sido establecer</value>
+    <value>una carpeta cuya ruta no se ha establecido</value>
   </data>
   <data name="Settings.PolicyDetails.RootOffline" xml:space="preserve">
-    <value> ello es actual sin conexión o no puede ser alcanzado.</value>
+    <value> Actualmente está sin conexión o no se puede acceder a ella.</value>
   </data>
   <data name="Settings.PolicyDetails.AllIncluded" xml:space="preserve">
-    <value>cada coincidencia música archivo es incluir.</value>
+    <value>Se incluyen todos los archivos de música que coincidan.</value>
   </data>
   <data name="Settings.PolicyDetails.PatternsIncluded" xml:space="preserve">
-    <value>solo archivos coincidencia {0} son incluir.</value>
+    <value>Solo se incluyen los archivos que coincidan con {0}.</value>
   </data>
   <data name="Settings.PolicyDetails.PatternsExcluded" xml:space="preserve">
-    <value> archivos coincidencia {0} son excluir.</value>
+    <value> Se excluyen los archivos que coincidan con {0}.</value>
   </data>
   <data name="Settings.PolicyDetails.AllFormats" xml:space="preserve">
-    <value>todos reconocido música formatos</value>
+    <value>todos los formatos de música compatibles</value>
   </data>
   <data name="Settings.PolicyDetails.RootLine" xml:space="preserve">
-    <value>• en {0}, el aplicación indexar {1}. {2} {3}{4}{5}</value>
+    <value>• En {0}, la aplicación indexa {1}. {2} {3}{4}{5}</value>
   </data>
   <data name="Settings.PolicyDetails.Example.MusicFolder" xml:space="preserve">
     <value>música</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Artist" xml:space="preserve">
-    <value>ejemplo artista</value>
+    <value>Artista de ejemplo</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Album" xml:space="preserve">
-    <value>ejemplo álbum</value>
+    <value>Álbum de ejemplo</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Song" xml:space="preserve">
-    <value>ejemplo canción</value>
+    <value>Canción de ejemplo</value>
   </data>
   <data name="Settings.PolicyDetails.Example.FileName" xml:space="preserve">
-    <value>03 ejemplo canción</value>
+    <value>03 Canción de ejemplo</value>
   </data>
   <data name="Settings.PolicyDetails.Example.Genre" xml:space="preserve">
     <value>rock</value>
@@ -3445,28 +3454,28 @@
     <value>, proponer</value>
   </data>
   <data name="Settings.PolicyDetails.Repair.None" xml:space="preserve">
-    <value>no automático reparaciones son habilitado.</value>
+    <value>No hay ninguna reparación automática activada.</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Disabled" xml:space="preserve">
     <value>deshabilitado</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.NoRecipes" xml:space="preserve">
-    <value>habilitado, pero no salida recetas</value>
+    <value>activada, pero sin recetas de salida</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Recipe" xml:space="preserve">
-    <value>{0}: {1} a {2}</value>
+    <value>Receta «{0}»: acción — {1}; destino — {2}</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.MissingRoot" xml:space="preserve">
-    <value>ausente raíz</value>
+    <value>falta la raíz de destino</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.NoDirectRoot" xml:space="preserve">
-    <value>no directo raíz</value>
+    <value>sin raíz de destino directa</value>
   </data>
   <data name="Settings.PolicyDetails.Integrations.NoCatalog" xml:space="preserve">
-    <value>archivo listas de reproducción (M3U/M3U8); no medios catálogo integración configurado</value>
+    <value>Listas basadas en archivos (M3U/M3U8); no se ha configurado una integración con un catálogo multimedia</value>
   </data>
   <data name="Settings.PolicyDetails.Integrations.Itunes" xml:space="preserve">
-    <value>archivo listas de reproducción (M3U/M3U8); iTunes catálogo: {0}</value>
+    <value>Listas basadas en archivos (M3U/M3U8); catálogo de iTunes: {0}</value>
   </data>
   <data name="Settings.PolicyDetails.Exports.None" xml:space="preserve">
     <value>ninguno configurado</value>
@@ -3481,67 +3490,67 @@
     <value>deshabilitado</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.CatalogOnly" xml:space="preserve">
-    <value>el aplicación dejar archivo y carpeta nombre dónde ellos son.</value>
+    <value>La aplicación conserva los nombres y ubicaciones actuales de archivos y carpetas.</value>
   </data>
   <data name="Settings.PolicyDetails.Naming.Organized" xml:space="preserve">
     <value>Al organizar los archivos, se les asigna un nombre como «{0}». Si ese nombre ya existe, la aplicación usa la regla {1}.</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Eager" xml:space="preserve">
-    <value>carátula es leer y en caché durante indexando, por tanto examinar y carátula auditoría son inmediatamente completo. indexando se tomar más largo y el caché se usar más espacio.</value>
+    <value>Las carátulas se leen y almacenan en caché durante la indexación, por lo que están disponibles de inmediato al explorar y auditar carátulas. La indexación tardará más y la caché ocupará más espacio.</value>
   </data>
   <data name="Settings.PolicyDetails.Artwork.Lazy" xml:space="preserve">
-    <value>carátula es no leer durante indexando. ello es cargado y en caché más tarde cuando usted vista ello o ejecutar un carátula auditoría, que conservar indexando más rápido y el inicial caché más pequeño.</value>
+    <value>Las carátulas no se leen durante la indexación. Se cargan y almacenan en caché más adelante al verlas o auditarlas, lo que agiliza la indexación y reduce el tamaño inicial de la caché.</value>
   </data>
   <data name="Settings.PolicyDetails.Discs.Preserve" xml:space="preserve">
-    <value>disco número permanecer en el etiquetas.</value>
+    <value>Los números de disco permanecen en las etiquetas.</value>
   </data>
   <data name="Settings.PolicyDetails.Discs.Transform" xml:space="preserve">
-    <value>disco número son representado usando {0}, y el disco etiquetas son quitado.</value>
+    <value>Los números de disco se representan mediante {0} y se quitan las etiquetas de disco.</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Enabled" xml:space="preserve">
-    <value>ingesta es habilitado mediante “{0}”. el activo recetas son {1}, y origen archivos son {2} después un correcto ingesta.</value>
+    <value>La ingesta está activada mediante «{0}». Recetas activas: {1}. Tratamiento de los archivos de origen tras una ingesta correcta: {2}.</value>
   </data>
   <data name="Settings.PolicyDetails.Ingest.Preserved" xml:space="preserve">
-    <value>automático ingesta es deshabilitado, por tanto origen archivos son conservado.</value>
+    <value>La ingesta automática está desactivada, por lo que se conservan los archivos de origen.</value>
   </data>
   <data name="Settings.PolicyDetails.Introduction" xml:space="preserve">
-    <value>este directiva es “{0}” ({1}). el indexador reconoce: {2}.</value>
+    <value>Esta política es «{0}» ({1}). El indexador reconoce: {2}.</value>
   </data>
   <data name="Settings.PolicyDetails.Unicode.Kept" xml:space="preserve">
     <value>conservado</value>
   </data>
   <data name="Settings.PolicyDetails.Unicode.Normalized" xml:space="preserve">
-    <value>normalizar o reemplazado</value>
+    <value>normalizados o reemplazados</value>
   </data>
   <data name="Settings.PolicyDetails.NamingParagraph" xml:space="preserve">
-    <value>Los caracteres Unicode {0} se tratan como {1}. Los límites de longitud de ruta usan los valores predeterminados de la aplicación y la plataforma, salvo que hayas indicado otro valor.</value>
+    <value>{0} Los caracteres Unicode se tratan como {1}. Los límites de longitud de ruta usan los valores predeterminados de la aplicación y la plataforma, salvo que se haya indicado otro valor.</value>
   </data>
   <data name="Settings.PolicyDetails.QualityParagraph" xml:space="preserve">
-    <value>{0} un grabación es considerado alto resolución en {1:N0} Hz o {2}-bit.</value>
+    <value>{0} Una grabación se considera de alta resolución a partir de {1:N0} Hz o {2}-bit.</value>
   </data>
   <data name="Settings.PolicyDetails.Preserved" xml:space="preserve">
     <value>conservado</value>
   </data>
   <data name="Settings.PolicyDetails.NotCopied" xml:space="preserve">
-    <value>no copiado</value>
+    <value>no se copia</value>
   </data>
   <data name="Settings.PolicyDetails.MetadataParagraph" xml:space="preserve">
-    <value>cuando metadatos es copiado, ReplayGain es {0}, MusicBrainz identificadores son {1}, personalizado campos son {2}, y recopilación información es {3}.</value>
+    <value>Copia de metadatos: ReplayGain — {0}; identificadores de MusicBrainz — {1}; campos personalizados — {2}; información de recopilación — {3}.</value>
   </data>
   <data name="Settings.PolicyDetails.ArtworkParagraph" xml:space="preserve">
-    <value>{0} escrito carátula usa {1} almacenamiento, {2}, y {3} codificación.</value>
+    <value>{0} Escritura de carátulas: almacenamiento — {1}; funciones — {2}; codificación — {3}.</value>
   </data>
   <data name="Settings.PolicyDetails.HealthParagraph" xml:space="preserve">
-    <value>estado comprobación actual habilitado: {0}. archivos ese hacer no coincidencia un archivo asociado regla son {1}.</value>
+    <value>Comprobaciones de estado activadas: {0}. Los archivos que no coincidan con una regla de archivo auxiliar se tratan como {1}.</value>
   </data>
   <data name="Settings.PolicyDetails.ConnectionsParagraph" xml:space="preserve">
-    <value>lista de reproducción y catálogo conexiones: {0}. exportar perfil: {1}.</value>
+    <value>Conexiones de listas y catálogos: {0}. Perfiles de exportación: {1}.</value>
   </data>
   <data name="Settings.PolicyDetails.RootsParagraph" xml:space="preserve">
-    <value>configurado música carpetas:{0}{1}</value>
+    <value>Carpetas de música configuradas:{0}{1}</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.StoredDirectly" xml:space="preserve">
-    <value>carpeta rutas son almacenado directamente en este configuración.</value>
+    <value>Las rutas de las carpetas se guardan directamente en esta configuración.</value>
   </data>
   <data name="Settings.PolicyDetails.Paths.MachineBindings" xml:space="preserve">
     <value>Las rutas de carpetas específicas del equipo proceden de «{0}».</value>
@@ -3559,22 +3568,22 @@
     <value>oscuro</value>
   </data>
   <data name="Settings.Choice.Theme.Steel_Blue" xml:space="preserve">
-    <value>acero azul</value>
+    <value>Azul acero</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.LegacyMusicLibraryTools" xml:space="preserve">
-    <value>heredado MusicLibraryTools</value>
+    <value>MusicLibraryTools heredado</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.CatalogOnly" xml:space="preserve">
-    <value>catálogo solo</value>
+    <value>Solo catálogo</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.PreserveLayoutAndTags" xml:space="preserve">
-    <value>conservar diseño y etiquetas</value>
+    <value>Conservar diseño y etiquetas</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.ArtistAlbum" xml:space="preserve">
     <value>artista/álbum</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.ItunesMedia" xml:space="preserve">
-    <value>iTunes medios</value>
+    <value>Contenido multimedia de iTunes</value>
   </data>
   <data name="Settings.Choice.LibraryProfilePreset.Custom" xml:space="preserve">
     <value>personalizado</value>
@@ -3583,49 +3592,49 @@
     <value>detener</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.Suffix" xml:space="preserve">
-    <value>añadir un sufijo</value>
+    <value>Añadir un sufijo</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.Hash" xml:space="preserve">
-    <value>añadir un hash</value>
+    <value>Añadir un hash</value>
   </data>
   <data name="Settings.Choice.LibraryPathCollisionPolicy.PreserveExisting" xml:space="preserve">
-    <value>conservar existente archivo</value>
+    <value>Conservar el archivo existente</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.None" xml:space="preserve">
     <value>ninguno</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormC" xml:space="preserve">
-    <value>canónico composición (forma C)</value>
+    <value>Composición canónica (Form C)</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormD" xml:space="preserve">
-    <value>canónico descomposición (forma D)</value>
+    <value>Descomposición canónica (Form D)</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormKC" xml:space="preserve">
-    <value>compatibilidad composición (forma KC)</value>
+    <value>Composición de compatibilidad (Form KC)</value>
   </data>
   <data name="Settings.Choice.LibraryUnicodeNormalization.FormKD" xml:space="preserve">
-    <value>compatibilidad descomposición (forma KD)</value>
+    <value>Descomposición de compatibilidad (Form KD)</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.PreserveTags" xml:space="preserve">
-    <value>conservar etiquetas</value>
+    <value>Conservar etiquetas</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.AlbumSuffix" xml:space="preserve">
-    <value>sufijo del álbum</value>
+    <value>Sufijo del álbum</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.DiscFolder" xml:space="preserve">
-    <value>disco carpeta</value>
+    <value>Carpeta por disco</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FileNamePrefix" xml:space="preserve">
     <value>Prefijo del nombre de archivo</value>
   </data>
   <data name="Settings.Choice.LibraryDiscStrategy.FlattenContinuous" xml:space="preserve">
-    <value>continuo pista número</value>
+    <value>Números de pista continuos</value>
   </data>
   <data name="Settings.Choice.LibraryTrackTotalScope.PerDisc" xml:space="preserve">
-    <value>por disco</value>
+    <value>Por disco</value>
   </data>
   <data name="Settings.Choice.LibraryTrackTotalScope.Album" xml:space="preserve">
-    <value>completo álbum</value>
+    <value>Todo el álbum</value>
   </data>
   <data name="Settings.Choice.LibraryHealthSeverity.Information" xml:space="preserve">
     <value>información</value>
@@ -3655,19 +3664,19 @@
     <value>transcodificar</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.Any" xml:space="preserve">
-    <value>cualquiera álbum</value>
+    <value>Cualquier álbum</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.HasHighResolution" xml:space="preserve">
-    <value>tiene alto-resolución audio</value>
+    <value>Contiene audio de alta resolución</value>
   </data>
   <data name="Settings.Choice.LibraryIngestAlbumCondition.HasNoHighResolution" xml:space="preserve">
-    <value>tiene no alto-resolución audio</value>
+    <value>No contiene audio de alta resolución</value>
   </data>
   <data name="Settings.Choice.LibraryIngestSourceSelection.HighestQuality" xml:space="preserve">
-    <value>más alto calidad</value>
+    <value>Máxima calidad</value>
   </data>
   <data name="Settings.Choice.LibraryIngestSourceSelection.PreferCdQuality" xml:space="preserve">
-    <value>preferir CD calidad</value>
+    <value>Preferir calidad de CD</value>
   </data>
   <data name="Settings.Choice.LibraryChannelSelection.Stereo" xml:space="preserve">
     <value>estéreo</value>
@@ -3685,16 +3694,16 @@
     <value>archivo asociado</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkStorage.Both" xml:space="preserve">
-    <value>incrustado y archivo asociado</value>
+    <value>Incrustada y como archivo asociado</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkRoleSelection.FrontCoverOnly" xml:space="preserve">
-    <value>frontal carátula solo</value>
+    <value>Solo portada frontal</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkRoleSelection.AllRoles" xml:space="preserve">
-    <value>todos carátula roles</value>
+    <value>Todos los tipos de carátula</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkEncoding.PreserveSource" xml:space="preserve">
-    <value>conservar origen codificación</value>
+    <value>Conservar la codificación de origen</value>
   </data>
   <data name="Settings.Choice.LibraryArtworkEncoding.Jpeg" xml:space="preserve">
     <value>JPEG</value>
@@ -3712,16 +3721,16 @@
     <value>eliminar</value>
   </data>
   <data name="Settings.Choice.LibrarySidecarDisposition.FollowSourceDisposition" xml:space="preserve">
-    <value>seguir disposición de origen</value>
+    <value>Seguir el tratamiento del origen</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.EntireLibrary" xml:space="preserve">
-    <value>completo biblioteca</value>
+    <value>Biblioteca completa</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.Playlists" xml:space="preserve">
     <value>listas de reproducción</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.SavedView" xml:space="preserve">
-    <value>guardado vista</value>
+    <value>Vista guardada</value>
   </data>
   <data name="Settings.Choice.ExportSelectionKind.ExplicitTracks" xml:space="preserve">
     <value>pistas seleccionadas</value>
@@ -3739,7 +3748,7 @@
     <value>transcodificar</value>
   </data>
   <data name="Settings.Choice.ExportTransformMode.SpecializedProvider" xml:space="preserve">
-    <value>especializado proveedor</value>
+    <value>Proveedor especializado</value>
   </data>
   <data name="Settings.Choice.ExportArtworkMode.None" xml:space="preserve">
     <value>ninguno</value>
@@ -3751,7 +3760,7 @@
     <value>archivo asociado</value>
   </data>
   <data name="Settings.Choice.ExportArtworkMode.EmbeddedAndSidecar" xml:space="preserve">
-    <value>incrustado y archivo asociado</value>
+    <value>Incrustada y como archivo asociado</value>
   </data>
   <data name="Settings.Choice.ExportExtraFileDisposition.Preserve" xml:space="preserve">
     <value>conservar</value>
@@ -3763,10 +3772,10 @@
     <value>eliminar</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.legacy" xml:space="preserve">
-    <value>heredado</value>
+    <value>Heredado</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.provided" xml:space="preserve">
-    <value>como proporcionado</value>
+    <value>Tal como se proporciona</value>
   </data>
   <data name="Settings.Choice.PlaylistPathStyle.absolute" xml:space="preserve">
     <value>absoluto</value>
@@ -3775,16 +3784,16 @@
     <value>relativo</value>
   </data>
   <data name="Settings.Choice.PlaylistLineEnding.platform" xml:space="preserve">
-    <value>plataforma predeterminado</value>
+    <value>Predeterminado de la plataforma</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.legacy" xml:space="preserve">
-    <value>heredado</value>
+    <value>Heredado</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.preserve" xml:space="preserve">
     <value>conservar</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.sanitize" xml:space="preserve">
-    <value>sanear</value>
+    <value>Adaptar al nombre de archivo</value>
   </data>
   <data name="Settings.Choice.PlaylistFileNameTransform.sonos" xml:space="preserve">
     <value>Sonos-compatible</value>
@@ -3841,19 +3850,19 @@
     <value>AcoustID ID</value>
   </data>
   <data name="Settings.Choice.TagFields.AcoustID_Fingerprint" xml:space="preserve">
-    <value>AcoustID huella</value>
+    <value>Huella de AcoustID</value>
   </data>
   <data name="Settings.Choice.TagFields.Album" xml:space="preserve">
     <value>álbum</value>
   </data>
   <data name="Settings.Choice.TagFields.AlbumArtist" xml:space="preserve">
-    <value>artista del álbum</value>
+    <value>Artista del álbum</value>
   </data>
   <data name="Settings.Choice.TagFields.AlbumArtistSort" xml:space="preserve">
-    <value>artista del álbum ordenar</value>
+    <value>Orden del artista del álbum</value>
   </data>
   <data name="Settings.Choice.TagFields.AlbumSort" xml:space="preserve">
-    <value>álbum ordenar</value>
+    <value>Orden del álbum</value>
   </data>
   <data name="Settings.Choice.TagFields.Arranger" xml:space="preserve">
     <value>arreglista</value>
@@ -3862,7 +3871,7 @@
     <value>artista</value>
   </data>
   <data name="Settings.Choice.TagFields.ArtistSort" xml:space="preserve">
-    <value>artista ordenar</value>
+    <value>Orden del artista</value>
   </data>
   <data name="Settings.Choice.TagFields.Artists" xml:space="preserve">
     <value>artistas</value>
@@ -3877,7 +3886,7 @@
     <value>BPM</value>
   </data>
   <data name="Settings.Choice.TagFields.CatalogNumber" xml:space="preserve">
-    <value>catálogo número</value>
+    <value>Número de catálogo</value>
   </data>
   <data name="Settings.Choice.TagFields.Comment" xml:space="preserve">
     <value>comentario</value>
@@ -3889,7 +3898,7 @@
     <value>compositor</value>
   </data>
   <data name="Settings.Choice.TagFields.ComposerSort" xml:space="preserve">
-    <value>compositor ordenar</value>
+    <value>Orden del compositor</value>
   </data>
   <data name="Settings.Choice.TagFields.Conductor" xml:space="preserve">
     <value>director</value>
@@ -3898,16 +3907,16 @@
     <value>derechos de autor</value>
   </data>
   <data name="Settings.Choice.TagFields.DiscNumber" xml:space="preserve">
-    <value>disco número</value>
+    <value>Número de disco</value>
   </data>
   <data name="Settings.Choice.TagFields.DiscSubtitle" xml:space="preserve">
-    <value>disco subtítulo</value>
+    <value>Subtítulo del disco</value>
   </data>
   <data name="Settings.Choice.TagFields.EncodedBy" xml:space="preserve">
-    <value>codificado por</value>
+    <value>Codificado por</value>
   </data>
   <data name="Settings.Choice.TagFields.EncoderSettings" xml:space="preserve">
-    <value>codificador configuración</value>
+    <value>Ajustes del codificador</value>
   </data>
   <data name="Settings.Choice.TagFields.Engineer" xml:space="preserve">
     <value>ingeniero</value>
@@ -3922,7 +3931,7 @@
     <value>agrupación</value>
   </data>
   <data name="Settings.Choice.TagFields.Key" xml:space="preserve">
-    <value>clave</value>
+    <value>Tonalidad</value>
   </data>
   <data name="Settings.Choice.TagFields.ISRC" xml:space="preserve">
     <value>ISRC</value>
@@ -3943,7 +3952,7 @@
     <value>medios</value>
   </data>
   <data name="Settings.Choice.TagFields.DJMixer" xml:space="preserve">
-    <value>DJ mezclador</value>
+    <value>Mezclador DJ</value>
   </data>
   <data name="Settings.Choice.TagFields.Mixer" xml:space="preserve">
     <value>mezclador</value>
@@ -3955,10 +3964,10 @@
     <value>movimiento</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementTotal" xml:space="preserve">
-    <value>movimiento total</value>
+    <value>Total de movimientos</value>
   </data>
   <data name="Settings.Choice.TagFields.MovementNumber" xml:space="preserve">
-    <value>movimiento número</value>
+    <value>Número de movimiento</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_ArtistID" xml:space="preserve">
     <value>MusicBrainz artista ID</value>
@@ -3967,7 +3976,7 @@
     <value>MusicBrainz disco ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_OriginalArtistID" xml:space="preserve">
-    <value>MusicBrainz original artista ID</value>
+    <value>ID de MusicBrainz del artista original</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_OriginalAlbumID" xml:space="preserve">
     <value>MusicBrainz álbum original ID</value>
@@ -3979,7 +3988,7 @@
     <value>MusicBrainz artista del álbum ID</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_ReleaseGroupID" xml:space="preserve">
-    <value>MusicBrainz lanzamiento grupo ID</value>
+    <value>ID de grupo de publicación de MusicBrainz</value>
   </data>
   <data name="Settings.Choice.TagFields.MusicBrainz_AlbumID" xml:space="preserve">
     <value>MusicBrainz álbum ID</value>
@@ -3994,7 +4003,7 @@
     <value>álbum original</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalArtist" xml:space="preserve">
-    <value>original artista</value>
+    <value>Artista original</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalFileName" xml:space="preserve">
     <value>Nombre original del archivo</value>
@@ -4003,7 +4012,7 @@
     <value>fecha original</value>
   </data>
   <data name="Settings.Choice.TagFields.OriginalYear" xml:space="preserve">
-    <value>original año</value>
+    <value>Año original</value>
   </data>
   <data name="Settings.Choice.TagFields.Performer" xml:space="preserve">
     <value>intérprete</value>
@@ -4012,7 +4021,7 @@
     <value>pódcast</value>
   </data>
   <data name="Settings.Choice.TagFields.PostcastURL" xml:space="preserve">
-    <value>pódcast URL</value>
+    <value>URL del pódcast</value>
   </data>
   <data name="Settings.Choice.TagFields.Producer" xml:space="preserve">
     <value>productor</value>
@@ -4021,55 +4030,55 @@
     <value>valoración</value>
   </data>
   <data name="Settings.Choice.TagFields.Label" xml:space="preserve">
-    <value>etiqueta</value>
+    <value>Sello discográfico</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseCountry" xml:space="preserve">
-    <value>lanzamiento país</value>
+    <value>País de publicación</value>
   </data>
   <data name="Settings.Choice.TagFields.Date" xml:space="preserve">
     <value>fecha</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseStatus" xml:space="preserve">
-    <value>lanzamiento estado</value>
+    <value>Estado de publicación</value>
   </data>
   <data name="Settings.Choice.TagFields.ReleaseType" xml:space="preserve">
-    <value>lanzamiento tipo</value>
+    <value>Tipo de publicación</value>
   </data>
   <data name="Settings.Choice.TagFields.Remixer" xml:space="preserve">
     <value>remezclador</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Album_Gain" xml:space="preserve">
-    <value>ReplayGain álbum ganancia</value>
+    <value>Ganancia de álbum ReplayGain</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Album_Peak" xml:space="preserve">
-    <value>ReplayGain álbum pico</value>
+    <value>Pico de álbum ReplayGain</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Album_Range" xml:space="preserve">
-    <value>ReplayGain álbum rango</value>
+    <value>Rango de álbum ReplayGain</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Reference_Loudness" xml:space="preserve">
-    <value>ReplayGain referencia sonoridad</value>
+    <value>Sonoridad de referencia ReplayGain</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Gain" xml:space="preserve">
-    <value>ReplayGain pista ganancia</value>
+    <value>Ganancia de pista ReplayGain</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Peak" xml:space="preserve">
-    <value>ReplayGain pista pico</value>
+    <value>Pico de pista ReplayGain</value>
   </data>
   <data name="Settings.Choice.TagFields.ReplayGain_Track_Range" xml:space="preserve">
-    <value>ReplayGain pista rango</value>
+    <value>Rango de pista ReplayGain</value>
   </data>
   <data name="Settings.Choice.TagFields.Script" xml:space="preserve">
-    <value>guion</value>
+    <value>Sistema de escritura</value>
   </data>
   <data name="Settings.Choice.TagFields.Show" xml:space="preserve">
-    <value>mostrar</value>
+    <value>Programa</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowSort" xml:space="preserve">
-    <value>mostrar ordenar</value>
+    <value>Título de orden del programa</value>
   </data>
   <data name="Settings.Choice.TagFields.ShowMovement" xml:space="preserve">
-    <value>mostrar movimiento</value>
+    <value>Mostrar movimiento</value>
   </data>
   <data name="Settings.Choice.TagFields.Subtitle" xml:space="preserve">
     <value>subtítulo</value>
@@ -4081,13 +4090,13 @@
     <value>total de pistas</value>
   </data>
   <data name="Settings.Choice.TagFields.TrackNumber" xml:space="preserve">
-    <value>pista número</value>
+    <value>Número de pista</value>
   </data>
   <data name="Settings.Choice.TagFields.Title" xml:space="preserve">
     <value>título</value>
   </data>
   <data name="Settings.Choice.TagFields.TitleSort" xml:space="preserve">
-    <value>título ordenar</value>
+    <value>Orden del título</value>
   </data>
   <data name="Settings.Choice.TagFields.Website" xml:space="preserve">
     <value>sitio web</value>
@@ -6098,13 +6107,13 @@
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.RecordingId" xml:space="preserve"><value>ID de grabación exacto de MusicBrainz</value></data>
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.Unmatched" xml:space="preserve"><value>No se encontró una coincidencia fiable con una pista de la publicación.</value></data>
   <data name="OnlineMetadata.MusicBrainz.Validation.InvalidReleaseId" xml:space="preserve"><value>El ID de publicación de MusicBrainz no es un GUID válido.</value></data>
-  <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>configurado medios catálogo</value></data>
-  <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>no destino</value></data>
-  <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} a {2}</value></data>
+  <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>catálogo multimedia configurado</value></data>
+  <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>sin destino</value></data>
+  <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} → {2}</value></data>
   <data name="Workbench.Online.Thumbnail.Failed" xml:space="preserve"><value>Miniatura no disponible</value></data>
   <data name="Dialog.DefaultExportFileName" xml:space="preserve"><value>exportación</value></data>
   <data name="Dialog.FileType.Format" xml:space="preserve"><value>Archivo {0}</value></data>
-  <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>nuevo exportar</value></data>
+  <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>Nueva exportación</value></data>
   <data name="Navigation.About" xml:space="preserve"><value>Acerca de</value></data>
   <data name="About.Title" xml:space="preserve"><value>Acerca de</value></data>
   <data name="About.Subtitle" xml:space="preserve"><value>Detalles del producto, reconocimientos y acuerdos de licencia.</value></data>
@@ -6256,8 +6265,8 @@
   <data name="Operations.Run.ReviewedTransaction.One" xml:space="preserve"><value>{0:N0} volumen · {1:N0} confirmado</value></data>
   <data name="Operations.Run.ReviewedTransaction.Other" xml:space="preserve"><value>{0:N0} volúmenes · {1:N0} confirmados</value></data>
   <data name="Settings.Tools.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
-  <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Monkey's Audio MAC ejecutable</value></data>
-  <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>elegir Monkey's Audio MAC ejecutable</value></data>
+  <data name="Settings.Tools.MonkeysAudioAutomation" xml:space="preserve"><value>Ejecutable MAC de Monkey's Audio</value></data>
+  <data name="Settings.FilePicker.MonkeysAudio" xml:space="preserve"><value>Elegir el ejecutable MAC de Monkey's Audio</value></data>
   <data name="Transcode.Format.MonkeysAudio" xml:space="preserve"><value>Monkey's Audio</value></data>
   <data name="Transcode.Encoder.MonkeysAudioMac" xml:space="preserve"><value>Monkey's Audio MAC</value></data>
   <data name="Shell.Navigation.Toggle" xml:space="preserve"><value>Expandir o contraer la navegación</value></data>

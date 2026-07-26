@@ -624,19 +624,19 @@
                                       </StackPanel>
                                       <StackPanel Grid.Column="1" Classes="field">
                                         <TextBlock Classes="field-label"
-                                                   Text="{DynamicResource Loc.Settings.Playlists.TransformProvider}" />
+                                                   Text="{DynamicResource Loc.Settings.Playlists.TransportProvider}" />
                                         <TextBox Classes="app"
                                                  Text="{Binding TransportProviderId, Mode=TwoWay}"
                                                  PlaceholderText="{DynamicResource Loc.Settings.Playlists.TransportProviderPlaceholder}"
-                                                 AutomationProperties.Name="{DynamicResource Loc.Settings.Playlists.TransformProvider}" />
+                                                 AutomationProperties.Name="{DynamicResource Loc.Settings.Playlists.TransportProvider}" />
                                       </StackPanel>
                                       <StackPanel Grid.Column="2" Classes="field">
                                         <TextBlock Classes="field-label"
-                                                   Text="{DynamicResource Loc.Settings.Playlists.GeneratedTransport}" />
+                                                   Text="{DynamicResource Loc.Settings.Playlists.TransportOptions}" />
                                         <TextBox Classes="app"
                                                  Text="{Binding TransportOptions, Mode=TwoWay}"
                                                  PlaceholderText="{DynamicResource Loc.Settings.Playlists.TransportOptionsPlaceholder}"
-                                                 AutomationProperties.Name="{DynamicResource Loc.Settings.Playlists.GeneratedTransport}" />
+                                                 AutomationProperties.Name="{DynamicResource Loc.Settings.Playlists.TransportOptions}" />
                                       </StackPanel>
                                     </Grid>
                                     <StackPanel Classes="field">
@@ -966,7 +966,7 @@
                         <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" AutomationProperties.Name="{Binding Id}" />
                         <TextBlock Grid.Column="1" Text="{Binding Id}" FontWeight="SemiBold" />
                         <StackPanel Grid.Column="2" Classes="field">
-                          <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.HealthRules}" />
+                          <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.HealthSeverity}" />
                           <ComboBox Classes="app" ItemsSource="{Binding DataContext.HealthSeverityChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibraryHealthSeverity" local:LocalizedChoiceSelection.Value="{Binding Severity, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{Binding Id}" />
                         </StackPanel>
                         <CheckBox Grid.Column="3" Content="{DynamicResource Loc.Settings.RootPolicy.Propose}" IsChecked="{Binding ProposeRepair, Mode=TwoWay}" VerticalAlignment="Bottom" />
