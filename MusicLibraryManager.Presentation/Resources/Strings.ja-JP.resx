@@ -1187,7 +1187,7 @@
     <value>音楽フォルダーがオフラインでも、キャッシュをすぐに参照できます。</value>
   </data>
   <data name="Library.Action.Index" xml:space="preserve">
-    <value>インデックス ライブラリ</value>
+    <value>ライブラリのインデックスを作成</value>
   </data>
   <data name="Library.Action.Inspector" xml:space="preserve">
     <value>インスペクター</value>
@@ -1196,10 +1196,10 @@
     <value>メタデータインスペクターの表示を切り替えます</value>
   </data>
   <data name="Library.Action.HideInspector" xml:space="preserve">
-    <value>非表示 インスペクター</value>
+    <value>インスペクターを隠す</value>
   </data>
   <data name="Library.Action.InspectorUnsaved" xml:space="preserve">
-    <value>インスペクター (未保存)</value>
+    <value>インスペクター（保留中の編集）</value>
   </data>
   <data name="Library.Action.More" xml:space="preserve">
     <value>その他</value>
@@ -1214,10 +1214,10 @@
     <value>選択したファイルをワークベンチで開く</value>
   </data>
   <data name="Library.Action.CancelIndexing" xml:space="preserve">
-    <value>キャンセル インデックス作成中</value>
+    <value>インデックス作成をキャンセル</value>
   </data>
   <data name="Library.Action.CancelLoading" xml:space="preserve">
-    <value>キャンセル 読み込み中</value>
+    <value>読み込みをキャンセル</value>
   </data>
   <data name="Library.Filter.Placeholder" xml:space="preserve">
     <value>フィルターまたは構文を使用（例: Artist:Name AND NOT Codec:MP3）</value>
@@ -1235,22 +1235,22 @@
     <value>フィルター構文のヘルプを表示</value>
   </data>
   <data name="Library.Filter.HelpAutomation" xml:space="preserve">
-    <value>フィルター構文 ヘルプ</value>
+    <value>フィルター構文のヘルプ</value>
   </data>
   <data name="Library.Filter.ClearHealthTooltip" xml:space="preserve">
-    <value>クリア 健全性 フィルター</value>
+    <value>状態フィルターをクリア</value>
   </data>
   <data name="Library.Toolbar.Columns" xml:space="preserve">
     <value>列</value>
   </data>
   <data name="Library.Toolbar.SavedViews" xml:space="preserve">
-    <value>保存済み ビュー</value>
+    <value>保存済みビュー</value>
   </data>
   <data name="Library.Toolbar.VisualFilter" xml:space="preserve">
-    <value>ビジュアル フィルター</value>
+    <value>ビジュアルフィルター</value>
   </data>
   <data name="Library.Toolbar.ClearVisualFilter" xml:space="preserve">
-    <value>クリア ビジュアル フィルター</value>
+    <value>ビジュアルフィルターをクリア</value>
   </data>
   <data name="Library.Toolbar.Operations" xml:space="preserve">
     <value>操作</value>
@@ -1274,13 +1274,13 @@
     <value>列の選択画面を閉じる</value>
   </data>
   <data name="Library.Columns.MetadataColumns" xml:space="preserve">
-    <value>メタデータ 列</value>
+    <value>メタデータ列</value>
   </data>
   <data name="Library.Columns.LabelPlaceholder" xml:space="preserve">
-    <value>列 ラベル</value>
+    <value>列のラベル</value>
   </data>
   <data name="Library.Columns.KnownFieldPlaceholder" xml:space="preserve">
-    <value>既知 メタデータ フィールド</value>
+    <value>既知のメタデータフィールド</value>
   </data>
   <data name="Library.Columns.CustomFieldPlaceholder" xml:space="preserve">
     <value>ネイティブのカスタムフィールド名</value>
@@ -1292,10 +1292,10 @@
     <value>新規</value>
   </data>
   <data name="Library.Columns.Action.Save" xml:space="preserve">
-    <value>保存 列</value>
+    <value>列を保存</value>
   </data>
   <data name="Library.SavedViews.Title" xml:space="preserve">
-    <value>保存済み ビュー</value>
+    <value>保存済みビュー</value>
   </data>
   <data name="Library.SavedViews.CloseTooltip" xml:space="preserve">
     <value>保存済みビューを閉じる</value>
@@ -1316,13 +1316,13 @@
     <value>新しい保存済みビューの名前</value>
   </data>
   <data name="Library.SavedViews.Action.Save" xml:space="preserve">
-    <value>保存 ビュー</value>
+    <value>ビューを保存</value>
   </data>
   <data name="Library.SavedViews.Action.Delete" xml:space="preserve">
     <value>選択したビューを削除</value>
   </data>
   <data name="Library.VisualFilter.Title" xml:space="preserve">
-    <value>ビジュアル フィルター</value>
+    <value>ビジュアルフィルター</value>
   </data>
   <data name="Library.VisualFilter.MatchMode" xml:space="preserve">
     <value>一致条件</value>
@@ -1340,7 +1340,7 @@
     <value>同じグループ番号の条件は AND で結合されます。ルートモードでは、番号付きグループを結合します。</value>
   </data>
   <data name="Library.VisualFilter.Action.AddCondition" xml:space="preserve">
-    <value>追加 条件</value>
+    <value>条件を追加</value>
   </data>
   <data name="Library.VisualFilter.FieldPlaceholder" xml:space="preserve">
     <value>技術情報またはファイルのフィールド</value>
@@ -1352,7 +1352,7 @@
     <value>この条件を反転</value>
   </data>
   <data name="Library.VisualFilter.Action.Apply" xml:space="preserve">
-    <value>適用 ビジュアル フィルター</value>
+    <value>ビジュアルフィルターを適用</value>
   </data>
   <data name="Library.FilterHelp.Title" xml:space="preserve">
     <value>フィルター構文</value>
@@ -1361,28 +1361,28 @@
     <value>通常のテキストで表示中のすべてのメタデータを検索します。1 つのフィールドには Field:Value、フレーズには引用符を使用し、用語の組み合わせには AND、OR、NOT を使用します。</value>
   </data>
   <data name="Library.Operations.Title" xml:space="preserve">
-    <value>ライブラリ 操作 および 出力</value>
+    <value>ライブラリの操作と出力</value>
   </data>
   <data name="Library.Operations.Description" xml:space="preserve">
-    <value>適用 種類 操作, レポート, および プレイリスト へ 1つの 明示的 ライブラリ 範囲.</value>
+    <value>型指定された操作、レポート、プレイリストを明示的に選択したライブラリ範囲に適用します。</value>
   </data>
   <data name="Library.Operations.Action.UndoMetadata" xml:space="preserve">
-    <value>元に戻す メタデータ</value>
+    <value>メタデータを元に戻す</value>
   </data>
   <data name="Library.Operations.Action.RedoPreview" xml:space="preserve">
-    <value>やり直す プレビュー</value>
+    <value>プレビューをやり直す</value>
   </data>
   <data name="Library.Operations.Action.RepeatRecipe" xml:space="preserve">
-    <value>繰り返す レシピ</value>
+    <value>レシピを繰り返す</value>
   </data>
   <data name="Library.Operations.RecipePlaceholder" xml:space="preserve">
-    <value>個人 レシピ</value>
+    <value>個人用レシピ</value>
   </data>
   <data name="Library.Operations.Action.Load" xml:space="preserve">
     <value>読み込む</value>
   </data>
   <data name="Library.Operations.CloseTooltip" xml:space="preserve">
-    <value>閉じる ライブラリ 操作</value>
+    <value>ライブラリ操作を閉じる</value>
   </data>
   <data name="Library.Operations.Scope" xml:space="preserve">
     <value>範囲</value>
@@ -1394,79 +1394,79 @@
     <value>フィールド</value>
   </data>
   <data name="Library.Operations.DestinationField" xml:space="preserve">
-    <value>宛先 フィールド</value>
+    <value>対象フィールド</value>
   </data>
   <data name="Library.Operations.SecondSourceField" xml:space="preserve">
-    <value>2番目 ソース フィールド</value>
+    <value>2 番目のソースフィールド</value>
   </data>
   <data name="Library.Operations.Value" xml:space="preserve">
     <value>値</value>
   </data>
   <data name="Library.Operations.AssignmentPlaceholder" xml:space="preserve">
-    <value>割り当て 値</value>
+    <value>割り当てる値</value>
   </data>
   <data name="Library.Operations.Find" xml:space="preserve">
     <value>検索</value>
   </data>
   <data name="Library.Operations.FindPlaceholder" xml:space="preserve">
-    <value>テキスト または 正規 式</value>
+    <value>テキストまたは正規表現</value>
   </data>
   <data name="Library.Operations.ReplaceWith" xml:space="preserve">
-    <value>置換 付き</value>
+    <value>置換後</value>
   </data>
   <data name="Library.Operations.Case" xml:space="preserve">
-    <value>大文字/小文字</value>
+    <value>大文字と小文字</value>
   </data>
   <data name="Library.Operations.Separator" xml:space="preserve">
     <value>区切り文字</value>
   </data>
   <data name="Library.Operations.ValueOrder" xml:space="preserve">
-    <value>値 順序</value>
+    <value>値の順序</value>
   </data>
   <data name="Library.Operations.PathComponent" xml:space="preserve">
-    <value>パス コンポーネント</value>
+    <value>パス要素</value>
   </data>
   <data name="Library.Operations.ParentLevel" xml:space="preserve">
-    <value>親 レベル</value>
+    <value>親階層</value>
   </data>
   <data name="Library.Operations.ExtractionPattern" xml:space="preserve">
-    <value>任意 抽出 パターン</value>
+    <value>任意の抽出パターン</value>
   </data>
   <data name="Library.Operations.ExtractionPlaceholder" xml:space="preserve">
     <value>名前付きキャプチャグループを含む正規表現</value>
   </data>
   <data name="Library.Operations.CaptureGroup" xml:space="preserve">
-    <value>キャプチャ グループ</value>
+    <value>キャプチャグループ</value>
   </data>
   <data name="Library.Operations.RegularExpression" xml:space="preserve">
-    <value>正規 式</value>
+    <value>正規表現</value>
   </data>
   <data name="Library.Operations.SequenceStart" xml:space="preserve">
-    <value>連番 開始</value>
+    <value>連番の開始値</value>
   </data>
   <data name="Library.Operations.SequencePaddingTooltip" xml:space="preserve">
-    <value>連番 パディング</value>
+    <value>連番の桁埋め</value>
   </data>
   <data name="Library.Operations.Condition" xml:space="preserve">
     <value>条件</value>
   </data>
   <data name="Library.Operations.ConditionValuePlaceholder" xml:space="preserve">
-    <value>条件 値</value>
+    <value>条件値</value>
   </data>
   <data name="Library.Operations.EmptyImportTooltip" xml:space="preserve">
-    <value>方法 空 インポート セル です 処理済み</value>
+    <value>インポート時の空セルの扱い</value>
   </data>
   <data name="Library.Operations.Action.ImportCsv" xml:space="preserve">
-    <value>インポート CSV/TSV</value>
+    <value>CSV/TSV をインポート</value>
   </data>
   <data name="Library.Operations.Action.CopyField" xml:space="preserve">
-    <value>コピー フィールド</value>
+    <value>フィールドをコピー</value>
   </data>
   <data name="Library.Operations.CopyFieldTooltip" xml:space="preserve">
-    <value>コピー 対象の 選択済み フィールド 識別 および 順序 値 から 対象の 最初 ファイル 内 範囲</value>
+    <value>選択したフィールドの識別情報と並び順を保った値を、範囲内の最初のファイルからコピーします</value>
   </data>
   <data name="Library.Operations.Action.PastePreview" xml:space="preserve">
-    <value>貼り付け + プレビュー</value>
+    <value>貼り付けてプレビュー</value>
   </data>
   <data name="Library.Operations.PastePreviewTooltip" xml:space="preserve">
     <value>タグ対応または行区切りのテキストを選択範囲に貼り付けます</value>
@@ -1475,22 +1475,22 @@
     <value>プレビュー</value>
   </data>
   <data name="Library.Tab.MetadataPreview" xml:space="preserve">
-    <value>メタデータ プレビュー</value>
+    <value>メタデータのプレビュー</value>
   </data>
   <data name="Library.Tab.Files" xml:space="preserve">
     <value>ファイル</value>
   </data>
   <data name="Library.Tab.AudioMatches" xml:space="preserve">
-    <value>オーディオ 一致</value>
+    <value>オーディオの一致候補</value>
   </data>
   <data name="Library.Tab.ReleaseEditions" xml:space="preserve">
-    <value>リリース エディション</value>
+    <value>リリースの版</value>
   </data>
   <data name="Library.Tab.DiscogsEditions" xml:space="preserve">
-    <value>Discogs エディション</value>
+    <value>Discogs の版</value>
   </data>
   <data name="Library.Tab.TrackMapping" xml:space="preserve">
-    <value>トラック マッピング</value>
+    <value>トラックの対応付け</value>
   </data>
   <data name="Library.Tab.Artwork" xml:space="preserve">
     <value>アートワーク</value>
@@ -1505,7 +1505,7 @@
     <value>ツール</value>
   </data>
   <data name="Library.MetadataPreview.LiveDraft" xml:space="preserve">
-    <value>ライブ 代表 下書き</value>
+    <value>代表プレビュー</value>
   </data>
   <data name="Library.MetadataPreview.Before" xml:space="preserve">
     <value>変更前</value>
@@ -1523,7 +1523,7 @@
     <value>バーコード</value>
   </data>
   <data name="Library.Release.CatalogNumberPlaceholder" xml:space="preserve">
-    <value>カタログ いいえ.</value>
+    <value>カタログ番号</value>
   </data>
   <data name="Library.Release.ReleaseIdPlaceholder" xml:space="preserve">
     <value>リリース ID</value>
@@ -1535,7 +1535,7 @@
     <value>検索</value>
   </data>
   <data name="Library.Release.Action.SearchDiscogs" xml:space="preserve">
-    <value>検索 Discogs</value>
+    <value>Discogs を検索</value>
   </data>
   <data name="Library.Release.Action.LoadDetails" xml:space="preserve">
     <value>詳細を読み込む</value>
@@ -1544,115 +1544,115 @@
     <value>選択したフィールドを通常のプレビューに追加する前に、ファイルとトラックの対応候補をすべて確認してください。</value>
   </data>
   <data name="Library.Release.TrackMappingDescription" xml:space="preserve">
-    <value>確認 または 置換 提案 変更前 プレビュー.</value>
+    <value>メタデータをプレビューする前に、ファイルとトラックの各対応候補を確認または置き換えてください。</value>
   </data>
   <data name="Library.Release.Action.BuildMapping" xml:space="preserve">
-    <value>ビルド マッピング</value>
+    <value>対応付けを作成</value>
   </data>
   <data name="Library.Release.Action.PreviewMappedMetadata" xml:space="preserve">
-    <value>プレビュー マップ済み メタデータ</value>
+    <value>対応付けたメタデータをプレビュー</value>
   </data>
   <data name="Library.Release.Action.PreviewCover" xml:space="preserve">
-    <value>プレビュー カバー</value>
+    <value>アートワークをプレビュー</value>
   </data>
   <data name="Library.Release.Field.Titles" xml:space="preserve">
     <value>タイトル</value>
   </data>
   <data name="Library.Release.Field.TrackArtists" xml:space="preserve">
-    <value>トラック アーティスト</value>
+    <value>トラックアーティスト</value>
   </data>
   <data name="Library.Release.Field.AlbumDate" xml:space="preserve">
-    <value>アルバム/日付</value>
+    <value>アルバムと日付</value>
   </data>
   <data name="Library.Release.Field.Numbering" xml:space="preserve">
-    <value>番号付け</value>
+    <value>番号</value>
   </data>
   <data name="Library.Release.Field.ReleaseDetails" xml:space="preserve">
     <value>リリースの詳細</value>
   </data>
   <data name="Library.Release.Field.GenresStyles" xml:space="preserve">
-    <value>ジャンル/スタイル</value>
+    <value>ジャンルとスタイル</value>
   </data>
   <data name="Library.Release.Field.DiscogsReleaseId" xml:space="preserve">
     <value>Discogs リリース ID</value>
   </data>
   <data name="Library.Artwork.Description" xml:space="preserve">
-    <value>プレビュー ローカル アートワーク 用 対象の 現在 ライブラリ 範囲, または 使用 リリース アートワーク 用 確認済み マッピング.</value>
+    <value>現在のライブラリ範囲にあるローカルアートワークをプレビューするか、確認済みの対応付けにリリースのアートワークを使用します。</value>
   </data>
   <data name="Library.Artwork.Action.LocalFrontCover" xml:space="preserve">
-    <value>ローカル 前面 カバー</value>
+    <value>ローカルのフロントカバーを使用</value>
   </data>
   <data name="Library.Artwork.Action.RemoveFront" xml:space="preserve">
-    <value>削除 前面</value>
+    <value>フロントカバーを削除</value>
   </data>
   <data name="Library.Artwork.Action.RemoveAll" xml:space="preserve">
-    <value>削除 すべて</value>
+    <value>すべて削除</value>
   </data>
   <data name="Library.Artwork.Action.FindRelease" xml:space="preserve">
-    <value>検索 リリース アートワーク</value>
+    <value>リリースのアートワークを検索</value>
   </data>
   <data name="Library.Artwork.Action.PreviewRelease" xml:space="preserve">
-    <value>プレビュー リリース カバー</value>
+    <value>リリースのカバーをプレビュー</value>
   </data>
   <data name="Library.Reports.NamePlaceholder" xml:space="preserve">
     <value>レポート名</value>
   </data>
   <data name="Library.Reports.OutputPlaceholder" xml:space="preserve">
-    <value>出力 ファイル または フォルダー</value>
+    <value>出力ファイルまたはフォルダー</value>
   </data>
   <data name="Library.Reports.OneFilePerGroup" xml:space="preserve">
-    <value>1件 ファイル あたり グループ</value>
+    <value>グループごとに 1 ファイル</value>
   </data>
   <data name="Library.Reports.Action.AddColumn" xml:space="preserve">
-    <value>追加 列</value>
+    <value>列を追加</value>
   </data>
   <data name="Library.Reports.Action.AddCustom" xml:space="preserve">
-    <value>追加 カスタム</value>
+    <value>カスタムフィールドを追加</value>
   </data>
   <data name="Library.Reports.Action.MoveUp" xml:space="preserve">
-    <value>移動 設定</value>
+    <value>上へ移動</value>
   </data>
   <data name="Library.Reports.Action.MoveDown" xml:space="preserve">
-    <value>移動 下</value>
+    <value>下へ移動</value>
   </data>
   <data name="Library.Reports.GroupByPlaceholder" xml:space="preserve">
-    <value>グループ による</value>
+    <value>グループ化</value>
   </data>
   <data name="Library.Reports.SortByPlaceholder" xml:space="preserve">
-    <value>並べ替え による</value>
+    <value>並べ替え</value>
   </data>
   <data name="Library.Reports.Descending" xml:space="preserve">
     <value>降順</value>
   </data>
   <data name="Library.Reports.Action.Preview" xml:space="preserve">
-    <value>プレビュー レポート</value>
+    <value>レポートをプレビュー</value>
   </data>
   <data name="Library.Reports.Action.Write" xml:space="preserve">
-    <value>書き込む 確認済み レポート</value>
+    <value>確認済みレポートを書き込む</value>
   </data>
   <data name="Library.Playlists.NamePlaceholder" xml:space="preserve">
     <value>プレイリスト名</value>
   </data>
   <data name="Library.Playlists.OutputPlaceholder" xml:space="preserve">
-    <value>出力 ファイル または フォルダー</value>
+    <value>出力ファイルまたはフォルダー</value>
   </data>
   <data name="Library.Playlists.IncludeExtendedInfo" xml:space="preserve">
-    <value>含める 拡張 トラック 情報</value>
+    <value>拡張トラック情報を含める</value>
   </data>
   <data name="Library.Playlists.OnePerGroup" xml:space="preserve">
-    <value>1件 プレイリスト あたり メタデータ グループ</value>
+    <value>メタデータグループごとに 1 つのプレイリスト</value>
   </data>
   <data name="Library.Playlists.Description" xml:space="preserve">
-    <value>プレイリスト 順序 従う 対象の 選択済み ライブラリ 範囲. プレビュー 読み取る 現在 メタデータ から ディスク および 記録 復元可能 出力.</value>
+    <value>プレイリストの順序は、選択したライブラリ範囲に従います。プレビューではディスク上の現在のメタデータを読み取り、復元可能な出力を記録します。</value>
   </data>
   <data name="Library.Playlists.Action.Preview" xml:space="preserve">
-    <value>プレビュー プレイリスト</value>
+    <value>プレイリストをプレビュー</value>
   </data>
   <data name="Library.Playlists.Action.Write" xml:space="preserve">
-    <value>書き込む 確認済み プレイリスト</value>
+    <value>確認済みプレイリストを書き込む</value>
   </data>
   <data name="Library.Tools.SavedPlaceholder" xml:space="preserve">
-    <value>保存済み 個人 ツール</value>
+    <value>保存済みの個人用ツール</value>
   </data>
   <data name="Library.Tools.Action.Load" xml:space="preserve">
     <value>読み込む</value>
@@ -1673,52 +1673,52 @@
     <value>実行ファイルのパスまたはコマンド名</value>
   </data>
   <data name="Library.Tools.Action.BrowseExecutable" xml:space="preserve">
-    <value>参照 実行ファイル</value>
+    <value>実行ファイルを選択</value>
   </data>
   <data name="Library.Tools.WorkingDirectoryPlaceholder" xml:space="preserve">
     <value>任意の作業ディレクトリまたは {Directory}</value>
   </data>
   <data name="Library.Tools.Action.BrowseFolder" xml:space="preserve">
-    <value>参照 フォルダー</value>
+    <value>フォルダーを選択</value>
   </data>
   <data name="Library.Tools.ArgumentsDescription" xml:space="preserve">
     <value>1 行に 1 つの引数を入力します。使用可能なプレースホルダー: {Files}、{File}、{Directory}、{FileName}、{FileNameWithoutExtension}、{Extension}、{Index}、{Count}。</value>
   </data>
   <data name="Library.Tools.Warning" xml:space="preserve">
-    <value>外部ツール 実行 なし 1つの シェル ただし 残る 外部 アプリケーション 復旧. 実行中 常に 必須 確認.</value>
+    <value>外部ツールはシェルを介さずに実行されますが、アプリケーションの復元対象外です。実行には必ず確認が必要です。</value>
   </data>
   <data name="Library.Tools.Action.Preview" xml:space="preserve">
-    <value>プレビュー ツール</value>
+    <value>ツールをプレビュー</value>
   </data>
   <data name="Library.Tools.Action.Run" xml:space="preserve">
-    <value>実行 確認済み ツール</value>
+    <value>ツールを実行</value>
   </data>
   <data name="Library.Audio.Action.Find" xml:space="preserve">
-    <value>検索 による オーディオ</value>
+    <value>フィンガープリントで検索</value>
   </data>
   <data name="Library.Audio.Action.PreviewIds" xml:space="preserve">
-    <value>プレビュー 選択済み ID</value>
+    <value>選択した ID をプレビュー</value>
   </data>
   <data name="Library.Audio.Action.FindReleases" xml:space="preserve">
-    <value>検索 リリース</value>
+    <value>リリースを検索</value>
   </data>
   <data name="Library.Audio.Action.ApplyPreview" xml:space="preserve">
-    <value>適用 プレビュー</value>
+    <value>プレビューを適用</value>
   </data>
   <data name="Library.PendingChanges.Title" xml:space="preserve">
     <value>保留中の変更</value>
   </data>
   <data name="Library.PendingChanges.Description" xml:space="preserve">
-    <value>すべての ステージ済み または 確認済み メタデータ 編集 その 適用 します 検証 変更前 書き込む.</value>
+    <value>準備済みまたは確認済みの各メタデータ編集は、書き込み前に［適用］で検証されます。</value>
   </data>
   <data name="Library.PendingChanges.CountLabel" xml:space="preserve">
-    <value>保留中の編集</value>
+    <value>保留中の変更</value>
   </data>
   <data name="Library.PendingChanges.CloseTooltip" xml:space="preserve">
-    <value>閉じる 保留中の変更</value>
+    <value>保留中の変更を閉じる</value>
   </data>
   <data name="Library.PendingChanges.Automation" xml:space="preserve">
-    <value>ライブラリ 保留中の変更</value>
+    <value>ライブラリの保留中の変更</value>
   </data>
   <data name="Library.PendingChanges.EmptyTitle" xml:space="preserve">
     <value>保留中の変更はありません</value>
@@ -1732,10 +1732,10 @@
     <value>適用</value>
   </data>
   <data name="Library.Action.CopyPaths" xml:space="preserve">
-    <value>コピー パス</value>
+    <value>パスをコピー</value>
   </data>
   <data name="Library.Action.Reveal" xml:space="preserve">
-    <value>表示</value>
+    <value>ファイルマネージャーで表示</value>
   </data>
   <data name="Library.Action.Reindex" xml:space="preserve">
     <value>再インデックス</value>
@@ -4262,24 +4262,24 @@
   <data name="Library.Artwork.Bytes.One" xml:space="preserve"><value>{0:N0} バイト</value></data>
   <data name="Library.Artwork.Bytes.Other" xml:space="preserve"><value>{0:N0} バイト</value></data>
   <data name="Library.Artwork.Cached" xml:space="preserve"><value>キャッシュ済み</value></data>
-  <data name="Library.Artwork.ThumbnailFailed" xml:space="preserve"><value>サムネイル 利用不可</value></data>
-  <data name="Library.Choice.FilterMode.Substring" xml:space="preserve"><value>含む</value></data>
-  <data name="Library.Choice.FilterMode.Glob" xml:space="preserve"><value>ワイルドカード</value></data>
-  <data name="Library.Choice.FilterMode.Regex" xml:space="preserve"><value>正規 式</value></data>
-  <data name="Library.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>無視 空 セル</value></data>
-  <data name="Library.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>削除 対象の フィールド</value></data>
-  <data name="Library.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>保持 1つの 空 値</value></data>
+  <data name="Library.Artwork.ThumbnailFailed" xml:space="preserve"><value>サムネイルを取得できません</value></data>
+  <data name="Library.Choice.FilterMode.Substring" xml:space="preserve"><value>次を含む</value></data>
+  <data name="Library.Choice.FilterMode.Glob" xml:space="preserve"><value>ワイルドカード（glob）</value></data>
+  <data name="Library.Choice.FilterMode.Regex" xml:space="preserve"><value>正規表現</value></data>
+  <data name="Library.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>空のセルを無視</value></data>
+  <data name="Library.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>フィールドを削除</value></data>
+  <data name="Library.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>空の値を保持</value></data>
   <data name="Library.Choice.OperationScope.SelectedTracks" xml:space="preserve"><value>選択したトラック</value></data>
-  <data name="Library.Choice.OperationScope.SelectedAlbums" xml:space="preserve"><value>選択済み アルバム</value></data>
-  <data name="Library.Choice.OperationScope.VisibleFilteredResults" xml:space="preserve"><value>表示 フィルター 結果</value></data>
-  <data name="Library.Choice.OperationScope.CompleteLibrary" xml:space="preserve"><value>完了 ライブラリ</value></data>
-  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>「{0}」を {1:N0} 回実行しますか？外部ツールによるファイル変更は MusicLibraryManager の復元対象外です。</value></data>
-  <data name="Library.Dialog.ExternalTool.Title" xml:space="preserve"><value>実行 外部 ツール?</value></data>
-  <data name="Library.Dialog.Leave.Confirm" xml:space="preserve"><value>残す</value></data>
-  <data name="Library.Dialog.Leave.Message" xml:space="preserve"><value>対象の 確認済み 操作 または レポート 残る 利用可能 内 この ライブラリ セッション, ただし あります ではない 済み 適用済み.</value></data>
-  <data name="Library.Dialog.Leave.Title" xml:space="preserve"><value>残す 対象の ライブラリ 操作?</value></data>
-  <data name="Library.Dialog.Restore.Message" xml:space="preserve"><value>現在 ファイル します する 置換済み による 対象の 保持済み 元. 競合 バックアップ です 作成済み 場合 必須.</value></data>
-  <data name="Library.Dialog.Restore.Title" xml:space="preserve"><value>復元 対象の 最新 メタデータ 操作?</value></data>
+  <data name="Library.Choice.OperationScope.SelectedAlbums" xml:space="preserve"><value>選択したアルバム</value></data>
+  <data name="Library.Choice.OperationScope.VisibleFilteredResults" xml:space="preserve"><value>表示中の絞り込み結果</value></data>
+  <data name="Library.Choice.OperationScope.CompleteLibrary" xml:space="preserve"><value>ライブラリ全体</value></data>
+  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>「{0}」を実行しますか？予定されている呼び出し: {1:N0} 件。外部ツールはファイルを変更でき、その変更は MusicLibraryManager の復元対象外です。</value></data>
+  <data name="Library.Dialog.ExternalTool.Title" xml:space="preserve"><value>外部ツールを実行しますか？</value></data>
+  <data name="Library.Dialog.Leave.Confirm" xml:space="preserve"><value>終了</value></data>
+  <data name="Library.Dialog.Leave.Message" xml:space="preserve"><value>確認済みの操作またはレポートはこのライブラリセッションに残りますが、まだ適用されていません。</value></data>
+  <data name="Library.Dialog.Leave.Title" xml:space="preserve"><value>ライブラリ操作を終了しますか？</value></data>
+  <data name="Library.Dialog.Restore.Message" xml:space="preserve"><value>現在のファイルは保持されている元のファイルに置き換えられます。競合する場合は必要に応じてバックアップが作成されます。</value></data>
+  <data name="Library.Dialog.Restore.Title" xml:space="preserve"><value>最新のメタデータ操作を復元しますか？</value></data>
   <data name="Library.Empty.Default.Message" xml:space="preserve"><value>このビューを調整するか、ライブラリを再読み込みしてください。</value></data>
   <data name="Library.Empty.Default.Title" xml:space="preserve"><value>表示するトラックがありません</value></data>
   <data name="Library.Empty.Error.Action" xml:space="preserve"><value>もう一度試す</value></data>
@@ -4296,179 +4296,179 @@
   <data name="Library.Empty.NotIndexed.Action" xml:space="preserve"><value>ライブラリのインデックスを作成</value></data>
   <data name="Library.Empty.NotIndexed.Message" xml:space="preserve"><value>構成済みの音楽フォルダーにインデックスを作成し、ライブラリのキャッシュに登録してください。</value></data>
   <data name="Library.Empty.NotIndexed.Title" xml:space="preserve"><value>このライブラリはまだインデックスが作成されていません</value></data>
-  <data name="Library.Error.ChooseDiscogsRelease" xml:space="preserve"><value>選択 1つの Discogs リリース.</value></data>
-  <data name="Library.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>選択 1つの MusicBrainz リリース.</value></data>
-  <data name="Library.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs です 利用不可.</value></data>
-  <data name="Library.FileOperation.MetadataEditsPending" xml:space="preserve"><value>適用 または 破棄 対象の 現在 メタデータ 編集 変更前 移動 ファイル.</value></data>
-  <data name="Library.Filter.Invalid" xml:space="preserve"><value>対象の フィルター です 無効.</value></data>
-  <data name="Library.HealthFilter.Tracks.One" xml:space="preserve"><value>健全性 結果: {0:N0} トラック</value></data>
-  <data name="Library.HealthFilter.Tracks.Other" xml:space="preserve"><value>健全性 結果: {0:N0} トラック</value></data>
-  <data name="Library.Operation.Apply.Blocked" xml:space="preserve"><value>保留中の変更 できません する 適用済み.</value></data>
-  <data name="Library.Operation.Apply.Cancelled" xml:space="preserve"><value>適用 キャンセル済み. 完了 変更 残る 利用可能 経由 操作 復旧.</value></data>
-  <data name="Library.Operation.Apply.Complete.One" xml:space="preserve"><value>適用済み {0:N0} ファイル. 元 です 利用可能 経由 操作 復旧.</value></data>
-  <data name="Library.Operation.Apply.Complete.Other" xml:space="preserve"><value>適用済み {0:N0} ファイル. 元 です 利用可能 経由 操作 復旧.</value></data>
-  <data name="Library.Operation.Apply.Failed" xml:space="preserve"><value>適用 停止済み 安全に.</value></data>
-  <data name="Library.Operation.Apply.NoApplicable" xml:space="preserve"><value>対象の 保留中 編集 生成 いいえ 適用可能 ファイル 変更.</value></data>
-  <data name="Library.Operation.Apply.NoPending" xml:space="preserve"><value>そこ です いいえ 保留中 メタデータ 変更 へ 適用.</value></data>
-  <data name="Library.Operation.Artwork.Blockers.One" xml:space="preserve"><value>アートワーク プレビュー あります {0:N0} ブロッカー. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.Artwork.Blockers.Other" xml:space="preserve"><value>アートワーク プレビュー あります {0:N0} ブロッカー. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.Artwork.PreviewCancelled" xml:space="preserve"><value>アートワーク プレビュー キャンセル済み.</value></data>
-  <data name="Library.Operation.Artwork.PreviewFailed" xml:space="preserve"><value>アートワーク プレビュー 失敗.</value></data>
-  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>{1:N0} 件中 {0:N0} 件のファイルのアートワーク変更をプレビューしました。ファイルは変更されていません。</value></data>
-  <data name="Library.Operation.Artwork.ReleaseReady" xml:space="preserve"><value>対象の 選択済み 前面 カバー でした 追加済み へ 対象の 標準 メタデータ プレビュー. 確認 すべての アートワーク 変更 変更前 適用中.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryCancelled" xml:space="preserve"><value>オーディオ フィンガープリント 検出 キャンセル済み.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>フィンガープリント検索: ファイル {0:N0} 件、候補 {1:N0} 件、警告 {2:N0} 件。</value></data>
-  <data name="Library.Operation.Audio.DiscoveryFailed" xml:space="preserve"><value>オーディオ フィンガープリント 検出 失敗.</value></data>
-  <data name="Library.Operation.Audio.IdentifierPreviewCancelled" xml:space="preserve"><value>オーディオ 識別子 プレビュー キャンセル済み.</value></data>
-  <data name="Library.Operation.Audio.IdentifierPreviewFailed" xml:space="preserve"><value>オーディオ 識別子 プレビュー 失敗.</value></data>
-  <data name="Library.Operation.Audio.IdentifiersReady" xml:space="preserve"><value>オーディオ 識別子 でした 追加済み へ 対象の 標準 メタデータ プレビュー. 確認 変更前 適用中.</value></data>
-  <data name="Library.Operation.Choose" xml:space="preserve"><value>選択 1つの 操作 および 範囲, 次に プレビュー 信頼済み メタデータ から ディスク.</value></data>
-  <data name="Library.Operation.Clipboard.Blockers.One" xml:space="preserve"><value>クリップボード プレビュー あります {0:N0} ブロッカー. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.Clipboard.Blockers.Other" xml:space="preserve"><value>クリップボード プレビュー あります {0:N0} ブロッカー. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.Clipboard.Cancelled" xml:space="preserve"><value>クリップボード プレビュー キャンセル済み. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>{1:N0} 件のファイルに貼り付ける {0:N0} 件の変更をプレビューしました。</value></data>
-  <data name="Library.Operation.Clipboard.Failed" xml:space="preserve"><value>クリップボード プレビュー 失敗.</value></data>
-  <data name="Library.Operation.Clipboard.NoText" xml:space="preserve"><value>対象の クリップボード 実行 ではない 含む テキスト メタデータ.</value></data>
-  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>タグの識別情報を保ったまま、{2} から順序付きの {1} 値を {0:N0} 件コピーしました。</value></data>
-  <data name="Library.Operation.Copy.NoMetadata" xml:space="preserve"><value>対象の 選択済み ライブラリ 範囲 含む いいえ キャッシュ済み メタデータ へ コピー.</value></data>
-  <data name="Library.Operation.CoverArt.Cancelled" xml:space="preserve"><value>Cover Art Archive 検索 キャンセル済み.</value></data>
-  <data name="Library.Operation.CoverArt.Failed" xml:space="preserve"><value>Cover Art Archive 検索 失敗.</value></data>
-  <data name="Library.Operation.CoverArt.Loaded.One" xml:space="preserve"><value>読み込み済み {0:N0} アートワーク 候補. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.CoverArt.Loaded.Other" xml:space="preserve"><value>読み込み済み {0:N0} アートワーク 候補. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.CoverArt.None" xml:space="preserve"><value>この リリース あります いいえ Cover Art Archive 画像.</value></data>
-  <data name="Library.Operation.Discogs.ArtworkCancelled" xml:space="preserve"><value>Discogs アートワーク プレビュー キャンセル済み.</value></data>
-  <data name="Library.Operation.Discogs.ArtworkFailed" xml:space="preserve"><value>Discogs アートワーク プレビュー 失敗.</value></data>
-  <data name="Library.Operation.Discogs.ArtworkReady" xml:space="preserve"><value>対象の 選択済み Discogs カバー でした 追加済み へ 対象の 標準 アートワーク プレビュー. 確認 すべての 変更 変更前 適用中.</value></data>
-  <data name="Library.Operation.Discogs.DetailsCancelled" xml:space="preserve"><value>Discogs リリース 詳細 検索 キャンセル済み.</value></data>
-  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>Discogs リリース {0} と {1:N0} 件のトラックを読み込みました。メタデータは変更されていません。</value></data>
-  <data name="Library.Operation.Discogs.DetailsFailed" xml:space="preserve"><value>Discogs リリース 詳細 検索 失敗.</value></data>
-  <data name="Library.Operation.Discogs.MappingCancelled" xml:space="preserve"><value>Discogs トラック マッピング キャンセル済み.</value></data>
-  <data name="Library.Operation.Discogs.MappingComplete" xml:space="preserve"><value>推奨 {0:N0} の {1:N0} Discogs ファイルからトラック マッピング; {2:N0} 必要 確認.</value></data>
-  <data name="Library.Operation.Discogs.MappingFailed" xml:space="preserve"><value>Discogs トラック マッピング 失敗.</value></data>
-  <data name="Library.Operation.Discogs.MetadataCancelled" xml:space="preserve"><value>Discogs メタデータ プレビュー キャンセル済み.</value></data>
-  <data name="Library.Operation.Discogs.MetadataFailed" xml:space="preserve"><value>Discogs メタデータ プレビュー 失敗.</value></data>
-  <data name="Library.Operation.Discogs.MetadataReady" xml:space="preserve"><value>マップ済み Discogs フィールド でした 追加済み へ 対象の 標準 メタデータ プレビュー. 確認 すべての 変更 変更前 適用中.</value></data>
-  <data name="Library.Operation.Discogs.SearchCancelled" xml:space="preserve"><value>Discogs リリース 検索 キャンセル済み.</value></data>
+  <data name="Library.Error.ChooseDiscogsRelease" xml:space="preserve"><value>Discogs のリリースを選択してください。</value></data>
+  <data name="Library.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>MusicBrainz のリリースを選択してください。</value></data>
+  <data name="Library.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs は利用できません。</value></data>
+  <data name="Library.FileOperation.MetadataEditsPending" xml:space="preserve"><value>ファイルパスを変更する前に、現在のメタデータ編集を適用するか破棄してください。</value></data>
+  <data name="Library.Filter.Invalid" xml:space="preserve"><value>フィルターが無効です。</value></data>
+  <data name="Library.HealthFilter.Tracks.One" xml:space="preserve"><value>健全性の結果: {0:N0} トラック</value></data>
+  <data name="Library.HealthFilter.Tracks.Other" xml:space="preserve"><value>健全性の結果: {0:N0} トラック</value></data>
+  <data name="Library.Operation.Apply.Blocked" xml:space="preserve"><value>保留中の変更を適用できません。</value></data>
+  <data name="Library.Operation.Apply.Cancelled" xml:space="preserve"><value>適用がキャンセルされました。完了した変更は「操作」の復旧機能から引き続き利用できます。</value></data>
+  <data name="Library.Operation.Apply.Complete.One" xml:space="preserve"><value>{0:N0} ファイルに適用しました。元のファイルは「操作」の復旧機能から利用できます。</value></data>
+  <data name="Library.Operation.Apply.Complete.Other" xml:space="preserve"><value>{0:N0} ファイルに適用しました。元のファイルは「操作」の復旧機能から利用できます。</value></data>
+  <data name="Library.Operation.Apply.Failed" xml:space="preserve"><value>適用は安全に停止しました。</value></data>
+  <data name="Library.Operation.Apply.NoApplicable" xml:space="preserve"><value>保留中の編集から適用可能なファイル変更は生成されません。</value></data>
+  <data name="Library.Operation.Apply.NoPending" xml:space="preserve"><value>適用する保留中のメタデータ変更はありません。</value></data>
+  <data name="Library.Operation.Artwork.Blockers.One" xml:space="preserve"><value>アートワークのプレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Artwork.Blockers.Other" xml:space="preserve"><value>アートワークのプレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Artwork.PreviewCancelled" xml:space="preserve"><value>アートワークのプレビューがキャンセルされました。</value></data>
+  <data name="Library.Operation.Artwork.PreviewFailed" xml:space="preserve"><value>アートワークのプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>アートワークのプレビューが完了しました。プレビューしたファイル: {1:N0} 件中 {0:N0} 件。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Artwork.ReleaseReady" xml:space="preserve"><value>選択したフロントカバーを通常のメタデータプレビューに追加しました。適用する前に、すべてのアートワーク変更を確認してください。</value></data>
+  <data name="Library.Operation.Audio.DiscoveryCancelled" xml:space="preserve"><value>オーディオフィンガープリントの検出がキャンセルされました。</value></data>
+  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>フィンガープリントの検出が完了しました。ファイル: {0:N0}、候補: {1:N0}、警告: {2:N0}。</value></data>
+  <data name="Library.Operation.Audio.DiscoveryFailed" xml:space="preserve"><value>オーディオフィンガープリントの検出に失敗しました。</value></data>
+  <data name="Library.Operation.Audio.IdentifierPreviewCancelled" xml:space="preserve"><value>オーディオ識別子のプレビューがキャンセルされました。</value></data>
+  <data name="Library.Operation.Audio.IdentifierPreviewFailed" xml:space="preserve"><value>オーディオ識別子のプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.Audio.IdentifiersReady" xml:space="preserve"><value>オーディオ識別子を通常のメタデータプレビューに追加しました。適用する前に確認してください。</value></data>
+  <data name="Library.Operation.Choose" xml:space="preserve"><value>操作と範囲を選択してから、ディスク上の基準となるメタデータをプレビューしてください。</value></data>
+  <data name="Library.Operation.Clipboard.Blockers.One" xml:space="preserve"><value>クリップボードのプレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Clipboard.Blockers.Other" xml:space="preserve"><value>クリップボードのプレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Clipboard.Cancelled" xml:space="preserve"><value>クリップボードのプレビューがキャンセルされました。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>クリップボードのプレビューが完了しました。変更: {0:N0}、ファイル: {1:N0}。</value></data>
+  <data name="Library.Operation.Clipboard.Failed" xml:space="preserve"><value>クリップボードのプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.Clipboard.NoText" xml:space="preserve"><value>クリップボードにテキストメタデータが含まれていません。</value></data>
+  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>順序付きの値をコピーしました: {0:N0}、フィールド: {1}、コピー元: {2}。タグの識別情報は保持されました。</value></data>
+  <data name="Library.Operation.Copy.NoMetadata" xml:space="preserve"><value>選択したライブラリ範囲に、コピーできるキャッシュ済みメタデータがありません。</value></data>
+  <data name="Library.Operation.CoverArt.Cancelled" xml:space="preserve"><value>Cover Art Archive の検索がキャンセルされました。</value></data>
+  <data name="Library.Operation.CoverArt.Failed" xml:space="preserve"><value>Cover Art Archive の検索に失敗しました。</value></data>
+  <data name="Library.Operation.CoverArt.Loaded.One" xml:space="preserve"><value>アートワーク候補を {0:N0} 件読み込みました。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.CoverArt.Loaded.Other" xml:space="preserve"><value>アートワーク候補を {0:N0} 件読み込みました。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.CoverArt.None" xml:space="preserve"><value>このリリースには Cover Art Archive の画像がありません。</value></data>
+  <data name="Library.Operation.Discogs.ArtworkCancelled" xml:space="preserve"><value>Discogs アートワークのプレビューがキャンセルされました。</value></data>
+  <data name="Library.Operation.Discogs.ArtworkFailed" xml:space="preserve"><value>Discogs アートワークのプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.Discogs.ArtworkReady" xml:space="preserve"><value>選択した Discogs のカバーを通常のアートワークプレビューに追加しました。適用する前に、すべての変更を確認してください。</value></data>
+  <data name="Library.Operation.Discogs.DetailsCancelled" xml:space="preserve"><value>Discogs リリース詳細の検索がキャンセルされました。</value></data>
+  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>Discogs リリース {0} を読み込みました。トラック: {1:N0}。メタデータは変更されていません。</value></data>
+  <data name="Library.Operation.Discogs.DetailsFailed" xml:space="preserve"><value>Discogs リリース詳細の検索に失敗しました。</value></data>
+  <data name="Library.Operation.Discogs.MappingCancelled" xml:space="preserve"><value>Discogs トラックのマッピングがキャンセルされました。</value></data>
+  <data name="Library.Operation.Discogs.MappingComplete" xml:space="preserve"><value>{1:N0} 件中 {0:N0} 件の Discogs ファイルとトラックのマッピングを提案しました。{2:N0} 件は確認が必要です。</value></data>
+  <data name="Library.Operation.Discogs.MappingFailed" xml:space="preserve"><value>Discogs トラックのマッピングに失敗しました。</value></data>
+  <data name="Library.Operation.Discogs.MetadataCancelled" xml:space="preserve"><value>Discogs メタデータのプレビューがキャンセルされました。</value></data>
+  <data name="Library.Operation.Discogs.MetadataFailed" xml:space="preserve"><value>Discogs メタデータのプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.Discogs.MetadataReady" xml:space="preserve"><value>マッピングした Discogs フィールドを通常のメタデータプレビューに追加しました。適用する前に、すべての変更を確認してください。</value></data>
+  <data name="Library.Operation.Discogs.SearchCancelled" xml:space="preserve"><value>Discogs リリースの検索がキャンセルされました。</value></data>
   <data name="Library.Operation.Discogs.SearchComplete.One" xml:space="preserve"><value>Discogs で {0:N0} 件のリリース版が見つかりました。選択すると、トラックと版の詳細をすべて読み込みます。</value></data>
   <data name="Library.Operation.Discogs.SearchComplete.Other" xml:space="preserve"><value>Discogs で {0:N0} 件のリリース版が見つかりました。いずれかを選択すると、トラックと版の詳細をすべて読み込みます。</value></data>
-  <data name="Library.Operation.Discogs.SearchFailed" xml:space="preserve"><value>Discogs リリース 検索 失敗.</value></data>
+  <data name="Library.Operation.Discogs.SearchFailed" xml:space="preserve"><value>Discogs リリースの検索に失敗しました。</value></data>
   <data name="Library.Operation.ExternalTool.Blockers.One" xml:space="preserve"><value>外部ツールのプレビューに {0:N0} 件のブロッカーがあります。実行できません。</value></data>
   <data name="Library.Operation.ExternalTool.Blockers.Other" xml:space="preserve"><value>外部ツールのプレビューに {0:N0} 件のブロッカーがあります。実行できません。</value></data>
-  <data name="Library.Operation.ExternalTool.Cancelled" xml:space="preserve"><value>外部 ツール キャンセル済み. 対象の 有効 処理 でした 停止済み.</value></data>
-  <data name="Library.Operation.ExternalTool.Complete" xml:space="preserve"><value>外部 ツール 完了: {0:N0} 成功, {1:N0} 失敗.</value></data>
-  <data name="Library.Operation.ExternalTool.Failed" xml:space="preserve"><value>外部 ツール 停止済み.</value></data>
-  <data name="Library.Operation.ExternalTool.Ready.One" xml:space="preserve"><value>プレビュー済み {0:N0} 処理 呼び出し. 外部ツール 実行 外部 MusicLibraryManager 復旧.</value></data>
-  <data name="Library.Operation.ExternalTool.Ready.Other" xml:space="preserve"><value>プレビュー済み {0:N0} 処理 呼び出し. 外部ツール 実行 外部 MusicLibraryManager 復旧.</value></data>
-  <data name="Library.Operation.History.Cancelled" xml:space="preserve"><value>履歴 プレビュー キャンセル済み. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.History.Failed" xml:space="preserve"><value>履歴 プレビュー 失敗.</value></data>
-  <data name="Library.Operation.History.RedoReady" xml:space="preserve"><value>やり直す でした 再生成済み 対して 対象の 現在 ファイル. 確認 変更前 適用中.</value></data>
-  <data name="Library.Operation.History.RepeatReady" xml:space="preserve"><value>対象の 最新 レシピ でした 再生成済み 用 対象の 現在 ライブラリ 範囲. 確認 変更前 適用中.</value></data>
-  <data name="Library.Operation.Import.Blockers.One" xml:space="preserve"><value>インポート プレビュー あります {0:N0} ブロッカー. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.Import.Blockers.Other" xml:space="preserve"><value>インポート プレビュー あります {0:N0} ブロッカー. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.Import.Cancelled" xml:space="preserve"><value>インポート プレビュー キャンセル済み. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>{1:N0} 件のファイルへの {0:N0} 件のインポート変更をプレビューしました。{3:N0} 行中 {2:N0} 行を対応付けました。</value></data>
-  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>{1:N0} 件のファイルへの {0:N0} 件のインポート変更をプレビューしました。{4:N0} 件の警告があり、{3:N0} 行中 {2:N0} 行を対応付けました。</value></data>
-  <data name="Library.Operation.Import.Failed" xml:space="preserve"><value>インポート プレビュー 失敗.</value></data>
-  <data name="Library.Operation.Import.NoRowsMatched" xml:space="preserve"><value>いいえ インポート 行 一致 対象の 選択済み ライブラリ 範囲.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupCancelled" xml:space="preserve"><value>MusicBrainz リリース 検索 キャンセル済み.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupComplete.One" xml:space="preserve"><value>MusicBrainz 返却済み {0:N0} リリース エディション. いいえ メタデータ でした 選択済み または 変更済み.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupComplete.Other" xml:space="preserve"><value>MusicBrainz 返却済み {0:N0} リリース エディション. いいえ メタデータ でした 選択済み または 変更済み.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupFailed" xml:space="preserve"><value>MusicBrainz リリース 検索 失敗.</value></data>
-  <data name="Library.Operation.MusicBrainz.MappingCancelled" xml:space="preserve"><value>リリース トラック マッピング キャンセル済み.</value></data>
-  <data name="Library.Operation.MusicBrainz.MappingComplete" xml:space="preserve"><value>推奨 {0:N0} の {1:N0} ファイルからトラック マッピング; {2:N0} 必要 確認.</value></data>
-  <data name="Library.Operation.MusicBrainz.MappingFailed" xml:space="preserve"><value>リリース トラック マッピング 失敗.</value></data>
-  <data name="Library.Operation.MusicBrainz.MetadataCancelled" xml:space="preserve"><value>MusicBrainz メタデータ プレビュー キャンセル済み.</value></data>
-  <data name="Library.Operation.MusicBrainz.MetadataFailed" xml:space="preserve"><value>MusicBrainz メタデータ プレビュー 失敗.</value></data>
-  <data name="Library.Operation.MusicBrainz.MetadataReady" xml:space="preserve"><value>マップ済み MusicBrainz フィールド でした 追加済み へ 対象の 標準 メタデータ プレビュー. 確認 すべての 変更 変更前 適用中.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchCancelled" xml:space="preserve"><value>MusicBrainz リリース 検索 キャンセル済み.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchComplete.One" xml:space="preserve"><value>MusicBrainz 検出 {0:N0} リリース エディション. 選択 それ および ビルド 1つの ファイルからトラック マッピング.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchComplete.Other" xml:space="preserve"><value>MusicBrainz 検出 {0:N0} リリース エディション. 選択 1件 および ビルド 1つの ファイルからトラック マッピング.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchFailed" xml:space="preserve"><value>MusicBrainz リリース 検索 失敗.</value></data>
-  <data name="Library.Operation.NoFiles" xml:space="preserve"><value>対象の 選択済み ライブラリ 範囲 含む ファイルなし.</value></data>
-  <data name="Library.Operation.PendingReverted" xml:space="preserve"><value>保留中 プレビュー 元に戻す. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.Playlist.Blockers.One" xml:space="preserve"><value>プレイリスト プレビュー あります {0:N0} ブロッカー. いいえ 出力 でした 書き込み済み.</value></data>
-  <data name="Library.Operation.Playlist.Blockers.Other" xml:space="preserve"><value>プレイリスト プレビュー あります {0:N0} ブロッカー. いいえ 出力 でした 書き込み済み.</value></data>
-  <data name="Library.Operation.Playlist.OutputCancelled" xml:space="preserve"><value>プレイリスト 出力 キャンセル済み.</value></data>
-  <data name="Library.Operation.Playlist.OutputFailed" xml:space="preserve"><value>プレイリスト 出力 失敗.</value></data>
-  <data name="Library.Operation.Playlist.PreviewCancelled" xml:space="preserve"><value>プレイリスト プレビュー キャンセル済み.</value></data>
-  <data name="Library.Operation.Playlist.PreviewFailed" xml:space="preserve"><value>プレイリスト プレビュー 失敗.</value></data>
-  <data name="Library.Operation.Playlist.Ready.One" xml:space="preserve"><value>プレビュー済み {0:N0} プレイリスト ファイル. 確認 対象の 宛先 変更前 適用中.</value></data>
-  <data name="Library.Operation.Playlist.Ready.Other" xml:space="preserve"><value>プレビュー済み {0:N0} プレイリスト ファイル. 確認 対象の 宛先 変更前 適用中.</value></data>
-  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>{1:N0} 件のトラック参照を含むプレイリストファイルを {0:N0} 件書き込みました。</value></data>
-  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>{1:N0} 件のブロック要因がある {0:N0} 件のファイルをプレビューしました。ファイルは変更されていません。</value></data>
-  <data name="Library.Operation.PreviewCancelled" xml:space="preserve"><value>プレビュー キャンセル済み. ファイルなし でした 変更済み.</value></data>
-  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>{2:N0} 件中 {1:N0} 件のファイルに対する {0:N0} 件の変更をプレビューしました。</value></data>
-  <data name="Library.Operation.PreviewFailed" xml:space="preserve"><value>プレビュー 失敗.</value></data>
-  <data name="Library.Operation.PreviewInvalidated" xml:space="preserve"><value>操作 または 範囲 変更済み. プレビュー 信頼済み メタデータ 再度.</value></data>
-  <data name="Library.Operation.Report.Blockers.One" xml:space="preserve"><value>レポート プレビュー あります {0:N0} ブロッカー. いいえ 出力 でした 書き込み済み.</value></data>
-  <data name="Library.Operation.Report.Blockers.Other" xml:space="preserve"><value>レポート プレビュー あります {0:N0} ブロッカー. いいえ 出力 でした 書き込み済み.</value></data>
-  <data name="Library.Operation.Report.OutputCancelled" xml:space="preserve"><value>レポート 出力 キャンセル済み.</value></data>
-  <data name="Library.Operation.Report.OutputFailed" xml:space="preserve"><value>レポート 出力 失敗.</value></data>
-  <data name="Library.Operation.Report.PreviewCancelled" xml:space="preserve"><value>レポート プレビュー キャンセル済み.</value></data>
-  <data name="Library.Operation.Report.PreviewFailed" xml:space="preserve"><value>レポート プレビュー 失敗.</value></data>
-  <data name="Library.Operation.Report.Ready.One" xml:space="preserve"><value>プレビュー済み {0:N0} レポート ファイル. 確認 対象の 宛先 変更前 適用中.</value></data>
-  <data name="Library.Operation.Report.Ready.Other" xml:space="preserve"><value>プレビュー済み {0:N0} レポート ファイル. 確認 対象の 宛先 変更前 適用中.</value></data>
-  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>{1:N0} 行を含むレポートファイルを {0:N0} 件書き込みました。</value></data>
-  <data name="Library.Operation.Restore.Cancelled" xml:space="preserve"><value>復元 キャンセル済み. 任意 完了 復元 残る 復元可能.</value></data>
-  <data name="Library.Operation.Restore.Complete.One" xml:space="preserve"><value>復元済み {0:N0} ファイル から 対象の 最新 メタデータ 操作.</value></data>
-  <data name="Library.Operation.Restore.Complete.Other" xml:space="preserve"><value>復元済み {0:N0} ファイル から 対象の 最新 メタデータ 操作.</value></data>
-  <data name="Library.Operation.Restore.Failed" xml:space="preserve"><value>復元 失敗.</value></data>
+  <data name="Library.Operation.ExternalTool.Cancelled" xml:space="preserve"><value>外部ツールがキャンセルされました。実行中のプロセスは停止しました。</value></data>
+  <data name="Library.Operation.ExternalTool.Complete" xml:space="preserve"><value>外部ツールが完了しました。成功: {0:N0}、失敗: {1:N0}。</value></data>
+  <data name="Library.Operation.ExternalTool.Failed" xml:space="preserve"><value>外部ツールが停止しました。</value></data>
+  <data name="Library.Operation.ExternalTool.Ready.One" xml:space="preserve"><value>プロセス呼び出し {0:N0} 件をプレビューしました。外部ツールは MusicLibraryManager の復旧対象外で実行されます。</value></data>
+  <data name="Library.Operation.ExternalTool.Ready.Other" xml:space="preserve"><value>プロセス呼び出し {0:N0} 件をプレビューしました。外部ツールは MusicLibraryManager の復旧対象外で実行されます。</value></data>
+  <data name="Library.Operation.History.Cancelled" xml:space="preserve"><value>履歴のプレビューがキャンセルされました。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.History.Failed" xml:space="preserve"><value>履歴のプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.History.RedoReady" xml:space="preserve"><value>現在のファイルに基づいてやり直しを再生成しました。適用する前に確認してください。</value></data>
+  <data name="Library.Operation.History.RepeatReady" xml:space="preserve"><value>現在のライブラリ範囲に対して最新のレシピを再生成しました。適用する前に確認してください。</value></data>
+  <data name="Library.Operation.Import.Blockers.One" xml:space="preserve"><value>インポートのプレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Import.Blockers.Other" xml:space="preserve"><value>インポートのプレビューにブロッカーが {0:N0} 件あります。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Import.Cancelled" xml:space="preserve"><value>インポートのプレビューがキャンセルされました。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>インポートのプレビューが完了しました。変更: {0:N0}、ファイル: {1:N0}、一致した行: {3:N0} 行中 {2:N0} 行。</value></data>
+  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>インポートのプレビューが完了しました。変更: {0:N0}、ファイル: {1:N0}、一致した行: {3:N0} 行中 {2:N0} 行、警告: {4:N0}。</value></data>
+  <data name="Library.Operation.Import.Failed" xml:space="preserve"><value>インポートのプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.Import.NoRowsMatched" xml:space="preserve"><value>選択したライブラリ範囲に一致するインポート行はありませんでした。</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupCancelled" xml:space="preserve"><value>MusicBrainz リリースの検索がキャンセルされました。</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupComplete.One" xml:space="preserve"><value>MusicBrainz からリリース版が {0:N0} 件返されました。メタデータは選択も変更もされていません。</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupComplete.Other" xml:space="preserve"><value>MusicBrainz からリリース版が {0:N0} 件返されました。メタデータは選択も変更もされていません。</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupFailed" xml:space="preserve"><value>MusicBrainz リリースの検索に失敗しました。</value></data>
+  <data name="Library.Operation.MusicBrainz.MappingCancelled" xml:space="preserve"><value>リリーストラックのマッピングがキャンセルされました。</value></data>
+  <data name="Library.Operation.MusicBrainz.MappingComplete" xml:space="preserve"><value>{1:N0} 件中 {0:N0} 件のファイルとトラックのマッピングを提案しました。{2:N0} 件は確認が必要です。</value></data>
+  <data name="Library.Operation.MusicBrainz.MappingFailed" xml:space="preserve"><value>リリーストラックのマッピングに失敗しました。</value></data>
+  <data name="Library.Operation.MusicBrainz.MetadataCancelled" xml:space="preserve"><value>MusicBrainz メタデータのプレビューがキャンセルされました。</value></data>
+  <data name="Library.Operation.MusicBrainz.MetadataFailed" xml:space="preserve"><value>MusicBrainz メタデータのプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.MusicBrainz.MetadataReady" xml:space="preserve"><value>マッピングした MusicBrainz フィールドを通常のメタデータプレビューに追加しました。適用する前に、すべての変更を確認してください。</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchCancelled" xml:space="preserve"><value>MusicBrainz リリースの検索がキャンセルされました。</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchComplete.One" xml:space="preserve"><value>MusicBrainz でリリース版が {0:N0} 件見つかりました。選択して、ファイルとトラックのマッピングを作成してください。</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchComplete.Other" xml:space="preserve"><value>MusicBrainz でリリース版が {0:N0} 件見つかりました。1 件を選択して、ファイルとトラックのマッピングを作成してください。</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchFailed" xml:space="preserve"><value>MusicBrainz リリースの検索に失敗しました。</value></data>
+  <data name="Library.Operation.NoFiles" xml:space="preserve"><value>選択したライブラリ範囲にファイルがありません。</value></data>
+  <data name="Library.Operation.PendingReverted" xml:space="preserve"><value>保留中のプレビューを破棄しました。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.Playlist.Blockers.One" xml:space="preserve"><value>プレイリストのプレビューにブロッカーが {0:N0} 件あります。出力は書き込まれていません。</value></data>
+  <data name="Library.Operation.Playlist.Blockers.Other" xml:space="preserve"><value>プレイリストのプレビューにブロッカーが {0:N0} 件あります。出力は書き込まれていません。</value></data>
+  <data name="Library.Operation.Playlist.OutputCancelled" xml:space="preserve"><value>プレイリストの出力がキャンセルされました。</value></data>
+  <data name="Library.Operation.Playlist.OutputFailed" xml:space="preserve"><value>プレイリストの出力に失敗しました。</value></data>
+  <data name="Library.Operation.Playlist.PreviewCancelled" xml:space="preserve"><value>プレイリストのプレビューがキャンセルされました。</value></data>
+  <data name="Library.Operation.Playlist.PreviewFailed" xml:space="preserve"><value>プレイリストのプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.Playlist.Ready.One" xml:space="preserve"><value>プレイリストファイル {0:N0} 件をプレビューしました。適用する前に出力先を確認してください。</value></data>
+  <data name="Library.Operation.Playlist.Ready.Other" xml:space="preserve"><value>プレイリストファイル {0:N0} 件をプレビューしました。適用する前に出力先を確認してください。</value></data>
+  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>プレイリストの出力を書き込みました。ファイル: {0:N0}、トラック参照: {1:N0}。</value></data>
+  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>プレビューが完了しました。ファイル: {0:N0}、ブロッカー: {1:N0}。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.PreviewCancelled" xml:space="preserve"><value>プレビューがキャンセルされました。ファイルは変更されていません。</value></data>
+  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>プレビューが完了しました。変更: {0:N0}、影響を受けるファイル: {2:N0} 件中 {1:N0} 件。</value></data>
+  <data name="Library.Operation.PreviewFailed" xml:space="preserve"><value>プレビューに失敗しました。</value></data>
+  <data name="Library.Operation.PreviewInvalidated" xml:space="preserve"><value>操作または範囲が変更されました。基準となるメタデータをもう一度プレビューしてください。</value></data>
+  <data name="Library.Operation.Report.Blockers.One" xml:space="preserve"><value>レポートのプレビューにブロッカーが {0:N0} 件あります。出力は書き込まれていません。</value></data>
+  <data name="Library.Operation.Report.Blockers.Other" xml:space="preserve"><value>レポートのプレビューにブロッカーが {0:N0} 件あります。出力は書き込まれていません。</value></data>
+  <data name="Library.Operation.Report.OutputCancelled" xml:space="preserve"><value>レポートの出力がキャンセルされました。</value></data>
+  <data name="Library.Operation.Report.OutputFailed" xml:space="preserve"><value>レポートの出力に失敗しました。</value></data>
+  <data name="Library.Operation.Report.PreviewCancelled" xml:space="preserve"><value>レポートのプレビューがキャンセルされました。</value></data>
+  <data name="Library.Operation.Report.PreviewFailed" xml:space="preserve"><value>レポートのプレビューに失敗しました。</value></data>
+  <data name="Library.Operation.Report.Ready.One" xml:space="preserve"><value>レポートファイル {0:N0} 件をプレビューしました。適用する前に出力先を確認してください。</value></data>
+  <data name="Library.Operation.Report.Ready.Other" xml:space="preserve"><value>レポートファイル {0:N0} 件をプレビューしました。適用する前に出力先を確認してください。</value></data>
+  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>レポートの出力を書き込みました。ファイル: {0:N0}、行: {1:N0}。</value></data>
+  <data name="Library.Operation.Restore.Cancelled" xml:space="preserve"><value>復元がキャンセルされました。完了した復元は引き続き復旧できます。</value></data>
+  <data name="Library.Operation.Restore.Complete.One" xml:space="preserve"><value>最新のメタデータ操作から {0:N0} ファイルを復元しました。</value></data>
+  <data name="Library.Operation.Restore.Complete.Other" xml:space="preserve"><value>最新のメタデータ操作から {0:N0} ファイルを復元しました。</value></data>
+  <data name="Library.Operation.Restore.Failed" xml:space="preserve"><value>復元に失敗しました。</value></data>
   <data name="Library.OperationName.CoverArt" xml:space="preserve"><value>Cover Art Archive: {0}</value></data>
   <data name="Library.OperationName.DiscogsArtwork" xml:space="preserve"><value>Discogs アートワーク: {0}</value></data>
   <data name="Library.OperationName.DiscogsMetadata" xml:space="preserve"><value>Discogs: {0}</value></data>
-  <data name="Library.OperationName.ImportMetadata" xml:space="preserve"><value>メタデータをインポート から {0}</value></data>
+  <data name="Library.OperationName.ImportMetadata" xml:space="preserve"><value>{0} からメタデータをインポート</value></data>
   <data name="Library.OperationName.MusicBrainzMetadata" xml:space="preserve"><value>MusicBrainz: {0}</value></data>
-  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>{1:N0} 件のファイルに {0} 値を貼り付け</value></data>
-  <data name="Library.OperationName.RemoveAllArtwork" xml:space="preserve"><value>削除 すべて アートワーク</value></data>
-  <data name="Library.OperationName.RemoveFrontCover" xml:space="preserve"><value>削除 前面 カバー</value></data>
-  <data name="Library.OperationName.ReplaceFrontCover" xml:space="preserve"><value>置換 前面 カバー</value></data>
-  <data name="Library.OperationName.RepresentativePreview" xml:space="preserve"><value>下書き 代表 プレビュー</value></data>
-  <data name="Library.Picker.ArtworkImages" xml:space="preserve"><value>アートワーク 画像</value></data>
-  <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>区切り メタデータ</value></data>
-  <data name="Library.Picker.ExternalToolDirectory" xml:space="preserve"><value>選択 外部 ツール 処理中 ディレクトリ</value></data>
-  <data name="Library.Picker.ExternalToolExecutable" xml:space="preserve"><value>選択 外部 ツール 実行ファイル</value></data>
+  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>{0} の値を貼り付け、ファイル: {1:N0} 件</value></data>
+  <data name="Library.OperationName.RemoveAllArtwork" xml:space="preserve"><value>すべてのアートワークを削除</value></data>
+  <data name="Library.OperationName.RemoveFrontCover" xml:space="preserve"><value>フロントカバーを削除</value></data>
+  <data name="Library.OperationName.ReplaceFrontCover" xml:space="preserve"><value>フロントカバーを置換</value></data>
+  <data name="Library.OperationName.RepresentativePreview" xml:space="preserve"><value>代表プレビュー</value></data>
+  <data name="Library.Picker.ArtworkImages" xml:space="preserve"><value>アートワーク画像を選択</value></data>
+  <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>区切り形式のメタデータファイルを選択</value></data>
+  <data name="Library.Picker.ExternalToolDirectory" xml:space="preserve"><value>外部ツールの作業フォルダーを選択</value></data>
+  <data name="Library.Picker.ExternalToolExecutable" xml:space="preserve"><value>外部ツールの実行ファイルを選択</value></data>
   <data name="Library.Picker.FrontCover" xml:space="preserve"><value>フロントカバーのアートワークを選択</value></data>
   <data name="Library.Picker.ImportMetadata.Title" xml:space="preserve"><value>CSV または区切りテキストからメタデータをインポート</value></data>
-  <data name="Library.Picker.PlaylistFolder" xml:space="preserve"><value>選択 プレイリスト 出力 フォルダー</value></data>
-  <data name="Library.Picker.PlaylistOutput" xml:space="preserve"><value>選択 プレイリスト 出力</value></data>
-  <data name="Library.Picker.ReportFolder" xml:space="preserve"><value>選択 レポート 出力 フォルダー</value></data>
-  <data name="Library.Picker.ReportOutput" xml:space="preserve"><value>選択 レポート 出力</value></data>
+  <data name="Library.Picker.PlaylistFolder" xml:space="preserve"><value>プレイリストの出力フォルダーを選択</value></data>
+  <data name="Library.Picker.PlaylistOutput" xml:space="preserve"><value>プレイリストの出力先を選択</value></data>
+  <data name="Library.Picker.ReportFolder" xml:space="preserve"><value>レポートの出力フォルダーを選択</value></data>
+  <data name="Library.Picker.ReportOutput" xml:space="preserve"><value>レポートの出力先を選択</value></data>
   <data name="Library.Progress.ApplyingMetadataChanges" xml:space="preserve"><value>確認済みのメタデータ変更を適用しています</value></data>
   <data name="Library.Progress.BuildingArtworkPreview" xml:space="preserve"><value>アートワークのプレビューを作成しています</value></data>
-  <data name="Library.Progress.BuildingAudioIdentifierPreview" xml:space="preserve"><value>ビルド オーディオ 識別子 プレビュー</value></data>
-  <data name="Library.Progress.BuildingClipboardPreview" xml:space="preserve"><value>ビルド クリップボード メタデータ プレビュー</value></data>
-  <data name="Library.Progress.BuildingDiscogsArtworkPreview" xml:space="preserve"><value>Discogs アートワーク プレビューの構築</value></data>
-  <data name="Library.Progress.BuildingDiscogsMetadataPreview" xml:space="preserve"><value>Discogs メタデータ プレビューの構築</value></data>
+  <data name="Library.Progress.BuildingAudioIdentifierPreview" xml:space="preserve"><value>オーディオ識別子のプレビューを作成しています</value></data>
+  <data name="Library.Progress.BuildingClipboardPreview" xml:space="preserve"><value>クリップボードのメタデータプレビューを作成しています</value></data>
+  <data name="Library.Progress.BuildingDiscogsArtworkPreview" xml:space="preserve"><value>Discogs アートワークのプレビューを作成しています</value></data>
+  <data name="Library.Progress.BuildingDiscogsMetadataPreview" xml:space="preserve"><value>Discogs メタデータのプレビューを作成しています</value></data>
   <data name="Library.Progress.BuildingMetadataPreview" xml:space="preserve"><value>メタデータのプレビューを作成しています</value></data>
-  <data name="Library.Progress.BuildingMusicBrainzMetadataPreview" xml:space="preserve"><value>MusicBrainz メタデータ プレビューの構築</value></data>
-  <data name="Library.Progress.BuildingPlaylistPreview" xml:space="preserve"><value>プレイリストのプレビューを構築する</value></data>
-  <data name="Library.Progress.BuildingReportPreview" xml:space="preserve"><value>構築レポートのプレビュー</value></data>
-  <data name="Library.Progress.FindingCoverArt" xml:space="preserve"><value>Cover Art Archive 画像の検索</value></data>
-  <data name="Library.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>アートワークのサムネイル {1:N0} の {0:N0} を読み込み中</value></data>
+  <data name="Library.Progress.BuildingMusicBrainzMetadataPreview" xml:space="preserve"><value>MusicBrainz メタデータのプレビューを作成しています</value></data>
+  <data name="Library.Progress.BuildingPlaylistPreview" xml:space="preserve"><value>プレイリストのプレビューを作成しています</value></data>
+  <data name="Library.Progress.BuildingReportPreview" xml:space="preserve"><value>レポートのプレビューを作成しています</value></data>
+  <data name="Library.Progress.FindingCoverArt" xml:space="preserve"><value>Cover Art Archive の画像を検索しています</value></data>
+  <data name="Library.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>アートワークのサムネイルを読み込んでいます（{0:N0}/{1:N0}）</value></data>
   <data name="Library.Progress.LoadingDiscogsDetails" xml:space="preserve"><value>Discogs リリースの詳細を読み込んでいます</value></data>
   <data name="Library.Progress.MappingMetadataImport" xml:space="preserve"><value>メタデータのインポートを対応付けています</value></data>
-  <data name="Library.Progress.MatchingDiscogsTracks" xml:space="preserve"><value>ライブラリ ファイルを Discogs トラックに一致させる</value></data>
-  <data name="Library.Progress.MatchingReleaseTracks" xml:space="preserve"><value>ライブラリファイルとリリーストラックのマッチング</value></data>
-  <data name="Library.Progress.PreparingAudioDiscovery" xml:space="preserve"><value>音声指紋検出の準備</value></data>
-  <data name="Library.Progress.ReadingFile" xml:space="preserve"><value>読み取り中 {0}</value></data>
+  <data name="Library.Progress.MatchingDiscogsTracks" xml:space="preserve"><value>ライブラリファイルを Discogs のトラックに対応付けています</value></data>
+  <data name="Library.Progress.MatchingReleaseTracks" xml:space="preserve"><value>ライブラリファイルをリリースのトラックに対応付けています</value></data>
+  <data name="Library.Progress.PreparingAudioDiscovery" xml:space="preserve"><value>オーディオフィンガープリント検索を準備しています</value></data>
+  <data name="Library.Progress.ReadingFile" xml:space="preserve"><value>{0} を読み込んでいます</value></data>
   <data name="Library.Progress.RegeneratingMetadataPreview" xml:space="preserve"><value>メタデータのプレビューを再作成しています</value></data>
-  <data name="Library.Progress.ResolvingMusicBrainzReleases" xml:space="preserve"><value>MusicBrainz リリース エディションの解決</value></data>
+  <data name="Library.Progress.ResolvingMusicBrainzReleases" xml:space="preserve"><value>MusicBrainz のリリース版を照合しています</value></data>
   <data name="Library.Progress.RestoredFiles.One" xml:space="preserve"><value>{0:N0} ファイルを復元しました</value></data>
-  <data name="Library.Progress.RestoredFiles.Other" xml:space="preserve"><value>復元された {0:N0} ファイル</value></data>
+  <data name="Library.Progress.RestoredFiles.Other" xml:space="preserve"><value>{0:N0} ファイルを復元しました</value></data>
   <data name="Library.Progress.RestoringMetadataOperation" xml:space="preserve"><value>最新のメタデータ操作を復元しています</value></data>
-  <data name="Library.Progress.RunningExternalTool" xml:space="preserve"><value>実行中 {0}</value></data>
-  <data name="Library.Progress.SearchingDiscogsReleases" xml:space="preserve"><value>Discogs リリースを検索しています</value></data>
-  <data name="Library.Progress.SearchingMusicBrainzReleases" xml:space="preserve"><value>MusicBrainz リリースを検索しています</value></data>
+  <data name="Library.Progress.RunningExternalTool" xml:space="preserve"><value>{0} を実行しています</value></data>
+  <data name="Library.Progress.SearchingDiscogsReleases" xml:space="preserve"><value>Discogs のリリースを検索しています</value></data>
+  <data name="Library.Progress.SearchingMusicBrainzReleases" xml:space="preserve"><value>MusicBrainz のリリースを検索しています</value></data>
   <data name="Library.Progress.WritingPlaylist" xml:space="preserve"><value>確認済みのプレイリストを書き込んでいます</value></data>
   <data name="Library.Progress.WritingReport" xml:space="preserve"><value>確認済みのレポートを書き込んでいます</value></data>
   <data name="Library.ProviderSource.Cache" xml:space="preserve"><value>キャッシュ</value></data>
   <data name="Library.ProviderSource.Discogs" xml:space="preserve"><value>Discogs</value></data>
   <data name="Library.ProviderSource.OfflineCache" xml:space="preserve"><value>オフラインキャッシュ</value></data>
-  <data name="Library.Results.OfTotal" xml:space="preserve"><value>{0:N0}/{1:N0}</value></data>
+  <data name="Library.Results.OfTotal" xml:space="preserve"><value>{1:N0} 件中 {0:N0} 件</value></data>
   <data name="Library.Results.Tracks.One" xml:space="preserve"><value>{0:N0} トラック</value></data>
   <data name="Library.Results.Tracks.Other" xml:space="preserve"><value>{0:N0} トラック</value></data>
   <data name="Library.Status.ChooseConfiguration" xml:space="preserve"><value>設定でライブラリ構成を選択してください。</value></data>
-  <data name="Library.Status.Filtered" xml:space="preserve"><value>{1:N0} トラック中 {0:N0}</value></data>
+  <data name="Library.Status.Filtered" xml:space="preserve"><value>{1:N0} トラック中 {0:N0} トラック</value></data>
   <data name="Library.Status.FilteredPreserved" xml:space="preserve"><value>{1:N0} 件中 {0:N0} 件 · 未保存の変更がある選択済みトラック {2:N0} 件は引き続き表示されます</value></data>
   <data name="Library.Status.HealthFiltered" xml:space="preserve"><value>状態チェックの結果: {1:N0} 件中 {0:N0} 件</value></data>
   <data name="Library.Status.HealthFilteredPreserved" xml:space="preserve"><value>状態チェックの結果: {1:N0} 件中 {0:N0} 件 · 未保存の変更がある選択済みトラック {2:N0} 件は引き続き表示されます</value></data>
@@ -4480,7 +4480,7 @@
   <data name="Library.Status.Tracks.Other" xml:space="preserve"><value>{0:N0} トラック</value></data>
   <data name="Library.Status.TracksPreserved.One" xml:space="preserve"><value>{0:N0} 件のトラック · 未保存の変更がある選択済みトラック {1:N0} 件は引き続き表示されます</value></data>
   <data name="Library.Status.TracksPreserved.Other" xml:space="preserve"><value>{0:N0} 件のトラック · 未保存の変更がある選択済みトラック {1:N0} 件は引き続き表示されます</value></data>
-  <data name="Library.Tools.ApplicationDefault" xml:space="preserve"><value>(アプリケーション 既定)</value></data>
+  <data name="Library.Tools.ApplicationDefault" xml:space="preserve"><value>(アプリの既定値)</value></data>
   <data name="Library.VisualFilter.Status.Applied" xml:space="preserve"><value>ビジュアルフィルターを適用しました。</value></data>
   <data name="Library.VisualFilter.Status.Cleared" xml:space="preserve"><value>ビジュアルフィルターをクリアしました。</value></data>
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>ビジュアルフィルターが無効です。</value></data>
@@ -4984,20 +4984,20 @@
   <data name="Inspector.View.SaveArtworkToFileAutomation" xml:space="preserve"><value>アートワークをファイルに保存</value></data>
   <data name="Inspector.View.Selection" xml:space="preserve"><value>選択</value></data>
   <data name="Inspector.View.UnverifiedValue" xml:space="preserve"><value>現在の値は、選択されたすべてのトラックにわたって検証されていません。</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.Contains" xml:space="preserve"><value>含む</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.Equals" xml:space="preserve"><value>等しい</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.GreaterThan" xml:space="preserve"><value>より大きい より</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.Contains" xml:space="preserve"><value>次を含む</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.Equals" xml:space="preserve"><value>次と等しい</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.GreaterThan" xml:space="preserve"><value>次より大きい</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.GreaterThanOrEqual" xml:space="preserve"><value>以上</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.LessThan" xml:space="preserve"><value>少なく より</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.LessThan" xml:space="preserve"><value>次より小さい</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.LessThanOrEqual" xml:space="preserve"><value>以下</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.MatchesRegularExpression" xml:space="preserve"><value>正規表現に一致</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.Missing" xml:space="preserve"><value>不足</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.Present" xml:space="preserve"><value>存在</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.CustomMetadata" xml:space="preserve"><value>カスタム メタデータ</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.KnownMetadata" xml:space="preserve"><value>既知 メタデータ</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.Technical" xml:space="preserve"><value>技術</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.Missing" xml:space="preserve"><value>なし</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.Present" xml:space="preserve"><value>あり</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.CustomMetadata" xml:space="preserve"><value>カスタムメタデータ</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.KnownMetadata" xml:space="preserve"><value>既知のメタデータ</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.Technical" xml:space="preserve"><value>技術情報</value></data>
   <data name="Library.VisualFilter.Choice.RootMode.All" xml:space="preserve"><value>すべて</value></data>
-  <data name="Library.VisualFilter.Choice.RootMode.Any" xml:space="preserve"><value>任意</value></data>
+  <data name="Library.VisualFilter.Choice.RootMode.Any" xml:space="preserve"><value>いずれか</value></data>
   <data name="Library.VisualFilter.ConditionSummary" xml:space="preserve"><value>グループ {0}: {1} {2}</value></data>
   <data name="Library.VisualFilter.ConditionValue" xml:space="preserve"><value> {0}</value></data>
   <data name="Library.VisualFilter.Editor.Error.FieldRequired" xml:space="preserve"><value>各条件にフィールドが必要です。</value></data>

@@ -1187,7 +1187,7 @@
     <value>음악 폴더가 오프라인이어도 캐시를 바로 탐색할 수 있습니다.</value>
   </data>
   <data name="Library.Action.Index" xml:space="preserve">
-    <value>인덱스 라이브러리</value>
+    <value>라이브러리 인덱싱</value>
   </data>
   <data name="Library.Action.Inspector" xml:space="preserve">
     <value>검사기</value>
@@ -1196,10 +1196,10 @@
     <value>메타데이터 검사기 표시 또는 숨기기</value>
   </data>
   <data name="Library.Action.HideInspector" xml:space="preserve">
-    <value>숨기기 검사기</value>
+    <value>검사기 숨기기</value>
   </data>
   <data name="Library.Action.InspectorUnsaved" xml:space="preserve">
-    <value>검사기 (저장 안 됨)</value>
+    <value>검사기(보류 중인 편집)</value>
   </data>
   <data name="Library.Action.More" xml:space="preserve">
     <value>더 보기</value>
@@ -1214,10 +1214,10 @@
     <value>선택한 파일을 워크벤치에서 열기</value>
   </data>
   <data name="Library.Action.CancelIndexing" xml:space="preserve">
-    <value>취소 인덱싱 중</value>
+    <value>인덱싱 취소</value>
   </data>
   <data name="Library.Action.CancelLoading" xml:space="preserve">
-    <value>취소 불러오는 중</value>
+    <value>불러오기 취소</value>
   </data>
   <data name="Library.Filter.Placeholder" xml:space="preserve">
     <value>필터 또는 구문 사용(예: Artist:Name AND NOT Codec:MP3)</value>
@@ -1238,19 +1238,19 @@
     <value>필터 구문 도움말</value>
   </data>
   <data name="Library.Filter.ClearHealthTooltip" xml:space="preserve">
-    <value>지우기 상태 필터</value>
+    <value>상태 필터 지우기</value>
   </data>
   <data name="Library.Toolbar.Columns" xml:space="preserve">
     <value>열</value>
   </data>
   <data name="Library.Toolbar.SavedViews" xml:space="preserve">
-    <value>저장됨 보기</value>
+    <value>저장된 보기</value>
   </data>
   <data name="Library.Toolbar.VisualFilter" xml:space="preserve">
     <value>시각적 필터</value>
   </data>
   <data name="Library.Toolbar.ClearVisualFilter" xml:space="preserve">
-    <value>지우기 시각적 필터</value>
+    <value>시각적 필터 지우기</value>
   </data>
   <data name="Library.Toolbar.Operations" xml:space="preserve">
     <value>작업</value>
@@ -1280,7 +1280,7 @@
     <value>열 레이블</value>
   </data>
   <data name="Library.Columns.KnownFieldPlaceholder" xml:space="preserve">
-    <value>알려짐 메타데이터 필드</value>
+    <value>알려진 메타데이터 필드</value>
   </data>
   <data name="Library.Columns.CustomFieldPlaceholder" xml:space="preserve">
     <value>기본 사용자 지정 필드 이름</value>
@@ -1292,10 +1292,10 @@
     <value>새로 만들기</value>
   </data>
   <data name="Library.Columns.Action.Save" xml:space="preserve">
-    <value>저장 열</value>
+    <value>열 저장</value>
   </data>
   <data name="Library.SavedViews.Title" xml:space="preserve">
-    <value>저장됨 보기</value>
+    <value>저장된 보기</value>
   </data>
   <data name="Library.SavedViews.CloseTooltip" xml:space="preserve">
     <value>저장된 보기 닫기</value>
@@ -1316,7 +1316,7 @@
     <value>새로 저장할 보기 이름</value>
   </data>
   <data name="Library.SavedViews.Action.Save" xml:space="preserve">
-    <value>저장 보기</value>
+    <value>보기 저장</value>
   </data>
   <data name="Library.SavedViews.Action.Delete" xml:space="preserve">
     <value>선택한 보기 삭제</value>
@@ -1340,7 +1340,7 @@
     <value>그룹 번호가 같은 조건은 AND로 결합됩니다. 루트 모드는 번호가 지정된 그룹을 결합합니다.</value>
   </data>
   <data name="Library.VisualFilter.Action.AddCondition" xml:space="preserve">
-    <value>추가 조건</value>
+    <value>조건 추가</value>
   </data>
   <data name="Library.VisualFilter.FieldPlaceholder" xml:space="preserve">
     <value>기술 또는 파일 필드</value>
@@ -1352,7 +1352,7 @@
     <value>이 조건 반전</value>
   </data>
   <data name="Library.VisualFilter.Action.Apply" xml:space="preserve">
-    <value>적용 시각적 필터</value>
+    <value>시각적 필터 적용</value>
   </data>
   <data name="Library.FilterHelp.Title" xml:space="preserve">
     <value>필터 구문</value>
@@ -1364,16 +1364,16 @@
     <value>라이브러리 작업 및 출력</value>
   </data>
   <data name="Library.Operations.Description" xml:space="preserve">
-    <value>적용 유형 작업, 보고서, 및 재생 목록 로 하나의 명시적 라이브러리 범위.</value>
+    <value>형식이 지정된 작업, 보고서 및 재생 목록을 명시적으로 선택한 라이브러리 범위에 적용합니다.</value>
   </data>
   <data name="Library.Operations.Action.UndoMetadata" xml:space="preserve">
-    <value>실행 취소 메타데이터</value>
+    <value>메타데이터 실행 취소</value>
   </data>
   <data name="Library.Operations.Action.RedoPreview" xml:space="preserve">
-    <value>다시 실행 미리 보기</value>
+    <value>미리 보기 다시 실행</value>
   </data>
   <data name="Library.Operations.Action.RepeatRecipe" xml:space="preserve">
-    <value>반복 레시피</value>
+    <value>레시피 반복</value>
   </data>
   <data name="Library.Operations.RecipePlaceholder" xml:space="preserve">
     <value>개인 레시피</value>
@@ -1382,7 +1382,7 @@
     <value>불러오기</value>
   </data>
   <data name="Library.Operations.CloseTooltip" xml:space="preserve">
-    <value>닫기 라이브러리 작업</value>
+    <value>라이브러리 작업 닫기</value>
   </data>
   <data name="Library.Operations.Scope" xml:space="preserve">
     <value>범위</value>
@@ -1409,10 +1409,10 @@
     <value>찾기</value>
   </data>
   <data name="Library.Operations.FindPlaceholder" xml:space="preserve">
-    <value>텍스트 또는 정규 식</value>
+    <value>텍스트 또는 정규식</value>
   </data>
   <data name="Library.Operations.ReplaceWith" xml:space="preserve">
-    <value>바꾸기 포함</value>
+    <value>바꿀 내용</value>
   </data>
   <data name="Library.Operations.Case" xml:space="preserve">
     <value>대/소문자</value>
@@ -1430,7 +1430,7 @@
     <value>상위 수준</value>
   </data>
   <data name="Library.Operations.ExtractionPattern" xml:space="preserve">
-    <value>선택 사항 추출 패턴</value>
+    <value>선택적 추출 패턴</value>
   </data>
   <data name="Library.Operations.ExtractionPlaceholder" xml:space="preserve">
     <value>이름이 지정된 캡처 그룹이 있는 정규식</value>
@@ -1439,13 +1439,13 @@
     <value>캡처 그룹</value>
   </data>
   <data name="Library.Operations.RegularExpression" xml:space="preserve">
-    <value>정규 식</value>
+    <value>정규식</value>
   </data>
   <data name="Library.Operations.SequenceStart" xml:space="preserve">
-    <value>순서 시작</value>
+    <value>시퀀스 시작값</value>
   </data>
   <data name="Library.Operations.SequencePaddingTooltip" xml:space="preserve">
-    <value>순서 채움</value>
+    <value>시퀀스 자릿수 채움</value>
   </data>
   <data name="Library.Operations.Condition" xml:space="preserve">
     <value>조건</value>
@@ -1454,19 +1454,19 @@
     <value>조건 값</value>
   </data>
   <data name="Library.Operations.EmptyImportTooltip" xml:space="preserve">
-    <value>방법 비어 있음 가져오기 셀 입니다 처리됨</value>
+    <value>가져오기에서 빈 셀을 처리하는 방법</value>
   </data>
   <data name="Library.Operations.Action.ImportCsv" xml:space="preserve">
-    <value>가져오기 CSV/TSV</value>
+    <value>CSV/TSV 가져오기</value>
   </data>
   <data name="Library.Operations.Action.CopyField" xml:space="preserve">
-    <value>복사 필드</value>
+    <value>필드 복사</value>
   </data>
   <data name="Library.Operations.CopyFieldTooltip" xml:space="preserve">
-    <value>복사 해당 선택됨 필드 ID 및 순서 값 에서 해당 첫 번째 파일 에서 범위</value>
+    <value>선택한 필드의 식별 정보와 정렬된 값을 범위의 첫 번째 파일에서 복사</value>
   </data>
   <data name="Library.Operations.Action.PastePreview" xml:space="preserve">
-    <value>붙여넣기 + 미리 보기</value>
+    <value>붙여넣고 미리 보기</value>
   </data>
   <data name="Library.Operations.PastePreviewTooltip" xml:space="preserve">
     <value>태그 인식 또는 줄 구분 텍스트를 선택 범위에 붙여넣기</value>
@@ -1505,13 +1505,13 @@
     <value>도구</value>
   </data>
   <data name="Library.MetadataPreview.LiveDraft" xml:space="preserve">
-    <value>실시간 대표 초안</value>
+    <value>대표 미리 보기</value>
   </data>
   <data name="Library.MetadataPreview.Before" xml:space="preserve">
-    <value>이전</value>
+    <value>변경 전</value>
   </data>
   <data name="Library.MetadataPreview.After" xml:space="preserve">
-    <value>이후</value>
+    <value>변경 후</value>
   </data>
   <data name="Library.Release.ArtistPlaceholder" xml:space="preserve">
     <value>아티스트</value>
@@ -1523,7 +1523,7 @@
     <value>바코드</value>
   </data>
   <data name="Library.Release.CatalogNumberPlaceholder" xml:space="preserve">
-    <value>카탈로그 아니요.</value>
+    <value>카탈로그 번호</value>
   </data>
   <data name="Library.Release.ReleaseIdPlaceholder" xml:space="preserve">
     <value>릴리스 ID</value>
@@ -1535,7 +1535,7 @@
     <value>검색</value>
   </data>
   <data name="Library.Release.Action.SearchDiscogs" xml:space="preserve">
-    <value>검색 Discogs</value>
+    <value>Discogs 검색</value>
   </data>
   <data name="Library.Release.Action.LoadDetails" xml:space="preserve">
     <value>세부 정보 불러오기</value>
@@ -1544,16 +1544,16 @@
     <value>선택한 필드를 일반 미리 보기에 추가하기 전에 파일과 트랙의 매핑 제안을 모두 검토하세요.</value>
   </data>
   <data name="Library.Release.TrackMappingDescription" xml:space="preserve">
-    <value>검토 또는 바꾸기 제안 이전 미리 보기.</value>
+    <value>메타데이터를 미리 보기 전에 각 파일-트랙 매핑 제안을 검토하거나 바꾸세요.</value>
   </data>
   <data name="Library.Release.Action.BuildMapping" xml:space="preserve">
-    <value>빌드 매핑</value>
+    <value>매핑 만들기</value>
   </data>
   <data name="Library.Release.Action.PreviewMappedMetadata" xml:space="preserve">
-    <value>미리 보기 매핑됨 메타데이터</value>
+    <value>매핑된 메타데이터 미리 보기</value>
   </data>
   <data name="Library.Release.Action.PreviewCover" xml:space="preserve">
-    <value>미리 보기 표지</value>
+    <value>아트워크 미리 보기</value>
   </data>
   <data name="Library.Release.Field.Titles" xml:space="preserve">
     <value>제목</value>
@@ -1562,37 +1562,37 @@
     <value>트랙 아티스트</value>
   </data>
   <data name="Library.Release.Field.AlbumDate" xml:space="preserve">
-    <value>앨범/날짜</value>
+    <value>앨범 및 날짜</value>
   </data>
   <data name="Library.Release.Field.Numbering" xml:space="preserve">
-    <value>번호 매기기</value>
+    <value>번호</value>
   </data>
   <data name="Library.Release.Field.ReleaseDetails" xml:space="preserve">
     <value>릴리스 세부 정보</value>
   </data>
   <data name="Library.Release.Field.GenresStyles" xml:space="preserve">
-    <value>장르/스타일</value>
+    <value>장르 및 스타일</value>
   </data>
   <data name="Library.Release.Field.DiscogsReleaseId" xml:space="preserve">
     <value>Discogs 릴리스 ID</value>
   </data>
   <data name="Library.Artwork.Description" xml:space="preserve">
-    <value>미리 보기 로컬 아트워크 용 해당 현재 라이브러리 범위, 또는 사용 릴리스 아트워크 용 확인됨 매핑.</value>
+    <value>현재 라이브러리 범위의 로컬 아트워크를 미리 보거나 확인된 매핑에 릴리스 아트워크를 사용합니다.</value>
   </data>
   <data name="Library.Artwork.Action.LocalFrontCover" xml:space="preserve">
-    <value>로컬 앞면 표지</value>
+    <value>로컬 앞면 커버 사용</value>
   </data>
   <data name="Library.Artwork.Action.RemoveFront" xml:space="preserve">
-    <value>제거 앞면</value>
+    <value>앞면 커버 제거</value>
   </data>
   <data name="Library.Artwork.Action.RemoveAll" xml:space="preserve">
-    <value>제거 모두</value>
+    <value>모두 제거</value>
   </data>
   <data name="Library.Artwork.Action.FindRelease" xml:space="preserve">
-    <value>찾기 릴리스 아트워크</value>
+    <value>릴리스 아트워크 찾기</value>
   </data>
   <data name="Library.Artwork.Action.PreviewRelease" xml:space="preserve">
-    <value>미리 보기 릴리스 표지</value>
+    <value>릴리스 커버 미리 보기</value>
   </data>
   <data name="Library.Reports.NamePlaceholder" xml:space="preserve">
     <value>보고서 이름</value>
@@ -1601,22 +1601,22 @@
     <value>출력 파일 또는 폴더</value>
   </data>
   <data name="Library.Reports.OneFilePerGroup" xml:space="preserve">
-    <value>하나 파일 당 그룹</value>
+    <value>그룹당 파일 하나</value>
   </data>
   <data name="Library.Reports.Action.AddColumn" xml:space="preserve">
-    <value>추가 열</value>
+    <value>열 추가</value>
   </data>
   <data name="Library.Reports.Action.AddCustom" xml:space="preserve">
-    <value>추가 사용자 지정</value>
+    <value>사용자 지정 필드 추가</value>
   </data>
   <data name="Library.Reports.Action.MoveUp" xml:space="preserve">
-    <value>이동 설정</value>
+    <value>위로 이동</value>
   </data>
   <data name="Library.Reports.Action.MoveDown" xml:space="preserve">
-    <value>이동 아래</value>
+    <value>아래로 이동</value>
   </data>
   <data name="Library.Reports.GroupByPlaceholder" xml:space="preserve">
-    <value>그룹 기준</value>
+    <value>그룹화 기준</value>
   </data>
   <data name="Library.Reports.SortByPlaceholder" xml:space="preserve">
     <value>정렬 기준</value>
@@ -1625,10 +1625,10 @@
     <value>내림차순</value>
   </data>
   <data name="Library.Reports.Action.Preview" xml:space="preserve">
-    <value>미리 보기 보고서</value>
+    <value>보고서 미리 보기</value>
   </data>
   <data name="Library.Reports.Action.Write" xml:space="preserve">
-    <value>쓰기 검토됨 보고서</value>
+    <value>검토한 보고서 쓰기</value>
   </data>
   <data name="Library.Playlists.NamePlaceholder" xml:space="preserve">
     <value>재생 목록 이름</value>
@@ -1637,22 +1637,22 @@
     <value>출력 파일 또는 폴더</value>
   </data>
   <data name="Library.Playlists.IncludeExtendedInfo" xml:space="preserve">
-    <value>포함 확장 트랙 정보</value>
+    <value>확장 트랙 정보 포함</value>
   </data>
   <data name="Library.Playlists.OnePerGroup" xml:space="preserve">
-    <value>하나 재생 목록 당 메타데이터 그룹</value>
+    <value>메타데이터 그룹당 재생 목록 하나</value>
   </data>
   <data name="Library.Playlists.Description" xml:space="preserve">
-    <value>재생 목록 순서 따르기 해당 선택됨 라이브러리 범위. 미리 보기 읽기 현재 메타데이터 에서 디스크 및 레코드 복구 가능 출력.</value>
+    <value>재생 목록 순서는 선택한 라이브러리 범위를 따릅니다. 미리 보기에서는 디스크의 현재 메타데이터를 읽고 복구 가능한 출력을 기록합니다.</value>
   </data>
   <data name="Library.Playlists.Action.Preview" xml:space="preserve">
-    <value>미리 보기 재생 목록</value>
+    <value>재생 목록 미리 보기</value>
   </data>
   <data name="Library.Playlists.Action.Write" xml:space="preserve">
-    <value>쓰기 검토됨 재생 목록</value>
+    <value>검토한 재생 목록 쓰기</value>
   </data>
   <data name="Library.Tools.SavedPlaceholder" xml:space="preserve">
-    <value>저장됨 개인 도구</value>
+    <value>저장된 개인 도구</value>
   </data>
   <data name="Library.Tools.Action.Load" xml:space="preserve">
     <value>불러오기</value>
@@ -1673,52 +1673,52 @@
     <value>실행 파일 경로 또는 명령 이름</value>
   </data>
   <data name="Library.Tools.Action.BrowseExecutable" xml:space="preserve">
-    <value>찾아보기 실행 파일</value>
+    <value>실행 파일 선택</value>
   </data>
   <data name="Library.Tools.WorkingDirectoryPlaceholder" xml:space="preserve">
     <value>선택적 작업 디렉터리 또는 {Directory}</value>
   </data>
   <data name="Library.Tools.Action.BrowseFolder" xml:space="preserve">
-    <value>찾아보기 폴더</value>
+    <value>폴더 선택</value>
   </data>
   <data name="Library.Tools.ArgumentsDescription" xml:space="preserve">
     <value>한 줄에 인수 하나를 입력합니다. 지원되는 자리 표시자: {Files}, {File}, {Directory}, {FileName}, {FileNameWithoutExtension}, {Extension}, {Index}, {Count}.</value>
   </data>
   <data name="Library.Tools.Warning" xml:space="preserve">
-    <value>외부 도구 실행 없이 하나의 셸 하지만 유지 외부 응용 프로그램 복구. 실행 중 항상 필요 확인.</value>
+    <value>외부 도구는 셸 없이 실행되지만 애플리케이션 복구 범위 밖에 있습니다. 실행할 때마다 확인해야 합니다.</value>
   </data>
   <data name="Library.Tools.Action.Preview" xml:space="preserve">
-    <value>미리 보기 도구</value>
+    <value>도구 미리 보기</value>
   </data>
   <data name="Library.Tools.Action.Run" xml:space="preserve">
-    <value>실행 검토됨 도구</value>
+    <value>도구 실행</value>
   </data>
   <data name="Library.Audio.Action.Find" xml:space="preserve">
-    <value>찾기 기준 오디오</value>
+    <value>지문으로 찾기</value>
   </data>
   <data name="Library.Audio.Action.PreviewIds" xml:space="preserve">
-    <value>미리 보기 선택됨 ID</value>
+    <value>선택한 ID 미리 보기</value>
   </data>
   <data name="Library.Audio.Action.FindReleases" xml:space="preserve">
-    <value>찾기 릴리스</value>
+    <value>릴리스 찾기</value>
   </data>
   <data name="Library.Audio.Action.ApplyPreview" xml:space="preserve">
-    <value>적용 미리 보기</value>
+    <value>미리 보기 적용</value>
   </data>
   <data name="Library.PendingChanges.Title" xml:space="preserve">
-    <value>보류 중인 변경 사항</value>
+    <value>보류 중인 변경 내용</value>
   </data>
   <data name="Library.PendingChanges.Description" xml:space="preserve">
-    <value>모든 준비됨 또는 검토됨 메타데이터 편집 해당 적용 예정 검증 이전 쓰기.</value>
+    <value>적용을 누르면 준비되거나 검토된 각 메타데이터 편집을 쓰기 전에 검증합니다.</value>
   </data>
   <data name="Library.PendingChanges.CountLabel" xml:space="preserve">
-    <value>보류 중인 편집</value>
+    <value>보류 중인 변경 내용</value>
   </data>
   <data name="Library.PendingChanges.CloseTooltip" xml:space="preserve">
-    <value>닫기 보류 중인 변경 사항</value>
+    <value>보류 중인 변경 내용 닫기</value>
   </data>
   <data name="Library.PendingChanges.Automation" xml:space="preserve">
-    <value>라이브러리 보류 중인 변경 사항</value>
+    <value>라이브러리의 보류 중인 변경 내용</value>
   </data>
   <data name="Library.PendingChanges.EmptyTitle" xml:space="preserve">
     <value>보류 중인 변경 내용이 없습니다</value>
@@ -1732,10 +1732,10 @@
     <value>적용</value>
   </data>
   <data name="Library.Action.CopyPaths" xml:space="preserve">
-    <value>복사 경로</value>
+    <value>경로 복사</value>
   </data>
   <data name="Library.Action.Reveal" xml:space="preserve">
-    <value>표시</value>
+    <value>파일 관리자에서 보기</value>
   </data>
   <data name="Library.Action.Reindex" xml:space="preserve">
     <value>다시 인덱싱</value>
@@ -4259,27 +4259,27 @@
   <data name="Inspector.Unsaved.TagChanges.Other" xml:space="preserve"><value>{0:N0} 저장 안 됨 태그 변경 사항</value></data>
   <data name="Inspector.Unsaved.TagsAndArtwork.One" xml:space="preserve"><value>{0:N0} 저장 안 됨 태그 변경 및 아트워크 변경 사항</value></data>
   <data name="Inspector.Unsaved.TagsAndArtwork.Other" xml:space="preserve"><value>{0:N0} 저장 안 됨 태그 변경 사항 및 아트워크 변경 사항</value></data>
-  <data name="Library.Artwork.Bytes.One" xml:space="preserve"><value>{0:N0} 바이트</value></data>
-  <data name="Library.Artwork.Bytes.Other" xml:space="preserve"><value>{0:N0} 바이트</value></data>
+  <data name="Library.Artwork.Bytes.One" xml:space="preserve"><value>{0:N0}바이트</value></data>
+  <data name="Library.Artwork.Bytes.Other" xml:space="preserve"><value>{0:N0}바이트</value></data>
   <data name="Library.Artwork.Cached" xml:space="preserve"><value>캐시됨</value></data>
-  <data name="Library.Artwork.ThumbnailFailed" xml:space="preserve"><value>미리 보기 이미지 사용 불가</value></data>
+  <data name="Library.Artwork.ThumbnailFailed" xml:space="preserve"><value>미리 보기를 사용할 수 없음</value></data>
   <data name="Library.Choice.FilterMode.Substring" xml:space="preserve"><value>포함</value></data>
-  <data name="Library.Choice.FilterMode.Glob" xml:space="preserve"><value>와일드카드</value></data>
-  <data name="Library.Choice.FilterMode.Regex" xml:space="preserve"><value>정규 식</value></data>
-  <data name="Library.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>무시 비어 있음 셀</value></data>
-  <data name="Library.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>제거 해당 필드</value></data>
-  <data name="Library.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>유지 하나의 비어 있음 값</value></data>
+  <data name="Library.Choice.FilterMode.Glob" xml:space="preserve"><value>와일드카드(glob)</value></data>
+  <data name="Library.Choice.FilterMode.Regex" xml:space="preserve"><value>정규식</value></data>
+  <data name="Library.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>빈 셀 무시</value></data>
+  <data name="Library.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>필드 제거</value></data>
+  <data name="Library.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>빈 값 유지</value></data>
   <data name="Library.Choice.OperationScope.SelectedTracks" xml:space="preserve"><value>선택한 트랙</value></data>
-  <data name="Library.Choice.OperationScope.SelectedAlbums" xml:space="preserve"><value>선택됨 앨범</value></data>
-  <data name="Library.Choice.OperationScope.VisibleFilteredResults" xml:space="preserve"><value>표시 필터 결과</value></data>
-  <data name="Library.Choice.OperationScope.CompleteLibrary" xml:space="preserve"><value>완료 라이브러리</value></data>
-  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>“{0}”을(를) {1:N0}번 실행하시겠습니까? 외부 도구가 변경한 파일은 MusicLibraryManager 복구 대상이 아닙니다.</value></data>
-  <data name="Library.Dialog.ExternalTool.Title" xml:space="preserve"><value>실행 외부 도구?</value></data>
-  <data name="Library.Dialog.Leave.Confirm" xml:space="preserve"><value>유지</value></data>
-  <data name="Library.Dialog.Leave.Message" xml:space="preserve"><value>해당 검토됨 작업 또는 보고서 유지 사용 가능 에서 이 라이브러리 세션, 하지만 있음 아님 됨 적용됨.</value></data>
-  <data name="Library.Dialog.Leave.Title" xml:space="preserve"><value>유지 해당 라이브러리 작업?</value></data>
-  <data name="Library.Dialog.Restore.Message" xml:space="preserve"><value>현재 파일 예정 됨 바뀜 기준 해당 유지됨 원본. 충돌 백업 입니다 만들어짐 때 필수.</value></data>
-  <data name="Library.Dialog.Restore.Title" xml:space="preserve"><value>복원 해당 최신 메타데이터 작업?</value></data>
+  <data name="Library.Choice.OperationScope.SelectedAlbums" xml:space="preserve"><value>선택한 앨범</value></data>
+  <data name="Library.Choice.OperationScope.VisibleFilteredResults" xml:space="preserve"><value>표시된 필터 결과</value></data>
+  <data name="Library.Choice.OperationScope.CompleteLibrary" xml:space="preserve"><value>전체 라이브러리</value></data>
+  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>“{0}”을(를) 실행하시겠습니까? 예정된 호출: {1:N0}회. 외부 도구는 파일을 변경할 수 있으며 MusicLibraryManager 복구 범위 밖에 있습니다.</value></data>
+  <data name="Library.Dialog.ExternalTool.Title" xml:space="preserve"><value>외부 도구를 실행하시겠습니까?</value></data>
+  <data name="Library.Dialog.Leave.Confirm" xml:space="preserve"><value>나가기</value></data>
+  <data name="Library.Dialog.Leave.Message" xml:space="preserve"><value>검토한 작업 또는 보고서는 이 라이브러리 세션에서 계속 사용할 수 있지만 아직 적용되지 않았습니다.</value></data>
+  <data name="Library.Dialog.Leave.Title" xml:space="preserve"><value>라이브러리 작업을 종료하시겠습니까?</value></data>
+  <data name="Library.Dialog.Restore.Message" xml:space="preserve"><value>현재 파일이 보관된 원본으로 교체됩니다. 필요한 경우 충돌 백업이 생성됩니다.</value></data>
+  <data name="Library.Dialog.Restore.Title" xml:space="preserve"><value>최근 메타데이터 작업을 복원하시겠습니까?</value></data>
   <data name="Library.Empty.Default.Message" xml:space="preserve"><value>이 보기를 조정하거나 라이브러리를 다시 불러오세요.</value></data>
   <data name="Library.Empty.Default.Title" xml:space="preserve"><value>표시할 트랙이 없습니다</value></data>
   <data name="Library.Empty.Error.Action" xml:space="preserve"><value>다시 시도</value></data>
@@ -4296,183 +4296,183 @@
   <data name="Library.Empty.NotIndexed.Action" xml:space="preserve"><value>라이브러리 인덱싱</value></data>
   <data name="Library.Empty.NotIndexed.Message" xml:space="preserve"><value>구성된 음악 폴더를 인덱싱하여 라이브러리 캐시를 채우세요.</value></data>
   <data name="Library.Empty.NotIndexed.Title" xml:space="preserve"><value>이 라이브러리는 아직 인덱싱되지 않았습니다</value></data>
-  <data name="Library.Error.ChooseDiscogsRelease" xml:space="preserve"><value>선택 하나의 Discogs 릴리스.</value></data>
-  <data name="Library.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>선택 하나의 MusicBrainz 릴리스.</value></data>
-  <data name="Library.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs 입니다 사용 불가.</value></data>
-  <data name="Library.FileOperation.MetadataEditsPending" xml:space="preserve"><value>적용 또는 버리기 해당 현재 메타데이터 편집 이전 이동 파일.</value></data>
-  <data name="Library.Filter.Invalid" xml:space="preserve"><value>해당 필터 입니다 잘못됨.</value></data>
-  <data name="Library.HealthFilter.Tracks.One" xml:space="preserve"><value>상태 결과: {0:N0} 트랙</value></data>
-  <data name="Library.HealthFilter.Tracks.Other" xml:space="preserve"><value>상태 결과: {0:N0} 트랙</value></data>
-  <data name="Library.Operation.Apply.Blocked" xml:space="preserve"><value>보류 중인 변경 사항 할 수 없음 됨 적용됨.</value></data>
-  <data name="Library.Operation.Apply.Cancelled" xml:space="preserve"><value>적용 취소됨. 완료됨 변경 유지 사용 가능 통해 작업 복구.</value></data>
-  <data name="Library.Operation.Apply.Complete.One" xml:space="preserve"><value>적용됨 {0:N0} 파일. 원본 입니다 사용 가능 통해 작업 복구.</value></data>
-  <data name="Library.Operation.Apply.Complete.Other" xml:space="preserve"><value>적용됨 {0:N0} 파일. 원본 입니다 사용 가능 통해 작업 복구.</value></data>
-  <data name="Library.Operation.Apply.Failed" xml:space="preserve"><value>적용 중지됨 안전하게.</value></data>
-  <data name="Library.Operation.Apply.NoApplicable" xml:space="preserve"><value>해당 보류 중 편집 생성 아니요 적용 가능 파일 변경 사항.</value></data>
-  <data name="Library.Operation.Apply.NoPending" xml:space="preserve"><value>거기 입니다 아니요 보류 중 메타데이터 변경 사항 로 적용.</value></data>
-  <data name="Library.Operation.Artwork.Blockers.One" xml:space="preserve"><value>아트워크 미리 보기 있음 {0:N0} 차단 요소. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.Artwork.Blockers.Other" xml:space="preserve"><value>아트워크 미리 보기 있음 {0:N0} 차단 요소. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.Artwork.PreviewCancelled" xml:space="preserve"><value>아트워크 미리 보기 취소됨.</value></data>
-  <data name="Library.Operation.Artwork.PreviewFailed" xml:space="preserve"><value>아트워크 미리 보기 실패.</value></data>
-  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>{1:N0}개 파일 중 {0:N0}개의 아트워크 변경을 미리 보았습니다. 파일은 변경되지 않았습니다.</value></data>
-  <data name="Library.Operation.Artwork.ReleaseReady" xml:space="preserve"><value>해당 선택됨 앞면 표지 이었음 추가됨 로 해당 일반 메타데이터 미리 보기. 검토 모든 아트워크 변경 이전 적용 중.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryCancelled" xml:space="preserve"><value>오디오 지문 검색 취소됨.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>지문 검색: 파일 {0:N0}개, 후보 {1:N0}개, 경고 {2:N0}개.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryFailed" xml:space="preserve"><value>오디오 지문 검색 실패.</value></data>
-  <data name="Library.Operation.Audio.IdentifierPreviewCancelled" xml:space="preserve"><value>오디오 식별자 미리 보기 취소됨.</value></data>
-  <data name="Library.Operation.Audio.IdentifierPreviewFailed" xml:space="preserve"><value>오디오 식별자 미리 보기 실패.</value></data>
-  <data name="Library.Operation.Audio.IdentifiersReady" xml:space="preserve"><value>오디오 식별자 이었음 추가됨 로 해당 일반 메타데이터 미리 보기. 검토 이전 적용 중.</value></data>
-  <data name="Library.Operation.Choose" xml:space="preserve"><value>선택 하나의 작업 및 범위, 그런 다음 미리 보기 신뢰할 수 있음 메타데이터 에서 디스크.</value></data>
-  <data name="Library.Operation.Clipboard.Blockers.One" xml:space="preserve"><value>클립보드 미리 보기 있음 {0:N0} 차단 요소. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.Clipboard.Blockers.Other" xml:space="preserve"><value>클립보드 미리 보기 있음 {0:N0} 차단 요소. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.Clipboard.Cancelled" xml:space="preserve"><value>클립보드 미리 보기 취소됨. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>{1:N0}개 파일에 붙여넣을 변경 내용 {0:N0}개를 미리 보았습니다.</value></data>
-  <data name="Library.Operation.Clipboard.Failed" xml:space="preserve"><value>클립보드 미리 보기 실패.</value></data>
-  <data name="Library.Operation.Clipboard.NoText" xml:space="preserve"><value>해당 클립보드 수행 아님 포함 텍스트 메타데이터.</value></data>
-  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>태그 식별 정보를 유지한 채 {2}에서 정렬된 {1} 값 {0:N0}개를 복사했습니다.</value></data>
-  <data name="Library.Operation.Copy.NoMetadata" xml:space="preserve"><value>해당 선택됨 라이브러리 범위 포함 아니요 캐시됨 메타데이터 로 복사.</value></data>
-  <data name="Library.Operation.CoverArt.Cancelled" xml:space="preserve"><value>Cover Art Archive 조회 취소됨.</value></data>
-  <data name="Library.Operation.CoverArt.Failed" xml:space="preserve"><value>Cover Art Archive 조회 실패.</value></data>
-  <data name="Library.Operation.CoverArt.Loaded.One" xml:space="preserve"><value>불러옴 {0:N0} 아트워크 후보. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.CoverArt.Loaded.Other" xml:space="preserve"><value>불러옴 {0:N0} 아트워크 후보. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.CoverArt.None" xml:space="preserve"><value>이 릴리스 있음 아니요 Cover Art Archive 이미지.</value></data>
-  <data name="Library.Operation.Discogs.ArtworkCancelled" xml:space="preserve"><value>Discogs 아트워크 미리 보기 취소됨.</value></data>
-  <data name="Library.Operation.Discogs.ArtworkFailed" xml:space="preserve"><value>Discogs 아트워크 미리 보기 실패.</value></data>
-  <data name="Library.Operation.Discogs.ArtworkReady" xml:space="preserve"><value>해당 선택됨 Discogs 표지 이었음 추가됨 로 해당 일반 아트워크 미리 보기. 검토 모든 변경 이전 적용 중.</value></data>
-  <data name="Library.Operation.Discogs.DetailsCancelled" xml:space="preserve"><value>Discogs 릴리스 세부 정보 조회 취소됨.</value></data>
-  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>Discogs 릴리스 {0}과(와) 트랙 {1:N0}개를 불러왔습니다. 메타데이터는 변경되지 않았습니다.</value></data>
-  <data name="Library.Operation.Discogs.DetailsFailed" xml:space="preserve"><value>Discogs 릴리스 세부 정보 조회 실패.</value></data>
-  <data name="Library.Operation.Discogs.MappingCancelled" xml:space="preserve"><value>Discogs 트랙 매핑 취소됨.</value></data>
-  <data name="Library.Operation.Discogs.MappingComplete" xml:space="preserve"><value>제안됨 {0:N0} 의 {1:N0} Discogs 파일-트랙 매핑; {2:N0} 필요 검토.</value></data>
-  <data name="Library.Operation.Discogs.MappingFailed" xml:space="preserve"><value>Discogs 트랙 매핑 실패.</value></data>
-  <data name="Library.Operation.Discogs.MetadataCancelled" xml:space="preserve"><value>Discogs 메타데이터 미리 보기 취소됨.</value></data>
-  <data name="Library.Operation.Discogs.MetadataFailed" xml:space="preserve"><value>Discogs 메타데이터 미리 보기 실패.</value></data>
-  <data name="Library.Operation.Discogs.MetadataReady" xml:space="preserve"><value>매핑됨 Discogs 필드 이었음 추가됨 로 해당 일반 메타데이터 미리 보기. 검토 모든 변경 이전 적용 중.</value></data>
-  <data name="Library.Operation.Discogs.SearchCancelled" xml:space="preserve"><value>Discogs 릴리스 검색 취소됨.</value></data>
+  <data name="Library.Error.ChooseDiscogsRelease" xml:space="preserve"><value>Discogs 릴리스를 선택하세요.</value></data>
+  <data name="Library.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>MusicBrainz 릴리스를 선택하세요.</value></data>
+  <data name="Library.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs를 사용할 수 없습니다.</value></data>
+  <data name="Library.FileOperation.MetadataEditsPending" xml:space="preserve"><value>파일 경로를 변경하기 전에 현재 메타데이터 편집을 적용하거나 버리세요.</value></data>
+  <data name="Library.Filter.Invalid" xml:space="preserve"><value>필터가 올바르지 않습니다.</value></data>
+  <data name="Library.HealthFilter.Tracks.One" xml:space="preserve"><value>상태 결과: 트랙 {0:N0}개</value></data>
+  <data name="Library.HealthFilter.Tracks.Other" xml:space="preserve"><value>상태 결과: 트랙 {0:N0}개</value></data>
+  <data name="Library.Operation.Apply.Blocked" xml:space="preserve"><value>보류 중인 변경 내용을 적용할 수 없습니다.</value></data>
+  <data name="Library.Operation.Apply.Cancelled" xml:space="preserve"><value>적용이 취소되었습니다. 완료된 변경 내용은 작업 복구에서 계속 사용할 수 있습니다.</value></data>
+  <data name="Library.Operation.Apply.Complete.One" xml:space="preserve"><value>파일 {0:N0}개에 적용했습니다. 원본은 작업 복구에서 사용할 수 있습니다.</value></data>
+  <data name="Library.Operation.Apply.Complete.Other" xml:space="preserve"><value>파일 {0:N0}개에 적용했습니다. 원본은 작업 복구에서 사용할 수 있습니다.</value></data>
+  <data name="Library.Operation.Apply.Failed" xml:space="preserve"><value>적용이 안전하게 중지되었습니다.</value></data>
+  <data name="Library.Operation.Apply.NoApplicable" xml:space="preserve"><value>보류 중인 편집으로 적용 가능한 파일 변경 내용이 생성되지 않습니다.</value></data>
+  <data name="Library.Operation.Apply.NoPending" xml:space="preserve"><value>적용할 보류 중인 메타데이터 변경 내용이 없습니다.</value></data>
+  <data name="Library.Operation.Artwork.Blockers.One" xml:space="preserve"><value>아트워크 미리 보기에 차단 문제가 {0:N0}개 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Artwork.Blockers.Other" xml:space="preserve"><value>아트워크 미리 보기에 차단 문제가 {0:N0}개 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Artwork.PreviewCancelled" xml:space="preserve"><value>아트워크 미리 보기가 취소되었습니다.</value></data>
+  <data name="Library.Operation.Artwork.PreviewFailed" xml:space="preserve"><value>아트워크 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>아트워크 미리 보기가 완료되었습니다. 미리 본 파일: {1:N0}개 중 {0:N0}개. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Artwork.ReleaseReady" xml:space="preserve"><value>선택한 전면 표지가 일반 메타데이터 미리 보기에 추가되었습니다. 적용하기 전에 모든 아트워크 변경 내용을 검토하세요.</value></data>
+  <data name="Library.Operation.Audio.DiscoveryCancelled" xml:space="preserve"><value>오디오 지문 검색이 취소되었습니다.</value></data>
+  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>지문 검색이 완료되었습니다. 파일: {0:N0}개, 후보: {1:N0}개, 경고: {2:N0}개.</value></data>
+  <data name="Library.Operation.Audio.DiscoveryFailed" xml:space="preserve"><value>오디오 지문 검색에 실패했습니다.</value></data>
+  <data name="Library.Operation.Audio.IdentifierPreviewCancelled" xml:space="preserve"><value>오디오 식별자 미리 보기가 취소되었습니다.</value></data>
+  <data name="Library.Operation.Audio.IdentifierPreviewFailed" xml:space="preserve"><value>오디오 식별자 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.Audio.IdentifiersReady" xml:space="preserve"><value>오디오 식별자가 일반 메타데이터 미리 보기에 추가되었습니다. 적용하기 전에 검토하세요.</value></data>
+  <data name="Library.Operation.Choose" xml:space="preserve"><value>작업과 범위를 선택한 다음 디스크의 기준 메타데이터를 미리 보세요.</value></data>
+  <data name="Library.Operation.Clipboard.Blockers.One" xml:space="preserve"><value>클립보드 미리 보기에 차단 문제가 {0:N0}개 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Clipboard.Blockers.Other" xml:space="preserve"><value>클립보드 미리 보기에 차단 문제가 {0:N0}개 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Clipboard.Cancelled" xml:space="preserve"><value>클립보드 미리 보기가 취소되었습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>클립보드 미리 보기가 완료되었습니다. 변경 내용: {0:N0}개, 파일: {1:N0}개.</value></data>
+  <data name="Library.Operation.Clipboard.Failed" xml:space="preserve"><value>클립보드 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.Clipboard.NoText" xml:space="preserve"><value>클립보드에 텍스트 메타데이터가 없습니다.</value></data>
+  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>정렬된 값을 복사했습니다. 값: {0:N0}개, 필드: {1}, 원본: {2}. 태그 식별 정보가 유지되었습니다.</value></data>
+  <data name="Library.Operation.Copy.NoMetadata" xml:space="preserve"><value>선택한 라이브러리 범위에 복사할 캐시된 메타데이터가 없습니다.</value></data>
+  <data name="Library.Operation.CoverArt.Cancelled" xml:space="preserve"><value>Cover Art Archive 조회가 취소되었습니다.</value></data>
+  <data name="Library.Operation.CoverArt.Failed" xml:space="preserve"><value>Cover Art Archive 조회에 실패했습니다.</value></data>
+  <data name="Library.Operation.CoverArt.Loaded.One" xml:space="preserve"><value>아트워크 후보 {0:N0}개를 불러왔습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.CoverArt.Loaded.Other" xml:space="preserve"><value>아트워크 후보 {0:N0}개를 불러왔습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.CoverArt.None" xml:space="preserve"><value>이 릴리스에는 Cover Art Archive 이미지가 없습니다.</value></data>
+  <data name="Library.Operation.Discogs.ArtworkCancelled" xml:space="preserve"><value>Discogs 아트워크 미리 보기가 취소되었습니다.</value></data>
+  <data name="Library.Operation.Discogs.ArtworkFailed" xml:space="preserve"><value>Discogs 아트워크 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.Discogs.ArtworkReady" xml:space="preserve"><value>선택한 Discogs 표지가 일반 아트워크 미리 보기에 추가되었습니다. 적용하기 전에 모든 변경 내용을 검토하세요.</value></data>
+  <data name="Library.Operation.Discogs.DetailsCancelled" xml:space="preserve"><value>Discogs 릴리스 세부 정보 조회가 취소되었습니다.</value></data>
+  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>Discogs 릴리스 {0} 정보를 불러왔습니다. 트랙: {1:N0}개. 변경된 메타데이터는 없습니다.</value></data>
+  <data name="Library.Operation.Discogs.DetailsFailed" xml:space="preserve"><value>Discogs 릴리스 세부 정보 조회에 실패했습니다.</value></data>
+  <data name="Library.Operation.Discogs.MappingCancelled" xml:space="preserve"><value>Discogs 트랙 매핑이 취소되었습니다.</value></data>
+  <data name="Library.Operation.Discogs.MappingComplete" xml:space="preserve"><value>Discogs 파일-트랙 매핑 {1:N0}개 중 {0:N0}개를 제안했습니다. {2:N0}개는 검토가 필요합니다.</value></data>
+  <data name="Library.Operation.Discogs.MappingFailed" xml:space="preserve"><value>Discogs 트랙 매핑에 실패했습니다.</value></data>
+  <data name="Library.Operation.Discogs.MetadataCancelled" xml:space="preserve"><value>Discogs 메타데이터 미리 보기가 취소되었습니다.</value></data>
+  <data name="Library.Operation.Discogs.MetadataFailed" xml:space="preserve"><value>Discogs 메타데이터 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.Discogs.MetadataReady" xml:space="preserve"><value>매핑된 Discogs 필드가 일반 메타데이터 미리 보기에 추가되었습니다. 적용하기 전에 모든 변경 내용을 검토하세요.</value></data>
+  <data name="Library.Operation.Discogs.SearchCancelled" xml:space="preserve"><value>Discogs 릴리스 검색이 취소되었습니다.</value></data>
   <data name="Library.Operation.Discogs.SearchComplete.One" xml:space="preserve"><value>Discogs에서 {0:N0}개의 릴리스 에디션을 찾았습니다. 선택하면 트랙 및 에디션의 전체 세부 정보를 불러옵니다.</value></data>
   <data name="Library.Operation.Discogs.SearchComplete.Other" xml:space="preserve"><value>Discogs에서 {0:N0}개의 릴리스 에디션을 찾았습니다. 하나를 선택하면 트랙 및 에디션의 전체 세부 정보를 불러옵니다.</value></data>
-  <data name="Library.Operation.Discogs.SearchFailed" xml:space="preserve"><value>Discogs 릴리스 검색 실패.</value></data>
+  <data name="Library.Operation.Discogs.SearchFailed" xml:space="preserve"><value>Discogs 릴리스 검색에 실패했습니다.</value></data>
   <data name="Library.Operation.ExternalTool.Blockers.One" xml:space="preserve"><value>외부 도구 미리 보기에 차단 항목이 {0:N0}개 있습니다. 아무 작업도 실행할 수 없습니다.</value></data>
   <data name="Library.Operation.ExternalTool.Blockers.Other" xml:space="preserve"><value>외부 도구 미리 보기에 차단 항목이 {0:N0}개 있습니다. 아무 작업도 실행할 수 없습니다.</value></data>
-  <data name="Library.Operation.ExternalTool.Cancelled" xml:space="preserve"><value>외부 도구 취소됨. 해당 활성 프로세스 이었음 중지됨.</value></data>
-  <data name="Library.Operation.ExternalTool.Complete" xml:space="preserve"><value>외부 도구 완료됨: {0:N0} 성공, {1:N0} 실패.</value></data>
-  <data name="Library.Operation.ExternalTool.Failed" xml:space="preserve"><value>외부 도구 중지됨.</value></data>
-  <data name="Library.Operation.ExternalTool.Ready.One" xml:space="preserve"><value>미리 봄 {0:N0} 프로세스 호출. 외부 도구 실행 외부 MusicLibraryManager 복구.</value></data>
-  <data name="Library.Operation.ExternalTool.Ready.Other" xml:space="preserve"><value>미리 봄 {0:N0} 프로세스 호출. 외부 도구 실행 외부 MusicLibraryManager 복구.</value></data>
-  <data name="Library.Operation.History.Cancelled" xml:space="preserve"><value>기록 미리 보기 취소됨. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.History.Failed" xml:space="preserve"><value>기록 미리 보기 실패.</value></data>
-  <data name="Library.Operation.History.RedoReady" xml:space="preserve"><value>다시 실행 이었음 다시 생성됨 대상 해당 현재 파일. 검토 이전 적용 중.</value></data>
-  <data name="Library.Operation.History.RepeatReady" xml:space="preserve"><value>해당 최신 레시피 이었음 다시 생성됨 용 해당 현재 라이브러리 범위. 검토 이전 적용 중.</value></data>
-  <data name="Library.Operation.Import.Blockers.One" xml:space="preserve"><value>가져오기 미리 보기 있음 {0:N0} 차단 요소. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.Import.Blockers.Other" xml:space="preserve"><value>가져오기 미리 보기 있음 {0:N0} 차단 요소. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.Import.Cancelled" xml:space="preserve"><value>가져오기 미리 보기 취소됨. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>{1:N0}개 파일의 가져오기 변경 내용 {0:N0}개를 미리 보았습니다. {3:N0}개 행 중 {2:N0}개를 매핑했습니다.</value></data>
-  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>{1:N0}개 파일의 가져오기 변경 내용 {0:N0}개를 미리 보았습니다. 경고 {4:N0}개가 있으며 {3:N0}개 행 중 {2:N0}개를 매핑했습니다.</value></data>
-  <data name="Library.Operation.Import.Failed" xml:space="preserve"><value>가져오기 미리 보기 실패.</value></data>
-  <data name="Library.Operation.Import.NoRowsMatched" xml:space="preserve"><value>아니요 가져오기 행 일치함 해당 선택됨 라이브러리 범위.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupCancelled" xml:space="preserve"><value>MusicBrainz 릴리스 조회 취소됨.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupComplete.One" xml:space="preserve"><value>MusicBrainz 반환됨 {0:N0} 릴리스 에디션. 아니요 메타데이터 이었음 선택됨 또는 변경됨.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupComplete.Other" xml:space="preserve"><value>MusicBrainz 반환됨 {0:N0} 릴리스 에디션. 아니요 메타데이터 이었음 선택됨 또는 변경됨.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupFailed" xml:space="preserve"><value>MusicBrainz 릴리스 조회 실패.</value></data>
-  <data name="Library.Operation.MusicBrainz.MappingCancelled" xml:space="preserve"><value>릴리스 트랙 매핑 취소됨.</value></data>
-  <data name="Library.Operation.MusicBrainz.MappingComplete" xml:space="preserve"><value>제안됨 {0:N0} 의 {1:N0} 파일-트랙 매핑; {2:N0} 필요 검토.</value></data>
-  <data name="Library.Operation.MusicBrainz.MappingFailed" xml:space="preserve"><value>릴리스 트랙 매핑 실패.</value></data>
-  <data name="Library.Operation.MusicBrainz.MetadataCancelled" xml:space="preserve"><value>MusicBrainz 메타데이터 미리 보기 취소됨.</value></data>
-  <data name="Library.Operation.MusicBrainz.MetadataFailed" xml:space="preserve"><value>MusicBrainz 메타데이터 미리 보기 실패.</value></data>
-  <data name="Library.Operation.MusicBrainz.MetadataReady" xml:space="preserve"><value>매핑됨 MusicBrainz 필드 이었음 추가됨 로 해당 일반 메타데이터 미리 보기. 검토 모든 변경 이전 적용 중.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchCancelled" xml:space="preserve"><value>MusicBrainz 릴리스 검색 취소됨.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchComplete.One" xml:space="preserve"><value>MusicBrainz 찾음 {0:N0} 릴리스 에디션. 선택 해당 항목 및 빌드 하나의 파일-트랙 매핑.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchComplete.Other" xml:space="preserve"><value>MusicBrainz 찾음 {0:N0} 릴리스 에디션. 선택 하나 및 빌드 하나의 파일-트랙 매핑.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchFailed" xml:space="preserve"><value>MusicBrainz 릴리스 검색 실패.</value></data>
-  <data name="Library.Operation.NoFiles" xml:space="preserve"><value>해당 선택됨 라이브러리 범위 포함 파일 없음.</value></data>
-  <data name="Library.Operation.PendingReverted" xml:space="preserve"><value>보류 중 미리 보기 되돌리기. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.Playlist.Blockers.One" xml:space="preserve"><value>재생 목록 미리 보기 있음 {0:N0} 차단 요소. 아니요 출력 이었음 기록됨.</value></data>
-  <data name="Library.Operation.Playlist.Blockers.Other" xml:space="preserve"><value>재생 목록 미리 보기 있음 {0:N0} 차단 요소. 아니요 출력 이었음 기록됨.</value></data>
-  <data name="Library.Operation.Playlist.OutputCancelled" xml:space="preserve"><value>재생 목록 출력 취소됨.</value></data>
-  <data name="Library.Operation.Playlist.OutputFailed" xml:space="preserve"><value>재생 목록 출력 실패.</value></data>
-  <data name="Library.Operation.Playlist.PreviewCancelled" xml:space="preserve"><value>재생 목록 미리 보기 취소됨.</value></data>
-  <data name="Library.Operation.Playlist.PreviewFailed" xml:space="preserve"><value>재생 목록 미리 보기 실패.</value></data>
-  <data name="Library.Operation.Playlist.Ready.One" xml:space="preserve"><value>미리 봄 {0:N0} 재생 목록 파일. 검토 해당 대상 이전 적용 중.</value></data>
-  <data name="Library.Operation.Playlist.Ready.Other" xml:space="preserve"><value>미리 봄 {0:N0} 재생 목록 파일. 검토 해당 대상 이전 적용 중.</value></data>
-  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>트랙 참조 {1:N0}개가 포함된 재생 목록 파일 {0:N0}개를 썼습니다.</value></data>
-  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>차단 요소 {1:N0}개가 있는 파일 {0:N0}개를 미리 보았습니다. 파일은 변경되지 않았습니다.</value></data>
-  <data name="Library.Operation.PreviewCancelled" xml:space="preserve"><value>미리 보기 취소됨. 파일 없음 이었음 변경됨.</value></data>
-  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>전체 {2:N0}개 파일 중 {1:N0}개 파일의 변경 내용 {0:N0}개를 미리 보았습니다.</value></data>
-  <data name="Library.Operation.PreviewFailed" xml:space="preserve"><value>미리 보기 실패.</value></data>
-  <data name="Library.Operation.PreviewInvalidated" xml:space="preserve"><value>작업 또는 범위 변경됨. 미리 보기 신뢰할 수 있음 메타데이터 다시.</value></data>
-  <data name="Library.Operation.Report.Blockers.One" xml:space="preserve"><value>보고서 미리 보기 있음 {0:N0} 차단 요소. 아니요 출력 이었음 기록됨.</value></data>
-  <data name="Library.Operation.Report.Blockers.Other" xml:space="preserve"><value>보고서 미리 보기 있음 {0:N0} 차단 요소. 아니요 출력 이었음 기록됨.</value></data>
-  <data name="Library.Operation.Report.OutputCancelled" xml:space="preserve"><value>보고서 출력 취소됨.</value></data>
-  <data name="Library.Operation.Report.OutputFailed" xml:space="preserve"><value>보고서 출력 실패.</value></data>
-  <data name="Library.Operation.Report.PreviewCancelled" xml:space="preserve"><value>보고서 미리 보기 취소됨.</value></data>
-  <data name="Library.Operation.Report.PreviewFailed" xml:space="preserve"><value>보고서 미리 보기 실패.</value></data>
-  <data name="Library.Operation.Report.Ready.One" xml:space="preserve"><value>미리 봄 {0:N0} 보고서 파일. 검토 해당 대상 이전 적용 중.</value></data>
-  <data name="Library.Operation.Report.Ready.Other" xml:space="preserve"><value>미리 봄 {0:N0} 보고서 파일. 검토 해당 대상 이전 적용 중.</value></data>
-  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>행 {1:N0}개가 포함된 보고서 파일 {0:N0}개를 썼습니다.</value></data>
-  <data name="Library.Operation.Restore.Cancelled" xml:space="preserve"><value>복원 취소됨. 모두 완료됨 복원 유지 복구 가능.</value></data>
-  <data name="Library.Operation.Restore.Complete.One" xml:space="preserve"><value>복원됨 {0:N0} 파일 에서 해당 최신 메타데이터 작업.</value></data>
-  <data name="Library.Operation.Restore.Complete.Other" xml:space="preserve"><value>복원됨 {0:N0} 파일 에서 해당 최신 메타데이터 작업.</value></data>
-  <data name="Library.Operation.Restore.Failed" xml:space="preserve"><value>복원 실패.</value></data>
+  <data name="Library.Operation.ExternalTool.Cancelled" xml:space="preserve"><value>외부 도구가 취소되었습니다. 실행 중인 프로세스가 중지되었습니다.</value></data>
+  <data name="Library.Operation.ExternalTool.Complete" xml:space="preserve"><value>외부 도구가 완료되었습니다. 성공: {0:N0}개, 실패: {1:N0}개.</value></data>
+  <data name="Library.Operation.ExternalTool.Failed" xml:space="preserve"><value>외부 도구가 중지되었습니다.</value></data>
+  <data name="Library.Operation.ExternalTool.Ready.One" xml:space="preserve"><value>프로세스 호출 {0:N0}건을 미리 보았습니다. 외부 도구는 MusicLibraryManager 복구 범위 밖에서 실행됩니다.</value></data>
+  <data name="Library.Operation.ExternalTool.Ready.Other" xml:space="preserve"><value>프로세스 호출 {0:N0}건을 미리 보았습니다. 외부 도구는 MusicLibraryManager 복구 범위 밖에서 실행됩니다.</value></data>
+  <data name="Library.Operation.History.Cancelled" xml:space="preserve"><value>기록 미리 보기가 취소되었습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.History.Failed" xml:space="preserve"><value>기록 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.History.RedoReady" xml:space="preserve"><value>현재 파일을 기준으로 다시 실행 작업이 재생성되었습니다. 적용하기 전에 검토하세요.</value></data>
+  <data name="Library.Operation.History.RepeatReady" xml:space="preserve"><value>현재 라이브러리 범위에 대해 최신 레시피가 재생성되었습니다. 적용하기 전에 검토하세요.</value></data>
+  <data name="Library.Operation.Import.Blockers.One" xml:space="preserve"><value>가져오기 미리 보기에 차단 문제가 {0:N0}개 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Import.Blockers.Other" xml:space="preserve"><value>가져오기 미리 보기에 차단 문제가 {0:N0}개 있습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Import.Cancelled" xml:space="preserve"><value>가져오기 미리 보기가 취소되었습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>가져오기 미리 보기가 완료되었습니다. 변경 내용: {0:N0}개, 파일: {1:N0}개, 일치한 행: {3:N0}개 중 {2:N0}개.</value></data>
+  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>가져오기 미리 보기가 완료되었습니다. 변경 내용: {0:N0}개, 파일: {1:N0}개, 일치한 행: {3:N0}개 중 {2:N0}개, 경고: {4:N0}개.</value></data>
+  <data name="Library.Operation.Import.Failed" xml:space="preserve"><value>가져오기 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.Import.NoRowsMatched" xml:space="preserve"><value>선택한 라이브러리 범위와 일치하는 가져오기 행이 없습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupCancelled" xml:space="preserve"><value>MusicBrainz 릴리스 조회가 취소되었습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupComplete.One" xml:space="preserve"><value>MusicBrainz에서 릴리스 에디션 {0:N0}개를 반환했습니다. 선택되거나 변경된 메타데이터는 없습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupComplete.Other" xml:space="preserve"><value>MusicBrainz에서 릴리스 에디션 {0:N0}개를 반환했습니다. 선택되거나 변경된 메타데이터는 없습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupFailed" xml:space="preserve"><value>MusicBrainz 릴리스 조회에 실패했습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.MappingCancelled" xml:space="preserve"><value>릴리스 트랙 매핑이 취소되었습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.MappingComplete" xml:space="preserve"><value>파일-트랙 매핑 {1:N0}개 중 {0:N0}개를 제안했습니다. {2:N0}개는 검토가 필요합니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.MappingFailed" xml:space="preserve"><value>릴리스 트랙 매핑에 실패했습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.MetadataCancelled" xml:space="preserve"><value>MusicBrainz 메타데이터 미리 보기가 취소되었습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.MetadataFailed" xml:space="preserve"><value>MusicBrainz 메타데이터 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.MetadataReady" xml:space="preserve"><value>매핑된 MusicBrainz 필드가 일반 메타데이터 미리 보기에 추가되었습니다. 적용하기 전에 모든 변경 내용을 검토하세요.</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchCancelled" xml:space="preserve"><value>MusicBrainz 릴리스 검색이 취소되었습니다.</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchComplete.One" xml:space="preserve"><value>MusicBrainz에서 릴리스 에디션 {0:N0}개를 찾았습니다. 선택한 후 파일-트랙 매핑을 만드세요.</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchComplete.Other" xml:space="preserve"><value>MusicBrainz에서 릴리스 에디션 {0:N0}개를 찾았습니다. 하나를 선택한 후 파일-트랙 매핑을 만드세요.</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchFailed" xml:space="preserve"><value>MusicBrainz 릴리스 검색에 실패했습니다.</value></data>
+  <data name="Library.Operation.NoFiles" xml:space="preserve"><value>선택한 라이브러리 범위에 파일이 없습니다.</value></data>
+  <data name="Library.Operation.PendingReverted" xml:space="preserve"><value>보류 중인 미리 보기를 삭제했습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.Playlist.Blockers.One" xml:space="preserve"><value>재생 목록 미리 보기에 차단 문제가 {0:N0}개 있습니다. 출력이 기록되지 않았습니다.</value></data>
+  <data name="Library.Operation.Playlist.Blockers.Other" xml:space="preserve"><value>재생 목록 미리 보기에 차단 문제가 {0:N0}개 있습니다. 출력이 기록되지 않았습니다.</value></data>
+  <data name="Library.Operation.Playlist.OutputCancelled" xml:space="preserve"><value>재생 목록 출력이 취소되었습니다.</value></data>
+  <data name="Library.Operation.Playlist.OutputFailed" xml:space="preserve"><value>재생 목록 출력에 실패했습니다.</value></data>
+  <data name="Library.Operation.Playlist.PreviewCancelled" xml:space="preserve"><value>재생 목록 미리 보기가 취소되었습니다.</value></data>
+  <data name="Library.Operation.Playlist.PreviewFailed" xml:space="preserve"><value>재생 목록 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.Playlist.Ready.One" xml:space="preserve"><value>재생 목록 파일 {0:N0}개를 미리 보았습니다. 적용하기 전에 대상을 검토하세요.</value></data>
+  <data name="Library.Operation.Playlist.Ready.Other" xml:space="preserve"><value>재생 목록 파일 {0:N0}개를 미리 보았습니다. 적용하기 전에 대상을 검토하세요.</value></data>
+  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>재생 목록 출력이 기록되었습니다. 파일: {0:N0}개, 트랙 참조: {1:N0}개.</value></data>
+  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>미리 보기가 완료되었습니다. 파일: {0:N0}개, 차단 문제: {1:N0}개. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.PreviewCancelled" xml:space="preserve"><value>미리 보기가 취소되었습니다. 변경된 파일은 없습니다.</value></data>
+  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>미리 보기가 완료되었습니다. 변경 내용: {0:N0}개, 영향을 받는 파일: {2:N0}개 중 {1:N0}개.</value></data>
+  <data name="Library.Operation.PreviewFailed" xml:space="preserve"><value>미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.PreviewInvalidated" xml:space="preserve"><value>작업 또는 범위가 변경되었습니다. 기준 메타데이터를 다시 미리 보세요.</value></data>
+  <data name="Library.Operation.Report.Blockers.One" xml:space="preserve"><value>보고서 미리 보기에 차단 문제가 {0:N0}개 있습니다. 출력이 기록되지 않았습니다.</value></data>
+  <data name="Library.Operation.Report.Blockers.Other" xml:space="preserve"><value>보고서 미리 보기에 차단 문제가 {0:N0}개 있습니다. 출력이 기록되지 않았습니다.</value></data>
+  <data name="Library.Operation.Report.OutputCancelled" xml:space="preserve"><value>보고서 출력이 취소되었습니다.</value></data>
+  <data name="Library.Operation.Report.OutputFailed" xml:space="preserve"><value>보고서 출력에 실패했습니다.</value></data>
+  <data name="Library.Operation.Report.PreviewCancelled" xml:space="preserve"><value>보고서 미리 보기가 취소되었습니다.</value></data>
+  <data name="Library.Operation.Report.PreviewFailed" xml:space="preserve"><value>보고서 미리 보기에 실패했습니다.</value></data>
+  <data name="Library.Operation.Report.Ready.One" xml:space="preserve"><value>보고서 파일 {0:N0}개를 미리 보았습니다. 적용하기 전에 대상을 검토하세요.</value></data>
+  <data name="Library.Operation.Report.Ready.Other" xml:space="preserve"><value>보고서 파일 {0:N0}개를 미리 보았습니다. 적용하기 전에 대상을 검토하세요.</value></data>
+  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>보고서 출력이 기록되었습니다. 파일: {0:N0}개, 행: {1:N0}개.</value></data>
+  <data name="Library.Operation.Restore.Cancelled" xml:space="preserve"><value>복원이 취소되었습니다. 완료된 복원은 계속 복구할 수 있습니다.</value></data>
+  <data name="Library.Operation.Restore.Complete.One" xml:space="preserve"><value>최신 메타데이터 작업에서 파일 {0:N0}개를 복원했습니다.</value></data>
+  <data name="Library.Operation.Restore.Complete.Other" xml:space="preserve"><value>최신 메타데이터 작업에서 파일 {0:N0}개를 복원했습니다.</value></data>
+  <data name="Library.Operation.Restore.Failed" xml:space="preserve"><value>복원에 실패했습니다.</value></data>
   <data name="Library.OperationName.CoverArt" xml:space="preserve"><value>Cover Art Archive: {0}</value></data>
   <data name="Library.OperationName.DiscogsArtwork" xml:space="preserve"><value>Discogs 아트워크: {0}</value></data>
   <data name="Library.OperationName.DiscogsMetadata" xml:space="preserve"><value>Discogs: {0}</value></data>
-  <data name="Library.OperationName.ImportMetadata" xml:space="preserve"><value>메타데이터 가져오기 에서 {0}</value></data>
+  <data name="Library.OperationName.ImportMetadata" xml:space="preserve"><value>{0}에서 메타데이터 가져오기</value></data>
   <data name="Library.OperationName.MusicBrainzMetadata" xml:space="preserve"><value>MusicBrainz: {0}</value></data>
-  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>파일 {1:N0}개에 {0} 값 붙여넣기</value></data>
-  <data name="Library.OperationName.RemoveAllArtwork" xml:space="preserve"><value>제거 모두 아트워크</value></data>
-  <data name="Library.OperationName.RemoveFrontCover" xml:space="preserve"><value>제거 앞면 표지</value></data>
-  <data name="Library.OperationName.ReplaceFrontCover" xml:space="preserve"><value>바꾸기 앞면 표지</value></data>
-  <data name="Library.OperationName.RepresentativePreview" xml:space="preserve"><value>초안 대표 미리 보기</value></data>
-  <data name="Library.Picker.ArtworkImages" xml:space="preserve"><value>아트워크 이미지</value></data>
-  <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>구분됨 메타데이터</value></data>
-  <data name="Library.Picker.ExternalToolDirectory" xml:space="preserve"><value>선택 외부 도구 작업 중 디렉터리</value></data>
-  <data name="Library.Picker.ExternalToolExecutable" xml:space="preserve"><value>선택 외부 도구 실행 파일</value></data>
+  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>{0} 값 붙여넣기, 파일: {1:N0}개</value></data>
+  <data name="Library.OperationName.RemoveAllArtwork" xml:space="preserve"><value>모든 아트워크 제거</value></data>
+  <data name="Library.OperationName.RemoveFrontCover" xml:space="preserve"><value>앞면 커버 제거</value></data>
+  <data name="Library.OperationName.ReplaceFrontCover" xml:space="preserve"><value>앞면 커버 교체</value></data>
+  <data name="Library.OperationName.RepresentativePreview" xml:space="preserve"><value>대표 미리 보기</value></data>
+  <data name="Library.Picker.ArtworkImages" xml:space="preserve"><value>아트워크 이미지 선택</value></data>
+  <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>구분된 메타데이터 파일 선택</value></data>
+  <data name="Library.Picker.ExternalToolDirectory" xml:space="preserve"><value>외부 도구 작업 폴더 선택</value></data>
+  <data name="Library.Picker.ExternalToolExecutable" xml:space="preserve"><value>외부 도구 실행 파일 선택</value></data>
   <data name="Library.Picker.FrontCover" xml:space="preserve"><value>앞표지 아트워크 선택</value></data>
   <data name="Library.Picker.ImportMetadata.Title" xml:space="preserve"><value>CSV 또는 구분된 텍스트에서 메타데이터 가져오기</value></data>
-  <data name="Library.Picker.PlaylistFolder" xml:space="preserve"><value>선택 재생 목록 출력 폴더</value></data>
-  <data name="Library.Picker.PlaylistOutput" xml:space="preserve"><value>선택 재생 목록 출력</value></data>
-  <data name="Library.Picker.ReportFolder" xml:space="preserve"><value>선택 보고서 출력 폴더</value></data>
-  <data name="Library.Picker.ReportOutput" xml:space="preserve"><value>선택 보고서 출력</value></data>
+  <data name="Library.Picker.PlaylistFolder" xml:space="preserve"><value>재생 목록 출력 폴더 선택</value></data>
+  <data name="Library.Picker.PlaylistOutput" xml:space="preserve"><value>재생 목록 출력 선택</value></data>
+  <data name="Library.Picker.ReportFolder" xml:space="preserve"><value>보고서 출력 폴더 선택</value></data>
+  <data name="Library.Picker.ReportOutput" xml:space="preserve"><value>보고서 출력 선택</value></data>
   <data name="Library.Progress.ApplyingMetadataChanges" xml:space="preserve"><value>검토한 메타데이터 변경 내용을 적용하는 중</value></data>
   <data name="Library.Progress.BuildingArtworkPreview" xml:space="preserve"><value>아트워크 미리 보기를 만드는 중</value></data>
-  <data name="Library.Progress.BuildingAudioIdentifierPreview" xml:space="preserve"><value>빌드 오디오 식별자 미리 보기</value></data>
-  <data name="Library.Progress.BuildingClipboardPreview" xml:space="preserve"><value>빌드 클립보드 메타데이터 미리 보기</value></data>
-  <data name="Library.Progress.BuildingDiscogsArtworkPreview" xml:space="preserve"><value>빌드 Discogs 아트워크 미리 보기</value></data>
-  <data name="Library.Progress.BuildingDiscogsMetadataPreview" xml:space="preserve"><value>빌드 Discogs 메타데이터 미리 보기</value></data>
+  <data name="Library.Progress.BuildingAudioIdentifierPreview" xml:space="preserve"><value>오디오 식별자 미리 보기 만드는 중</value></data>
+  <data name="Library.Progress.BuildingClipboardPreview" xml:space="preserve"><value>클립보드 메타데이터 미리 보기 만드는 중</value></data>
+  <data name="Library.Progress.BuildingDiscogsArtworkPreview" xml:space="preserve"><value>Discogs 아트워크 미리 보기 만드는 중</value></data>
+  <data name="Library.Progress.BuildingDiscogsMetadataPreview" xml:space="preserve"><value>Discogs 메타데이터 미리 보기 만드는 중</value></data>
   <data name="Library.Progress.BuildingMetadataPreview" xml:space="preserve"><value>메타데이터 미리 보기를 만드는 중</value></data>
-  <data name="Library.Progress.BuildingMusicBrainzMetadataPreview" xml:space="preserve"><value>빌드 MusicBrainz 메타데이터 미리 보기</value></data>
-  <data name="Library.Progress.BuildingPlaylistPreview" xml:space="preserve"><value>빌드 재생 목록 미리 보기</value></data>
-  <data name="Library.Progress.BuildingReportPreview" xml:space="preserve"><value>빌드 보고서 미리 보기</value></data>
-  <data name="Library.Progress.FindingCoverArt" xml:space="preserve"><value>발견 사항 Cover Art Archive 이미지</value></data>
-  <data name="Library.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>불러오는 중 아트워크 미리 보기 이미지 {0:N0} 의 {1:N0}</value></data>
+  <data name="Library.Progress.BuildingMusicBrainzMetadataPreview" xml:space="preserve"><value>MusicBrainz 메타데이터 미리 보기 만드는 중</value></data>
+  <data name="Library.Progress.BuildingPlaylistPreview" xml:space="preserve"><value>재생 목록 미리 보기 만드는 중</value></data>
+  <data name="Library.Progress.BuildingReportPreview" xml:space="preserve"><value>보고서 미리 보기 만드는 중</value></data>
+  <data name="Library.Progress.FindingCoverArt" xml:space="preserve"><value>Cover Art Archive 이미지 찾는 중</value></data>
+  <data name="Library.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>아트워크 미리 보기 이미지 불러오는 중({0:N0}/{1:N0})</value></data>
   <data name="Library.Progress.LoadingDiscogsDetails" xml:space="preserve"><value>Discogs 릴리스 세부 정보 불러오는 중</value></data>
   <data name="Library.Progress.MappingMetadataImport" xml:space="preserve"><value>메타데이터 가져오기를 매핑하는 중</value></data>
-  <data name="Library.Progress.MatchingDiscogsTracks" xml:space="preserve"><value>일치 라이브러리 파일 로 Discogs 트랙</value></data>
-  <data name="Library.Progress.MatchingReleaseTracks" xml:space="preserve"><value>일치 라이브러리 파일 로 릴리스 트랙</value></data>
-  <data name="Library.Progress.PreparingAudioDiscovery" xml:space="preserve"><value>준비 중 오디오 지문 검색</value></data>
-  <data name="Library.Progress.ReadingFile" xml:space="preserve"><value>읽는 중 {0}</value></data>
+  <data name="Library.Progress.MatchingDiscogsTracks" xml:space="preserve"><value>라이브러리 파일과 Discogs 트랙을 매핑하는 중</value></data>
+  <data name="Library.Progress.MatchingReleaseTracks" xml:space="preserve"><value>라이브러리 파일과 릴리스 트랙을 매핑하는 중</value></data>
+  <data name="Library.Progress.PreparingAudioDiscovery" xml:space="preserve"><value>오디오 지문 검색 준비 중</value></data>
+  <data name="Library.Progress.ReadingFile" xml:space="preserve"><value>{0} 읽는 중</value></data>
   <data name="Library.Progress.RegeneratingMetadataPreview" xml:space="preserve"><value>메타데이터 미리 보기를 다시 만드는 중</value></data>
-  <data name="Library.Progress.ResolvingMusicBrainzReleases" xml:space="preserve"><value>해결 중 MusicBrainz 릴리스 에디션</value></data>
-  <data name="Library.Progress.RestoredFiles.One" xml:space="preserve"><value>복원됨 {0:N0} 파일</value></data>
-  <data name="Library.Progress.RestoredFiles.Other" xml:space="preserve"><value>복원됨 {0:N0} 파일</value></data>
+  <data name="Library.Progress.ResolvingMusicBrainzReleases" xml:space="preserve"><value>MusicBrainz 릴리스 에디션 확인 중</value></data>
+  <data name="Library.Progress.RestoredFiles.One" xml:space="preserve"><value>파일 {0:N0}개 복원됨</value></data>
+  <data name="Library.Progress.RestoredFiles.Other" xml:space="preserve"><value>파일 {0:N0}개 복원됨</value></data>
   <data name="Library.Progress.RestoringMetadataOperation" xml:space="preserve"><value>최근 메타데이터 작업을 복원하는 중</value></data>
-  <data name="Library.Progress.RunningExternalTool" xml:space="preserve"><value>실행 중 {0}</value></data>
-  <data name="Library.Progress.SearchingDiscogsReleases" xml:space="preserve"><value>검색 중 Discogs 릴리스</value></data>
-  <data name="Library.Progress.SearchingMusicBrainzReleases" xml:space="preserve"><value>검색 중 MusicBrainz 릴리스</value></data>
+  <data name="Library.Progress.RunningExternalTool" xml:space="preserve"><value>{0} 실행 중</value></data>
+  <data name="Library.Progress.SearchingDiscogsReleases" xml:space="preserve"><value>Discogs 릴리스 검색 중</value></data>
+  <data name="Library.Progress.SearchingMusicBrainzReleases" xml:space="preserve"><value>MusicBrainz 릴리스 검색 중</value></data>
   <data name="Library.Progress.WritingPlaylist" xml:space="preserve"><value>검토한 재생 목록을 쓰는 중</value></data>
   <data name="Library.Progress.WritingReport" xml:space="preserve"><value>검토한 보고서를 쓰는 중</value></data>
   <data name="Library.ProviderSource.Cache" xml:space="preserve"><value>캐시</value></data>
   <data name="Library.ProviderSource.Discogs" xml:space="preserve"><value>Discogs</value></data>
   <data name="Library.ProviderSource.OfflineCache" xml:space="preserve"><value>오프라인 캐시</value></data>
-  <data name="Library.Results.OfTotal" xml:space="preserve"><value>{0:N0} 의 {1:N0}</value></data>
+  <data name="Library.Results.OfTotal" xml:space="preserve"><value>{1:N0}개 중 {0:N0}개</value></data>
   <data name="Library.Results.Tracks.One" xml:space="preserve"><value>{0:N0} 트랙</value></data>
   <data name="Library.Results.Tracks.Other" xml:space="preserve"><value>{0:N0} 트랙</value></data>
   <data name="Library.Status.ChooseConfiguration" xml:space="preserve"><value>설정에서 라이브러리 구성을 선택하세요.</value></data>
-  <data name="Library.Status.Filtered" xml:space="preserve"><value>{0:N0} 의 {1:N0} 트랙</value></data>
+  <data name="Library.Status.Filtered" xml:space="preserve"><value>트랙 {1:N0}개 중 {0:N0}개</value></data>
   <data name="Library.Status.FilteredPreserved" xml:space="preserve"><value>{1:N0}개 중 {0:N0}개 트랙 · 저장되지 않은 변경 내용이 있는 선택된 트랙 {2:N0}개는 계속 표시됩니다</value></data>
   <data name="Library.Status.HealthFiltered" xml:space="preserve"><value>상태 결과: {1:N0}개 중 {0:N0}개 트랙</value></data>
   <data name="Library.Status.HealthFilteredPreserved" xml:space="preserve"><value>상태 결과: {1:N0}개 중 {0:N0}개 트랙 · 저장되지 않은 변경 내용이 있는 선택된 트랙 {2:N0}개는 계속 표시됩니다</value></data>
-  <data name="Library.Status.InvalidFilter" xml:space="preserve"><value>해당 필터 입니다 잘못됨.</value></data>
+  <data name="Library.Status.InvalidFilter" xml:space="preserve"><value>필터가 올바르지 않습니다.</value></data>
   <data name="Library.Status.LoadConfiguration" xml:space="preserve"><value>라이브러리를 탐색하려면 구성을 불러오세요.</value></data>
   <data name="Library.Status.LoadFailed" xml:space="preserve"><value>라이브러리 캐시를 불러올 수 없습니다.</value></data>
   <data name="Library.Status.LoadingCache" xml:space="preserve"><value>라이브러리 캐시를 불러오는 중…</value></data>
@@ -4480,7 +4480,7 @@
   <data name="Library.Status.Tracks.Other" xml:space="preserve"><value>{0:N0} 트랙</value></data>
   <data name="Library.Status.TracksPreserved.One" xml:space="preserve"><value>트랙 {0:N0}개 · 저장되지 않은 변경 내용이 있는 선택된 트랙 {1:N0}개는 계속 표시됩니다</value></data>
   <data name="Library.Status.TracksPreserved.Other" xml:space="preserve"><value>트랙 {0:N0}개 · 저장되지 않은 변경 내용이 있는 선택된 트랙 {1:N0}개는 계속 표시됩니다</value></data>
-  <data name="Library.Tools.ApplicationDefault" xml:space="preserve"><value>(응용 프로그램 기본값)</value></data>
+  <data name="Library.Tools.ApplicationDefault" xml:space="preserve"><value>(앱 기본값)</value></data>
   <data name="Library.VisualFilter.Status.Applied" xml:space="preserve"><value>시각적 필터를 적용했습니다.</value></data>
   <data name="Library.VisualFilter.Status.Cleared" xml:space="preserve"><value>시각적 필터를 지웠습니다.</value></data>
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>시각적 필터가 올바르지 않습니다.</value></data>
@@ -4986,25 +4986,25 @@
   <data name="Inspector.View.UnverifiedValue" xml:space="preserve"><value>현재 값 아님 확인 전체 모두 선택한 트랙.</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Contains" xml:space="preserve"><value>포함</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Equals" xml:space="preserve"><value>같음</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.GreaterThan" xml:space="preserve"><value>보다 큼 보다</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.GreaterThan" xml:space="preserve"><value>보다 큼</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.GreaterThanOrEqual" xml:space="preserve"><value>크거나 같음</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.LessThan" xml:space="preserve"><value>간단히 보다</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.LessThan" xml:space="preserve"><value>보다 작음</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.LessThanOrEqual" xml:space="preserve"><value>작거나 같음</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.MatchesRegularExpression" xml:space="preserve"><value>정규식과 일치</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.Missing" xml:space="preserve"><value>누락</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.Missing" xml:space="preserve"><value>없음</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Present" xml:space="preserve"><value>있음</value></data>
   <data name="Library.VisualFilter.Choice.FieldKind.CustomMetadata" xml:space="preserve"><value>사용자 지정 메타데이터</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.KnownMetadata" xml:space="preserve"><value>알려짐 메타데이터</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.Technical" xml:space="preserve"><value>기술</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.KnownMetadata" xml:space="preserve"><value>알려진 메타데이터</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.Technical" xml:space="preserve"><value>기술 정보</value></data>
   <data name="Library.VisualFilter.Choice.RootMode.All" xml:space="preserve"><value>모두</value></data>
-  <data name="Library.VisualFilter.Choice.RootMode.Any" xml:space="preserve"><value>모두</value></data>
+  <data name="Library.VisualFilter.Choice.RootMode.Any" xml:space="preserve"><value>하나 이상</value></data>
   <data name="Library.VisualFilter.ConditionSummary" xml:space="preserve"><value>그룹 {0}: {1} {2}</value></data>
   <data name="Library.VisualFilter.ConditionValue" xml:space="preserve"><value> {0}</value></data>
   <data name="Library.VisualFilter.Editor.Error.FieldRequired" xml:space="preserve"><value>각 조건에는 필드가 필요합니다.</value></data>
   <data name="Library.VisualFilter.Editor.Error.ValueRequired" xml:space="preserve"><value>{0}에는 비교 값이 필요합니다.</value></data>
   <data name="Library.VisualFilter.Editor.Status.EditCondition" xml:space="preserve"><value>선택한 조건을 편집한 후 필터를 적용하세요.</value></data>
   <data name="Library.VisualFilter.Field.Custom" xml:space="preserve"><value>사용자 지정</value></data>
-  <data name="Library.VisualFilter.Field.Known" xml:space="preserve"><value>알려짐</value></data>
+  <data name="Library.VisualFilter.Field.Known" xml:space="preserve"><value>알려진 항목</value></data>
   <data name="Library.VisualFilter.Field.Technical" xml:space="preserve"><value>기술</value></data>
   <data name="ReviewedFileOperation.Activity.Applying" xml:space="preserve"><value>적용 중 검토됨 파일 작업</value></data>
   <data name="ReviewedFileOperation.Activity.Planning" xml:space="preserve"><value>{0} 계획 중</value></data>

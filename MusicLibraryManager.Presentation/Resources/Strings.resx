@@ -1199,7 +1199,7 @@
     <value>Hide inspector</value>
   </data>
   <data name="Library.Action.InspectorUnsaved" xml:space="preserve">
-    <value>Inspector (unsaved)</value>
+    <value>Inspector (pending edits)</value>
   </data>
   <data name="Library.Action.More" xml:space="preserve">
     <value>More</value>
@@ -1466,7 +1466,7 @@
     <value>Copy the selected field identity and ordered values from the first file in scope</value>
   </data>
   <data name="Library.Operations.Action.PastePreview" xml:space="preserve">
-    <value>Paste + preview</value>
+    <value>Paste and preview</value>
   </data>
   <data name="Library.Operations.PastePreviewTooltip" xml:space="preserve">
     <value>Paste tag-aware or line-delimited text into the selected scope</value>
@@ -1505,7 +1505,7 @@
     <value>Tools</value>
   </data>
   <data name="Library.MetadataPreview.LiveDraft" xml:space="preserve">
-    <value>Live representative draft</value>
+    <value>Representative preview</value>
   </data>
   <data name="Library.MetadataPreview.Before" xml:space="preserve">
     <value>Before</value>
@@ -1523,7 +1523,7 @@
     <value>Barcode</value>
   </data>
   <data name="Library.Release.CatalogNumberPlaceholder" xml:space="preserve">
-    <value>Catalog no.</value>
+    <value>Catalog number</value>
   </data>
   <data name="Library.Release.ReleaseIdPlaceholder" xml:space="preserve">
     <value>Release ID</value>
@@ -1544,7 +1544,7 @@
     <value>Review every file-to-track suggestion before adding selected fields to the normal preview.</value>
   </data>
   <data name="Library.Release.TrackMappingDescription" xml:space="preserve">
-    <value>Review or replace suggestions before preview.</value>
+    <value>Review or replace each file-to-track suggestion before previewing metadata.</value>
   </data>
   <data name="Library.Release.Action.BuildMapping" xml:space="preserve">
     <value>Build mapping</value>
@@ -1562,7 +1562,7 @@
     <value>Track artists</value>
   </data>
   <data name="Library.Release.Field.AlbumDate" xml:space="preserve">
-    <value>Album/date</value>
+    <value>Album and date</value>
   </data>
   <data name="Library.Release.Field.Numbering" xml:space="preserve">
     <value>Numbering</value>
@@ -1571,7 +1571,7 @@
     <value>Release details</value>
   </data>
   <data name="Library.Release.Field.GenresStyles" xml:space="preserve">
-    <value>Genres/styles</value>
+    <value>Genres and styles</value>
   </data>
   <data name="Library.Release.Field.DiscogsReleaseId" xml:space="preserve">
     <value>Discogs release ID</value>
@@ -1580,10 +1580,10 @@
     <value>Preview local artwork for the current Library scope, or use release artwork for confirmed mappings.</value>
   </data>
   <data name="Library.Artwork.Action.LocalFrontCover" xml:space="preserve">
-    <value>Local front cover</value>
+    <value>Use local front cover</value>
   </data>
   <data name="Library.Artwork.Action.RemoveFront" xml:space="preserve">
-    <value>Remove front</value>
+    <value>Remove front cover</value>
   </data>
   <data name="Library.Artwork.Action.RemoveAll" xml:space="preserve">
     <value>Remove all</value>
@@ -1607,7 +1607,7 @@
     <value>Add column</value>
   </data>
   <data name="Library.Reports.Action.AddCustom" xml:space="preserve">
-    <value>Add custom</value>
+    <value>Add custom field</value>
   </data>
   <data name="Library.Reports.Action.MoveUp" xml:space="preserve">
     <value>Move up</value>
@@ -1691,10 +1691,10 @@
     <value>Preview tool</value>
   </data>
   <data name="Library.Tools.Action.Run" xml:space="preserve">
-    <value>Run reviewed tool</value>
+    <value>Run tool</value>
   </data>
   <data name="Library.Audio.Action.Find" xml:space="preserve">
-    <value>Find by audio</value>
+    <value>Find by fingerprint</value>
   </data>
   <data name="Library.Audio.Action.PreviewIds" xml:space="preserve">
     <value>Preview selected IDs</value>
@@ -1712,7 +1712,7 @@
     <value>Every staged or reviewed metadata edit that Apply will validate before writing.</value>
   </data>
   <data name="Library.PendingChanges.CountLabel" xml:space="preserve">
-    <value>pending edit(s)</value>
+    <value>pending changes</value>
   </data>
   <data name="Library.PendingChanges.CloseTooltip" xml:space="preserve">
     <value>Close pending changes</value>
@@ -1735,7 +1735,7 @@
     <value>Copy paths</value>
   </data>
   <data name="Library.Action.Reveal" xml:space="preserve">
-    <value>Reveal</value>
+    <value>Show in file manager</value>
   </data>
   <data name="Library.Action.Reindex" xml:space="preserve">
     <value>Reindex</value>
@@ -4264,7 +4264,7 @@
   <data name="Library.Artwork.Cached" xml:space="preserve"><value>Cached</value></data>
   <data name="Library.Artwork.ThumbnailFailed" xml:space="preserve"><value>Thumbnail unavailable</value></data>
   <data name="Library.Choice.FilterMode.Substring" xml:space="preserve"><value>Contains</value></data>
-  <data name="Library.Choice.FilterMode.Glob" xml:space="preserve"><value>Wildcard</value></data>
+  <data name="Library.Choice.FilterMode.Glob" xml:space="preserve"><value>Wildcard (glob)</value></data>
   <data name="Library.Choice.FilterMode.Regex" xml:space="preserve"><value>Regular expression</value></data>
   <data name="Library.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>Ignore empty cells</value></data>
   <data name="Library.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>Remove the field</value></data>
@@ -4273,7 +4273,7 @@
   <data name="Library.Choice.OperationScope.SelectedAlbums" xml:space="preserve"><value>Selected albums</value></data>
   <data name="Library.Choice.OperationScope.VisibleFilteredResults" xml:space="preserve"><value>Visible filtered results</value></data>
   <data name="Library.Choice.OperationScope.CompleteLibrary" xml:space="preserve"><value>Complete library</value></data>
-  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>Run '{0}' {1:N0} time(s)? External tools can change files and are outside MusicLibraryManager recovery.</value></data>
+  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>Run “{0}”? Planned invocations: {1:N0}. External tools can change files and are outside MusicLibraryManager recovery.</value></data>
   <data name="Library.Dialog.ExternalTool.Title" xml:space="preserve"><value>Run external tool?</value></data>
   <data name="Library.Dialog.Leave.Confirm" xml:space="preserve"><value>Leave</value></data>
   <data name="Library.Dialog.Leave.Message" xml:space="preserve"><value>The reviewed operation or report remains available in this Library session, but has not been applied.</value></data>
@@ -4299,7 +4299,7 @@
   <data name="Library.Error.ChooseDiscogsRelease" xml:space="preserve"><value>Choose a Discogs release.</value></data>
   <data name="Library.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>Choose a MusicBrainz release.</value></data>
   <data name="Library.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs is unavailable.</value></data>
-  <data name="Library.FileOperation.MetadataEditsPending" xml:space="preserve"><value>Apply or discard the current metadata edits before moving files.</value></data>
+  <data name="Library.FileOperation.MetadataEditsPending" xml:space="preserve"><value>Apply or discard the current metadata edits before changing file paths.</value></data>
   <data name="Library.Filter.Invalid" xml:space="preserve"><value>The filter is invalid.</value></data>
   <data name="Library.HealthFilter.Tracks.One" xml:space="preserve"><value>Health results: {0:N0} track</value></data>
   <data name="Library.HealthFilter.Tracks.Other" xml:space="preserve"><value>Health results: {0:N0} tracks</value></data>
@@ -4314,10 +4314,10 @@
   <data name="Library.Operation.Artwork.Blockers.Other" xml:space="preserve"><value>Artwork preview has {0:N0} blockers. No files were changed.</value></data>
   <data name="Library.Operation.Artwork.PreviewCancelled" xml:space="preserve"><value>Artwork preview cancelled.</value></data>
   <data name="Library.Operation.Artwork.PreviewFailed" xml:space="preserve"><value>Artwork preview failed.</value></data>
-  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>Previewed artwork changes for {0:N0} of {1:N0} file(s). No files were changed.</value></data>
+  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>Artwork preview complete. Files previewed: {0:N0} of {1:N0}. No files were changed.</value></data>
   <data name="Library.Operation.Artwork.ReleaseReady" xml:space="preserve"><value>The selected front cover was added to the normal metadata preview. Review every artwork change before applying.</value></data>
   <data name="Library.Operation.Audio.DiscoveryCancelled" xml:space="preserve"><value>Audio fingerprint discovery cancelled.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>Fingerprint discovery: {0:N0} file(s), {1:N0} candidate(s), {2:N0} warning(s).</value></data>
+  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>Fingerprint discovery complete. Files: {0:N0}; candidates: {1:N0}; warnings: {2:N0}.</value></data>
   <data name="Library.Operation.Audio.DiscoveryFailed" xml:space="preserve"><value>Audio fingerprint discovery failed.</value></data>
   <data name="Library.Operation.Audio.IdentifierPreviewCancelled" xml:space="preserve"><value>Audio identifier preview cancelled.</value></data>
   <data name="Library.Operation.Audio.IdentifierPreviewFailed" xml:space="preserve"><value>Audio identifier preview failed.</value></data>
@@ -4326,10 +4326,10 @@
   <data name="Library.Operation.Clipboard.Blockers.One" xml:space="preserve"><value>Clipboard preview has {0:N0} blocker. No files were changed.</value></data>
   <data name="Library.Operation.Clipboard.Blockers.Other" xml:space="preserve"><value>Clipboard preview has {0:N0} blockers. No files were changed.</value></data>
   <data name="Library.Operation.Clipboard.Cancelled" xml:space="preserve"><value>Clipboard preview cancelled. No files were changed.</value></data>
-  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>Previewed {0:N0} pasted change(s) in {1:N0} file(s).</value></data>
+  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>Clipboard preview complete. Changes: {0:N0}; files: {1:N0}.</value></data>
   <data name="Library.Operation.Clipboard.Failed" xml:space="preserve"><value>Clipboard preview failed.</value></data>
   <data name="Library.Operation.Clipboard.NoText" xml:space="preserve"><value>The clipboard does not contain text metadata.</value></data>
-  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>Copied {0:N0} ordered {1} value(s) from {2} with tag identity.</value></data>
+  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>Copied ordered values: {0:N0}; field: {1}; source: {2}. Tag identity was preserved.</value></data>
   <data name="Library.Operation.Copy.NoMetadata" xml:space="preserve"><value>The selected Library scope contains no cached metadata to copy.</value></data>
   <data name="Library.Operation.CoverArt.Cancelled" xml:space="preserve"><value>Cover Art Archive lookup cancelled.</value></data>
   <data name="Library.Operation.CoverArt.Failed" xml:space="preserve"><value>Cover Art Archive lookup failed.</value></data>
@@ -4340,7 +4340,7 @@
   <data name="Library.Operation.Discogs.ArtworkFailed" xml:space="preserve"><value>Discogs artwork preview failed.</value></data>
   <data name="Library.Operation.Discogs.ArtworkReady" xml:space="preserve"><value>The selected Discogs cover was added to the normal artwork preview. Review every change before applying.</value></data>
   <data name="Library.Operation.Discogs.DetailsCancelled" xml:space="preserve"><value>Discogs release detail lookup cancelled.</value></data>
-  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>Loaded Discogs release {0} with {1:N0} track(s). No metadata was changed.</value></data>
+  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>Loaded Discogs release {0}. Tracks: {1:N0}. No metadata was changed.</value></data>
   <data name="Library.Operation.Discogs.DetailsFailed" xml:space="preserve"><value>Discogs release detail lookup failed.</value></data>
   <data name="Library.Operation.Discogs.MappingCancelled" xml:space="preserve"><value>Discogs track mapping cancelled.</value></data>
   <data name="Library.Operation.Discogs.MappingComplete" xml:space="preserve"><value>Suggested {0:N0} of {1:N0} Discogs file-to-track mappings; {2:N0} need review.</value></data>
@@ -4366,8 +4366,8 @@
   <data name="Library.Operation.Import.Blockers.One" xml:space="preserve"><value>Import preview has {0:N0} blocker. No files were changed.</value></data>
   <data name="Library.Operation.Import.Blockers.Other" xml:space="preserve"><value>Import preview has {0:N0} blockers. No files were changed.</value></data>
   <data name="Library.Operation.Import.Cancelled" xml:space="preserve"><value>Import preview cancelled. No files were changed.</value></data>
-  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>Previewed {0:N0} imported change(s) in {1:N0} file(s). Mapped {2:N0} of {3:N0} row(s).</value></data>
-  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>Previewed {0:N0} imported change(s) in {1:N0} file(s). Mapped {2:N0} of {3:N0} row(s) with {4:N0} warning(s).</value></data>
+  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>Import preview complete. Changes: {0:N0}; files: {1:N0}; matched rows: {2:N0} of {3:N0}.</value></data>
+  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>Import preview complete. Changes: {0:N0}; files: {1:N0}; matched rows: {2:N0} of {3:N0}; warnings: {4:N0}.</value></data>
   <data name="Library.Operation.Import.Failed" xml:space="preserve"><value>Import preview failed.</value></data>
   <data name="Library.Operation.Import.NoRowsMatched" xml:space="preserve"><value>No import rows matched the selected Library scope.</value></data>
   <data name="Library.Operation.MusicBrainz.LookupCancelled" xml:space="preserve"><value>MusicBrainz release lookup cancelled.</value></data>
@@ -4385,7 +4385,7 @@
   <data name="Library.Operation.MusicBrainz.SearchComplete.Other" xml:space="preserve"><value>MusicBrainz found {0:N0} release editions. Choose one and build a file-to-track mapping.</value></data>
   <data name="Library.Operation.MusicBrainz.SearchFailed" xml:space="preserve"><value>MusicBrainz release search failed.</value></data>
   <data name="Library.Operation.NoFiles" xml:space="preserve"><value>The selected Library scope contains no files.</value></data>
-  <data name="Library.Operation.PendingReverted" xml:space="preserve"><value>Pending preview reverted. No files were changed.</value></data>
+  <data name="Library.Operation.PendingReverted" xml:space="preserve"><value>Pending preview discarded. No files were changed.</value></data>
   <data name="Library.Operation.Playlist.Blockers.One" xml:space="preserve"><value>Playlist preview has {0:N0} blocker. No output was written.</value></data>
   <data name="Library.Operation.Playlist.Blockers.Other" xml:space="preserve"><value>Playlist preview has {0:N0} blockers. No output was written.</value></data>
   <data name="Library.Operation.Playlist.OutputCancelled" xml:space="preserve"><value>Playlist output cancelled.</value></data>
@@ -4394,10 +4394,10 @@
   <data name="Library.Operation.Playlist.PreviewFailed" xml:space="preserve"><value>Playlist preview failed.</value></data>
   <data name="Library.Operation.Playlist.Ready.One" xml:space="preserve"><value>Previewed {0:N0} playlist file. Review the destination before applying.</value></data>
   <data name="Library.Operation.Playlist.Ready.Other" xml:space="preserve"><value>Previewed {0:N0} playlist files. Review the destinations before applying.</value></data>
-  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>Wrote {0:N0} playlist file(s) with {1:N0} track reference(s).</value></data>
-  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>Previewed {0:N0} file(s) with {1:N0} blocker(s). No files were changed.</value></data>
+  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>Playlist output written. Files: {0:N0}; track references: {1:N0}.</value></data>
+  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>Preview complete. Files: {0:N0}; blockers: {1:N0}. No files were changed.</value></data>
   <data name="Library.Operation.PreviewCancelled" xml:space="preserve"><value>Preview cancelled. No files were changed.</value></data>
-  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>Previewed {0:N0} change(s) in {1:N0} of {2:N0} file(s).</value></data>
+  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>Preview complete. Changes: {0:N0}; affected files: {1:N0} of {2:N0}.</value></data>
   <data name="Library.Operation.PreviewFailed" xml:space="preserve"><value>Preview failed.</value></data>
   <data name="Library.Operation.PreviewInvalidated" xml:space="preserve"><value>Operation or scope changed. Preview authoritative metadata again.</value></data>
   <data name="Library.Operation.Report.Blockers.One" xml:space="preserve"><value>Report preview has {0:N0} blocker. No output was written.</value></data>
@@ -4408,7 +4408,7 @@
   <data name="Library.Operation.Report.PreviewFailed" xml:space="preserve"><value>Report preview failed.</value></data>
   <data name="Library.Operation.Report.Ready.One" xml:space="preserve"><value>Previewed {0:N0} report file. Review the destination before applying.</value></data>
   <data name="Library.Operation.Report.Ready.Other" xml:space="preserve"><value>Previewed {0:N0} report files. Review the destinations before applying.</value></data>
-  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>Wrote {0:N0} report file(s) with {1:N0} row(s).</value></data>
+  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>Report output written. Files: {0:N0}; rows: {1:N0}.</value></data>
   <data name="Library.Operation.Restore.Cancelled" xml:space="preserve"><value>Restore cancelled. Any completed restores remain recoverable.</value></data>
   <data name="Library.Operation.Restore.Complete.One" xml:space="preserve"><value>Restored {0:N0} file from the latest metadata operation.</value></data>
   <data name="Library.Operation.Restore.Complete.Other" xml:space="preserve"><value>Restored {0:N0} files from the latest metadata operation.</value></data>
@@ -4418,13 +4418,13 @@
   <data name="Library.OperationName.DiscogsMetadata" xml:space="preserve"><value>Discogs: {0}</value></data>
   <data name="Library.OperationName.ImportMetadata" xml:space="preserve"><value>Import metadata from {0}</value></data>
   <data name="Library.OperationName.MusicBrainzMetadata" xml:space="preserve"><value>MusicBrainz: {0}</value></data>
-  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>Paste {0} values for {1:N0} file(s)</value></data>
+  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>Paste values for {0}; files: {1:N0}</value></data>
   <data name="Library.OperationName.RemoveAllArtwork" xml:space="preserve"><value>Remove all artwork</value></data>
   <data name="Library.OperationName.RemoveFrontCover" xml:space="preserve"><value>Remove front cover</value></data>
   <data name="Library.OperationName.ReplaceFrontCover" xml:space="preserve"><value>Replace front cover</value></data>
-  <data name="Library.OperationName.RepresentativePreview" xml:space="preserve"><value>Draft representative preview</value></data>
-  <data name="Library.Picker.ArtworkImages" xml:space="preserve"><value>Artwork images</value></data>
-  <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>Delimited metadata</value></data>
+  <data name="Library.OperationName.RepresentativePreview" xml:space="preserve"><value>Representative preview</value></data>
+  <data name="Library.Picker.ArtworkImages" xml:space="preserve"><value>Choose artwork images</value></data>
+  <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>Choose a delimited metadata file</value></data>
   <data name="Library.Picker.ExternalToolDirectory" xml:space="preserve"><value>Choose external tool working directory</value></data>
   <data name="Library.Picker.ExternalToolExecutable" xml:space="preserve"><value>Choose external tool executable</value></data>
   <data name="Library.Picker.FrontCover" xml:space="preserve"><value>Choose front-cover artwork</value></data>
@@ -4986,15 +4986,15 @@
   <data name="Inspector.View.UnverifiedValue" xml:space="preserve"><value>Current value not verified across all selected tracks.</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Contains" xml:space="preserve"><value>Contains</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Equals" xml:space="preserve"><value>Equals</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.GreaterThan" xml:space="preserve"><value>Greater Than</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.GreaterThan" xml:space="preserve"><value>Greater than</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.GreaterThanOrEqual" xml:space="preserve"><value>Greater Than Or Equal</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.LessThan" xml:space="preserve"><value>Less Than</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.LessThan" xml:space="preserve"><value>Less than</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.LessThanOrEqual" xml:space="preserve"><value>Less Than Or Equal</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.MatchesRegularExpression" xml:space="preserve"><value>Matches Regular Expression</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Missing" xml:space="preserve"><value>Missing</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Present" xml:space="preserve"><value>Present</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.CustomMetadata" xml:space="preserve"><value>Custom Metadata</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.KnownMetadata" xml:space="preserve"><value>Known Metadata</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.CustomMetadata" xml:space="preserve"><value>Custom metadata</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.KnownMetadata" xml:space="preserve"><value>Known metadata</value></data>
   <data name="Library.VisualFilter.Choice.FieldKind.Technical" xml:space="preserve"><value>Technical</value></data>
   <data name="Library.VisualFilter.Choice.RootMode.All" xml:space="preserve"><value>All</value></data>
   <data name="Library.VisualFilter.Choice.RootMode.Any" xml:space="preserve"><value>Any</value></data>

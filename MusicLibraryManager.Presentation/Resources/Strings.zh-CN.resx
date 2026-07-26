@@ -1181,13 +1181,13 @@
     <value>健康状况（请先加载媒体库配置）</value>
   </data>
   <data name="Library.Title" xml:space="preserve">
-    <value>库</value>
+    <value>媒体库</value>
   </data>
   <data name="Library.Subtitle" xml:space="preserve">
     <value>即使音乐文件夹处于离线状态，也可立即浏览缓存。</value>
   </data>
   <data name="Library.Action.Index" xml:space="preserve">
-    <value>索引 库</value>
+    <value>为媒体库编制索引</value>
   </data>
   <data name="Library.Action.Inspector" xml:space="preserve">
     <value>检查器</value>
@@ -1196,10 +1196,10 @@
     <value>显示或隐藏元数据检查器</value>
   </data>
   <data name="Library.Action.HideInspector" xml:space="preserve">
-    <value>隐藏 检查器</value>
+    <value>隐藏检查器</value>
   </data>
   <data name="Library.Action.InspectorUnsaved" xml:space="preserve">
-    <value>检查器 (未保存)</value>
+    <value>检查器（有待处理编辑）</value>
   </data>
   <data name="Library.Action.More" xml:space="preserve">
     <value>更多</value>
@@ -1214,10 +1214,10 @@
     <value>在工作台中打开所选文件</value>
   </data>
   <data name="Library.Action.CancelIndexing" xml:space="preserve">
-    <value>取消 正在索引</value>
+    <value>取消索引</value>
   </data>
   <data name="Library.Action.CancelLoading" xml:space="preserve">
-    <value>取消 正在加载</value>
+    <value>取消加载</value>
   </data>
   <data name="Library.Filter.Placeholder" xml:space="preserve">
     <value>筛选或使用语法，例如 Artist:Name AND NOT Codec:MP3</value>
@@ -1235,22 +1235,22 @@
     <value>显示筛选语法帮助</value>
   </data>
   <data name="Library.Filter.HelpAutomation" xml:space="preserve">
-    <value>筛选器语法 帮助</value>
+    <value>筛选器语法帮助</value>
   </data>
   <data name="Library.Filter.ClearHealthTooltip" xml:space="preserve">
-    <value>清除 健康状况 筛选器</value>
+    <value>清除健康状况筛选器</value>
   </data>
   <data name="Library.Toolbar.Columns" xml:space="preserve">
     <value>列</value>
   </data>
   <data name="Library.Toolbar.SavedViews" xml:space="preserve">
-    <value>已保存 视图</value>
+    <value>已保存的视图</value>
   </data>
   <data name="Library.Toolbar.VisualFilter" xml:space="preserve">
-    <value>可视化 筛选器</value>
+    <value>可视筛选器</value>
   </data>
   <data name="Library.Toolbar.ClearVisualFilter" xml:space="preserve">
-    <value>清除 可视化 筛选器</value>
+    <value>清除可视筛选器</value>
   </data>
   <data name="Library.Toolbar.Operations" xml:space="preserve">
     <value>操作</value>
@@ -1274,13 +1274,13 @@
     <value>关闭列选择器</value>
   </data>
   <data name="Library.Columns.MetadataColumns" xml:space="preserve">
-    <value>元数据 列</value>
+    <value>元数据列</value>
   </data>
   <data name="Library.Columns.LabelPlaceholder" xml:space="preserve">
-    <value>列 标签</value>
+    <value>列标签</value>
   </data>
   <data name="Library.Columns.KnownFieldPlaceholder" xml:space="preserve">
-    <value>已知 元数据 字段</value>
+    <value>已知元数据字段</value>
   </data>
   <data name="Library.Columns.CustomFieldPlaceholder" xml:space="preserve">
     <value>原生自定义字段名称</value>
@@ -1292,10 +1292,10 @@
     <value>新建</value>
   </data>
   <data name="Library.Columns.Action.Save" xml:space="preserve">
-    <value>保存 列</value>
+    <value>保存列</value>
   </data>
   <data name="Library.SavedViews.Title" xml:space="preserve">
-    <value>已保存 视图</value>
+    <value>已保存的视图</value>
   </data>
   <data name="Library.SavedViews.CloseTooltip" xml:space="preserve">
     <value>关闭已保存视图</value>
@@ -1316,19 +1316,19 @@
     <value>新保存视图的名称</value>
   </data>
   <data name="Library.SavedViews.Action.Save" xml:space="preserve">
-    <value>保存 视图</value>
+    <value>保存视图</value>
   </data>
   <data name="Library.SavedViews.Action.Delete" xml:space="preserve">
     <value>删除所选视图</value>
   </data>
   <data name="Library.VisualFilter.Title" xml:space="preserve">
-    <value>可视化 筛选器</value>
+    <value>可视筛选器</value>
   </data>
   <data name="Library.VisualFilter.MatchMode" xml:space="preserve">
     <value>匹配方式</value>
   </data>
   <data name="Library.VisualFilter.Comparison" xml:space="preserve">
-    <value>比较</value>
+    <value>比较方式</value>
   </data>
   <data name="Library.VisualFilter.Value" xml:space="preserve">
     <value>值</value>
@@ -1340,7 +1340,7 @@
     <value>组号相同的条件使用 AND 组合。根模式用于组合带编号的组。</value>
   </data>
   <data name="Library.VisualFilter.Action.AddCondition" xml:space="preserve">
-    <value>添加 条件</value>
+    <value>添加条件</value>
   </data>
   <data name="Library.VisualFilter.FieldPlaceholder" xml:space="preserve">
     <value>技术或文件字段</value>
@@ -1352,7 +1352,7 @@
     <value>反转此条件</value>
   </data>
   <data name="Library.VisualFilter.Action.Apply" xml:space="preserve">
-    <value>应用 可视化 筛选器</value>
+    <value>应用可视筛选器</value>
   </data>
   <data name="Library.FilterHelp.Title" xml:space="preserve">
     <value>筛选器语法</value>
@@ -1361,28 +1361,28 @@
     <value>使用普通文本搜索所有可见的元数据。使用 Field:Value 指定字段，使用引号指定短语，并使用 AND、OR 或 NOT 组合搜索词。</value>
   </data>
   <data name="Library.Operations.Title" xml:space="preserve">
-    <value>库 操作 和 输出</value>
+    <value>媒体库操作和输出</value>
   </data>
   <data name="Library.Operations.Description" xml:space="preserve">
-    <value>应用 类型 操作, 报告, 和 播放列表 到 一个 显式 库 范围.</value>
+    <value>将类型明确的操作、报告和播放列表应用于明确选择的媒体库范围。</value>
   </data>
   <data name="Library.Operations.Action.UndoMetadata" xml:space="preserve">
-    <value>撤销 元数据</value>
+    <value>撤销元数据更改</value>
   </data>
   <data name="Library.Operations.Action.RedoPreview" xml:space="preserve">
-    <value>重做 预览</value>
+    <value>重做预览</value>
   </data>
   <data name="Library.Operations.Action.RepeatRecipe" xml:space="preserve">
-    <value>重复 方案</value>
+    <value>重复配方</value>
   </data>
   <data name="Library.Operations.RecipePlaceholder" xml:space="preserve">
-    <value>个人 方案</value>
+    <value>个人配方</value>
   </data>
   <data name="Library.Operations.Action.Load" xml:space="preserve">
     <value>加载</value>
   </data>
   <data name="Library.Operations.CloseTooltip" xml:space="preserve">
-    <value>关闭 库 操作</value>
+    <value>关闭媒体库操作</value>
   </data>
   <data name="Library.Operations.Scope" xml:space="preserve">
     <value>范围</value>
@@ -1394,25 +1394,25 @@
     <value>字段</value>
   </data>
   <data name="Library.Operations.DestinationField" xml:space="preserve">
-    <value>目标 字段</value>
+    <value>目标字段</value>
   </data>
   <data name="Library.Operations.SecondSourceField" xml:space="preserve">
-    <value>第二 源 字段</value>
+    <value>第二个源字段</value>
   </data>
   <data name="Library.Operations.Value" xml:space="preserve">
     <value>值</value>
   </data>
   <data name="Library.Operations.AssignmentPlaceholder" xml:space="preserve">
-    <value>分配 值</value>
+    <value>赋值</value>
   </data>
   <data name="Library.Operations.Find" xml:space="preserve">
     <value>查找</value>
   </data>
   <data name="Library.Operations.FindPlaceholder" xml:space="preserve">
-    <value>文本 或 正则 表达式</value>
+    <value>文本或正则表达式</value>
   </data>
   <data name="Library.Operations.ReplaceWith" xml:space="preserve">
-    <value>替换 带</value>
+    <value>替换为</value>
   </data>
   <data name="Library.Operations.Case" xml:space="preserve">
     <value>大小写</value>
@@ -1421,52 +1421,52 @@
     <value>分隔符</value>
   </data>
   <data name="Library.Operations.ValueOrder" xml:space="preserve">
-    <value>值 顺序</value>
+    <value>值顺序</value>
   </data>
   <data name="Library.Operations.PathComponent" xml:space="preserve">
-    <value>路径 组件</value>
+    <value>路径组成部分</value>
   </data>
   <data name="Library.Operations.ParentLevel" xml:space="preserve">
-    <value>父级 级别</value>
+    <value>父级</value>
   </data>
   <data name="Library.Operations.ExtractionPattern" xml:space="preserve">
-    <value>可选 提取 模式</value>
+    <value>可选提取模式</value>
   </data>
   <data name="Library.Operations.ExtractionPlaceholder" xml:space="preserve">
     <value>包含命名捕获组的正则表达式</value>
   </data>
   <data name="Library.Operations.CaptureGroup" xml:space="preserve">
-    <value>捕获 组</value>
+    <value>捕获组</value>
   </data>
   <data name="Library.Operations.RegularExpression" xml:space="preserve">
-    <value>正则 表达式</value>
+    <value>正则表达式</value>
   </data>
   <data name="Library.Operations.SequenceStart" xml:space="preserve">
-    <value>序列 开始</value>
+    <value>序列起始值</value>
   </data>
   <data name="Library.Operations.SequencePaddingTooltip" xml:space="preserve">
-    <value>序列 填充</value>
+    <value>序列补零</value>
   </data>
   <data name="Library.Operations.Condition" xml:space="preserve">
     <value>条件</value>
   </data>
   <data name="Library.Operations.ConditionValuePlaceholder" xml:space="preserve">
-    <value>条件 值</value>
+    <value>条件值</value>
   </data>
   <data name="Library.Operations.EmptyImportTooltip" xml:space="preserve">
-    <value>如何 空 导入 单元格 是 已处理</value>
+    <value>空白导入单元格的处理方式</value>
   </data>
   <data name="Library.Operations.Action.ImportCsv" xml:space="preserve">
     <value>导入 CSV/TSV</value>
   </data>
   <data name="Library.Operations.Action.CopyField" xml:space="preserve">
-    <value>复制 字段</value>
+    <value>复制字段</value>
   </data>
   <data name="Library.Operations.CopyFieldTooltip" xml:space="preserve">
-    <value>复制 该 已选择 字段 标识 和 顺序 值 从 该 第一个 文件 在 范围</value>
+    <value>从范围内的第一个文件复制所选字段的标识和有序值</value>
   </data>
   <data name="Library.Operations.Action.PastePreview" xml:space="preserve">
-    <value>粘贴 + 预览</value>
+    <value>粘贴并预览</value>
   </data>
   <data name="Library.Operations.PastePreviewTooltip" xml:space="preserve">
     <value>将标签感知或按行分隔的文本粘贴到所选范围</value>
@@ -1475,22 +1475,22 @@
     <value>预览</value>
   </data>
   <data name="Library.Tab.MetadataPreview" xml:space="preserve">
-    <value>元数据 预览</value>
+    <value>元数据预览</value>
   </data>
   <data name="Library.Tab.Files" xml:space="preserve">
     <value>文件</value>
   </data>
   <data name="Library.Tab.AudioMatches" xml:space="preserve">
-    <value>音频 匹配项</value>
+    <value>音频匹配项</value>
   </data>
   <data name="Library.Tab.ReleaseEditions" xml:space="preserve">
-    <value>发行版 版本</value>
+    <value>发行版本</value>
   </data>
   <data name="Library.Tab.DiscogsEditions" xml:space="preserve">
     <value>Discogs 版本</value>
   </data>
   <data name="Library.Tab.TrackMapping" xml:space="preserve">
-    <value>音轨 映射</value>
+    <value>音轨映射</value>
   </data>
   <data name="Library.Tab.Artwork" xml:space="preserve">
     <value>封面</value>
@@ -1505,13 +1505,13 @@
     <value>工具</value>
   </data>
   <data name="Library.MetadataPreview.LiveDraft" xml:space="preserve">
-    <value>实时 代表 草稿</value>
+    <value>代表性预览</value>
   </data>
   <data name="Library.MetadataPreview.Before" xml:space="preserve">
-    <value>之前</value>
+    <value>更改前</value>
   </data>
   <data name="Library.MetadataPreview.After" xml:space="preserve">
-    <value>之后</value>
+    <value>更改后</value>
   </data>
   <data name="Library.Release.ArtistPlaceholder" xml:space="preserve">
     <value>艺术家</value>
@@ -1523,7 +1523,7 @@
     <value>条形码</value>
   </data>
   <data name="Library.Release.CatalogNumberPlaceholder" xml:space="preserve">
-    <value>目录 否.</value>
+    <value>目录编号</value>
   </data>
   <data name="Library.Release.ReleaseIdPlaceholder" xml:space="preserve">
     <value>发行版 ID</value>
@@ -1544,25 +1544,25 @@
     <value>将所选字段添加到普通预览前，请审阅每条文件与音轨的映射建议。</value>
   </data>
   <data name="Library.Release.TrackMappingDescription" xml:space="preserve">
-    <value>审阅 或 替换 建议 之前 预览.</value>
+    <value>预览元数据前，请检查或替换每项文件到音轨的映射建议。</value>
   </data>
   <data name="Library.Release.Action.BuildMapping" xml:space="preserve">
-    <value>构建 映射</value>
+    <value>创建映射</value>
   </data>
   <data name="Library.Release.Action.PreviewMappedMetadata" xml:space="preserve">
-    <value>预览 已映射 元数据</value>
+    <value>预览已映射的元数据</value>
   </data>
   <data name="Library.Release.Action.PreviewCover" xml:space="preserve">
-    <value>预览 封面</value>
+    <value>预览封面</value>
   </data>
   <data name="Library.Release.Field.Titles" xml:space="preserve">
     <value>标题</value>
   </data>
   <data name="Library.Release.Field.TrackArtists" xml:space="preserve">
-    <value>音轨 艺术家</value>
+    <value>音轨艺术家</value>
   </data>
   <data name="Library.Release.Field.AlbumDate" xml:space="preserve">
-    <value>专辑/日期</value>
+    <value>专辑和日期</value>
   </data>
   <data name="Library.Release.Field.Numbering" xml:space="preserve">
     <value>编号</value>
@@ -1571,88 +1571,88 @@
     <value>发行版详细信息</value>
   </data>
   <data name="Library.Release.Field.GenresStyles" xml:space="preserve">
-    <value>流派/风格</value>
+    <value>流派和风格</value>
   </data>
   <data name="Library.Release.Field.DiscogsReleaseId" xml:space="preserve">
     <value>Discogs 发行版 ID</value>
   </data>
   <data name="Library.Artwork.Description" xml:space="preserve">
-    <value>预览 本地 封面 用于 该 当前 库 范围, 或 使用 发行版 封面 用于 已确认 映射.</value>
+    <value>预览当前媒体库范围内的本地封面，或对已确认的映射使用发行版封面。</value>
   </data>
   <data name="Library.Artwork.Action.LocalFrontCover" xml:space="preserve">
-    <value>本地 正面 封面</value>
+    <value>使用本地正面封面</value>
   </data>
   <data name="Library.Artwork.Action.RemoveFront" xml:space="preserve">
-    <value>移除 正面</value>
+    <value>移除正面封面</value>
   </data>
   <data name="Library.Artwork.Action.RemoveAll" xml:space="preserve">
-    <value>移除 全部</value>
+    <value>全部移除</value>
   </data>
   <data name="Library.Artwork.Action.FindRelease" xml:space="preserve">
-    <value>查找 发行版 封面</value>
+    <value>查找发行版封面</value>
   </data>
   <data name="Library.Artwork.Action.PreviewRelease" xml:space="preserve">
-    <value>预览 发行版 封面</value>
+    <value>预览发行版封面</value>
   </data>
   <data name="Library.Reports.NamePlaceholder" xml:space="preserve">
     <value>报告名称</value>
   </data>
   <data name="Library.Reports.OutputPlaceholder" xml:space="preserve">
-    <value>输出 文件 或 文件夹</value>
+    <value>输出文件或文件夹</value>
   </data>
   <data name="Library.Reports.OneFilePerGroup" xml:space="preserve">
-    <value>一个 文件 每 组</value>
+    <value>每组一个文件</value>
   </data>
   <data name="Library.Reports.Action.AddColumn" xml:space="preserve">
-    <value>添加 列</value>
+    <value>添加列</value>
   </data>
   <data name="Library.Reports.Action.AddCustom" xml:space="preserve">
-    <value>添加 自定义</value>
+    <value>添加自定义字段</value>
   </data>
   <data name="Library.Reports.Action.MoveUp" xml:space="preserve">
-    <value>移动 设置</value>
+    <value>上移</value>
   </data>
   <data name="Library.Reports.Action.MoveDown" xml:space="preserve">
-    <value>移动 向下</value>
+    <value>下移</value>
   </data>
   <data name="Library.Reports.GroupByPlaceholder" xml:space="preserve">
-    <value>组 按</value>
+    <value>分组依据</value>
   </data>
   <data name="Library.Reports.SortByPlaceholder" xml:space="preserve">
-    <value>排序 按</value>
+    <value>排序依据</value>
   </data>
   <data name="Library.Reports.Descending" xml:space="preserve">
     <value>降序</value>
   </data>
   <data name="Library.Reports.Action.Preview" xml:space="preserve">
-    <value>预览 报告</value>
+    <value>预览报告</value>
   </data>
   <data name="Library.Reports.Action.Write" xml:space="preserve">
-    <value>写入 已审阅 报告</value>
+    <value>写入已审核的报告</value>
   </data>
   <data name="Library.Playlists.NamePlaceholder" xml:space="preserve">
     <value>播放列表名称</value>
   </data>
   <data name="Library.Playlists.OutputPlaceholder" xml:space="preserve">
-    <value>输出 文件 或 文件夹</value>
+    <value>输出文件或文件夹</value>
   </data>
   <data name="Library.Playlists.IncludeExtendedInfo" xml:space="preserve">
-    <value>包括 扩展 音轨 信息</value>
+    <value>包括扩展音轨信息</value>
   </data>
   <data name="Library.Playlists.OnePerGroup" xml:space="preserve">
-    <value>一个 播放列表 每 元数据 组</value>
+    <value>每个元数据组一个播放列表</value>
   </data>
   <data name="Library.Playlists.Description" xml:space="preserve">
-    <value>播放列表 顺序 跟随 该 已选择 库 范围. 预览 读取 当前 元数据 从 磁盘 和 记录 可恢复 输出.</value>
+    <value>播放列表顺序与所选媒体库范围一致。预览会从磁盘读取当前元数据，并记录可恢复的输出。</value>
   </data>
   <data name="Library.Playlists.Action.Preview" xml:space="preserve">
-    <value>预览 播放列表</value>
+    <value>预览播放列表</value>
   </data>
   <data name="Library.Playlists.Action.Write" xml:space="preserve">
-    <value>写入 已审阅 播放列表</value>
+    <value>写入已审核的播放列表</value>
   </data>
   <data name="Library.Tools.SavedPlaceholder" xml:space="preserve">
-    <value>已保存 个人 工具</value>
+    <value>已保存的个人工具</value>
   </data>
   <data name="Library.Tools.Action.Load" xml:space="preserve">
     <value>加载</value>
@@ -1673,52 +1673,52 @@
     <value>可执行文件路径或命令名称</value>
   </data>
   <data name="Library.Tools.Action.BrowseExecutable" xml:space="preserve">
-    <value>浏览 可执行文件</value>
+    <value>选择可执行文件</value>
   </data>
   <data name="Library.Tools.WorkingDirectoryPlaceholder" xml:space="preserve">
     <value>可选的工作目录或 {Directory}</value>
   </data>
   <data name="Library.Tools.Action.BrowseFolder" xml:space="preserve">
-    <value>浏览 文件夹</value>
+    <value>选择文件夹</value>
   </data>
   <data name="Library.Tools.ArgumentsDescription" xml:space="preserve">
     <value>每行输入一个参数。支持的占位符：{Files}、{File}、{Directory}、{FileName}、{FileNameWithoutExtension}、{Extension}、{Index} 和 {Count}。</value>
   </data>
   <data name="Library.Tools.Warning" xml:space="preserve">
-    <value>外部工具 运行 不带 一个 外壳 但是 保留 外部 应用程序 恢复. 正在运行 始终 需要 确认.</value>
+    <value>外部工具不通过命令解释器运行，但仍不在应用程序恢复范围内。每次运行均需确认。</value>
   </data>
   <data name="Library.Tools.Action.Preview" xml:space="preserve">
-    <value>预览 工具</value>
+    <value>预览工具</value>
   </data>
   <data name="Library.Tools.Action.Run" xml:space="preserve">
-    <value>运行 已审阅 工具</value>
+    <value>运行工具</value>
   </data>
   <data name="Library.Audio.Action.Find" xml:space="preserve">
-    <value>查找 按 音频</value>
+    <value>按指纹查找</value>
   </data>
   <data name="Library.Audio.Action.PreviewIds" xml:space="preserve">
-    <value>预览 已选择 ID</value>
+    <value>预览所选 ID</value>
   </data>
   <data name="Library.Audio.Action.FindReleases" xml:space="preserve">
-    <value>查找 发行版</value>
+    <value>查找发行版</value>
   </data>
   <data name="Library.Audio.Action.ApplyPreview" xml:space="preserve">
-    <value>应用 预览</value>
+    <value>应用预览</value>
   </data>
   <data name="Library.PendingChanges.Title" xml:space="preserve">
     <value>待处理更改</value>
   </data>
   <data name="Library.PendingChanges.Description" xml:space="preserve">
-    <value>每个 已暂存 或 已审阅 元数据 编辑 该 应用 将 验证 之前 写入.</value>
+    <value>“应用”将在写入前验证每项已暂存或已审核的元数据编辑。</value>
   </data>
   <data name="Library.PendingChanges.CountLabel" xml:space="preserve">
-    <value>待处理编辑</value>
+    <value>项待处理更改</value>
   </data>
   <data name="Library.PendingChanges.CloseTooltip" xml:space="preserve">
-    <value>关闭 待处理更改</value>
+    <value>关闭待处理更改</value>
   </data>
   <data name="Library.PendingChanges.Automation" xml:space="preserve">
-    <value>库 待处理更改</value>
+    <value>媒体库待处理更改</value>
   </data>
   <data name="Library.PendingChanges.EmptyTitle" xml:space="preserve">
     <value>没有待处理更改</value>
@@ -1732,10 +1732,10 @@
     <value>应用</value>
   </data>
   <data name="Library.Action.CopyPaths" xml:space="preserve">
-    <value>复制 路径</value>
+    <value>复制路径</value>
   </data>
   <data name="Library.Action.Reveal" xml:space="preserve">
-    <value>显示</value>
+    <value>在文件管理器中显示</value>
   </data>
   <data name="Library.Action.Reindex" xml:space="preserve">
     <value>重新索引</value>
@@ -4262,24 +4262,24 @@
   <data name="Library.Artwork.Bytes.One" xml:space="preserve"><value>{0:N0} 字节</value></data>
   <data name="Library.Artwork.Bytes.Other" xml:space="preserve"><value>{0:N0} 字节</value></data>
   <data name="Library.Artwork.Cached" xml:space="preserve"><value>已缓存</value></data>
-  <data name="Library.Artwork.ThumbnailFailed" xml:space="preserve"><value>缩略图 不可用</value></data>
+  <data name="Library.Artwork.ThumbnailFailed" xml:space="preserve"><value>缩略图不可用</value></data>
   <data name="Library.Choice.FilterMode.Substring" xml:space="preserve"><value>包含</value></data>
-  <data name="Library.Choice.FilterMode.Glob" xml:space="preserve"><value>通配符</value></data>
-  <data name="Library.Choice.FilterMode.Regex" xml:space="preserve"><value>正则 表达式</value></data>
-  <data name="Library.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>忽略 空 单元格</value></data>
-  <data name="Library.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>移除 该 字段</value></data>
-  <data name="Library.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>保留 一个 空 值</value></data>
+  <data name="Library.Choice.FilterMode.Glob" xml:space="preserve"><value>通配符（glob）</value></data>
+  <data name="Library.Choice.FilterMode.Regex" xml:space="preserve"><value>正则表达式</value></data>
+  <data name="Library.Choice.ImportEmptyCellMode.Ignore" xml:space="preserve"><value>忽略空白单元格</value></data>
+  <data name="Library.Choice.ImportEmptyCellMode.RemoveField" xml:space="preserve"><value>移除字段</value></data>
+  <data name="Library.Choice.ImportEmptyCellMode.PreserveEmptyValue" xml:space="preserve"><value>保留空值</value></data>
   <data name="Library.Choice.OperationScope.SelectedTracks" xml:space="preserve"><value>所选音轨</value></data>
-  <data name="Library.Choice.OperationScope.SelectedAlbums" xml:space="preserve"><value>已选择 专辑</value></data>
-  <data name="Library.Choice.OperationScope.VisibleFilteredResults" xml:space="preserve"><value>可见 筛选器 结果</value></data>
-  <data name="Library.Choice.OperationScope.CompleteLibrary" xml:space="preserve"><value>完成 库</value></data>
-  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>是否运行“{0}”{1:N0} 次？外部工具可能会更改文件，且不在 MusicLibraryManager 恢复范围内。</value></data>
-  <data name="Library.Dialog.ExternalTool.Title" xml:space="preserve"><value>运行 外部 工具?</value></data>
-  <data name="Library.Dialog.Leave.Confirm" xml:space="preserve"><value>保留</value></data>
-  <data name="Library.Dialog.Leave.Message" xml:space="preserve"><value>该 已审阅 操作 或 报告 保留 可用 在 此 库 会话, 但是 有 不 已经 已应用.</value></data>
-  <data name="Library.Dialog.Leave.Title" xml:space="preserve"><value>保留 该 库 操作?</value></data>
-  <data name="Library.Dialog.Restore.Message" xml:space="preserve"><value>当前 文件 将 为 已替换 按 该 已保留 原始. 冲突 备份 是 已创建 当 必需.</value></data>
-  <data name="Library.Dialog.Restore.Title" xml:space="preserve"><value>还原 该 最新 元数据 操作?</value></data>
+  <data name="Library.Choice.OperationScope.SelectedAlbums" xml:space="preserve"><value>所选专辑</value></data>
+  <data name="Library.Choice.OperationScope.VisibleFilteredResults" xml:space="preserve"><value>可见的筛选结果</value></data>
+  <data name="Library.Choice.OperationScope.CompleteLibrary" xml:space="preserve"><value>整个媒体库</value></data>
+  <data name="Library.Dialog.ExternalTool.Message" xml:space="preserve"><value>是否运行“{0}”？计划调用次数：{1:N0}。外部工具可能会更改文件，且不在 MusicLibraryManager 的恢复范围内。</value></data>
+  <data name="Library.Dialog.ExternalTool.Title" xml:space="preserve"><value>是否运行外部工具？</value></data>
+  <data name="Library.Dialog.Leave.Confirm" xml:space="preserve"><value>离开</value></data>
+  <data name="Library.Dialog.Leave.Message" xml:space="preserve"><value>已审核的操作或报告仍会保留在此媒体库会话中，但尚未应用。</value></data>
+  <data name="Library.Dialog.Leave.Title" xml:space="preserve"><value>是否离开媒体库操作？</value></data>
+  <data name="Library.Dialog.Restore.Message" xml:space="preserve"><value>当前文件将由保留的原始文件替换。必要时会创建冲突备份。</value></data>
+  <data name="Library.Dialog.Restore.Title" xml:space="preserve"><value>是否恢复最近一次元数据操作？</value></data>
   <data name="Library.Empty.Default.Message" xml:space="preserve"><value>请调整此视图或重新加载媒体库。</value></data>
   <data name="Library.Empty.Default.Title" xml:space="preserve"><value>没有可显示的音轨</value></data>
   <data name="Library.Empty.Error.Action" xml:space="preserve"><value>重试</value></data>
@@ -4296,165 +4296,165 @@
   <data name="Library.Empty.NotIndexed.Action" xml:space="preserve"><value>为媒体库编制索引</value></data>
   <data name="Library.Empty.NotIndexed.Message" xml:space="preserve"><value>为已配置的音乐文件夹编制索引，以填充媒体库缓存。</value></data>
   <data name="Library.Empty.NotIndexed.Title" xml:space="preserve"><value>此媒体库尚未编制索引</value></data>
-  <data name="Library.Error.ChooseDiscogsRelease" xml:space="preserve"><value>选择 一个 Discogs 发行版.</value></data>
-  <data name="Library.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>选择 一个 MusicBrainz 发行版.</value></data>
-  <data name="Library.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs 是 不可用.</value></data>
-  <data name="Library.FileOperation.MetadataEditsPending" xml:space="preserve"><value>应用 或 放弃 该 当前 元数据 编辑 之前 移动 文件.</value></data>
-  <data name="Library.Filter.Invalid" xml:space="preserve"><value>该 筛选器 是 无效.</value></data>
-  <data name="Library.HealthFilter.Tracks.One" xml:space="preserve"><value>健康状况 结果: {0:N0} 音轨</value></data>
-  <data name="Library.HealthFilter.Tracks.Other" xml:space="preserve"><value>健康状况 结果: {0:N0} 音轨</value></data>
-  <data name="Library.Operation.Apply.Blocked" xml:space="preserve"><value>待处理更改 无法 为 已应用.</value></data>
-  <data name="Library.Operation.Apply.Cancelled" xml:space="preserve"><value>应用 已取消. 已完成 变更 保留 可用 通过 操作 恢复.</value></data>
-  <data name="Library.Operation.Apply.Complete.One" xml:space="preserve"><value>已应用 {0:N0} 文件. 原始 是 可用 通过 操作 恢复.</value></data>
-  <data name="Library.Operation.Apply.Complete.Other" xml:space="preserve"><value>已应用 {0:N0} 文件. 原始 是 可用 通过 操作 恢复.</value></data>
-  <data name="Library.Operation.Apply.Failed" xml:space="preserve"><value>应用 已停止 安全地.</value></data>
-  <data name="Library.Operation.Apply.NoApplicable" xml:space="preserve"><value>该 待处理 编辑 生成 否 适用 文件 更改.</value></data>
-  <data name="Library.Operation.Apply.NoPending" xml:space="preserve"><value>那里 是 否 待处理 元数据 更改 到 应用.</value></data>
-  <data name="Library.Operation.Artwork.Blockers.One" xml:space="preserve"><value>封面 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Artwork.Blockers.Other" xml:space="preserve"><value>封面 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Artwork.PreviewCancelled" xml:space="preserve"><value>封面 预览 已取消.</value></data>
-  <data name="Library.Operation.Artwork.PreviewFailed" xml:space="preserve"><value>封面 预览 失败.</value></data>
-  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>已预览 {1:N0} 个文件中 {0:N0} 个文件的封面更改。未更改任何文件。</value></data>
-  <data name="Library.Operation.Artwork.ReleaseReady" xml:space="preserve"><value>该 已选择 正面 封面 曾是 已添加 到 该 正常 元数据 预览. 审阅 每个 封面 更改 之前 正在应用.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryCancelled" xml:space="preserve"><value>音频 指纹 发现 已取消.</value></data>
-  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>指纹搜索：{0:N0} 个文件、{1:N0} 个候选项、{2:N0} 个警告。</value></data>
-  <data name="Library.Operation.Audio.DiscoveryFailed" xml:space="preserve"><value>音频 指纹 发现 失败.</value></data>
-  <data name="Library.Operation.Audio.IdentifierPreviewCancelled" xml:space="preserve"><value>音频 标识符 预览 已取消.</value></data>
-  <data name="Library.Operation.Audio.IdentifierPreviewFailed" xml:space="preserve"><value>音频 标识符 预览 失败.</value></data>
-  <data name="Library.Operation.Audio.IdentifiersReady" xml:space="preserve"><value>音频 标识符 曾是 已添加 到 该 正常 元数据 预览. 审阅 之前 正在应用.</value></data>
-  <data name="Library.Operation.Choose" xml:space="preserve"><value>选择 一个 操作 和 范围, 然后 预览 权威 元数据 从 磁盘.</value></data>
-  <data name="Library.Operation.Clipboard.Blockers.One" xml:space="preserve"><value>剪贴板 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Clipboard.Blockers.Other" xml:space="preserve"><value>剪贴板 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Clipboard.Cancelled" xml:space="preserve"><value>剪贴板 预览 已取消. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>已预览 {1:N0} 个文件中的 {0:N0} 个粘贴更改。</value></data>
-  <data name="Library.Operation.Clipboard.Failed" xml:space="preserve"><value>剪贴板 预览 失败.</value></data>
-  <data name="Library.Operation.Clipboard.NoText" xml:space="preserve"><value>该 剪贴板 执行 不 包含 文本 元数据.</value></data>
-  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>已从 {2} 复制 {0:N0} 个有序的 {1} 值，并保留标签标识。</value></data>
-  <data name="Library.Operation.Copy.NoMetadata" xml:space="preserve"><value>该 已选择 库 范围 包含 否 已缓存 元数据 到 复制.</value></data>
-  <data name="Library.Operation.CoverArt.Cancelled" xml:space="preserve"><value>Cover Art Archive 查找 已取消.</value></data>
-  <data name="Library.Operation.CoverArt.Failed" xml:space="preserve"><value>Cover Art Archive 查找 失败.</value></data>
-  <data name="Library.Operation.CoverArt.Loaded.One" xml:space="preserve"><value>已加载 {0:N0} 封面 候选项. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.CoverArt.Loaded.Other" xml:space="preserve"><value>已加载 {0:N0} 封面 候选项. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.CoverArt.None" xml:space="preserve"><value>此 发行版 有 否 Cover Art Archive 图像.</value></data>
-  <data name="Library.Operation.Discogs.ArtworkCancelled" xml:space="preserve"><value>Discogs 封面 预览 已取消.</value></data>
-  <data name="Library.Operation.Discogs.ArtworkFailed" xml:space="preserve"><value>Discogs 封面 预览 失败.</value></data>
-  <data name="Library.Operation.Discogs.ArtworkReady" xml:space="preserve"><value>该 已选择 Discogs 封面 曾是 已添加 到 该 正常 封面 预览. 审阅 每个 更改 之前 正在应用.</value></data>
-  <data name="Library.Operation.Discogs.DetailsCancelled" xml:space="preserve"><value>Discogs 发行版 详细信息 查找 已取消.</value></data>
-  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>已加载 Discogs 发行版 {0}，其中包含 {1:N0} 个音轨。未更改元数据。</value></data>
-  <data name="Library.Operation.Discogs.DetailsFailed" xml:space="preserve"><value>Discogs 发行版 详细信息 查找 失败.</value></data>
-  <data name="Library.Operation.Discogs.MappingCancelled" xml:space="preserve"><value>Discogs 音轨 映射 已取消.</value></data>
-  <data name="Library.Operation.Discogs.MappingComplete" xml:space="preserve"><value>建议 {0:N0} 的 {1:N0} Discogs 文件到音轨 映射; {2:N0} 需要 审阅.</value></data>
-  <data name="Library.Operation.Discogs.MappingFailed" xml:space="preserve"><value>Discogs 音轨 映射 失败.</value></data>
-  <data name="Library.Operation.Discogs.MetadataCancelled" xml:space="preserve"><value>Discogs 元数据 预览 已取消.</value></data>
-  <data name="Library.Operation.Discogs.MetadataFailed" xml:space="preserve"><value>Discogs 元数据 预览 失败.</value></data>
-  <data name="Library.Operation.Discogs.MetadataReady" xml:space="preserve"><value>已映射 Discogs 字段 曾是 已添加 到 该 正常 元数据 预览. 审阅 每个 更改 之前 正在应用.</value></data>
-  <data name="Library.Operation.Discogs.SearchCancelled" xml:space="preserve"><value>Discogs 发行版 搜索 已取消.</value></data>
+  <data name="Library.Error.ChooseDiscogsRelease" xml:space="preserve"><value>请选择一个 Discogs 发行版。</value></data>
+  <data name="Library.Error.ChooseMusicBrainzRelease" xml:space="preserve"><value>请选择一个 MusicBrainz 发行版。</value></data>
+  <data name="Library.Error.DiscogsUnavailable" xml:space="preserve"><value>Discogs 不可用。</value></data>
+  <data name="Library.FileOperation.MetadataEditsPending" xml:space="preserve"><value>更改文件路径前，请应用或放弃当前元数据编辑。</value></data>
+  <data name="Library.Filter.Invalid" xml:space="preserve"><value>筛选器无效。</value></data>
+  <data name="Library.HealthFilter.Tracks.One" xml:space="preserve"><value>健康状况结果：{0:N0} 个音轨</value></data>
+  <data name="Library.HealthFilter.Tracks.Other" xml:space="preserve"><value>健康状况结果：{0:N0} 个音轨</value></data>
+  <data name="Library.Operation.Apply.Blocked" xml:space="preserve"><value>无法应用待处理的更改。</value></data>
+  <data name="Library.Operation.Apply.Cancelled" xml:space="preserve"><value>应用已取消。已完成的修改仍可通过“操作”恢复功能使用。</value></data>
+  <data name="Library.Operation.Apply.Complete.One" xml:space="preserve"><value>已应用到 {0:N0} 个文件。原始文件可通过“操作”恢复功能使用。</value></data>
+  <data name="Library.Operation.Apply.Complete.Other" xml:space="preserve"><value>已应用到 {0:N0} 个文件。原始文件可通过“操作”恢复功能使用。</value></data>
+  <data name="Library.Operation.Apply.Failed" xml:space="preserve"><value>应用已安全停止。</value></data>
+  <data name="Library.Operation.Apply.NoApplicable" xml:space="preserve"><value>待处理的编辑不会产生可应用的文件更改。</value></data>
+  <data name="Library.Operation.Apply.NoPending" xml:space="preserve"><value>没有要应用的待处理元数据更改。</value></data>
+  <data name="Library.Operation.Artwork.Blockers.One" xml:space="preserve"><value>封面预览有 {0:N0} 个阻止项。未更改任何文件。</value></data>
+  <data name="Library.Operation.Artwork.Blockers.Other" xml:space="preserve"><value>封面预览有 {0:N0} 个阻止项。未更改任何文件。</value></data>
+  <data name="Library.Operation.Artwork.PreviewCancelled" xml:space="preserve"><value>封面预览已取消。</value></data>
+  <data name="Library.Operation.Artwork.PreviewFailed" xml:space="preserve"><value>封面预览失败。</value></data>
+  <data name="Library.Operation.Artwork.Ready" xml:space="preserve"><value>封面预览完成。已预览文件：{0:N0}/{1:N0}。未更改任何文件。</value></data>
+  <data name="Library.Operation.Artwork.ReleaseReady" xml:space="preserve"><value>所选封面已添加到常规元数据预览。应用前请审阅每项封面更改。</value></data>
+  <data name="Library.Operation.Audio.DiscoveryCancelled" xml:space="preserve"><value>音频指纹发现已取消。</value></data>
+  <data name="Library.Operation.Audio.DiscoveryComplete" xml:space="preserve"><value>指纹发现完成。文件：{0:N0}；候选项：{1:N0}；警告：{2:N0}。</value></data>
+  <data name="Library.Operation.Audio.DiscoveryFailed" xml:space="preserve"><value>音频指纹发现失败。</value></data>
+  <data name="Library.Operation.Audio.IdentifierPreviewCancelled" xml:space="preserve"><value>音频标识符预览已取消。</value></data>
+  <data name="Library.Operation.Audio.IdentifierPreviewFailed" xml:space="preserve"><value>音频标识符预览失败。</value></data>
+  <data name="Library.Operation.Audio.IdentifiersReady" xml:space="preserve"><value>音频标识符已添加到常规元数据预览。应用前请审阅。</value></data>
+  <data name="Library.Operation.Choose" xml:space="preserve"><value>请选择操作和范围，然后预览磁盘上的权威元数据。</value></data>
+  <data name="Library.Operation.Clipboard.Blockers.One" xml:space="preserve"><value>剪贴板预览有 {0:N0} 个阻止项。未更改任何文件。</value></data>
+  <data name="Library.Operation.Clipboard.Blockers.Other" xml:space="preserve"><value>剪贴板预览有 {0:N0} 个阻止项。未更改任何文件。</value></data>
+  <data name="Library.Operation.Clipboard.Cancelled" xml:space="preserve"><value>剪贴板预览已取消。未更改任何文件。</value></data>
+  <data name="Library.Operation.Clipboard.Complete" xml:space="preserve"><value>剪贴板预览完成。更改：{0:N0}；文件：{1:N0}。</value></data>
+  <data name="Library.Operation.Clipboard.Failed" xml:space="preserve"><value>剪贴板预览失败。</value></data>
+  <data name="Library.Operation.Clipboard.NoText" xml:space="preserve"><value>剪贴板不包含文本元数据。</value></data>
+  <data name="Library.Operation.Copy.Complete" xml:space="preserve"><value>已复制有序值：{0:N0}；字段：{1}；来源：{2}。标签标识保持不变。</value></data>
+  <data name="Library.Operation.Copy.NoMetadata" xml:space="preserve"><value>所选媒体库范围中没有可复制的缓存元数据。</value></data>
+  <data name="Library.Operation.CoverArt.Cancelled" xml:space="preserve"><value>Cover Art Archive 查找已取消。</value></data>
+  <data name="Library.Operation.CoverArt.Failed" xml:space="preserve"><value>Cover Art Archive 查找失败。</value></data>
+  <data name="Library.Operation.CoverArt.Loaded.One" xml:space="preserve"><value>已加载 {0:N0} 个封面候选项。未更改任何文件。</value></data>
+  <data name="Library.Operation.CoverArt.Loaded.Other" xml:space="preserve"><value>已加载 {0:N0} 个封面候选项。未更改任何文件。</value></data>
+  <data name="Library.Operation.CoverArt.None" xml:space="preserve"><value>此发行版没有 Cover Art Archive 图像。</value></data>
+  <data name="Library.Operation.Discogs.ArtworkCancelled" xml:space="preserve"><value>Discogs 封面预览已取消。</value></data>
+  <data name="Library.Operation.Discogs.ArtworkFailed" xml:space="preserve"><value>Discogs 封面预览失败。</value></data>
+  <data name="Library.Operation.Discogs.ArtworkReady" xml:space="preserve"><value>所选 Discogs 封面已添加到常规封面预览。应用前请审阅每项更改。</value></data>
+  <data name="Library.Operation.Discogs.DetailsCancelled" xml:space="preserve"><value>Discogs 发行版详细信息查找已取消。</value></data>
+  <data name="Library.Operation.Discogs.DetailsComplete" xml:space="preserve"><value>已加载 Discogs 发行版 {0}。音轨：{1:N0}。未更改任何元数据。</value></data>
+  <data name="Library.Operation.Discogs.DetailsFailed" xml:space="preserve"><value>Discogs 发行版详细信息查找失败。</value></data>
+  <data name="Library.Operation.Discogs.MappingCancelled" xml:space="preserve"><value>Discogs 音轨映射已取消。</value></data>
+  <data name="Library.Operation.Discogs.MappingComplete" xml:space="preserve"><value>已建议 {0:N0}/{1:N0} 个 Discogs 文件到音轨映射；{2:N0} 个需要审阅。</value></data>
+  <data name="Library.Operation.Discogs.MappingFailed" xml:space="preserve"><value>Discogs 音轨映射失败。</value></data>
+  <data name="Library.Operation.Discogs.MetadataCancelled" xml:space="preserve"><value>Discogs 元数据预览已取消。</value></data>
+  <data name="Library.Operation.Discogs.MetadataFailed" xml:space="preserve"><value>Discogs 元数据预览失败。</value></data>
+  <data name="Library.Operation.Discogs.MetadataReady" xml:space="preserve"><value>映射的 Discogs 字段已添加到常规元数据预览。应用前请审阅每项更改。</value></data>
+  <data name="Library.Operation.Discogs.SearchCancelled" xml:space="preserve"><value>Discogs 发行版搜索已取消。</value></data>
   <data name="Library.Operation.Discogs.SearchComplete.One" xml:space="preserve"><value>Discogs 找到 {0:N0} 个发行版本。选择它可加载完整的音轨和版本详细信息。</value></data>
   <data name="Library.Operation.Discogs.SearchComplete.Other" xml:space="preserve"><value>Discogs 找到 {0:N0} 个发行版本。选择一个可加载完整的音轨和版本详细信息。</value></data>
-  <data name="Library.Operation.Discogs.SearchFailed" xml:space="preserve"><value>Discogs 发行版 搜索 失败.</value></data>
+  <data name="Library.Operation.Discogs.SearchFailed" xml:space="preserve"><value>Discogs 发行版搜索失败。</value></data>
   <data name="Library.Operation.ExternalTool.Blockers.One" xml:space="preserve"><value>外部工具预览中有 {0:N0} 个阻止项，无法运行任何操作。</value></data>
   <data name="Library.Operation.ExternalTool.Blockers.Other" xml:space="preserve"><value>外部工具预览中有 {0:N0} 个阻止项，无法运行任何操作。</value></data>
-  <data name="Library.Operation.ExternalTool.Cancelled" xml:space="preserve"><value>外部 工具 已取消. 该 活动 进程 曾是 已停止.</value></data>
-  <data name="Library.Operation.ExternalTool.Complete" xml:space="preserve"><value>外部 工具 已完成: {0:N0} 成功, {1:N0} 失败.</value></data>
-  <data name="Library.Operation.ExternalTool.Failed" xml:space="preserve"><value>外部 工具 已停止.</value></data>
-  <data name="Library.Operation.ExternalTool.Ready.One" xml:space="preserve"><value>已预览 {0:N0} 进程 调用. 外部工具 运行 外部 MusicLibraryManager 恢复.</value></data>
-  <data name="Library.Operation.ExternalTool.Ready.Other" xml:space="preserve"><value>已预览 {0:N0} 进程 调用. 外部工具 运行 外部 MusicLibraryManager 恢复.</value></data>
-  <data name="Library.Operation.History.Cancelled" xml:space="preserve"><value>历史记录 预览 已取消. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.History.Failed" xml:space="preserve"><value>历史记录 预览 失败.</value></data>
-  <data name="Library.Operation.History.RedoReady" xml:space="preserve"><value>重做 曾是 已重新生成 针对 该 当前 文件. 审阅 之前 正在应用.</value></data>
-  <data name="Library.Operation.History.RepeatReady" xml:space="preserve"><value>该 最新 方案 曾是 已重新生成 用于 该 当前 库 范围. 审阅 之前 正在应用.</value></data>
-  <data name="Library.Operation.Import.Blockers.One" xml:space="preserve"><value>导入 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Import.Blockers.Other" xml:space="preserve"><value>导入 预览 有 {0:N0} 阻止项. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Import.Cancelled" xml:space="preserve"><value>导入 预览 已取消. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>已预览 {1:N0} 个文件中的 {0:N0} 个导入更改。已映射 {3:N0} 行中的 {2:N0} 行。</value></data>
-  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>已预览 {1:N0} 个文件中的 {0:N0} 个导入更改。已映射 {3:N0} 行中的 {2:N0} 行，并有 {4:N0} 个警告。</value></data>
-  <data name="Library.Operation.Import.Failed" xml:space="preserve"><value>导入 预览 失败.</value></data>
-  <data name="Library.Operation.Import.NoRowsMatched" xml:space="preserve"><value>否 导入 行 已匹配 该 已选择 库 范围.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupCancelled" xml:space="preserve"><value>MusicBrainz 发行版 查找 已取消.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupComplete.One" xml:space="preserve"><value>MusicBrainz 已返回 {0:N0} 发行版 版本. 否 元数据 曾是 已选择 或 已更改.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupComplete.Other" xml:space="preserve"><value>MusicBrainz 已返回 {0:N0} 发行版 版本. 否 元数据 曾是 已选择 或 已更改.</value></data>
-  <data name="Library.Operation.MusicBrainz.LookupFailed" xml:space="preserve"><value>MusicBrainz 发行版 查找 失败.</value></data>
-  <data name="Library.Operation.MusicBrainz.MappingCancelled" xml:space="preserve"><value>发行版 音轨 映射 已取消.</value></data>
-  <data name="Library.Operation.MusicBrainz.MappingComplete" xml:space="preserve"><value>建议 {0:N0} 的 {1:N0} 文件到音轨 映射; {2:N0} 需要 审阅.</value></data>
-  <data name="Library.Operation.MusicBrainz.MappingFailed" xml:space="preserve"><value>发行版 音轨 映射 失败.</value></data>
-  <data name="Library.Operation.MusicBrainz.MetadataCancelled" xml:space="preserve"><value>MusicBrainz 元数据 预览 已取消.</value></data>
-  <data name="Library.Operation.MusicBrainz.MetadataFailed" xml:space="preserve"><value>MusicBrainz 元数据 预览 失败.</value></data>
-  <data name="Library.Operation.MusicBrainz.MetadataReady" xml:space="preserve"><value>已映射 MusicBrainz 字段 曾是 已添加 到 该 正常 元数据 预览. 审阅 每个 更改 之前 正在应用.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchCancelled" xml:space="preserve"><value>MusicBrainz 发行版 搜索 已取消.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchComplete.One" xml:space="preserve"><value>MusicBrainz 已找到 {0:N0} 发行版 版本. 选择 它 和 构建 一个 文件到音轨 映射.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchComplete.Other" xml:space="preserve"><value>MusicBrainz 已找到 {0:N0} 发行版 版本. 选择 一个 和 构建 一个 文件到音轨 映射.</value></data>
-  <data name="Library.Operation.MusicBrainz.SearchFailed" xml:space="preserve"><value>MusicBrainz 发行版 搜索 失败.</value></data>
-  <data name="Library.Operation.NoFiles" xml:space="preserve"><value>该 已选择 库 范围 包含 无文件.</value></data>
-  <data name="Library.Operation.PendingReverted" xml:space="preserve"><value>待处理 预览 还原. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.Playlist.Blockers.One" xml:space="preserve"><value>播放列表 预览 有 {0:N0} 阻止项. 否 输出 曾是 已写入.</value></data>
-  <data name="Library.Operation.Playlist.Blockers.Other" xml:space="preserve"><value>播放列表 预览 有 {0:N0} 阻止项. 否 输出 曾是 已写入.</value></data>
-  <data name="Library.Operation.Playlist.OutputCancelled" xml:space="preserve"><value>播放列表 输出 已取消.</value></data>
-  <data name="Library.Operation.Playlist.OutputFailed" xml:space="preserve"><value>播放列表 输出 失败.</value></data>
-  <data name="Library.Operation.Playlist.PreviewCancelled" xml:space="preserve"><value>播放列表 预览 已取消.</value></data>
-  <data name="Library.Operation.Playlist.PreviewFailed" xml:space="preserve"><value>播放列表 预览 失败.</value></data>
-  <data name="Library.Operation.Playlist.Ready.One" xml:space="preserve"><value>已预览 {0:N0} 播放列表 文件. 审阅 该 目标 之前 正在应用.</value></data>
-  <data name="Library.Operation.Playlist.Ready.Other" xml:space="preserve"><value>已预览 {0:N0} 播放列表 文件. 审阅 该 目标 之前 正在应用.</value></data>
-  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>已写入 {0:N0} 个播放列表文件，其中包含 {1:N0} 个音轨引用。</value></data>
-  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>已预览存在 {1:N0} 个阻止项的 {0:N0} 个文件。未更改任何文件。</value></data>
-  <data name="Library.Operation.PreviewCancelled" xml:space="preserve"><value>预览 已取消. 无文件 曾是 已更改.</value></data>
-  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>已预览 {2:N0} 个文件中 {1:N0} 个文件的 {0:N0} 个更改。</value></data>
-  <data name="Library.Operation.PreviewFailed" xml:space="preserve"><value>预览 失败.</value></data>
-  <data name="Library.Operation.PreviewInvalidated" xml:space="preserve"><value>操作 或 范围 已更改. 预览 权威 元数据 再次.</value></data>
-  <data name="Library.Operation.Report.Blockers.One" xml:space="preserve"><value>报告 预览 有 {0:N0} 阻止项. 否 输出 曾是 已写入.</value></data>
-  <data name="Library.Operation.Report.Blockers.Other" xml:space="preserve"><value>报告 预览 有 {0:N0} 阻止项. 否 输出 曾是 已写入.</value></data>
-  <data name="Library.Operation.Report.OutputCancelled" xml:space="preserve"><value>报告 输出 已取消.</value></data>
-  <data name="Library.Operation.Report.OutputFailed" xml:space="preserve"><value>报告 输出 失败.</value></data>
-  <data name="Library.Operation.Report.PreviewCancelled" xml:space="preserve"><value>报告 预览 已取消.</value></data>
-  <data name="Library.Operation.Report.PreviewFailed" xml:space="preserve"><value>报告 预览 失败.</value></data>
-  <data name="Library.Operation.Report.Ready.One" xml:space="preserve"><value>已预览 {0:N0} 报告 文件. 审阅 该 目标 之前 正在应用.</value></data>
-  <data name="Library.Operation.Report.Ready.Other" xml:space="preserve"><value>已预览 {0:N0} 报告 文件. 审阅 该 目标 之前 正在应用.</value></data>
-  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>已写入 {0:N0} 个报告文件，其中包含 {1:N0} 行。</value></data>
-  <data name="Library.Operation.Restore.Cancelled" xml:space="preserve"><value>还原 已取消. 任意 已完成 还原 保留 可恢复.</value></data>
-  <data name="Library.Operation.Restore.Complete.One" xml:space="preserve"><value>已还原 {0:N0} 文件 从 该 最新 元数据 操作.</value></data>
-  <data name="Library.Operation.Restore.Complete.Other" xml:space="preserve"><value>已还原 {0:N0} 文件 从 该 最新 元数据 操作.</value></data>
-  <data name="Library.Operation.Restore.Failed" xml:space="preserve"><value>还原 失败.</value></data>
+  <data name="Library.Operation.ExternalTool.Cancelled" xml:space="preserve"><value>外部工具已取消。活动进程已停止。</value></data>
+  <data name="Library.Operation.ExternalTool.Complete" xml:space="preserve"><value>外部工具已完成：{0:N0} 个成功，{1:N0} 个失败。</value></data>
+  <data name="Library.Operation.ExternalTool.Failed" xml:space="preserve"><value>外部工具已停止。</value></data>
+  <data name="Library.Operation.ExternalTool.Ready.One" xml:space="preserve"><value>已预览 {0:N0} 次进程调用。外部工具在 MusicLibraryManager 恢复范围之外运行。</value></data>
+  <data name="Library.Operation.ExternalTool.Ready.Other" xml:space="preserve"><value>已预览 {0:N0} 次进程调用。外部工具在 MusicLibraryManager 恢复范围之外运行。</value></data>
+  <data name="Library.Operation.History.Cancelled" xml:space="preserve"><value>历史记录预览已取消。未更改任何文件。</value></data>
+  <data name="Library.Operation.History.Failed" xml:space="preserve"><value>历史记录预览失败。</value></data>
+  <data name="Library.Operation.History.RedoReady" xml:space="preserve"><value>已根据当前文件重新生成“重做”。应用前请审阅。</value></data>
+  <data name="Library.Operation.History.RepeatReady" xml:space="preserve"><value>已为当前媒体库范围重新生成最新方案。应用前请审阅。</value></data>
+  <data name="Library.Operation.Import.Blockers.One" xml:space="preserve"><value>导入预览有 {0:N0} 个阻止项。未更改任何文件。</value></data>
+  <data name="Library.Operation.Import.Blockers.Other" xml:space="preserve"><value>导入预览有 {0:N0} 个阻止项。未更改任何文件。</value></data>
+  <data name="Library.Operation.Import.Cancelled" xml:space="preserve"><value>导入预览已取消。未更改任何文件。</value></data>
+  <data name="Library.Operation.Import.Complete" xml:space="preserve"><value>导入预览完成。更改：{0:N0}；文件：{1:N0}；匹配行：{2:N0}/{3:N0}。</value></data>
+  <data name="Library.Operation.Import.CompleteWithWarnings" xml:space="preserve"><value>导入预览完成。更改：{0:N0}；文件：{1:N0}；匹配行：{2:N0}/{3:N0}；警告：{4:N0}。</value></data>
+  <data name="Library.Operation.Import.Failed" xml:space="preserve"><value>导入预览失败。</value></data>
+  <data name="Library.Operation.Import.NoRowsMatched" xml:space="preserve"><value>没有导入行与所选媒体库范围匹配。</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupCancelled" xml:space="preserve"><value>MusicBrainz 发行版查找已取消。</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupComplete.One" xml:space="preserve"><value>MusicBrainz 返回了 {0:N0} 个发行版本。未选择或更改任何元数据。</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupComplete.Other" xml:space="preserve"><value>MusicBrainz 返回了 {0:N0} 个发行版本。未选择或更改任何元数据。</value></data>
+  <data name="Library.Operation.MusicBrainz.LookupFailed" xml:space="preserve"><value>MusicBrainz 发行版查找失败。</value></data>
+  <data name="Library.Operation.MusicBrainz.MappingCancelled" xml:space="preserve"><value>发行版音轨映射已取消。</value></data>
+  <data name="Library.Operation.MusicBrainz.MappingComplete" xml:space="preserve"><value>已建议 {0:N0}/{1:N0} 个文件到音轨映射；{2:N0} 个需要审阅。</value></data>
+  <data name="Library.Operation.MusicBrainz.MappingFailed" xml:space="preserve"><value>发行版音轨映射失败。</value></data>
+  <data name="Library.Operation.MusicBrainz.MetadataCancelled" xml:space="preserve"><value>MusicBrainz 元数据预览已取消。</value></data>
+  <data name="Library.Operation.MusicBrainz.MetadataFailed" xml:space="preserve"><value>MusicBrainz 元数据预览失败。</value></data>
+  <data name="Library.Operation.MusicBrainz.MetadataReady" xml:space="preserve"><value>映射的 MusicBrainz 字段已添加到常规元数据预览。应用前请审阅每项更改。</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchCancelled" xml:space="preserve"><value>MusicBrainz 发行版搜索已取消。</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchComplete.One" xml:space="preserve"><value>MusicBrainz 找到 {0:N0} 个发行版本。请选择该版本并创建文件到音轨映射。</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchComplete.Other" xml:space="preserve"><value>MusicBrainz 找到 {0:N0} 个发行版本。请选择一个版本并创建文件到音轨映射。</value></data>
+  <data name="Library.Operation.MusicBrainz.SearchFailed" xml:space="preserve"><value>MusicBrainz 发行版搜索失败。</value></data>
+  <data name="Library.Operation.NoFiles" xml:space="preserve"><value>所选媒体库范围中没有文件。</value></data>
+  <data name="Library.Operation.PendingReverted" xml:space="preserve"><value>已放弃待处理的预览。未更改任何文件。</value></data>
+  <data name="Library.Operation.Playlist.Blockers.One" xml:space="preserve"><value>播放列表预览有 {0:N0} 个阻止项。未写入任何输出。</value></data>
+  <data name="Library.Operation.Playlist.Blockers.Other" xml:space="preserve"><value>播放列表预览有 {0:N0} 个阻止项。未写入任何输出。</value></data>
+  <data name="Library.Operation.Playlist.OutputCancelled" xml:space="preserve"><value>播放列表输出已取消。</value></data>
+  <data name="Library.Operation.Playlist.OutputFailed" xml:space="preserve"><value>播放列表输出失败。</value></data>
+  <data name="Library.Operation.Playlist.PreviewCancelled" xml:space="preserve"><value>播放列表预览已取消。</value></data>
+  <data name="Library.Operation.Playlist.PreviewFailed" xml:space="preserve"><value>播放列表预览失败。</value></data>
+  <data name="Library.Operation.Playlist.Ready.One" xml:space="preserve"><value>已预览 {0:N0} 个播放列表文件。应用前请审阅目标位置。</value></data>
+  <data name="Library.Operation.Playlist.Ready.Other" xml:space="preserve"><value>已预览 {0:N0} 个播放列表文件。应用前请审阅目标位置。</value></data>
+  <data name="Library.Operation.Playlist.Written" xml:space="preserve"><value>播放列表输出已写入。文件：{0:N0}；音轨引用：{1:N0}。</value></data>
+  <data name="Library.Operation.PreviewBlockers" xml:space="preserve"><value>预览完成。文件：{0:N0}；阻止项：{1:N0}。未更改任何文件。</value></data>
+  <data name="Library.Operation.PreviewCancelled" xml:space="preserve"><value>预览已取消。未更改任何文件。</value></data>
+  <data name="Library.Operation.PreviewComplete" xml:space="preserve"><value>预览完成。更改：{0:N0}；受影响的文件：{1:N0}/{2:N0}。</value></data>
+  <data name="Library.Operation.PreviewFailed" xml:space="preserve"><value>预览失败。</value></data>
+  <data name="Library.Operation.PreviewInvalidated" xml:space="preserve"><value>操作或范围已更改。请再次预览权威元数据。</value></data>
+  <data name="Library.Operation.Report.Blockers.One" xml:space="preserve"><value>报表预览有 {0:N0} 个阻止项。未写入任何输出。</value></data>
+  <data name="Library.Operation.Report.Blockers.Other" xml:space="preserve"><value>报表预览有 {0:N0} 个阻止项。未写入任何输出。</value></data>
+  <data name="Library.Operation.Report.OutputCancelled" xml:space="preserve"><value>报表输出已取消。</value></data>
+  <data name="Library.Operation.Report.OutputFailed" xml:space="preserve"><value>报表输出失败。</value></data>
+  <data name="Library.Operation.Report.PreviewCancelled" xml:space="preserve"><value>报表预览已取消。</value></data>
+  <data name="Library.Operation.Report.PreviewFailed" xml:space="preserve"><value>报表预览失败。</value></data>
+  <data name="Library.Operation.Report.Ready.One" xml:space="preserve"><value>已预览 {0:N0} 个报表文件。应用前请审阅目标位置。</value></data>
+  <data name="Library.Operation.Report.Ready.Other" xml:space="preserve"><value>已预览 {0:N0} 个报表文件。应用前请审阅目标位置。</value></data>
+  <data name="Library.Operation.Report.Written" xml:space="preserve"><value>报表输出已写入。文件：{0:N0}；行：{1:N0}。</value></data>
+  <data name="Library.Operation.Restore.Cancelled" xml:space="preserve"><value>还原已取消。已完成的还原仍可恢复。</value></data>
+  <data name="Library.Operation.Restore.Complete.One" xml:space="preserve"><value>已从最近的元数据操作还原 {0:N0} 个文件。</value></data>
+  <data name="Library.Operation.Restore.Complete.Other" xml:space="preserve"><value>已从最近的元数据操作还原 {0:N0} 个文件。</value></data>
+  <data name="Library.Operation.Restore.Failed" xml:space="preserve"><value>还原失败。</value></data>
   <data name="Library.OperationName.CoverArt" xml:space="preserve"><value>Cover Art Archive: {0}</value></data>
-  <data name="Library.OperationName.DiscogsArtwork" xml:space="preserve"><value>Discogs 封面: {0}</value></data>
+  <data name="Library.OperationName.DiscogsArtwork" xml:space="preserve"><value>Discogs 封面：{0}</value></data>
   <data name="Library.OperationName.DiscogsMetadata" xml:space="preserve"><value>Discogs: {0}</value></data>
-  <data name="Library.OperationName.ImportMetadata" xml:space="preserve"><value>导入元数据 从 {0}</value></data>
+  <data name="Library.OperationName.ImportMetadata" xml:space="preserve"><value>从 {0} 导入元数据</value></data>
   <data name="Library.OperationName.MusicBrainzMetadata" xml:space="preserve"><value>MusicBrainz: {0}</value></data>
-  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>将 {0} 值粘贴到 {1:N0} 个文件</value></data>
-  <data name="Library.OperationName.RemoveAllArtwork" xml:space="preserve"><value>移除 全部 封面</value></data>
-  <data name="Library.OperationName.RemoveFrontCover" xml:space="preserve"><value>移除 正面 封面</value></data>
-  <data name="Library.OperationName.ReplaceFrontCover" xml:space="preserve"><value>替换 正面 封面</value></data>
-  <data name="Library.OperationName.RepresentativePreview" xml:space="preserve"><value>草稿 代表 预览</value></data>
-  <data name="Library.Picker.ArtworkImages" xml:space="preserve"><value>封面 图像</value></data>
-  <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>分隔 元数据</value></data>
-  <data name="Library.Picker.ExternalToolDirectory" xml:space="preserve"><value>选择 外部 工具 正在处理 目录</value></data>
-  <data name="Library.Picker.ExternalToolExecutable" xml:space="preserve"><value>选择 外部 工具 可执行文件</value></data>
+  <data name="Library.OperationName.PasteValues" xml:space="preserve"><value>粘贴 {0} 的值；文件：{1:N0}</value></data>
+  <data name="Library.OperationName.RemoveAllArtwork" xml:space="preserve"><value>移除所有封面</value></data>
+  <data name="Library.OperationName.RemoveFrontCover" xml:space="preserve"><value>移除正面封面</value></data>
+  <data name="Library.OperationName.ReplaceFrontCover" xml:space="preserve"><value>替换正面封面</value></data>
+  <data name="Library.OperationName.RepresentativePreview" xml:space="preserve"><value>代表性预览</value></data>
+  <data name="Library.Picker.ArtworkImages" xml:space="preserve"><value>选择封面图像</value></data>
+  <data name="Library.Picker.DelimitedMetadata" xml:space="preserve"><value>选择分隔格式的元数据文件</value></data>
+  <data name="Library.Picker.ExternalToolDirectory" xml:space="preserve"><value>选择外部工具工作文件夹</value></data>
+  <data name="Library.Picker.ExternalToolExecutable" xml:space="preserve"><value>选择外部工具可执行文件</value></data>
   <data name="Library.Picker.FrontCover" xml:space="preserve"><value>选择正面封面</value></data>
   <data name="Library.Picker.ImportMetadata.Title" xml:space="preserve"><value>从 CSV 或分隔文本导入元数据</value></data>
-  <data name="Library.Picker.PlaylistFolder" xml:space="preserve"><value>选择 播放列表 输出 文件夹</value></data>
-  <data name="Library.Picker.PlaylistOutput" xml:space="preserve"><value>选择 播放列表 输出</value></data>
-  <data name="Library.Picker.ReportFolder" xml:space="preserve"><value>选择 报告 输出 文件夹</value></data>
-  <data name="Library.Picker.ReportOutput" xml:space="preserve"><value>选择 报告 输出</value></data>
+  <data name="Library.Picker.PlaylistFolder" xml:space="preserve"><value>选择播放列表输出文件夹</value></data>
+  <data name="Library.Picker.PlaylistOutput" xml:space="preserve"><value>选择播放列表输出位置</value></data>
+  <data name="Library.Picker.ReportFolder" xml:space="preserve"><value>选择报告输出文件夹</value></data>
+  <data name="Library.Picker.ReportOutput" xml:space="preserve"><value>选择报告输出位置</value></data>
   <data name="Library.Progress.ApplyingMetadataChanges" xml:space="preserve"><value>正在应用已审阅的元数据更改</value></data>
   <data name="Library.Progress.BuildingArtworkPreview" xml:space="preserve"><value>正在生成封面预览</value></data>
-  <data name="Library.Progress.BuildingAudioIdentifierPreview" xml:space="preserve"><value>构建 音频 标识符 预览</value></data>
-  <data name="Library.Progress.BuildingClipboardPreview" xml:space="preserve"><value>构建 剪贴板 元数据 预览</value></data>
-  <data name="Library.Progress.BuildingDiscogsArtworkPreview" xml:space="preserve"><value>构建 Discogs 封面 预览</value></data>
-  <data name="Library.Progress.BuildingDiscogsMetadataPreview" xml:space="preserve"><value>构建 Discogs 元数据 预览</value></data>
+  <data name="Library.Progress.BuildingAudioIdentifierPreview" xml:space="preserve"><value>正在生成音频标识符预览</value></data>
+  <data name="Library.Progress.BuildingClipboardPreview" xml:space="preserve"><value>正在生成剪贴板元数据预览</value></data>
+  <data name="Library.Progress.BuildingDiscogsArtworkPreview" xml:space="preserve"><value>正在生成 Discogs 封面预览</value></data>
+  <data name="Library.Progress.BuildingDiscogsMetadataPreview" xml:space="preserve"><value>正在生成 Discogs 元数据预览</value></data>
   <data name="Library.Progress.BuildingMetadataPreview" xml:space="preserve"><value>正在生成元数据预览</value></data>
-  <data name="Library.Progress.BuildingMusicBrainzMetadataPreview" xml:space="preserve"><value>构建 MusicBrainz 元数据 预览</value></data>
-  <data name="Library.Progress.BuildingPlaylistPreview" xml:space="preserve"><value>构建 播放列表 预览</value></data>
-  <data name="Library.Progress.BuildingReportPreview" xml:space="preserve"><value>构建 报告 预览</value></data>
-  <data name="Library.Progress.FindingCoverArt" xml:space="preserve"><value>发现项 Cover Art Archive 图像</value></data>
-  <data name="Library.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>正在加载 封面 缩略图 {0:N0} 的 {1:N0}</value></data>
+  <data name="Library.Progress.BuildingMusicBrainzMetadataPreview" xml:space="preserve"><value>正在生成 MusicBrainz 元数据预览</value></data>
+  <data name="Library.Progress.BuildingPlaylistPreview" xml:space="preserve"><value>正在生成播放列表预览</value></data>
+  <data name="Library.Progress.BuildingReportPreview" xml:space="preserve"><value>正在生成报告预览</value></data>
+  <data name="Library.Progress.FindingCoverArt" xml:space="preserve"><value>正在查找 Cover Art Archive 图像</value></data>
+  <data name="Library.Progress.LoadingArtworkThumbnail" xml:space="preserve"><value>正在加载封面缩略图 {0:N0}/{1:N0}</value></data>
   <data name="Library.Progress.LoadingDiscogsDetails" xml:space="preserve"><value>正在加载 Discogs 发行版详细信息</value></data>
   <data name="Library.Progress.MappingMetadataImport" xml:space="preserve"><value>正在映射导入的元数据</value></data>
-  <data name="Library.Progress.MatchingDiscogsTracks" xml:space="preserve"><value>匹配 库 文件 到 Discogs 音轨</value></data>
-  <data name="Library.Progress.MatchingReleaseTracks" xml:space="preserve"><value>匹配 库 文件 到 发行版 音轨</value></data>
-  <data name="Library.Progress.PreparingAudioDiscovery" xml:space="preserve"><value>正在准备 音频 指纹 发现</value></data>
+  <data name="Library.Progress.MatchingDiscogsTracks" xml:space="preserve"><value>正在将媒体库文件与 Discogs 音轨匹配</value></data>
+  <data name="Library.Progress.MatchingReleaseTracks" xml:space="preserve"><value>正在将媒体库文件与发行版音轨匹配</value></data>
+  <data name="Library.Progress.PreparingAudioDiscovery" xml:space="preserve"><value>正在准备音频指纹发现</value></data>
   <data name="Library.Progress.ReadingFile" xml:space="preserve"><value>正在读取 {0}</value></data>
   <data name="Library.Progress.RegeneratingMetadataPreview" xml:space="preserve"><value>正在重新生成元数据预览</value></data>
-  <data name="Library.Progress.ResolvingMusicBrainzReleases" xml:space="preserve"><value>正在解决 MusicBrainz 发行版 版本</value></data>
-  <data name="Library.Progress.RestoredFiles.One" xml:space="preserve"><value>已还原 {0:N0} 文件</value></data>
-  <data name="Library.Progress.RestoredFiles.Other" xml:space="preserve"><value>已还原 {0:N0} 文件</value></data>
+  <data name="Library.Progress.ResolvingMusicBrainzReleases" xml:space="preserve"><value>正在解析 MusicBrainz 发行版本</value></data>
+  <data name="Library.Progress.RestoredFiles.One" xml:space="preserve"><value>已恢复 {0:N0} 个文件</value></data>
+  <data name="Library.Progress.RestoredFiles.Other" xml:space="preserve"><value>已恢复 {0:N0} 个文件</value></data>
   <data name="Library.Progress.RestoringMetadataOperation" xml:space="preserve"><value>正在还原最近的元数据操作</value></data>
   <data name="Library.Progress.RunningExternalTool" xml:space="preserve"><value>正在运行 {0}</value></data>
   <data name="Library.Progress.SearchingDiscogsReleases" xml:space="preserve"><value>正在搜索 Discogs 发行版</value></data>
@@ -4464,15 +4464,15 @@
   <data name="Library.ProviderSource.Cache" xml:space="preserve"><value>缓存</value></data>
   <data name="Library.ProviderSource.Discogs" xml:space="preserve"><value>Discogs</value></data>
   <data name="Library.ProviderSource.OfflineCache" xml:space="preserve"><value>离线缓存</value></data>
-  <data name="Library.Results.OfTotal" xml:space="preserve"><value>{0:N0} 的 {1:N0}</value></data>
+  <data name="Library.Results.OfTotal" xml:space="preserve"><value>{0:N0}/{1:N0}</value></data>
   <data name="Library.Results.Tracks.One" xml:space="preserve"><value>{0:N0} 音轨</value></data>
   <data name="Library.Results.Tracks.Other" xml:space="preserve"><value>{0:N0} 音轨</value></data>
   <data name="Library.Status.ChooseConfiguration" xml:space="preserve"><value>请在“设置”中选择媒体库配置。</value></data>
-  <data name="Library.Status.Filtered" xml:space="preserve"><value>{0:N0} 的 {1:N0} 音轨</value></data>
+  <data name="Library.Status.Filtered" xml:space="preserve"><value>{1:N0} 个音轨中的 {0:N0} 个</value></data>
   <data name="Library.Status.FilteredPreserved" xml:space="preserve"><value>{1:N0} 个音轨中显示 {0:N0} 个 · {2:N0} 个有未保存更改的所选音轨仍保持显示</value></data>
   <data name="Library.Status.HealthFiltered" xml:space="preserve"><value>健康检查结果：{1:N0} 个音轨中有 {0:N0} 个</value></data>
   <data name="Library.Status.HealthFilteredPreserved" xml:space="preserve"><value>健康检查结果：{1:N0} 个音轨中有 {0:N0} 个 · {2:N0} 个有未保存更改的所选音轨仍保持显示</value></data>
-  <data name="Library.Status.InvalidFilter" xml:space="preserve"><value>该 筛选器 是 无效.</value></data>
+  <data name="Library.Status.InvalidFilter" xml:space="preserve"><value>筛选器无效。</value></data>
   <data name="Library.Status.LoadConfiguration" xml:space="preserve"><value>加载配置以浏览媒体库。</value></data>
   <data name="Library.Status.LoadFailed" xml:space="preserve"><value>无法加载媒体库缓存。</value></data>
   <data name="Library.Status.LoadingCache" xml:space="preserve"><value>正在加载媒体库缓存…</value></data>
@@ -4480,7 +4480,7 @@
   <data name="Library.Status.Tracks.Other" xml:space="preserve"><value>{0:N0} 音轨</value></data>
   <data name="Library.Status.TracksPreserved.One" xml:space="preserve"><value>{0:N0} 个音轨 · {1:N0} 个有未保存更改的所选音轨仍保持显示</value></data>
   <data name="Library.Status.TracksPreserved.Other" xml:space="preserve"><value>{0:N0} 个音轨 · {1:N0} 个有未保存更改的所选音轨仍保持显示</value></data>
-  <data name="Library.Tools.ApplicationDefault" xml:space="preserve"><value>(应用程序 默认)</value></data>
+  <data name="Library.Tools.ApplicationDefault" xml:space="preserve"><value>(应用默认值)</value></data>
   <data name="Library.VisualFilter.Status.Applied" xml:space="preserve"><value>已应用可视筛选器。</value></data>
   <data name="Library.VisualFilter.Status.Cleared" xml:space="preserve"><value>已清除可视筛选器。</value></data>
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>可视筛选器无效。</value></data>
@@ -4986,19 +4986,19 @@
   <data name="Inspector.View.UnverifiedValue" xml:space="preserve"><value>当前 值 不 验证 跨 全部 所选音轨.</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Contains" xml:space="preserve"><value>包含</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Equals" xml:space="preserve"><value>等于</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.GreaterThan" xml:space="preserve"><value>大于 比</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.GreaterThan" xml:space="preserve"><value>大于</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.GreaterThanOrEqual" xml:space="preserve"><value>大于或等于</value></data>
-  <data name="Library.VisualFilter.Choice.Comparison.LessThan" xml:space="preserve"><value>更少 比</value></data>
+  <data name="Library.VisualFilter.Choice.Comparison.LessThan" xml:space="preserve"><value>小于</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.LessThanOrEqual" xml:space="preserve"><value>小于或等于</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.MatchesRegularExpression" xml:space="preserve"><value>与正则表达式匹配</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Missing" xml:space="preserve"><value>缺失</value></data>
   <data name="Library.VisualFilter.Choice.Comparison.Present" xml:space="preserve"><value>存在</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.CustomMetadata" xml:space="preserve"><value>自定义 元数据</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.KnownMetadata" xml:space="preserve"><value>已知 元数据</value></data>
-  <data name="Library.VisualFilter.Choice.FieldKind.Technical" xml:space="preserve"><value>技术</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.CustomMetadata" xml:space="preserve"><value>自定义元数据</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.KnownMetadata" xml:space="preserve"><value>已知元数据</value></data>
+  <data name="Library.VisualFilter.Choice.FieldKind.Technical" xml:space="preserve"><value>技术信息</value></data>
   <data name="Library.VisualFilter.Choice.RootMode.All" xml:space="preserve"><value>全部</value></data>
-  <data name="Library.VisualFilter.Choice.RootMode.Any" xml:space="preserve"><value>任意</value></data>
-  <data name="Library.VisualFilter.ConditionSummary" xml:space="preserve"><value>组 {0}: {1} {2}</value></data>
+  <data name="Library.VisualFilter.Choice.RootMode.Any" xml:space="preserve"><value>任一</value></data>
+  <data name="Library.VisualFilter.ConditionSummary" xml:space="preserve"><value>组 {0}：{1} {2}</value></data>
   <data name="Library.VisualFilter.ConditionValue" xml:space="preserve"><value> {0}</value></data>
   <data name="Library.VisualFilter.Editor.Error.FieldRequired" xml:space="preserve"><value>每个条件都需要一个字段。</value></data>
   <data name="Library.VisualFilter.Editor.Error.ValueRequired" xml:space="preserve"><value>{0} 需要一个比较值。</value></data>
