@@ -24,7 +24,12 @@ public sealed record MetadataPreviewRow(
     string Field,
     string Before,
     string After,
-    string? DiagnosticDetail = null);
+    string? DiagnosticDetail = null)
+{
+    public bool HasDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            DiagnosticDetail);
+}
 
 public sealed record PendingMetadataOperationRow(
     int Number,
@@ -359,7 +364,7 @@ public static class MetadataPreviewRowBuilder
             {
                 destination.Add(new(
                     Path.GetFileName(file.Path),
-                    FieldName(
+                    DisplayFieldName(
                         difference.Field,
                         localization),
                     string.Join("; ", difference.Before),
@@ -488,7 +493,7 @@ public static class MetadataPreviewRowBuilder
         _ => kind.ToString(),
     };
 
-    private static string FieldName(
+    public static string DisplayFieldName(
         MetadataFieldKey field,
         ILocalizationService? localization) =>
         field.KnownField is { } known

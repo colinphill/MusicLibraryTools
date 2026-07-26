@@ -350,6 +350,12 @@ public partial class WorkbenchViewModel :
             WorkbenchOnlineMetadataResultStep.AudioCandidates;
 
     [ObservableProperty]
+    private bool _hasCompletedOnlineDiscovery;
+
+    [ObservableProperty]
+    private bool _hasCompletedOnlineSearch;
+
+    [ObservableProperty]
     private bool _isInspectorOpen = true;
 
     [ObservableProperty]
@@ -500,11 +506,13 @@ public partial class WorkbenchViewModel :
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         ReleaseSearch.PropertyChanged += (_, _) =>
         {
+            HasCompletedOnlineSearch = false;
             SearchMusicBrainzReleasesCommand.NotifyCanExecuteChanged();
             SearchOnlineReleasesCommand.NotifyCanExecuteChanged();
         };
         DiscogsSearch.PropertyChanged += (_, _) =>
         {
+            HasCompletedOnlineSearch = false;
             SearchDiscogsReleasesCommand.NotifyCanExecuteChanged();
             SearchOnlineReleasesCommand.NotifyCanExecuteChanged();
         };
@@ -749,6 +757,12 @@ public partial class WorkbenchViewModel :
 
     partial void OnSelectedFileChanged(WorkbenchTrackViewModel? value)
     {
+        if (SelectedOnlineMetadataScope.Scope ==
+            WorkbenchOnlineMetadataScope.SelectedFile)
+        {
+            HasCompletedOnlineDiscovery = false;
+            HasCompletedOnlineSearch = false;
+        }
         RebuildMetadataFields();
         _ = RebuildStagedArtworkAsync(value);
         ScheduleRepresentativePreview();
@@ -760,11 +774,19 @@ public partial class WorkbenchViewModel :
     partial void OnSelectedOnlineMetadataProviderChanged(
         WorkbenchOnlineMetadataProviderOption value)
     {
+        HasCompletedOnlineSearch = false;
         OnPropertyChanged(
             nameof(IsMusicBrainzOnlineMetadataProvider));
         OnPropertyChanged(
             nameof(IsDiscogsOnlineMetadataProvider));
         SearchOnlineReleasesCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedOnlineMetadataScopeChanged(
+        WorkbenchOnlineMetadataScopeOption value)
+    {
+        HasCompletedOnlineDiscovery = false;
+        HasCompletedOnlineSearch = false;
     }
 
     partial void OnSelectedOnlineMetadataResultStepChanged(
@@ -1265,6 +1287,8 @@ public partial class WorkbenchViewModel :
             file.PropertyChanged -= OnTrackChanged;
         Files.Clear();
         _artworkDrafts.Clear();
+        HasCompletedOnlineDiscovery = false;
+        HasCompletedOnlineSearch = false;
         AudioMatches.Clear();
         ReleaseMatches.Clear();
         SelectedRelease = null;
@@ -1801,16 +1825,16 @@ public partial class WorkbenchViewModel :
             {
                 if (HasDirectPendingChanges)
                 {
-                    MetadataOperationPlan? directPlan =
+                    ReviewedMetadataMutationIntent?
+                        directIntent =
                         await PreviewDirectPendingChangesAsync(
                             progress,
                             _cancellation!.Token);
-                    if (directPlan is not null)
+                    if (directIntent is not null)
                     {
                         bool accepted =
                             await AddPendingMutationAsync(
-                            ReviewedMetadataMutationIntent.Create(
-                                directPlan),
+                            directIntent,
                             _cancellation.Token);
                         if (!accepted)
                         {
@@ -2190,7 +2214,11 @@ public partial class WorkbenchViewModel :
                  _metadataIntents)
         {
             foreach (string path in intent.Paths)
-                Add(path, intent.MutationKind);
+            {
+                foreach (ReviewedMediaMutationKind kind
+                         in intent.MutationKinds)
+                    Add(path, kind);
+            }
         }
         foreach (WorkbenchTrackViewModel file in
                  Files.Where(file => file.HasChanges))
@@ -2201,9 +2229,24 @@ public partial class WorkbenchViewModel :
         {
             foreach (string path in
                      _inspector.Selection.Paths)
-                Add(
-                    path,
-                    ReviewedMediaMutationKind.Metadata);
+            {
+                if (_inspector
+                    .HasUnsavedMetadataChanges)
+                {
+                    Add(
+                        path,
+                        ReviewedMediaMutationKind
+                            .Metadata);
+                }
+                if (_inspector
+                    .HasUnsavedArtworkChanges)
+                {
+                    Add(
+                        path,
+                        ReviewedMediaMutationKind
+                            .Artwork);
+                }
+            }
         }
         foreach (ReviewedFileOperationItem item in
                  _fileOperationPlans.SelectMany(plan =>
@@ -3098,6 +3141,7 @@ public partial class WorkbenchViewModel :
     [RelayCommand(CanExecute = nameof(CanSearchMusicBrainzReleases))]
     private async Task SearchMusicBrainzReleasesAsync()
     {
+        HasCompletedOnlineSearch = false;
         SelectedOnlineMetadataResultStep =
             WorkbenchOnlineMetadataResultStep.MusicBrainzReleases;
         BeginOperation(
@@ -3117,6 +3161,7 @@ public partial class WorkbenchViewModel :
                      MusicBrainzReleaseRows.CreateSearch(sourcePath, result))
                 ReleaseMatches.Add(row);
             SelectedRelease = ReleaseMatches.FirstOrDefault();
+            HasCompletedOnlineSearch = true;
             SetCountStatus(
                 "Workbench.Status.MusicBrainzFound",
                 ReleaseMatches.Count);
@@ -3162,6 +3207,7 @@ public partial class WorkbenchViewModel :
     {
         if (_discogs is null)
             return;
+        HasCompletedOnlineSearch = false;
         SelectedOnlineMetadataResultStep =
             WorkbenchOnlineMetadataResultStep.DiscogsReleases;
         BeginOperation(
@@ -3184,6 +3230,7 @@ public partial class WorkbenchViewModel :
                 DiscogsMatches.Add(
                     DiscogsReleaseRow.Create(candidate, source));
             SelectedDiscogsRelease = DiscogsMatches.FirstOrDefault();
+            HasCompletedOnlineSearch = true;
             SetCountStatus(
                 "Workbench.Status.DiscogsFound",
                 DiscogsMatches.Count);
@@ -4165,6 +4212,7 @@ public partial class WorkbenchViewModel :
 
     private async Task DiscoverAudioAsync(IReadOnlyList<string> paths)
     {
+        HasCompletedOnlineDiscovery = false;
         BeginOperation(
             L("Workbench.Activity.PreparingFingerprint"));
         try
@@ -4181,6 +4229,7 @@ public partial class WorkbenchViewModel :
                          _localization))
                 AudioMatches.Add(row);
             SelectedAudioMatch = AudioMatches.FirstOrDefault();
+            HasCompletedOnlineDiscovery = true;
             int issues = result.Files.Sum(file => file.Issues.Length);
             SetStatus(
                 WorkbenchStatusTexts.FingerprintDiscovery(
@@ -5022,7 +5071,8 @@ public partial class WorkbenchViewModel :
                 messages);
     }
 
-    private async Task<MetadataOperationPlan?>
+    private async Task<
+        ReviewedMetadataMutationIntent?>
         PreviewDirectPendingChangesAsync(
             IProgress<OperationProgress> progress,
             CancellationToken cancellationToken)
@@ -5092,10 +5142,35 @@ public partial class WorkbenchViewModel :
                 cancellationToken);
         if (valuesPlan is null && artworkPlan is null)
             return null;
-        return MetadataOperationPlanComposer.Combine(
-            L("Workbench.Operation.PendingChanges"),
-            valuesPlan,
-            artworkPlan);
+        MetadataOperationPlan combined =
+            MetadataOperationPlanComposer.Combine(
+                L(
+                    "Workbench.Operation.PendingChanges"),
+                valuesPlan,
+                artworkPlan);
+        return ReviewedMetadataMutationIntent.Create(
+            combined,
+            (valuesPlan is not null,
+                artworkPlan is not null) switch
+            {
+                (true, true) =>
+                [
+                    ReviewedMediaMutationKind
+                        .Metadata,
+                    ReviewedMediaMutationKind
+                        .Artwork,
+                ],
+                (false, true) =>
+                [
+                    ReviewedMediaMutationKind
+                        .Artwork,
+                ],
+                _ =>
+                [
+                    ReviewedMediaMutationKind
+                        .Metadata,
+                ],
+            });
 
         Dictionary<string, MetadataValueEdit> GetOrCreate(
             string path)

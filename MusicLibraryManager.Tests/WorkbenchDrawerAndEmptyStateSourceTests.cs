@@ -185,7 +185,197 @@ public sealed class
                 .Split(
                     ' ',
                     StringSplitOptions
-                        .RemoveEmptyEntries));
+            .RemoveEmptyEntries));
+    }
+
+    [Fact]
+    public void Every_workbench_section_declares_its_scroll_empty_state_and_sticky_action_contract()
+    {
+        (
+            string File,
+            string EmptyState,
+            string Footer,
+            string? PageScroll,
+            string[] ApprovedAdditionalScrolls)[]
+            contracts =
+        [
+            (
+                "WorkbenchSessionSectionView.axaml",
+                "SessionEmptyState",
+                "SessionStatusFooter",
+                null,
+                []),
+            (
+                "WorkbenchBulkOperationSectionView.axaml",
+                "BulkEmptyState",
+                "BulkStickyFooter",
+                "SectionScroll",
+                []),
+            (
+                "WorkbenchAllFieldsSectionView.axaml",
+                "AllFieldsEmptyState",
+                "AllFieldsStickyFooter",
+                "EditorScroll",
+                []),
+            (
+                "WorkbenchOnlineMetadataSectionView.axaml",
+                "OnlineMetadataSourceEmptyState",
+                "OnlineMetadataStickyFooter",
+                "OnlineMetadataStepScroll",
+                ["ArtworkEditorScroll"]),
+            (
+                "WorkbenchReportsSectionView.axaml",
+                "ReportsSourceEmptyState",
+                "ReportsStickyFooter",
+                "EditorScroll",
+                []),
+            (
+                "WorkbenchPlaylistsSectionView.axaml",
+                "PlaylistsSourceEmptyState",
+                "PlaylistsStickyFooter",
+                "EditorScroll",
+                []),
+            (
+                "WorkbenchToolsSectionView.axaml",
+                "ToolsSourceEmptyState",
+                "ToolsStickyFooter",
+                "EditorScroll",
+                []),
+            (
+                "WorkbenchShortcutsSectionView.axaml",
+                "ShortcutsEmptyState",
+                "ShortcutsStickyFooter",
+                "EditorScroll",
+                []),
+        ];
+
+        foreach (var contract in contracts)
+        {
+            XDocument view =
+                LoadWorkbenchSection(
+                    contract.File);
+            Assert.NotNull(
+                Named(
+                    view,
+                    contract.EmptyState));
+            XElement footer =
+                Named(
+                    view,
+                    contract.Footer);
+            Assert.Contains(
+                "sticky-footer",
+                Attribute(
+                    footer,
+                    "Classes")
+                    .Split(
+                        ' ',
+                        StringSplitOptions
+                            .RemoveEmptyEntries));
+            string[] scrollOwners =
+            [
+                .. view.Descendants()
+                    .Where(element =>
+                        element.Name.LocalName ==
+                            "ScrollViewer")
+                    .Select(element =>
+                        Attribute(
+                            element,
+                            "Name")),
+            ];
+            if (contract.PageScroll is null)
+            {
+                Assert.Empty(scrollOwners);
+            }
+            else
+            {
+                Assert.Equal(
+                    [
+                        contract.PageScroll,
+                        .. contract
+                            .ApprovedAdditionalScrolls,
+                    ],
+                    scrollOwners);
+            }
+        }
+
+        XDocument files =
+            LoadWorkbenchSection(
+                "WorkbenchFilesSectionView.axaml");
+        Assert.NotNull(
+            Named(
+                files,
+                "FileOperationsEmptyState"));
+        XDocument fileEditor =
+            LoadView(
+                "ReviewedFileOperationEditorView.axaml");
+        Assert.Single(
+            fileEditor.Descendants(),
+            element =>
+                element.Name.LocalName ==
+                    "ScrollViewer" &&
+                Attribute(
+                    element,
+                    "Name") ==
+                    "ReviewedFileOperationFormScroll");
+        XElement fileFooter =
+            Named(
+                fileEditor,
+                "ReviewedFileOperationStickyFooter");
+        Assert.Contains(
+            "sticky-footer",
+            Attribute(
+                fileFooter,
+                "Classes"));
+
+        // Session is an intentional exception: its virtualized
+        // AppDataGrid owns scrolling, and its sticky footer reports
+        // session state because the section has no mutating workflow
+        // action. Online metadata's second ScrollViewer is confined
+        // to selected-artwork details inside an approved data surface.
+    }
+
+    [Fact]
+    public void Advanced_tag_layer_operations_expose_localized_consequence_help_to_sighted_and_assistive_users()
+    {
+        XDocument view =
+            LoadWorkbenchSection(
+                "WorkbenchInspectorDrawerView.axaml");
+        string[] helpKeys =
+        [
+            "Workbench.Inspector.CopyPrimaryMetadataHelp",
+            "Workbench.Inspector.Id3ConversionHelp",
+            "Workbench.Inspector.LayerCopyHelp",
+            "Workbench.Inspector.Id3EncodingHelp",
+        ];
+        foreach (string key in helpKeys)
+        {
+            Assert.Contains(
+                view.Descendants(),
+                element =>
+                    Attribute(
+                        element,
+                        "Text") ==
+                    $"{{DynamicResource Loc.{key}}}");
+        }
+
+        Assert.Contains(
+            view.Descendants(),
+            element =>
+                element.Name.LocalName ==
+                    "CheckBox" &&
+                Attribute(
+                    element,
+                    "HelpText") ==
+                "{DynamicResource Loc.Workbench.Inspector.CopyPrimaryMetadataHelp}");
+        Assert.Contains(
+            view.Descendants(),
+            element =>
+                element.Name.LocalName ==
+                    "ComboBox" &&
+                Attribute(
+                    element,
+                    "HelpText") ==
+                "{DynamicResource Loc.Workbench.Inspector.Id3EncodingHelp}");
     }
 
     private static string RepositoryRoot

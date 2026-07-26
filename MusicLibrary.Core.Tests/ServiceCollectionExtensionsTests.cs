@@ -9,6 +9,32 @@ namespace MusicLibrary.Core.Tests;
 public sealed class ServiceCollectionExtensionsTests
 {
     [Fact]
+    public void MetadataOperationServiceRetainsLegacyConstructorSignature()
+    {
+        Type[] expected =
+        [
+            typeof(IMetadataDocumentService),
+            typeof(IMediaFormatRegistry),
+            typeof(IFileMutationPlanExecutor),
+            typeof(IAppSettings),
+            typeof(IReindexService),
+            typeof(IEditHistoryService),
+            typeof(IMetadataFieldMappingService),
+            typeof(IRecoverySpaceProbe),
+        ];
+
+        Assert.Contains(
+            typeof(MetadataOperationService)
+                .GetConstructors(),
+            constructor =>
+                constructor
+                    .GetParameters()
+                    .Select(parameter =>
+                        parameter.ParameterType)
+                    .SequenceEqual(expected));
+    }
+
+    [Fact]
     public void CoreServicesResolveWithActiveConfigurationDependencies()
     {
         var services = new ServiceCollection();
@@ -105,6 +131,12 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IMetadataOperationService>());
         Assert.IsType<ReverseDeltaService>(
             provider.GetRequiredService<IReverseDeltaService>());
+        Assert.IsType<FileSystemVolumeIdentityProvider>(
+            provider.GetRequiredService<
+                IFileSystemVolumeIdentityProvider>());
+        Assert.IsType<ReviewedChangeBatchService>(
+            provider.GetRequiredService<
+                IReviewedChangeBatchService>());
         Assert.IsType<EditHistoryService>(
             provider.GetRequiredService<IEditHistoryService>());
         Assert.Equal(BuiltInLibraryOperationProviders.All.Count,

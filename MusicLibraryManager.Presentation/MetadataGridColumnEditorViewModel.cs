@@ -140,6 +140,7 @@ public partial class MetadataGridColumnEditorViewModel :
     private MetadataFieldChoice? _selectedKnownField;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveColumnCommand))]
+    [NotifyPropertyChangedFor(nameof(CanInlineEdit))]
     private string? _customFieldName;
     [ObservableProperty]
     private MetadataGridColumnSortType _sortType;
@@ -184,12 +185,17 @@ public partial class MetadataGridColumnEditorViewModel :
         LocalizedChoice<MetadataGridColumnSortType>>
         SortTypeChoices { get; } = [];
     public bool SupportsInlineEditing =>
-        _surface == MetadataGridSurface.Workbench;
+        true;
     public bool CanInlineEdit =>
         SupportsInlineEditing &&
-        FieldKind == MetadataGridFieldKind.Known &&
-        SelectedKnownField is not null &&
-        InlineEditPath(SelectedKnownField.Field) is not null;
+        (FieldKind == MetadataGridFieldKind.Custom
+            ? _surface == MetadataGridSurface.Library &&
+              !string.IsNullOrWhiteSpace(
+                  CustomFieldName)
+            : SelectedKnownField is not null &&
+              (_surface == MetadataGridSurface.Library ||
+               InlineEditPath(
+                   SelectedKnownField.Field) is not null));
 
     public static string? InlineEditPath(TagFields field) => field switch
     {

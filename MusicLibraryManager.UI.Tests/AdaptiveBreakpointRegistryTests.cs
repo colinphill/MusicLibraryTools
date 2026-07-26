@@ -6,10 +6,10 @@ using Xunit;
 namespace MusicLibraryManager.UI.Tests;
 
 /// <summary>
-/// Keeps the set of literal adaptive comparisons reviewable. Adding or
-/// changing a shipping width/height breakpoint requires both a registry entry
-/// and an executable boundary test, so an untested comparison cannot silently
-/// enter a view code-behind.
+/// Keeps the set of adaptive comparisons reviewable. Adding or changing a
+/// shipping width/height breakpoint, including a symbolic/shared-control
+/// breakpoint, requires both a registry entry and an executable boundary test,
+/// so an untested comparison cannot silently enter the presentation layer.
 /// </summary>
 public sealed class AdaptiveBreakpointRegistryTests
 {
@@ -19,6 +19,25 @@ public sealed class AdaptiveBreakpointRegistryTests
             \b(?<left>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)
             \s*(?<operator><=|>=|<|>)\s*
             (?<value>\d{3,4})(?!\d)
+            """,
+            RegexOptions.CultureInvariant |
+            RegexOptions.IgnorePatternWhitespace);
+
+    private static readonly Regex SymbolicComparison =
+        new(
+            """
+            \b(?<left>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)
+            \s*(?<operator><=|>=|<|>)\s*
+            (?<right>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)
+            """,
+            RegexOptions.CultureInvariant |
+            RegexOptions.IgnorePatternWhitespace);
+
+    private static readonly Regex CompactTransitionHook =
+        new(
+            """
+            \bpublic\s+void\s+SetCompact\s*
+            \(\s*bool\s+compact\s*\)
             """,
             RegexOptions.CultureInvariant |
             RegexOptions.IgnorePatternWhitespace);
@@ -40,6 +59,33 @@ public sealed class AdaptiveBreakpointRegistryTests
                 .Workbench_shell_and_section_breakpoints_switch_at_minus_one_exact_and_plus_one),
             "contentWidth <= 1100",
             "contentWidth <= 1100"),
+        new(
+            "MusicLibraryManager/MainWindow.axaml.cs",
+            typeof(AdaptiveUiModernizationTests),
+            nameof(AdaptiveUiModernizationTests
+                .Shell_expanded_rail_uses_a_full_width_overlay_below_the_safe_docking_threshold),
+            "shellWidth >= MinimumDestinationWidth",
+            "Width < MinimumDestinationWidth"),
+        new(
+            "MusicLibraryManager/Controls/AdaptivePage.cs",
+            typeof(AdaptiveUiModernizationTests),
+            nameof(AdaptiveUiModernizationTests
+                .Adaptive_page_uses_content_width_and_height_thresholds_at_minus_one_exact_and_plus_one),
+            "LayoutBounds.Width < NarrowContentThreshold",
+            "LayoutBounds.Height <= CompactHeightThreshold"),
+        new(
+            "MusicLibraryManager/Controls/PageHeader.axaml.cs",
+            typeof(AdaptiveBreakpointCoverageTests),
+            nameof(AdaptiveBreakpointCoverageTests
+                .Page_header_command_bar_preserves_primary_and_more_at_its_measured_breakpoint),
+            "actionWidth > inlineActionAllowance",
+            "actionWidth > inlineActionAllowance"),
+        new(
+            "MusicLibraryManager/Controls/PersistedSplitView.axaml.cs",
+            typeof(AdaptiveBreakpointCoverageTests),
+            nameof(AdaptiveBreakpointCoverageTests
+                .Library_docking_and_settings_navigation_and_form_modes_use_their_actual_content_hosts),
+            "SetCompact(bool compact)"),
         new(
             "MusicLibraryManager/Views/AboutView.axaml.cs",
             typeof(AdaptiveBreakpointCoverageTests),
@@ -108,13 +154,37 @@ public sealed class AdaptiveBreakpointRegistryTests
                 .Context_labels_refresh_without_changing_semantic_operation_or_column_ids),
             "visualFilterWidth < 600"),
         new(
+            "MusicLibraryManager/Views/LibraryView.axaml.cs",
+            typeof(AdaptiveSharedBreakpointTests),
+            nameof(AdaptiveSharedBreakpointTests
+                .Library_workspace_resolution_uses_shared_gutters_at_every_boundary),
+            "workspaceWidth < requiredWorkspaceWidth",
+            "Bounds.Height <= AdaptivePage.CompactHeightThreshold",
+            "Bounds.Width < AdaptivePage.NarrowContentThreshold"),
+        new(
+            "MusicLibraryManager/Views/SettingsView.axaml.cs",
+            typeof(AdaptiveBreakpointCoverageTests),
+            nameof(AdaptiveBreakpointCoverageTests
+                .Library_docking_and_settings_navigation_and_form_modes_use_their_actual_content_hosts),
+            "navigationWidth >= CategoryRailActivationWidth",
+            "pageWidth >= FourColumnPageWidth",
+            "pageWidth >= TwoColumnPageWidth",
+            "pageWidth < TwoColumnPageWidth",
+            "pageWidth < TwoColumnPageWidth",
+            "pageWidth < FourColumnPageWidth",
+            "pageWidth < FourColumnPageWidth",
+            "_responsivePageWidth < FieldMappingSingleColumnWidth"),
+        new(
             "MusicLibraryManager/Views/WorkbenchView.axaml.cs",
             typeof(AdaptiveBreakpointCoverageTests),
             nameof(AdaptiveBreakpointCoverageTests
                 .Workbench_shell_and_section_breakpoints_switch_at_minus_one_exact_and_plus_one),
             "Bounds.Width <= 1100",
             "height <= 700",
-            "contentWidth < 700"),
+            "contentWidth < 700",
+            "width < SectionRailActivationWidth",
+            "width < SectionRailActivationWidth",
+            "width < DockedDrawerActivationWidth"),
         Section(
             "WorkbenchAllFieldsSectionView.axaml.cs",
             "Bounds.Width < 880",
@@ -235,6 +305,12 @@ public sealed class AdaptiveBreakpointRegistryTests
             .. Directory.EnumerateFiles(
                 Path.Combine(
                     applicationRoot,
+                    "Controls"),
+                "*.cs",
+                SearchOption.AllDirectories),
+            .. Directory.EnumerateFiles(
+                Path.Combine(
+                    applicationRoot,
                     "Views"),
                 "*.cs",
                 SearchOption.AllDirectories),
@@ -271,8 +347,68 @@ public sealed class AdaptiveBreakpointRegistryTests
                     $"{match.Groups["operator"].Value} " +
                     $"{match.Groups["value"].Value}");
             }
+
+            foreach (Match match in
+                     SymbolicComparison.Matches(
+                         source))
+            {
+                string left =
+                    match.Groups["left"].Value;
+                string right =
+                    match.Groups["right"].Value;
+                if (!left.Contains(
+                        "width",
+                        StringComparison
+                            .OrdinalIgnoreCase) &&
+                    !left.Contains(
+                        "height",
+                        StringComparison
+                            .OrdinalIgnoreCase))
+                    continue;
+                if (!IsAdaptiveThresholdName(right))
+                    continue;
+                // Window-state validation guards the platform minimum. It is
+                // not a responsive presentation transition.
+                if (right is "MinWidth" or
+                    "MinHeight")
+                    continue;
+                yield return new(
+                    relativePath,
+                    $"{left} " +
+                    $"{match.Groups["operator"].Value} " +
+                    right);
+            }
+
+            if (relativePath.EndsWith(
+                    "Controls/PersistedSplitView.axaml.cs",
+                    StringComparison.Ordinal) &&
+                CompactTransitionHook.IsMatch(
+                    source))
+            {
+                yield return new(
+                    relativePath,
+                    "SetCompact(bool compact)");
+            }
         }
     }
+
+    private static bool IsAdaptiveThresholdName(
+        string name) =>
+        name.Contains(
+            "width",
+            StringComparison.OrdinalIgnoreCase) ||
+        name.Contains(
+            "height",
+            StringComparison.OrdinalIgnoreCase) ||
+        name.Contains(
+            "threshold",
+            StringComparison.OrdinalIgnoreCase) ||
+        name.Contains(
+            "allowance",
+            StringComparison.OrdinalIgnoreCase) ||
+        name.Contains(
+            "required",
+            StringComparison.OrdinalIgnoreCase);
 
     private static string FindRepositoryRoot()
     {

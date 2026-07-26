@@ -104,12 +104,28 @@ public sealed class OperationsViewModelTests
 
         Assert.Equal("portable", export.LastRequest?.ProfileId);
         Assert.True(viewModel.ApplyJobCommand.CanExecute(null));
-        Assert.Contains("1 desired", viewModel.JobOutput);
+        Assert.Contains(
+            LocalizedText.FormatCount(
+                "Operations.Output.ConfiguredExport.Plan",
+                1,
+                0,
+                0,
+                1),
+            viewModel.JobOutput);
 
         await viewModel.ApplyJobCommand.ExecuteAsync(null);
 
         Assert.Equal(1, export.ApplyCalls);
-        Assert.Contains("1 copied", viewModel.JobOutput);
+        Assert.Contains(
+            LocalizedText.FormatCount(
+                "Operations.Output.ConfiguredExport.Result",
+                1,
+                "portable",
+                0,
+                0,
+                0,
+                0),
+            viewModel.JobOutput);
         Assert.Contains("Recovery is available", dialogs.ApplyMessage);
     }
 
@@ -206,7 +222,13 @@ public sealed class OperationsViewModelTests
         var run = Assert.Single(viewModel.Runs);
         Assert.True(run.IsInterrupted);
         Assert.Contains("12", run.AffectedItems);
-        Assert.Contains("1 operation run", viewModel.StatusText);
+        Assert.Equal(
+            LocalizedText.FormatCount(
+                "Operations.Status.DiscoveryCompleted",
+                1,
+                1,
+                0),
+            viewModel.StatusText);
     }
 
     [Fact]
@@ -377,7 +399,12 @@ public sealed class OperationsViewModelTests
         await viewModel.ApplyRestoreCommand.ExecuteAsync(null);
         Assert.Equal(1, journals.ApplyCalls);
         Assert.False(viewModel.ShowRestorePreview);
-        Assert.Contains("Restored 2 items", viewModel.StatusText);
+        Assert.Equal(
+            LocalizedText.FormatCount(
+                "Operations.Status.RestoreCompleted",
+                2,
+                0),
+            viewModel.StatusText);
     }
 
     [Fact]
@@ -411,7 +438,13 @@ public sealed class OperationsViewModelTests
         Assert.Equal(1, journals.PurgeApplyCalls);
         Assert.Empty(viewModel.Runs);
         Assert.False(viewModel.ShowPurgePreview);
-        Assert.Contains("Purged 1 run", viewModel.StatusText);
+        Assert.Equal(
+            LocalizedText.FormatCount(
+                "Operations.Status.PurgeCompleted",
+                1,
+                1,
+                "5 B"),
+            viewModel.StatusText);
     }
 
     private sealed class RecordingJournals(

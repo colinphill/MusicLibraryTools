@@ -905,7 +905,7 @@
     <value>Vérifier l’audio décodé</value>
   </data>
   <data name="Health.Audit.Run" xml:space="preserve">
-    <value>Exécuter l’audit…</value>
+    <value>Exécuter l’audit</value>
   </data>
   <data name="Health.Audit.RunAutomation" xml:space="preserve">
     <value>Choisir un audit à exécuter</value>
@@ -1025,7 +1025,7 @@
     <value>Noms d’artistes similaires</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
-    <value>Préparer les réparations…</value>
+    <value>Préparer les réparations</value>
   </data>
   <data name="Health.Repair.PrepareAutomation" xml:space="preserve">
     <value>Choisir un plan de réparation à préparer</value>
@@ -1742,6 +1742,12 @@
   <data name="Library.PendingChanges.Action.Apply" xml:space="preserve">
     <value>Appliquer</value>
   </data>
+  <data name="Library.PendingChanges.FieldChanged" xml:space="preserve">
+    <value>La valeur de {0} a changé après le début de la modification. Rechargez le fichier avant d’appliquer la modification en attente.</value>
+  </data>
+  <data name="Library.PendingChanges.SourceChanged" xml:space="preserve">
+    <value>Le fichier a changé après le début de la modification. Rechargez-le avant d’appliquer la modification en attente.</value>
+  </data>
   <data name="Library.Action.CopyPaths" xml:space="preserve">
     <value>Copier les chemins</value>
   </data>
@@ -1818,7 +1824,7 @@
     <value>Effacer la sélection</value>
   </data>
   <data name="Operations.Action.Maintenance" xml:space="preserve">
-    <value>maintenance…</value>
+    <value>Maintenance</value>
   </data>
   <data name="Operations.Action.MaintenanceAutomation" xml:space="preserve">
     <value>Actions de maintenance de la récupération</value>
@@ -1913,6 +1919,8 @@
   <data name="ReviewedFileOperation.DestinationAutomation" xml:space="preserve">
     <value>Destination de l’opération sur les fichiers</value>
   </data>
+  <data name="ReviewedFileOperation.EmptyPreviewDescription" xml:space="preserve"><value>Choisissez une opération, puis « Prévisualiser ». Chaque chemin et traitement proposé s’affichera ici avant d’être ajouté à « Vérifier les modifications ».</value></data>
+  <data name="ReviewedFileOperation.EmptyPreviewTitle" xml:space="preserve"><value>Aucun aperçu d’opération sur les fichiers</value></data>
   <data name="ReviewedFileOperation.DestinationFolderPlaceholder" xml:space="preserve"><value>Dossier de destination</value></data>
   <data name="ReviewedFileOperation.DestinationPlaceholder" xml:space="preserve">
     <value>Dossier de destination ou de quarantaine</value>
@@ -2011,7 +2019,7 @@
     <value>Langue d’affichage</value>
   </data>
   <data name="Settings.Appearance.DisplayLanguageDescription" xml:space="preserve">
-    <value>Modifie immédiatement le texte de l’application. Les métadonnées de la bibliothèque, les noms de fichiers, les formats régionaux, l’analyse et le tri restent inchangés. L’anglais (États-Unis) est actuellement disponible.</value>
+    <value>Modifie immédiatement le texte de l’application. Les langues signalées comme Bêta utilisent une traduction assistée par ordinateur. Les métadonnées de la bibliothèque, les noms de fichiers, les formats régionaux, l’analyse et le tri restent inchangés.</value>
   </data>
   <data name="Activity.Cancelling" xml:space="preserve">
     <value>Annulation…</value>
@@ -5122,6 +5130,8 @@
   <data name="Workbench.Bulk.ConditionField" xml:space="preserve"><value>Champ de condition</value></data>
   <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>Valeur de condition</value></data>
   <data name="Workbench.Bulk.Description" xml:space="preserve"><value>Créez une recette de métadonnées réutilisable, prévisualisez ses effets et n’appliquez que les modifications vérifiées.</value></data>
+  <data name="Workbench.Bulk.EmptyPreviewDescription" xml:space="preserve"><value>Ajoutez au moins une étape de recette, puis sélectionnez « Prévisualiser ». Les modifications de champs proposées s’afficheront ici avant d’entrer dans « Vérifier les modifications ».</value></data>
+  <data name="Workbench.Bulk.EmptyPreviewTitle" xml:space="preserve"><value>Aucun aperçu de modification en bloc</value></data>
   <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>Champ de destination</value></data>
   <data name="Workbench.Bulk.EnableCondition" xml:space="preserve"><value>Activer la condition</value></data>
   <data name="Workbench.Bulk.ExtractionPattern" xml:space="preserve"><value>Motif d’extraction</value></data>
@@ -5188,7 +5198,7 @@
   <data name="Workbench.Columns.AllowInlineEditing" xml:space="preserve"><value>Autoriser la modification directe</value></data>
   <data name="Workbench.Columns.Close" xml:space="preserve"><value>Fermer</value></data>
   <data name="Workbench.Columns.Description" xml:space="preserve"><value>Choisissez les colonnes visibles ou créez des colonnes de métadonnées sans modifier les métadonnées enregistrées.</value></data>
-  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>La modification directe n’est disponible que pour les champs connus pris en charge.</value></data>
+  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>La modification directe est disponible pour les champs standard pris en charge et les champs de texte personnalisés. Dans les champs multivaleurs, les points-virgules séparent les valeurs ; saisissez \; pour insérer un point-virgule littéral.</value></data>
   <data name="Workbench.Columns.InlineEditingLabel" xml:space="preserve"><value>Modification directe</value></data>
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>Champ connu</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>Libellé</value></data>
@@ -5277,6 +5287,7 @@
   <data name="Workbench.Inspector.AddId3v1Automation" xml:space="preserve"><value>Ajouter une couche de balises ID3v1</value></data>
   <data name="Workbench.Inspector.AddId3v2Automation" xml:space="preserve"><value>Ajouter une couche de balises ID3v2</value></data>
   <data name="Workbench.Inspector.CopyPrimaryMetadata" xml:space="preserve"><value>Copier les métadonnées principales</value></data>
+  <data name="Workbench.Inspector.CopyPrimaryMetadataHelp" xml:space="preserve"><value>Lorsqu’une couche de balises manquante est ajoutée, copie les valeurs principales vérifiées du fichier dans cette nouvelle couche. Désactivez cette option pour ajouter une couche vide.</value></data>
   <data name="Workbench.Inspector.CopyV1ToV2" xml:space="preserve"><value>Copier ID3v1 vers ID3v2</value></data>
   <data name="Workbench.Inspector.CopyV1ToV2Automation" xml:space="preserve"><value>Copier ID3v1 vers ID3v2</value></data>
   <data name="Workbench.Inspector.CopyV2ToV1" xml:space="preserve"><value>Copier ID3v2 vers ID3v1</value></data>
@@ -5285,8 +5296,11 @@
   <data name="Workbench.Inspector.CurrentValueFormat" xml:space="preserve"><value>Version ID3 actuelle : {0}</value></data>
   <data name="Workbench.Inspector.DropUnsupportedFrames" xml:space="preserve"><value>Abandonner les trames non prises en charge</value></data>
   <data name="Workbench.Inspector.Id3Conversion" xml:space="preserve"><value>Conversion ID3</value></data>
+  <data name="Workbench.Inspector.Id3ConversionHelp" xml:space="preserve"><value>La conversion change la version ID3v2 utilisée par le fichier. Vérifiez les avertissements avant de choisir de supprimer les trames non prises en charge ou de joindre les textes multivaleurs.</value></data>
   <data name="Workbench.Inspector.Id3EncodingAutomation" xml:space="preserve"><value>Encodage ID3</value></data>
+  <data name="Workbench.Inspector.Id3EncodingHelp" xml:space="preserve"><value>Réencode le texte ID3 selon une règle prise en charge par la version actuelle de la balise. Cela peut modifier l’interprétation du texte par les anciens lecteurs sans changer les valeurs affichées.</value></data>
   <data name="Workbench.Inspector.JoinMultiValueText" xml:space="preserve"><value>Joindre le texte à valeurs multiples</value></data>
+  <data name="Workbench.Inspector.LayerCopyHelp" xml:space="preserve"><value>La copie de valeurs entre couches ID3 ne prépare que les champs que la couche de destination peut représenter. La couche source reste présente, sauf si vous la supprimez séparément.</value></data>
   <data name="Workbench.Inspector.PreviewConversion" xml:space="preserve"><value>Prévisualiser la conversion</value></data>
   <data name="Workbench.Inspector.PreviewConversionAutomation" xml:space="preserve"><value>Prévisualiser la conversion</value></data>
   <data name="Workbench.Inspector.PreviewEncoding" xml:space="preserve"><value>Prévisualiser l’encodage</value></data>
@@ -5340,6 +5354,17 @@
   <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>Calculez l’empreinte des fichiers sélectionnés et recherchez des enregistrements candidats dans AcoustID et MusicBrainz. Aucune donnée n’est envoyée.</value></data>
   <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>Identifier l’audio</value></data>
   <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>Jeu d’illustrations intégrées</value></data>
+  <data name="Workbench.Online.Empty.ArtworkCandidatesDescription" xml:space="preserve"><value>Sélectionnez « Rechercher les illustrations de la parution » après avoir choisi ou associé une parution. Les images candidates s’afficheront ici pour vérification.</value></data>
+  <data name="Workbench.Online.Empty.ArtworkCandidatesTitle" xml:space="preserve"><value>Aucune illustration candidate pour la parution</value></data>
+  <data name="Workbench.Online.Empty.ArtworkDescription" xml:space="preserve"><value>Ajoutez une image ou chargez l’ensemble d’illustrations incorporées d’un fichier sélectionné, puis vérifiez son rôle, sa description et ses options d’optimisation.</value></data>
+  <data name="Workbench.Online.Empty.ArtworkTitle" xml:space="preserve"><value>Aucune illustration incorporée préparée</value></data>
+  <data name="Workbench.Online.Empty.AwaitingDiscoveryDescription" xml:space="preserve"><value>Choisissez une étendue et terminez la découverte audio. Les candidats d’empreinte s’afficheront ici même si la recherche terminée ne trouve aucune correspondance.</value></data>
+  <data name="Workbench.Online.Empty.AwaitingSearchDescription" xml:space="preserve"><value>Choisissez un fournisseur, saisissez des critères et terminez la recherche. Les éditions de la parution s’afficheront ici pour vérification.</value></data>
+  <data name="Workbench.Online.Empty.AwaitingTitle" xml:space="preserve"><value>Terminez l’étape précédente</value></data>
+  <data name="Workbench.Online.Empty.MappingDescription" xml:space="preserve"><value>Sélectionnez une édition de la parution et créez sa correspondance entre fichiers et pistes avant de prévisualiser les métadonnées.</value></data>
+  <data name="Workbench.Online.Empty.MappingTitle" xml:space="preserve"><value>Aucune correspondance de pistes</value></data>
+  <data name="Workbench.Online.Empty.NoResultsDescription" xml:space="preserve"><value>La recherche terminée n’a renvoyé aucun résultat pour cette vue. Modifiez l’étendue ou les critères de recherche, puis réessayez.</value></data>
+  <data name="Workbench.Online.Empty.NoResultsTitle" xml:space="preserve"><value>Aucun résultat correspondant</value></data>
   <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>Exporter l’illustration</value></data>
   <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>Exporter l’illustration</value></data>
   <data name="Workbench.Online.Field.AlbumArtistDate" xml:space="preserve"><value>Album, artiste et date</value></data>
@@ -5444,6 +5469,8 @@
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>Écrire</value></data>
   <data name="Workbench.Playlists.DefaultName" xml:space="preserve"><value>Liste de lecture musicale</value></data>
   <data name="Workbench.Playlists.Description" xml:space="preserve"><value>Prévisualisez la destination et le contenu de la liste avant de l’écrire.</value></data>
+  <data name="Workbench.Playlists.EmptyPreviewDescription" xml:space="preserve"><value>Choisissez la disposition de la liste de lecture, puis sélectionnez « Prévisualiser ». Les fichiers vérifiés s’afficheront ici avant toute écriture.</value></data>
+  <data name="Workbench.Playlists.EmptyPreviewTitle" xml:space="preserve"><value>Aucun aperçu de liste de lecture</value></data>
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>Encodage</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>Informations étendues</value></data>
   <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>Fins de ligne</value></data>
@@ -5465,6 +5492,8 @@
   <data name="Workbench.Reports.ColumnActions" xml:space="preserve"><value>Actions sur les colonnes</value></data>
   <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>Rapport de la bibliothèque musicale</value></data>
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>Décroissant</value></data>
+  <data name="Workbench.Reports.EmptyPreviewDescription" xml:space="preserve"><value>Choisissez la disposition du rapport, puis sélectionnez « Prévisualiser ». Les fichiers de sortie vérifiés s’afficheront ici avant toute écriture.</value></data>
+  <data name="Workbench.Reports.EmptyPreviewTitle" xml:space="preserve"><value>Aucun aperçu de rapport</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>Choisissez les champs, le regroupement et le tri, puis vérifiez chaque destination de sortie.</value></data>
   <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>Bits par échantillon</value></data>
   <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>Type de codec</value></data>
@@ -5527,8 +5556,8 @@
   <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>{0:N0} illustration</value></data>
   <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>{0:N0} illustrations</value></data>
   <data name="Workbench.Session.Columns" xml:space="preserve"><value>Colonnes</value></data>
-  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>Cellules vides</value></data>
-  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>Traitement des cellules importées vides</value></data>
+  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>Règle des cellules vides à l’importation</value></data>
+  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>Choisissez l’effet des cellules vides importées sur les métadonnées existantes.</value></data>
   <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>Ajoutez des fichiers audio ou un dossier pour commencer à vérifier et modifier une session.</value></data>
   <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>Aucun fichier dans cette session</value></data>
   <data name="Workbench.Session.FieldsCount.One" xml:space="preserve"><value>{0:N0} champ</value></data>
@@ -5747,6 +5776,8 @@
   <data name="Workbench.Tools.BrowseFolder" xml:space="preserve"><value>Choisir un dossier</value></data>
   <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>Outil externe</value></data>
   <data name="Workbench.Tools.Delete" xml:space="preserve"><value>Supprimer l’outil</value></data>
+  <data name="Workbench.Tools.EmptyPreviewDescription" xml:space="preserve"><value>Configurez l’appel, puis sélectionnez « Prévisualiser ». L’exécutable, les arguments, le répertoire de travail et les lots de fichiers exacts s’afficheront ici avant toute exécution.</value></data>
+  <data name="Workbench.Tools.EmptyPreviewTitle" xml:space="preserve"><value>Aucun aperçu de l’appel d’outil</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>Exécutable</value></data>
   <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>Mode d’appel</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>Charger</value></data>

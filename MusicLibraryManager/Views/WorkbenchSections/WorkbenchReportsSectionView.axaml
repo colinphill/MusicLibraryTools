@@ -189,7 +189,25 @@
       <controls:AppDataGrid x:Name="ReportOutputGrid"
                             Grid.Row="1"
                             MinHeight="150"
+                            IsVisible="{Binding ReportOutputs.Count}"
                             ItemsSource="{Binding ReportOutputs}" />
+      <Border x:Name="ReportPreviewEmptyState"
+              Grid.Row="1"
+              Classes="empty-state"
+              IsVisible="{Binding !ReportOutputs.Count}">
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="360"
+                    Spacing="8">
+          <TextBlock FontWeight="SemiBold"
+                     TextAlignment="Center"
+                     Text="{DynamicResource Loc.Workbench.Reports.EmptyPreviewTitle}" />
+          <TextBlock Classes="muted"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap"
+                     Text="{DynamicResource Loc.Workbench.Reports.EmptyPreviewDescription}" />
+        </StackPanel>
+      </Border>
       <Border Grid.Row="2" Classes="status-banner info">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding StatusText}"
@@ -203,7 +221,8 @@
               IsVisible="{Binding HasStatusDiagnosticDetail}" />
         </StackPanel>
       </Border>
-      <Border Grid.Row="3"
+      <Border x:Name="ReportsStickyFooter"
+              Grid.Row="3"
               Classes="sticky-footer">
         <WrapPanel HorizontalAlignment="Right">
           <Button x:Name="PreviewReportButton"
@@ -218,5 +237,33 @@
         </WrapPanel>
       </Border>
     </Grid>
+    <Border x:Name="ReportsSourceEmptyState"
+            Grid.ColumnSpan="3"
+            Grid.RowSpan="3"
+            Classes="empty-state"
+            IsVisible="{Binding !HasFiles}">
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  MaxWidth="360"
+                  Spacing="8">
+        <TextBlock Classes="faint caption"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   Text="{DynamicResource Loc.Workbench.Section.ReportsAutomation}" />
+        <TextBlock FontSize="17"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
+        <TextBlock Classes="muted"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   Text="{DynamicResource Loc.Workbench.Session.EmptyDescription}" />
+        <Button x:Name="ReportsAddFilesButton"
+                Classes="app"
+                HorizontalAlignment="Center"
+                Content="{DynamicResource Loc.Workbench.Action.AddFiles}"
+                Command="{Binding BrowseFilesCommand}" />
+      </StackPanel>
+    </Border>
   </Grid>
 </UserControl>

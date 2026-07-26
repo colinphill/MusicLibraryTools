@@ -81,8 +81,8 @@ public partial class WorkbenchAllFieldsSectionView : UserControl
                     new GridLength(
                         1,
                         GridUnitType.Star)));
-            Grid.SetColumn(EditorScroll, 0);
-            Grid.SetRow(EditorScroll, 0);
+            Grid.SetColumn(EditorPanel, 0);
+            Grid.SetRow(EditorPanel, 0);
             Grid.SetColumn(FieldListPanel, 0);
             Grid.SetRow(FieldListPanel, 0);
         }
@@ -105,8 +105,8 @@ public partial class WorkbenchAllFieldsSectionView : UserControl
                     new GridLength(
                         1,
                         GridUnitType.Star)));
-            Grid.SetColumn(EditorScroll, 2);
-            Grid.SetRow(EditorScroll, 0);
+            Grid.SetColumn(EditorPanel, 2);
+            Grid.SetRow(EditorPanel, 0);
             Grid.SetColumn(FieldListPanel, 0);
             Grid.SetRow(FieldListPanel, 0);
         }
@@ -134,6 +134,8 @@ public partial class WorkbenchAllFieldsSectionView : UserControl
         FieldListPanel.IsVisible =
             !_narrow || !showEditor;
         EditorScroll.IsVisible =
+            showEditor;
+        EditorPanel.IsVisible =
             showEditor;
         AllFieldsBackButton.IsVisible =
             _narrow && showEditor;

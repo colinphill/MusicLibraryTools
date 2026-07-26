@@ -33,7 +33,8 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
-        <Border Classes="empty-state"
+        <Border x:Name="ShortcutsEmptyState"
+                Classes="empty-state"
                 IsVisible="{Binding !ShortcutEditor.Bindings.Count}">
           <StackPanel HorizontalAlignment="Center"
                       VerticalAlignment="Center"
@@ -63,10 +64,13 @@
       </Border>
     </Grid>
 
-    <ScrollViewer x:Name="EditorScroll"
-                  Grid.Column="2"
-                  VerticalScrollBarVisibility="Auto">
-      <StackPanel Classes="content-stack">
+    <Grid x:Name="EditorPanel"
+          Grid.Column="2"
+          RowDefinitions="*,Auto"
+          RowSpacing="8">
+      <ScrollViewer x:Name="EditorScroll"
+                    VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="content-stack">
         <Button x:Name="ShortcutBackButton"
                 Classes="app quiet"
                 HorizontalAlignment="Left"
@@ -126,20 +130,6 @@
                     PlaceholderText="{DynamicResource Loc.Workbench.Shortcuts.RecipePlaceholder}"
                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Shortcuts.Recipe}" />
         </StackPanel>
-        <WrapPanel>
-          <Button x:Name="NewShortcutEditorButton"
-                  Classes="app"
-                  Content="{DynamicResource Loc.Workbench.Shortcuts.New}"
-                  Command="{Binding ShortcutEditor.NewShortcutCommand}"
-                  Click="OnNewShortcutClick" />
-          <Button x:Name="SaveShortcutButton"
-                  Classes="app primary"
-                  Content="{DynamicResource Loc.Workbench.Shortcuts.Save}"
-                  Command="{Binding ShortcutEditor.SaveShortcutCommand}" />
-          <Button Classes="app danger"
-                  Content="{DynamicResource Loc.Common.Remove}"
-                  Command="{Binding ShortcutEditor.RemoveShortcutCommand}" />
-        </WrapPanel>
         <Border x:Name="InputWarning"
                 Classes="status-banner warning">
           <TextBlock TextWrapping="Wrap"
@@ -148,7 +138,26 @@
         <TextBlock Classes="muted"
                    TextWrapping="Wrap"
                    Text="{Binding ShortcutEditor.Status}" />
-      </StackPanel>
-    </ScrollViewer>
+        </StackPanel>
+      </ScrollViewer>
+      <Border x:Name="ShortcutsStickyFooter"
+              Grid.Row="1"
+              Classes="sticky-footer">
+        <WrapPanel HorizontalAlignment="Right">
+          <Button x:Name="NewShortcutEditorButton"
+                  Classes="app"
+                  Content="{DynamicResource Loc.Workbench.Shortcuts.New}"
+                  Command="{Binding ShortcutEditor.NewShortcutCommand}"
+                  Click="OnNewShortcutClick" />
+          <Button Classes="app danger"
+                  Content="{DynamicResource Loc.Common.Remove}"
+                  Command="{Binding ShortcutEditor.RemoveShortcutCommand}" />
+          <Button x:Name="SaveShortcutButton"
+                  Classes="app primary"
+                  Content="{DynamicResource Loc.Workbench.Shortcuts.Save}"
+                  Command="{Binding ShortcutEditor.SaveShortcutCommand}" />
+        </WrapPanel>
+      </Border>
+    </Grid>
   </Grid>
 </UserControl>

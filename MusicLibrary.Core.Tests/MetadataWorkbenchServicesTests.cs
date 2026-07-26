@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
@@ -208,6 +209,600 @@ public sealed class MetadataWorkbenchServicesTests
             stage.Files,
             file => Assert.False(
                 File.Exists(file.StagedPath)));
+    }
+
+    [Fact]
+    public async Task MultiParticipantApplyDelegatesTheCompleteStageToOneReviewedBatch()
+    {
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-metadata-batch-" +
+            Guid.NewGuid().ToString("N") +
+            ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var mutations =
+                new RecordingMutationExecutor();
+            var reviewed =
+                new RecordingReviewedChangeBatchService();
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                mutations,
+                settings,
+                reviewedChanges: reviewed);
+            FileMutationPlan first =
+                EmptyParticipant(
+                    "first",
+                    "first-recovery");
+            FileMutationPlan second =
+                EmptyParticipant(
+                    "second",
+                    "second-recovery");
+            MetadataOperationStageResult stage =
+                SyntheticStage(
+                    first,
+                    second);
+
+            MetadataApplyResult result =
+                await service.ApplyStagedAsync(
+                    stage,
+                    ct: TestContext.Current
+                        .CancellationToken);
+
+            Assert.Equal(0, mutations.ApplyCount);
+            Assert.Equal(1, reviewed.CreateCount);
+            Assert.Equal(1, reviewed.ApplyCount);
+            Assert.Collection(
+                reviewed.Participants,
+                participant =>
+                    Assert.Same(first, participant),
+                participant =>
+                    Assert.Same(second, participant));
+            Assert.Equal(
+                ["first-journal", "second-journal"],
+                result.JournalPaths);
+            Assert.Equal(2, result.ChangedFiles);
+            Assert.Equal(
+                new RecoveryStorageSummary(
+                    300,
+                    30,
+                    1,
+                    1),
+                result.RecoveryStorage);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(statePath);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task MultiParticipantApplyRollsBackTheFirstParticipantWhenTheSecondFails()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-metadata-batch-rollback-" +
+            Guid.NewGuid().ToString("N"));
+        string firstRoot =
+            Path.Combine(session, "a");
+        string secondRoot =
+            Path.Combine(session, "b");
+        Directory.CreateDirectory(firstRoot);
+        Directory.CreateDirectory(secondRoot);
+        string statePath =
+            Path.Combine(session, "settings.json");
+        string firstLive =
+            Path.Combine(firstRoot, "first.flac");
+        string secondLive =
+            Path.Combine(secondRoot, "second.flac");
+        string firstStage =
+            Path.Combine(firstRoot, "first.stage.flac");
+        string secondStage =
+            Path.Combine(secondRoot, "second.stage.flac");
+        File.WriteAllText(
+            firstLive,
+            "first original");
+        File.WriteAllText(
+            secondLive,
+            "second original");
+        File.WriteAllText(
+            firstStage,
+            "first updated");
+        File.WriteAllText(
+            secondStage,
+            "second updated");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var coordinator =
+                new FileMutationCoordinator();
+            var mutations =
+                new FailOnSecondMutationExecutor(
+                    new FileMutationPlanExecutor(
+                        coordinator,
+                        settings: settings));
+            var reviewed =
+                new ReviewedChangeBatchService(
+                    mutations,
+                    new OperationJournalService(
+                        coordinator),
+                    settings);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                mutations,
+                settings,
+                reviewedChanges: reviewed);
+            MetadataOperationStageResult stage =
+                SyntheticStage(
+                    ReplacementParticipant(
+                        firstRoot,
+                        Path.Combine(
+                            session,
+                            "first-recovery"),
+                        firstStage,
+                        firstLive),
+                    ReplacementParticipant(
+                        secondRoot,
+                        Path.Combine(
+                            session,
+                            "second-recovery"),
+                        secondStage,
+                        secondLive));
+
+            await Assert.ThrowsAsync<
+                InvalidOperationException>(
+                () => service.ApplyStagedAsync(
+                    stage,
+                    ct: TestContext.Current
+                        .CancellationToken));
+
+            Assert.Equal(2, mutations.ApplyCount);
+            Assert.Equal(
+                "first original",
+                File.ReadAllText(firstLive));
+            Assert.Equal(
+                "second original",
+                File.ReadAllText(secondLive));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(
+                    session,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SyntheticVolumeIdentitySplitsParticipantsAndKeepsRecoveryOnEachVolume()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-metadata-volume-identity-" +
+            Guid.NewGuid().ToString("N"));
+        string firstRoot = Path.Combine(session, "a");
+        string secondRoot = Path.Combine(session, "b");
+        string firstPath = Path.Combine(
+            firstRoot,
+            "first.flac");
+        string secondPath = Path.Combine(
+            secondRoot,
+            "second.flac");
+        string statePath = Path.Combine(
+            session,
+            "settings.json");
+        Directory.CreateDirectory(firstRoot);
+        Directory.CreateDirectory(secondRoot);
+        File.Copy(
+            MediaFixtures.Path_("sample.flac"),
+            firstPath);
+        File.Copy(
+            MediaFixtures.Path_("sample.flac"),
+            secondPath);
+        var volumes =
+            new PrefixVolumeIdentityProvider(
+                (firstRoot, "volume-a"),
+                (secondRoot, "volume-b"));
+        MetadataOperationStageResult? stage = null;
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(
+                    settings: settings),
+                settings,
+                volumeIdentities: volumes);
+            MetadataOperationPlan plan =
+                await service.PreviewAsync(
+                    [secondPath, firstPath],
+                    OperationRecipe.Create(
+                        "Synthetic volumes",
+                        new AssignFieldOperation(
+                            MetadataFieldKey.Known(
+                                TagFields.Title),
+                            "Changed")),
+                    TestContext.Current.CancellationToken);
+
+            stage = await service.StageAsync(
+                plan,
+                ct: TestContext.Current
+                    .CancellationToken);
+
+            Assert.Equal(2, stage.Participants.Length);
+            Assert.Equal(
+                [firstPath, secondPath],
+                stage.Participants
+                    .SelectMany(participant =>
+                        participant.Actions)
+                    .Select(action =>
+                        action.DestinationPath));
+            Assert.All(
+                stage.Participants,
+                participant =>
+                {
+                    FileMutationAction action =
+                        Assert.Single(
+                            participant.Actions);
+                    Assert.Equal(
+                        volumes.GetIdentity(
+                            action.DestinationPath).Key,
+                        volumes.GetIdentity(
+                            participant.RecoveryRoot).Key);
+                    Assert.StartsWith(
+                        participant.DestinationRoot +
+                        Path.DirectorySeparatorChar,
+                        participant.RecoveryRoot,
+                        StringComparisonForPaths);
+                });
+        }
+        finally
+        {
+            if (stage is not null)
+            {
+                var cleanup = new MetadataOperationService(
+                    _documents,
+                    MediaFormatRegistry.Default,
+                    new RecordingMutationExecutor(),
+                    new AppSettings(statePath),
+                    volumeIdentities: volumes);
+                await cleanup.DiscardStageAsync(
+                    stage,
+                    CancellationToken.None);
+            }
+            try
+            {
+                Directory.Delete(
+                    session,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task StageRefusesARecoveryRootOutsideTheReportedSourceVolume()
+    {
+        using var media =
+            MediaFixtures.Copy("sample.flac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-metadata-volume-refusal-" +
+            Guid.NewGuid().ToString("N") +
+            ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var volumes =
+                new SourceOnlyVolumeIdentityProvider(
+                    media.Path);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(
+                    settings: settings),
+                settings,
+                volumeIdentities: volumes);
+            MetadataOperationPlan plan =
+                await service.PreviewAsync(
+                    [media.Path],
+                    OperationRecipe.Create(
+                        "No recovery volume",
+                        new AssignFieldOperation(
+                            MetadataFieldKey.Known(
+                                TagFields.Title),
+                            "Changed")),
+                    TestContext.Current.CancellationToken);
+
+            InvalidOperationException error =
+                await Assert.ThrowsAsync<
+                    InvalidOperationException>(
+                    () => service.StageAsync(
+                        plan,
+                        ct: TestContext.Current
+                            .CancellationToken));
+
+            Assert.Contains(
+                "same-volume",
+                error.Message,
+                StringComparison.Ordinal);
+            Assert.Equal(
+                "TestTitle",
+                (await _documents.LoadAsync(
+                    media.Path,
+                    ct: TestContext.Current
+                        .CancellationToken))
+                    .FirstValue(TagFields.Title));
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(statePath);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ReversedValueInputProducesTheSameCanonicalPlanAndActionOrder()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-metadata-order-" +
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(session);
+        string[] paths =
+        [
+            Path.Combine(session, "c.flac"),
+            Path.Combine(session, "a.flac"),
+            Path.Combine(session, "b.flac"),
+        ];
+        foreach (string path in paths)
+            File.Copy(
+                MediaFixtures.Path_("sample.flac"),
+                path);
+        string statePath = Path.Combine(
+            session,
+            "settings.json");
+        var volumes =
+            new PrefixVolumeIdentityProvider(
+                (session, "volume"));
+        MetadataOperationStageResult? firstStage = null;
+        MetadataOperationStageResult? secondStage = null;
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(
+                    settings: settings),
+                settings,
+                volumeIdentities: volumes);
+            Dictionary<
+                string,
+                IReadOnlyList<MetadataValueEdit>>
+                firstInput = [];
+            Dictionary<
+                string,
+                IReadOnlyList<MetadataValueEdit>>
+                secondInput = [];
+            foreach (string path in paths)
+                firstInput[path] = TitleEdit(path);
+            foreach (string path in paths.Reverse())
+                secondInput[path] = TitleEdit(path);
+
+            MetadataOperationPlan firstPlan =
+                await service.PreviewValueEditsAsync(
+                    firstInput,
+                    "Forward",
+                    TestContext.Current
+                        .CancellationToken);
+            MetadataOperationPlan secondPlan =
+                await service.PreviewValueEditsAsync(
+                    secondInput,
+                    "Reverse",
+                    TestContext.Current
+                        .CancellationToken);
+            string[] expected =
+            [
+                .. paths.OrderBy(
+                    path => path,
+                    PathComparerForTests),
+            ];
+
+            Assert.Equal(
+                expected,
+                firstPlan.Files.Select(file =>
+                    file.Path));
+            Assert.Equal(
+                expected,
+                secondPlan.Files.Select(file =>
+                    file.Path));
+
+            firstStage =
+                await service.StageAsync(
+                    firstPlan,
+                    ct: TestContext.Current
+                        .CancellationToken);
+            secondStage =
+                await service.StageAsync(
+                    secondPlan,
+                    ct: TestContext.Current
+                        .CancellationToken);
+            Assert.Equal(
+                expected,
+                Assert.Single(
+                        firstStage.Participants)
+                    .Actions.Select(action =>
+                        action.DestinationPath));
+            Assert.Equal(
+                expected,
+                Assert.Single(
+                        secondStage.Participants)
+                    .Actions.Select(action =>
+                        action.DestinationPath));
+        }
+        finally
+        {
+            var cleanup = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new RecordingMutationExecutor(),
+                new AppSettings(statePath),
+                volumeIdentities: volumes);
+            if (firstStage is not null)
+                await cleanup.DiscardStageAsync(
+                    firstStage,
+                    CancellationToken.None);
+            if (secondStage is not null)
+                await cleanup.DiscardStageAsync(
+                    secondStage,
+                    CancellationToken.None);
+            try
+            {
+                Directory.Delete(
+                    session,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+        }
+
+        static IReadOnlyList<MetadataValueEdit>
+            TitleEdit(string path) =>
+            [
+                new(
+                    MetadataFieldKey.Known(
+                        TagFields.Title),
+                    [
+                        "Title " +
+                        Path.GetFileNameWithoutExtension(
+                            path),
+                    ]),
+            ];
+    }
+
+    [Fact]
+    public async Task CancellationArrivingAfterCommitDoesNotCancelMetadataFinalization()
+    {
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-metadata-post-commit-cancel-" +
+            Guid.NewGuid().ToString("N") +
+            ".json");
+        using var cancellation =
+            new CancellationTokenSource();
+        try
+        {
+            var history =
+                new RecordingEditHistoryService();
+            var reviewed =
+                new RecordingReviewedChangeBatchService(
+                    cancellation.Cancel);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new RecordingMutationExecutor(),
+                new AppSettings(statePath),
+                history: history,
+                reviewedChanges: reviewed);
+
+            MetadataApplyResult result =
+                await service.ApplyStagedAsync(
+                    SyntheticStage(
+                        EmptyParticipant(
+                            "first",
+                            "first-recovery"),
+                        EmptyParticipant(
+                            "second",
+                            "second-recovery")),
+                    ct: cancellation.Token);
+
+            Assert.True(
+                cancellation.IsCancellationRequested);
+            Assert.Equal(2, result.ChangedFiles);
+            Assert.Single(history.Entries);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(statePath);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ThrowingCompletionProgressCannotChangeACommittedMetadataResult()
+    {
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-metadata-post-commit-progress-" +
+            Guid.NewGuid().ToString("N") +
+            ".json");
+        try
+        {
+            var history =
+                new RecordingEditHistoryService();
+            var executor =
+                new PostCommitProgressMutationExecutor();
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                executor,
+                new AppSettings(statePath),
+                history: history);
+
+            MetadataApplyResult result =
+                await service.ApplyStagedAsync(
+                    SyntheticStage(
+                        EmptyParticipant(
+                            "only",
+                            "only-recovery")),
+                    new ThrowingOperationProgress(),
+                    TestContext.Current
+                        .CancellationToken);
+
+            Assert.Equal(1, result.ChangedFiles);
+            Assert.True(
+                executor.ReturnedAfterProgress);
+            Assert.Single(history.Entries);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(statePath);
+            }
+            catch
+            {
+            }
+        }
     }
 
     [Fact]
@@ -601,6 +1196,407 @@ public sealed class MetadataWorkbenchServicesTests
             try { Directory.Delete(session, recursive: true); } catch { }
             try { Directory.Delete(recovery, recursive: true); } catch { }
         }
+    }
+
+    [Fact]
+    public async Task Value_edit_expectations_block_a_source_changed_after_the_draft_was_created()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-edit-expectation-" +
+            Guid.NewGuid().ToString("N"));
+        string recovery =
+            session +
+            ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(
+            session,
+            "track.flac");
+        File.Copy(
+            MediaFixtures.Path_("sample.flac"),
+            mediaPath);
+        string statePath = Path.Combine(
+            session,
+            "settings.json");
+        try
+        {
+            var settings =
+                new AppSettings(statePath);
+            var service =
+                new MetadataOperationService(
+                    _documents,
+                    MediaFormatRegistry.Default,
+                    new FileMutationPlanExecutor(
+                        settings: settings),
+                    settings);
+            MediaDocument original =
+                await _documents.LoadAsync(
+                    mediaPath,
+                    includeArtwork: false,
+                    TestContext.Current
+                        .CancellationToken);
+            MediaDocument originalWithArtwork =
+                await _documents.LoadAsync(
+                    mediaPath,
+                    includeArtwork: true,
+                    TestContext.Current
+                        .CancellationToken);
+            Assert.Equal(
+                original.Snapshot.MetadataHash,
+                MetadataDocumentService
+                    .CreateMetadataFingerprint(
+                        originalWithArtwork));
+            MetadataFieldKey title =
+                MetadataFieldKey.Known(
+                    TagFields.Title);
+            var expectation =
+                new MetadataEditSourceExpectation(
+                    original.Snapshot.Length,
+                    original.Snapshot
+                        .LastWriteTimeUtc,
+                    new Dictionary<
+                        MetadataFieldKey,
+                        ImmutableArray<string>>
+                    {
+                        [title] = original
+                            .TagLayers[0]
+                            .Fields
+                            .Where(field =>
+                                field.Field ==
+                                title)
+                            .SelectMany(field =>
+                                field.Values)
+                            .ToImmutableArray(),
+                    },
+                    original.Snapshot
+                        .MetadataHash,
+                    MetadataDocumentService
+                        .CreateArtworkFingerprint(
+                            originalWithArtwork));
+            var requested =
+                new Dictionary<
+                    string,
+                    IReadOnlyList<
+                        MetadataValueEdit>>
+                {
+                    [mediaPath] =
+                    [
+                        new(
+                            title,
+                            ["User title"]),
+                    ],
+                };
+
+            MetadataOperationPlan unchanged =
+                await service
+                    .PreviewValueEditsAsync(
+                        requested,
+                        new Dictionary<
+                            string,
+                            MetadataEditSourceExpectation>
+                        {
+                            [mediaPath] =
+                                expectation,
+                        },
+                        "Expected source",
+                        progress: null,
+                        TestContext.Current
+                            .CancellationToken);
+            Assert.DoesNotContain(
+                Assert.Single(unchanged.Files)
+                    .Issues,
+                issue => issue.Code.StartsWith(
+                    "metadata.edit-",
+                    StringComparison.Ordinal));
+
+            var artworkRequest =
+                new Dictionary<
+                    string,
+                    ArtworkSetPreviewRequest>
+                {
+                    [mediaPath] = new([]),
+                };
+            MetadataOperationPlan
+                unchangedArtwork =
+                    await service
+                        .PreviewArtworkSetsAsync(
+                            artworkRequest,
+                            new Dictionary<
+                                string,
+                                MetadataEditSourceExpectation>
+                            {
+                                [mediaPath] =
+                                    expectation,
+                            },
+                            "Expected artwork source",
+                            progress: null,
+                            TestContext.Current
+                                .CancellationToken);
+            Assert.DoesNotContain(
+                Assert.Single(
+                        unchangedArtwork.Files)
+                    .Issues,
+                issue =>
+                    issue.Code.StartsWith(
+                        "metadata.edit-",
+                        StringComparison.Ordinal));
+
+            MetadataEditSourceExpectation
+                staleArtworkExpectation =
+                    expectation with
+                    {
+                        ArtworkFingerprint =
+                            expectation
+                                .ArtworkFingerprint +
+                            "-changed",
+                    };
+            MetadataOperationPlan
+                staleArtwork =
+                    await service
+                        .PreviewArtworkSetsAsync(
+                            artworkRequest,
+                            new Dictionary<
+                                string,
+                                MetadataEditSourceExpectation>
+                            {
+                                [mediaPath] =
+                                    staleArtworkExpectation,
+                            },
+                            "Changed artwork source",
+                            progress: null,
+                            TestContext.Current
+                                .CancellationToken);
+            Assert.Contains(
+                Assert.Single(
+                        staleArtwork.Files)
+                    .Issues,
+                issue =>
+                    issue.Code ==
+                    "metadata.edit-source-changed");
+
+            MetadataOperationPlan
+                valueIgnoresArtworkFingerprint =
+                    await service
+                        .PreviewValueEditsAsync(
+                            requested,
+                            new Dictionary<
+                                string,
+                                MetadataEditSourceExpectation>
+                            {
+                                [mediaPath] =
+                                    staleArtworkExpectation,
+                            },
+                            "Metadata-only source",
+                            progress: null,
+                            TestContext.Current
+                                .CancellationToken);
+            Assert.DoesNotContain(
+                Assert.Single(
+                        valueIgnoresArtworkFingerprint
+                            .Files)
+                    .Issues,
+                issue =>
+                    issue.Code ==
+                    "metadata.edit-source-changed");
+
+            MetadataEditSourceExpectation
+                staleHashExpectation =
+                    expectation with
+                    {
+                        MetadataHash =
+                            new string(
+                                '0',
+                                64),
+                    };
+            MetadataOperationPlan
+                staleArtworkHash =
+                    await service
+                        .PreviewArtworkSetsAsync(
+                            artworkRequest,
+                            new Dictionary<
+                                string,
+                                MetadataEditSourceExpectation>
+                            {
+                                [mediaPath] =
+                                    staleHashExpectation,
+                            },
+                            "Stale artwork source",
+                            progress: null,
+                            TestContext.Current
+                                .CancellationToken);
+            Assert.Contains(
+                Assert.Single(
+                        staleArtworkHash.Files)
+                    .Issues,
+                issue =>
+                    issue.Code ==
+                    "metadata.edit-source-changed");
+
+            MetadataOperationPlan external =
+                await service
+                    .PreviewValueEditsAsync(
+                        new Dictionary<
+                            string,
+                            IReadOnlyList<
+                                MetadataValueEdit>>
+                        {
+                            [mediaPath] =
+                            [
+                                new(
+                                    title,
+                                    ["External title"]),
+                            ],
+                        },
+                        "External edit",
+                        TestContext.Current
+                            .CancellationToken);
+            await service.ApplyAsync(
+                external,
+                ct: TestContext.Current
+                    .CancellationToken);
+
+            MetadataOperationPlan stale =
+                await service
+                    .PreviewValueEditsAsync(
+                        requested,
+                        new Dictionary<
+                            string,
+                            MetadataEditSourceExpectation>
+                        {
+                            [mediaPath] =
+                                expectation,
+                        },
+                        "Stale source",
+                        progress: null,
+                        TestContext.Current
+                            .CancellationToken);
+
+            MetadataFilePlan staleFile =
+                Assert.Single(stale.Files);
+            Assert.False(stale.CanApply);
+            Assert.Contains(
+                staleFile.Issues,
+                issue =>
+                    issue.Code ==
+                    "metadata.edit-source-changed");
+            Assert.Contains(
+                staleFile.Issues,
+                issue =>
+                    issue.Code ==
+                    "metadata.edit-field-changed:" +
+                    MetadataGridValueKey.For(
+                        title));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(
+                    session,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+            try
+            {
+                Directory.Delete(
+                    recovery,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void Artwork_fingerprint_is_order_independent_and_content_sensitive()
+    {
+        ArtworkModel first = new()
+        {
+            Data = [1, 2, 3],
+        };
+        ArtworkModel second = new()
+        {
+            Data = [4, 5, 6],
+        };
+
+        string forward =
+            MetadataDocumentService
+                .CreateArtworkFingerprint(
+                    [first, second]);
+        string reverse =
+            MetadataDocumentService
+                .CreateArtworkFingerprint(
+                    [second, first]);
+        string changed =
+            MetadataDocumentService
+                .CreateArtworkFingerprint(
+                    [
+                        first,
+                        second with
+                        {
+                            Data =
+                                [4, 5, 7],
+                        },
+                    ]);
+
+        Assert.Equal(forward, reverse);
+        Assert.NotEqual(forward, changed);
+        Assert.Equal(
+            "",
+            MetadataDocumentService
+                .CreateArtworkFingerprint(
+                    []));
+    }
+
+    [Fact]
+    public async Task Source_expectation_overloads_fail_closed_for_legacy_implementers()
+    {
+        IMetadataOperationService service =
+            new LegacyMetadataOperationService();
+        var expectations = new Dictionary<
+            string,
+            MetadataEditSourceExpectation>();
+
+        MetadataOperationPlan legacy =
+            await service
+                .PreviewValueEditsAsync(
+                    new Dictionary<
+                        string,
+                        IReadOnlyList<
+                            MetadataValueEdit>>(),
+                    "Legacy",
+                    TestContext.Current
+                        .CancellationToken);
+        Assert.Equal("Legacy", legacy.Name);
+
+        await Assert.ThrowsAsync<
+            NotSupportedException>(
+            () => service
+                .PreviewValueEditsAsync(
+                    new Dictionary<
+                        string,
+                        IReadOnlyList<
+                            MetadataValueEdit>>(),
+                    expectations,
+                    "Guarded",
+                    progress: null,
+                    TestContext.Current
+                        .CancellationToken));
+        await Assert.ThrowsAsync<
+            NotSupportedException>(
+            () => service
+                .PreviewArtworkSetsAsync(
+                    new Dictionary<
+                        string,
+                        ArtworkSetPreviewRequest>(),
+                    expectations,
+                    "Guarded artwork",
+                    progress: null,
+                    TestContext.Current
+                        .CancellationToken));
     }
 
     [Theory]
@@ -3099,6 +4095,476 @@ public sealed class MetadataWorkbenchServicesTests
         : IRecoverySpaceProbe
     {
         public long? GetAvailableFreeSpace(string root) => available;
+    }
+
+    private static readonly StringComparer
+        PathComparerForTests =
+            OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+    private static readonly StringComparison
+        StringComparisonForPaths =
+            OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+
+    private static MetadataOperationStageResult
+        SyntheticStage(
+            params FileMutationPlan[] participants) =>
+        new(
+            new(
+                Guid.NewGuid(),
+                "Synthetic multi-participant apply",
+                [],
+                DateTimeOffset.UtcNow),
+            [.. participants],
+            [
+                .. participants.Select(
+                    (participant, index) =>
+                        new MetadataStagedFile(
+                            Path.Combine(
+                                participant
+                                    .DestinationRoot,
+                                $"live-{index}.flac"),
+                            Path.Combine(
+                                participant
+                                    .DestinationRoot,
+                                $"stage-{index}.flac"))),
+            ]);
+
+    private static FileMutationPlan
+        EmptyParticipant(
+            string destinationRoot,
+            string recoveryRoot) =>
+        new(
+            "MusicLibraryManager",
+            destinationRoot,
+            recoveryRoot,
+            [],
+            [],
+            DateTimeOffset.UtcNow,
+            RetainRecovery: true,
+            RecoveryPayloadPolicy:
+                RecoveryPayloadPolicy
+                    .AdaptiveReverseDelta);
+
+    private static FileMutationPlan
+        ReplacementParticipant(
+            string destinationRoot,
+            string recoveryRoot,
+            string stagedPath,
+            string livePath) =>
+        new(
+            "MusicLibraryManager",
+            destinationRoot,
+            recoveryRoot,
+            [
+                new(
+                    FileMutationKind.Replace,
+                    stagedPath,
+                    livePath,
+                    FileSnapshot(stagedPath),
+                    FileSnapshot(livePath)),
+            ],
+            [],
+            DateTimeOffset.UtcNow,
+            RetainRecovery: true,
+            RecoveryPayloadPolicy:
+                RecoveryPayloadPolicy
+                    .AdaptiveReverseDelta);
+
+    private static OperationPathSnapshot
+        FileSnapshot(
+            string path)
+    {
+        var info =
+            new FileInfo(path);
+        return new(
+            true,
+            false,
+            info.Length,
+            info.LastWriteTimeUtc)
+        {
+            Path = Path.GetFullPath(path),
+        };
+    }
+
+    private sealed class RecordingMutationExecutor :
+        IFileMutationPlanExecutor
+    {
+        public int ApplyCount { get; private set; }
+
+        public Task<FileMutationSummary> ApplyAsync(
+            FileMutationPlan plan,
+            IProgress<OperationProgress>?
+                progress = null,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            ApplyCount++;
+            return Task.FromResult(
+                new FileMutationSummary(
+                    0,
+                    0,
+                    0,
+                    0,
+                    "direct-journal",
+                    []));
+        }
+    }
+
+    private sealed class
+        PostCommitProgressMutationExecutor :
+        IFileMutationPlanExecutor
+    {
+        public bool ReturnedAfterProgress
+        {
+            get;
+            private set;
+        }
+
+        public Task<FileMutationSummary> ApplyAsync(
+            FileMutationPlan plan,
+            IProgress<OperationProgress>?
+                progress = null,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Completed,
+                1,
+                1,
+                Message:
+                    "The transaction is durably committed."));
+            ReturnedAfterProgress = true;
+            return Task.FromResult(
+                new FileMutationSummary(
+                    0,
+                    1,
+                    0,
+                    0,
+                    "direct-journal",
+                    []));
+        }
+    }
+
+    private sealed class
+        RecordingReviewedChangeBatchService(
+            Action? afterCommit = null) :
+        IReviewedChangeBatchService
+    {
+        public int CreateCount { get; private set; }
+        public int ApplyCount { get; private set; }
+        public ImmutableArray<FileMutationPlan>
+            Participants
+        {
+            get;
+            private set;
+        } = [];
+
+        public ReviewedChangeBatchPlan CreatePlan(
+            IReadOnlyList<
+                FileMutationPlan> participants)
+        {
+            CreateCount++;
+            Participants =
+                [.. participants];
+            return new(
+                Guid.NewGuid(),
+                Participants,
+                "coordinator-manifest",
+                DateTimeOffset.UtcNow);
+        }
+
+        public Task<ReviewedChangeBatchResult>
+            ApplyAsync(
+                ReviewedChangeBatchPlan plan,
+                IProgress<OperationProgress>?
+                    progress = null,
+                CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            ApplyCount++;
+            FileMutationSummary[] results =
+            [
+                new(
+                    0,
+                    1,
+                    0,
+                    0,
+                    "first-journal",
+                    [])
+                {
+                    RecoveryStorage = new(
+                        100,
+                        10,
+                        1,
+                        0),
+                },
+                new(
+                    0,
+                    1,
+                    0,
+                    0,
+                    "second-journal",
+                    [])
+                {
+                    RecoveryStorage = new(
+                        200,
+                        20,
+                        0,
+                        1),
+                },
+            ];
+            var result =
+                new ReviewedChangeBatchResult(
+                    plan.Id,
+                    [.. results],
+                    [
+                        "first-journal",
+                        "second-journal",
+                    ],
+                    plan.CoordinatorManifestPath);
+            afterCommit?.Invoke();
+            return Task.FromResult(result);
+        }
+
+        public Task<
+            ReviewedChangeReconciliationResult>
+            ReconcilePendingAsync(
+                CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult(
+                new ReviewedChangeReconciliationResult(
+                    0,
+                    0,
+                    0,
+                    []));
+        }
+    }
+
+    private sealed class
+        FailOnSecondMutationExecutor(
+            IFileMutationPlanExecutor inner) :
+        IFileMutationPlanExecutor
+    {
+        public int ApplyCount { get; private set; }
+
+        public Task<FileMutationSummary> ApplyAsync(
+            FileMutationPlan plan,
+            IProgress<OperationProgress>?
+                progress = null,
+            CancellationToken ct = default)
+        {
+            ApplyCount++;
+            if (ApplyCount == 2)
+                throw new InvalidOperationException(
+                    "Injected second-participant failure.");
+            return inner.ApplyAsync(
+                plan,
+                progress,
+                ct);
+        }
+    }
+
+    private sealed class PrefixVolumeIdentityProvider(
+        params (string Root, string Key)[] entries) :
+        IFileSystemVolumeIdentityProvider
+    {
+        private readonly (
+            string Root,
+            string Key)[] _entries =
+        [
+            .. entries
+                .Select(entry => (
+                    Path.GetFullPath(entry.Root),
+                    entry.Key))
+                .OrderByDescending(entry =>
+                    entry.Item1.Length),
+        ];
+
+        public FileSystemVolumeIdentity GetIdentity(
+            string path)
+        {
+            string fullPath =
+                Path.GetFullPath(path);
+            foreach ((string root, string key) in
+                     _entries)
+            {
+                if (IsWithin(fullPath, root))
+                    return new(key, root);
+            }
+            string fallback =
+                Path.GetDirectoryName(fullPath) ??
+                Path.GetPathRoot(fullPath) ??
+                fullPath;
+            return new(
+                "host-volume",
+                fallback);
+        }
+
+        private static bool IsWithin(
+            string path,
+            string root)
+        {
+            if (PathComparerForTests.Equals(
+                    path,
+                    root))
+                return true;
+            string prefix =
+                Path.EndsInDirectorySeparator(root)
+                    ? root
+                    : root +
+                      Path.DirectorySeparatorChar;
+            return path.StartsWith(
+                prefix,
+                StringComparisonForPaths);
+        }
+    }
+
+    private sealed class
+        SourceOnlyVolumeIdentityProvider(
+            string sourcePath) :
+        IFileSystemVolumeIdentityProvider
+    {
+        private readonly string _sourcePath =
+            Path.GetFullPath(sourcePath);
+
+        public FileSystemVolumeIdentity GetIdentity(
+            string path)
+        {
+            string fullPath =
+                Path.GetFullPath(path);
+            string root =
+                Path.GetDirectoryName(
+                    _sourcePath)!;
+            return PathComparerForTests.Equals(
+                    fullPath,
+                    _sourcePath)
+                ? new("source-volume", root)
+                : new(
+                    "foreign-volume",
+                    Path.GetDirectoryName(
+                        fullPath) ??
+                    root);
+        }
+    }
+
+    private sealed class RecordingEditHistoryService :
+        IEditHistoryService
+    {
+        private readonly List<EditHistoryEntry>
+            _entries = [];
+
+        public IReadOnlyList<EditHistoryEntry>
+            Entries => _entries;
+        public IReadOnlyList<EditHistoryEntry>
+            RedoEntries => [];
+        public bool CanUndo => _entries.Count > 0;
+        public bool CanRedo => false;
+
+        public void Record(EditHistoryEntry entry) =>
+            _entries.Add(entry);
+
+        public Task<int> UndoLatestAsync(
+            IProgress<int>? progress = null,
+            CancellationToken ct = default) =>
+            Task.FromResult(0);
+    }
+
+    private sealed class ThrowingOperationProgress :
+        IProgress<OperationProgress>
+    {
+        public void Report(OperationProgress value) =>
+            throw new InvalidOperationException(
+                "Injected progress observer failure.");
+    }
+
+    private sealed class
+        LegacyMetadataOperationService :
+        IMetadataOperationService
+    {
+        public Task<MetadataOperationPlan>
+            PreviewAsync(
+                IReadOnlyList<string> paths,
+                OperationRecipe recipe,
+                CancellationToken ct = default) =>
+            Plan(recipe.Name);
+
+        public Task<MetadataOperationPlan>
+            PreviewEditsAsync(
+                IReadOnlyDictionary<
+                    string,
+                    IReadOnlyList<TagEdit>>
+                    editsByPath,
+                string name,
+                CancellationToken ct = default) =>
+            Plan(name);
+
+        public Task<MetadataOperationPlan>
+            PreviewValueEditsAsync(
+                IReadOnlyDictionary<
+                    string,
+                    IReadOnlyList<
+                        MetadataValueEdit>>
+                    editsByPath,
+                string name,
+                CancellationToken ct = default) =>
+            Plan(name);
+
+        public Task<MetadataOperationPlan>
+            PreviewTagLayerEditsAsync(
+                IReadOnlyDictionary<
+                    string,
+                    IReadOnlyList<
+                        TagLayerEdit>>
+                    editsByPath,
+                string name,
+                CancellationToken ct = default) =>
+            Plan(name);
+
+        public Task<MetadataOperationPlan>
+            PreviewTagLayerConversionsAsync(
+                IReadOnlyDictionary<
+                    string,
+                    TagLayerConversionEdit>
+                    editsByPath,
+                string name,
+                CancellationToken ct = default) =>
+            Plan(name);
+
+        public Task<MetadataOperationPlan>
+            PreviewId3VersionEditsAsync(
+                IReadOnlyDictionary<
+                    string,
+                    Id3VersionEdit>
+                    editsByPath,
+                string name,
+                CancellationToken ct = default) =>
+            Plan(name);
+
+        public Task<MetadataApplyResult>
+            ApplyAsync(
+                MetadataOperationPlan plan,
+                IProgress<OperationProgress>?
+                    progress = null,
+                CancellationToken ct = default) =>
+            Task.FromResult(
+                new MetadataApplyResult(
+                    0,
+                    [],
+                    []));
+
+        private static Task<
+            MetadataOperationPlan> Plan(
+                string name) =>
+            Task.FromResult(
+                new MetadataOperationPlan(
+                    Guid.NewGuid(),
+                    name,
+                    [],
+                    DateTimeOffset.UtcNow));
     }
 
     private sealed class SyntheticDocuments : IMetadataDocumentService

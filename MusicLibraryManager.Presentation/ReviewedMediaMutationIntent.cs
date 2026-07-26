@@ -39,25 +39,49 @@ public sealed record ReviewedMetadataMutationIntent(
     MetadataOperationPlan Plan)
     : ReviewedMediaMutationIntent(Id, MutationKind, Paths)
 {
+    public ImmutableArray<ReviewedMediaMutationKind>
+        MutationKinds { get; init; } =
+        [MutationKind];
+
     public static ReviewedMetadataMutationIntent Create(
         MetadataOperationPlan plan,
         ReviewedMediaMutationKind kind =
             ReviewedMediaMutationKind.Metadata)
+        => Create(
+            plan,
+            [kind]);
+
+    public static ReviewedMetadataMutationIntent Create(
+        MetadataOperationPlan plan,
+        IEnumerable<ReviewedMediaMutationKind> kinds)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        if (kind is not (
-                ReviewedMediaMutationKind.Metadata or
-                ReviewedMediaMutationKind.Artwork or
-                ReviewedMediaMutationKind.TagLayers))
-            throw new ArgumentOutOfRangeException(nameof(kind));
+        ArgumentNullException.ThrowIfNull(kinds);
+        ImmutableArray<ReviewedMediaMutationKind>
+            normalizedKinds =
+        [
+            .. kinds
+                .Distinct()
+                .OrderBy(kind => (int)kind),
+        ];
+        if (normalizedKinds.IsDefaultOrEmpty ||
+            normalizedKinds.Any(kind =>
+                kind is not (
+                    ReviewedMediaMutationKind.Metadata or
+                    ReviewedMediaMutationKind.Artwork or
+                    ReviewedMediaMutationKind.TagLayers)))
+            throw new ArgumentOutOfRangeException(nameof(kinds));
         return new(
             Guid.NewGuid(),
-            kind,
+            normalizedKinds[0],
             [
                 .. plan.Files.Select(file => file.Path)
                     .Distinct(ReviewedMediaMutationPaths.Comparer),
             ],
-            plan);
+            plan)
+        {
+            MutationKinds = normalizedKinds,
+        };
     }
 }
 

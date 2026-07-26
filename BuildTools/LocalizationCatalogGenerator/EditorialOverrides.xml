@@ -1552,15 +1552,15 @@
     <translation culture="zh-TW">驗證解碼後的音訊</translation>
   </entry>
   <entry key="Health.Audit.Run">
-    <translation culture="de-DE">Prüfung ausführen…</translation>
-    <translation culture="es-ES">Ejecutar auditoría…</translation>
-    <translation culture="fr-FR">Exécuter l’audit…</translation>
-    <translation culture="it-IT">Esegui controllo…</translation>
-    <translation culture="pt-BR">Executar auditoria…</translation>
-    <translation culture="ja-JP">監査を実行…</translation>
-    <translation culture="ko-KR">감사 실행…</translation>
-    <translation culture="zh-CN">运行审计…</translation>
-    <translation culture="zh-TW">執行稽核…</translation>
+    <translation culture="de-DE">Prüfung ausführen</translation>
+    <translation culture="es-ES">Ejecutar auditoría</translation>
+    <translation culture="fr-FR">Exécuter l’audit</translation>
+    <translation culture="it-IT">Esegui controllo</translation>
+    <translation culture="pt-BR">Executar auditoria</translation>
+    <translation culture="ja-JP">監査を実行</translation>
+    <translation culture="ko-KR">감사 실행</translation>
+    <translation culture="zh-CN">运行审计</translation>
+    <translation culture="zh-TW">執行稽核</translation>
   </entry>
   <entry key="Health.Audit.RunAutomation">
     <translation culture="de-DE">Auszuführende Prüfung auswählen</translation>
@@ -3147,15 +3147,15 @@
     <translation culture="zh-TW">未選取</translation>
   </entry>
   <entry key="Settings.Appearance.DisplayLanguageDescription">
-    <translation culture="de-DE">Ändert den Anwendungstext sofort. Bibliotheksmetadaten, Dateinamen, regionale Formate, Analyse und Sortierung bleiben unverändert. Derzeit ist Englisch (USA) verfügbar.</translation>
-    <translation culture="es-ES">Cambia de inmediato el texto de la aplicación. No modifica los metadatos de la biblioteca, los nombres de archivo, el formato regional, el análisis ni la ordenación. Actualmente está disponible Inglés (Estados Unidos).</translation>
-    <translation culture="fr-FR">Modifie immédiatement le texte de l’application. Les métadonnées de la bibliothèque, les noms de fichiers, les formats régionaux, l’analyse et le tri restent inchangés. L’anglais (États-Unis) est actuellement disponible.</translation>
-    <translation culture="it-IT">Modifica immediatamente il testo dell’applicazione. I metadati della libreria, i nomi dei file, i formati regionali, l’analisi e l’ordinamento restano invariati. Al momento è disponibile Inglese (Stati Uniti).</translation>
-    <translation culture="pt-BR">Altera imediatamente o texto do aplicativo. Os metadados da biblioteca, os nomes de arquivos, a formatação regional, a análise e a ordenação não são alterados. No momento, Inglês (Estados Unidos) está disponível.</translation>
-    <translation culture="ja-JP">アプリケーションの表示テキストをすぐに変更します。ライブラリのメタデータ、ファイル名、地域別の書式、解析、並べ替えには影響しません。現在は英語（米国）を利用できます。</translation>
-    <translation culture="ko-KR">애플리케이션의 표시 텍스트를 즉시 변경합니다. 라이브러리 메타데이터, 파일 이름, 지역 형식, 구문 분석 및 정렬은 변경되지 않습니다. 현재 영어(미국)를 사용할 수 있습니다.</translation>
-    <translation culture="zh-CN">立即更改应用界面文本。音乐库元数据、文件名、区域格式、解析和排序不会改变。目前可使用英语（美国）。</translation>
-    <translation culture="zh-TW">立即變更應用程式介面文字。音樂庫中繼資料、檔案名稱、地區格式、剖析與排序不會改變。目前可使用英文（美國）。</translation>
+    <translation culture="de-DE">Ändert den Anwendungstext sofort. Mit Beta gekennzeichnete Sprachen verwenden maschinell unterstützte Übersetzungen. Bibliotheksmetadaten, Dateinamen, regionale Formate, Analyse und Sortierung bleiben unverändert.</translation>
+    <translation culture="es-ES">Cambia de inmediato el texto de la aplicación. Los idiomas marcados como Beta usan traducciones asistidas por máquina. No modifica los metadatos de la biblioteca, los nombres de archivo, el formato regional, el análisis ni la ordenación.</translation>
+    <translation culture="fr-FR">Modifie immédiatement le texte de l’application. Les langues signalées comme Bêta utilisent une traduction assistée par ordinateur. Les métadonnées de la bibliothèque, les noms de fichiers, les formats régionaux, l’analyse et le tri restent inchangés.</translation>
+    <translation culture="it-IT">Modifica immediatamente il testo dell’applicazione. Le lingue contrassegnate come Beta usano traduzioni assistite automaticamente. I metadati della libreria, i nomi dei file, i formati regionali, l’analisi e l’ordinamento restano invariati.</translation>
+    <translation culture="pt-BR">Altera imediatamente o texto do aplicativo. Os idiomas marcados como Beta usam traduções assistidas por máquina. Os metadados da biblioteca, os nomes de arquivos, a formatação regional, a análise e a ordenação não são alterados.</translation>
+    <translation culture="ja-JP">アプリケーションの表示テキストをすぐに変更します。ベータと表示された言語では機械支援翻訳を使用しています。ライブラリのメタデータ、ファイル名、地域別の書式、解析、並べ替えには影響しません。</translation>
+    <translation culture="ko-KR">애플리케이션의 표시 텍스트를 즉시 변경합니다. 베타로 표시된 언어는 기계 보조 번역을 사용합니다. 라이브러리 메타데이터, 파일 이름, 지역 형식, 구문 분석 및 정렬은 변경되지 않습니다.</translation>
+    <translation culture="zh-CN">立即更改应用界面文本。标记为测试版的语言使用机器辅助翻译。音乐库元数据、文件名、区域格式、解析和排序不会改变。</translation>
+    <translation culture="zh-TW">立即變更應用程式介面文字。標示為測試版的語言使用機器輔助翻譯。音樂庫中繼資料、檔案名稱、地區格式、剖析與排序不會改變。</translation>
   </entry>
   <entry key="Activity.Cancelling">
     <translation culture="de-DE">Wird abgebrochen…</translation>
@@ -11177,15 +11177,15 @@
     <translation culture="zh-TW">選擇顯示欄或建立中繼資料欄，而不變更已儲存的中繼資料。</translation>
   </entry>
   <entry key="Workbench.Columns.InlineEditingDescription">
-    <translation culture="de-DE">Direktbearbeitung ist nur für unterstützte bekannte Felder verfügbar.</translation>
-    <translation culture="es-ES">La edición en línea solo está disponible para los campos conocidos compatibles.</translation>
-    <translation culture="fr-FR">La modification directe n’est disponible que pour les champs connus pris en charge.</translation>
-    <translation culture="it-IT">La modifica in linea è disponibile solo per i campi noti supportati.</translation>
-    <translation culture="pt-BR">A edição em linha está disponível apenas para campos conhecidos compatíveis.</translation>
-    <translation culture="ja-JP">インライン編集は、対応している既知のフィールドでのみ使用できます。</translation>
-    <translation culture="ko-KR">인라인 편집은 지원되는 알려진 필드에서만 사용할 수 있습니다.</translation>
-    <translation culture="zh-CN">内联编辑仅适用于受支持的已知字段。</translation>
-    <translation culture="zh-TW">行內編輯僅適用於支援的已知欄位。</translation>
+    <translation culture="de-DE">Direktbearbeitung ist für unterstützte Standardfelder und benutzerdefinierte Textfelder verfügbar. In mehrwertigen Feldern trennen Semikolons die Werte; geben Sie \; für ein wörtliches Semikolon ein.</translation>
+    <translation culture="es-ES">La edición en línea está disponible para los campos estándar compatibles y los campos de texto personalizados. En los campos con varios valores, los puntos y coma separan los valores; escriba \; para introducir un punto y coma literal.</translation>
+    <translation culture="fr-FR">La modification directe est disponible pour les champs standard pris en charge et les champs de texte personnalisés. Dans les champs multivaleurs, les points-virgules séparent les valeurs ; saisissez \; pour insérer un point-virgule littéral.</translation>
+    <translation culture="it-IT">La modifica in linea è disponibile per i campi standard supportati e i campi di testo personalizzati. Nei campi con più valori, i punti e virgola separano i valori; immetti \; per inserire un punto e virgola letterale.</translation>
+    <translation culture="pt-BR">A edição em linha está disponível para campos padrão compatíveis e campos de texto personalizados. Em campos com vários valores, os pontos e vírgulas separam os valores; digite \; para inserir um ponto e vírgula literal.</translation>
+    <translation culture="ja-JP">インライン編集は、対応している標準フィールドとカスタムテキストフィールドで使用できます。複数値フィールドではセミコロンで値を区切ります。セミコロン自体を入力するには \; と入力します。</translation>
+    <translation culture="ko-KR">인라인 편집은 지원되는 표준 필드와 사용자 지정 텍스트 필드에서 사용할 수 있습니다. 다중 값 필드에서는 세미콜론으로 값을 구분합니다. 세미콜론 자체를 입력하려면 \;을(를) 입력하세요.</translation>
+    <translation culture="zh-CN">支持的标准字段和自定义文本字段可以进行内联编辑。在多值字段中，分号用于分隔值；输入 \; 可插入字面分号。</translation>
+    <translation culture="zh-TW">支援的標準欄位與自訂文字欄位可以進行行內編輯。在多值欄位中，分號用來分隔值；輸入 \; 可插入常值分號。</translation>
   </entry>
   <entry key="Workbench.Columns.Status.ChooseField">
     <translation culture="de-DE">Wählen Sie ein bekanntes Feld aus, oder geben Sie einen benutzerdefinierten Feldnamen ein.</translation>
@@ -20794,26 +20794,26 @@
     <translation culture="zh-TW">欄</translation>
   </entry>
   <entry key="Workbench.Session.EmptyCellAutomation">
-    <translation culture="de-DE">Leere Zellen</translation>
-    <translation culture="es-ES">Celdas vacías</translation>
-    <translation culture="fr-FR">Cellules vides</translation>
-    <translation culture="it-IT">Celle vuote</translation>
-    <translation culture="pt-BR">Células vazias</translation>
-    <translation culture="ja-JP">空のセル</translation>
-    <translation culture="ko-KR">빈 셀</translation>
-    <translation culture="zh-CN">空单元格</translation>
-    <translation culture="zh-TW">空白儲存格</translation>
+    <translation culture="de-DE">Richtlinie für leere Importzellen</translation>
+    <translation culture="es-ES">Política de celdas vacías al importar</translation>
+    <translation culture="fr-FR">Règle des cellules vides à l’importation</translation>
+    <translation culture="it-IT">Criterio per le celle vuote importate</translation>
+    <translation culture="pt-BR">Política para células vazias importadas</translation>
+    <translation culture="ja-JP">インポート時の空セル処理</translation>
+    <translation culture="ko-KR">가져온 빈 셀 처리 정책</translation>
+    <translation culture="zh-CN">导入空单元格策略</translation>
+    <translation culture="zh-TW">匯入空白儲存格原則</translation>
   </entry>
   <entry key="Workbench.Session.EmptyCellTooltip">
-    <translation culture="de-DE">Umgang mit leeren importierten Zellen</translation>
-    <translation culture="es-ES">Tratamiento de las celdas importadas vacías</translation>
-    <translation culture="fr-FR">Traitement des cellules importées vides</translation>
-    <translation culture="it-IT">Gestione delle celle importate vuote</translation>
-    <translation culture="pt-BR">Tratamento de células importadas vazias</translation>
-    <translation culture="ja-JP">インポートした空のセルの処理</translation>
-    <translation culture="ko-KR">가져온 빈 셀 처리</translation>
-    <translation culture="zh-CN">如何处理导入的空单元格</translation>
-    <translation culture="zh-TW">如何處理匯入的空白儲存格</translation>
+    <translation culture="de-DE">Legt fest, wie importierte leere Zellen vorhandene Metadaten beeinflussen.</translation>
+    <translation culture="es-ES">Elija cómo afectan las celdas vacías importadas a los metadatos existentes.</translation>
+    <translation culture="fr-FR">Choisissez l’effet des cellules vides importées sur les métadonnées existantes.</translation>
+    <translation culture="it-IT">Scegli come le celle vuote importate influiscono sui metadati esistenti.</translation>
+    <translation culture="pt-BR">Escolha como as células vazias importadas afetam os metadados existentes.</translation>
+    <translation culture="ja-JP">インポートした空のセルを既存のメタデータにどう反映するかを選択します。</translation>
+    <translation culture="ko-KR">가져온 빈 셀이 기존 메타데이터에 미치는 영향을 선택합니다.</translation>
+    <translation culture="zh-CN">选择导入的空单元格如何影响现有元数据。</translation>
+    <translation culture="zh-TW">選擇匯入的空白儲存格如何影響現有中繼資料。</translation>
   </entry>
   <entry key="Workbench.Session.GridAutomation">
     <translation culture="de-DE">Sitzungsraster</translation>
@@ -27009,15 +27009,15 @@
     <translation culture="zh-TW">專輯演出者衝突</translation>
   </entry>
   <entry key="Health.Repair.Prepare">
-    <translation culture="de-DE">Reparaturen vorbereiten…</translation>
-    <translation culture="es-ES">Preparar reparaciones…</translation>
-    <translation culture="fr-FR">Préparer les réparations…</translation>
-    <translation culture="it-IT">Prepara riparazioni…</translation>
-    <translation culture="pt-BR">Preparar reparos…</translation>
-    <translation culture="ja-JP">修復を準備…</translation>
-    <translation culture="ko-KR">복구 준비…</translation>
-    <translation culture="zh-CN">准备修复…</translation>
-    <translation culture="zh-TW">準備修復…</translation>
+    <translation culture="de-DE">Reparaturen vorbereiten</translation>
+    <translation culture="es-ES">Preparar reparaciones</translation>
+    <translation culture="fr-FR">Préparer les réparations</translation>
+    <translation culture="it-IT">Prepara riparazioni</translation>
+    <translation culture="pt-BR">Preparar reparos</translation>
+    <translation culture="ja-JP">修復を準備</translation>
+    <translation culture="ko-KR">복구 준비</translation>
+    <translation culture="zh-CN">准备修复</translation>
+    <translation culture="zh-TW">準備修復</translation>
   </entry>
   <entry key="Health.Repair.Title">
     <translation culture="de-DE">Reparaturen vorbereiten</translation>
@@ -35928,5 +35928,313 @@
     <translation culture="ko-KR">날짜 및 시간</translation>
     <translation culture="zh-CN">日期和时间</translation>
     <translation culture="zh-TW">日期與時間</translation>
+  </entry>
+  <entry key="Operations.Action.Maintenance">
+    <translation culture="de-DE">Wartung</translation>
+    <translation culture="es-ES">Mantenimiento</translation>
+    <translation culture="fr-FR">Maintenance</translation>
+    <translation culture="it-IT">Manutenzione</translation>
+    <translation culture="pt-BR">Manutenção</translation>
+    <translation culture="ja-JP">メンテナンス</translation>
+    <translation culture="ko-KR">유지 관리</translation>
+    <translation culture="zh-CN">维护</translation>
+    <translation culture="zh-TW">維護</translation>
+  </entry>
+  <entry key="ReviewedFileOperation.EmptyPreviewDescription">
+    <translation culture="de-DE">Wählen Sie einen Vorgang und dann „Vorschau“ aus. Alle vorgeschlagenen Pfade und Verarbeitungsweisen werden hier angezeigt, bevor sie zu „Änderungen prüfen“ hinzugefügt werden.</translation>
+    <translation culture="es-ES">Elija una operación y seleccione «Previsualizar». Aquí aparecerán todas las rutas y disposiciones propuestas antes de añadirse a «Revisar cambios».</translation>
+    <translation culture="fr-FR">Choisissez une opération, puis « Prévisualiser ». Chaque chemin et traitement proposé s’affichera ici avant d’être ajouté à « Vérifier les modifications ».</translation>
+    <translation culture="it-IT">Scegli un’operazione e seleziona «Anteprima». Tutti i percorsi e le destinazioni proposti verranno visualizzati qui prima di essere aggiunti a «Rivedi modifiche».</translation>
+    <translation culture="pt-BR">Escolha uma operação e selecione “Visualizar”. Todos os caminhos e destinos propostos aparecerão aqui antes de serem adicionados a “Revisar alterações”.</translation>
+    <translation culture="ja-JP">操作を選択して［プレビュー］を選びます。提案されたすべてのパスと処理方法が［変更を確認］に追加される前に、ここに表示されます。</translation>
+    <translation culture="ko-KR">작업을 선택한 다음 미리 보기를 선택하세요. 제안된 모든 경로와 처리 방식이 변경 내용 검토에 추가되기 전에 여기에 표시됩니다.</translation>
+    <translation culture="zh-CN">选择一项操作，然后选择“预览”。所有建议的路径和处理方式都会先显示在此处，再添加到“查看更改”。</translation>
+    <translation culture="zh-TW">選擇一項操作，然後選取「預覽」。所有建議的路徑與處理方式都會先顯示在這裡，再加入「檢閱變更」。</translation>
+  </entry>
+  <entry key="ReviewedFileOperation.EmptyPreviewTitle">
+    <translation culture="de-DE">Noch keine Vorschau für Dateivorgänge</translation>
+    <translation culture="es-ES">Aún no hay una vista previa de la operación de archivos</translation>
+    <translation culture="fr-FR">Aucun aperçu d’opération sur les fichiers</translation>
+    <translation culture="it-IT">Nessuna anteprima delle operazioni sui file</translation>
+    <translation culture="pt-BR">Nenhuma visualização da operação de arquivo</translation>
+    <translation culture="ja-JP">ファイル操作のプレビューはまだありません</translation>
+    <translation culture="ko-KR">파일 작업 미리 보기가 아직 없습니다</translation>
+    <translation culture="zh-CN">尚无文件操作预览</translation>
+    <translation culture="zh-TW">尚無檔案操作預覽</translation>
+  </entry>
+  <entry key="Workbench.Bulk.EmptyPreviewDescription">
+    <translation culture="de-DE">Fügen Sie mindestens einen Rezeptschritt hinzu und wählen Sie dann „Vorschau“. Vorgeschlagene Feldänderungen werden hier angezeigt, bevor sie in „Änderungen prüfen“ übernommen werden.</translation>
+    <translation culture="es-ES">Añada al menos un paso de receta y seleccione «Previsualizar». Los cambios de campo propuestos aparecerán aquí antes de pasar a «Revisar cambios».</translation>
+    <translation culture="fr-FR">Ajoutez au moins une étape de recette, puis sélectionnez « Prévisualiser ». Les modifications de champs proposées s’afficheront ici avant d’entrer dans « Vérifier les modifications ».</translation>
+    <translation culture="it-IT">Aggiungi almeno un passaggio alla ricetta, quindi seleziona «Anteprima». Le modifiche ai campi proposte verranno visualizzate qui prima di passare a «Rivedi modifiche».</translation>
+    <translation culture="pt-BR">Adicione pelo menos uma etapa à receita e selecione “Visualizar”. As alterações de campo propostas aparecerão aqui antes de entrarem em “Revisar alterações”.</translation>
+    <translation culture="ja-JP">レシピの手順を少なくとも 1 つ追加してから、［プレビュー］を選択します。提案されたフィールド変更が［変更を確認］に入る前に、ここに表示されます。</translation>
+    <translation culture="ko-KR">레시피 단계를 하나 이상 추가한 다음 미리 보기를 선택하세요. 제안된 필드 변경 내용이 변경 내용 검토에 들어가기 전에 여기에 표시됩니다.</translation>
+    <translation culture="zh-CN">至少添加一个配方步骤，然后选择“预览”。建议的字段更改会先显示在此处，再进入“查看更改”。</translation>
+    <translation culture="zh-TW">至少加入一個配方步驟，然後選取「預覽」。建議的欄位變更會先顯示在這裡，再進入「檢閱變更」。</translation>
+  </entry>
+  <entry key="Workbench.Bulk.EmptyPreviewTitle">
+    <translation culture="de-DE">Noch keine Vorschau für die Massenbearbeitung</translation>
+    <translation culture="es-ES">Aún no hay una vista previa de la edición masiva</translation>
+    <translation culture="fr-FR">Aucun aperçu de modification en bloc</translation>
+    <translation culture="it-IT">Nessuna anteprima della modifica in blocco</translation>
+    <translation culture="pt-BR">Nenhuma visualização da edição em massa</translation>
+    <translation culture="ja-JP">一括編集のプレビューはまだありません</translation>
+    <translation culture="ko-KR">일괄 편집 미리 보기가 아직 없습니다</translation>
+    <translation culture="zh-CN">尚无批量编辑预览</translation>
+    <translation culture="zh-TW">尚無批次編輯預覽</translation>
+  </entry>
+  <entry key="Workbench.Inspector.CopyPrimaryMetadataHelp">
+    <translation culture="de-DE">Wenn eine fehlende Tag-Ebene hinzugefügt wird, werden die geprüften Primärwerte der Datei in diese neue Ebene kopiert. Deaktivieren Sie diese Option, um eine leere Ebene hinzuzufügen.</translation>
+    <translation culture="es-ES">Al añadir una capa de etiquetas que falta, copia en ella los valores principales revisados del archivo. Desactive esta opción para añadir una capa vacía.</translation>
+    <translation culture="fr-FR">Lorsqu’une couche de balises manquante est ajoutée, copie les valeurs principales vérifiées du fichier dans cette nouvelle couche. Désactivez cette option pour ajouter une couche vide.</translation>
+    <translation culture="it-IT">Quando viene aggiunto un livello tag mancante, copia nel nuovo livello i valori principali revisionati del file. Disattiva questa opzione per aggiungere un livello vuoto.</translation>
+    <translation culture="pt-BR">Ao adicionar uma camada de tags ausente, copia para ela os valores principais revisados do arquivo. Desmarque esta opção para adicionar uma camada vazia.</translation>
+    <translation culture="ja-JP">不足しているタグレイヤーを追加するとき、ファイルの確認済みプライマリ値を新しいレイヤーにコピーします。このオプションをオフにすると空のレイヤーが追加されます。</translation>
+    <translation culture="ko-KR">누락된 태그 레이어를 추가할 때 파일의 검토된 기본값을 새 레이어에 복사합니다. 빈 레이어를 추가하려면 이 옵션을 해제하세요.</translation>
+    <translation culture="zh-CN">添加缺少的标签层时，将文件中已审核的主要值复制到新层。清除此选项可添加空层。</translation>
+    <translation culture="zh-TW">加入缺少的標籤層時，將檔案中已檢閱的主要值複製到新層。清除此選項可加入空白層。</translation>
+  </entry>
+  <entry key="Workbench.Inspector.Id3ConversionHelp">
+    <translation culture="de-DE">Die Konvertierung ändert die von der Datei verwendete ID3v2-Version. Prüfen Sie die Warnungen, bevor Sie entscheiden, ob nicht unterstützte Frames verworfen oder mehrwertige Texte zusammengeführt werden.</translation>
+    <translation culture="es-ES">La conversión cambia la versión de ID3v2 que usa el archivo. Revise las advertencias antes de decidir si se descartan los marcos no compatibles o se unen los textos con varios valores.</translation>
+    <translation culture="fr-FR">La conversion change la version ID3v2 utilisée par le fichier. Vérifiez les avertissements avant de choisir de supprimer les trames non prises en charge ou de joindre les textes multivaleurs.</translation>
+    <translation culture="it-IT">La conversione cambia la versione ID3v2 usata dal file. Esamina gli avvisi prima di scegliere se eliminare i frame non supportati o unire il testo con più valori.</translation>
+    <translation culture="pt-BR">A conversão altera a versão ID3v2 usada pelo arquivo. Revise os avisos antes de decidir se os quadros incompatíveis serão descartados ou se textos com vários valores serão unidos.</translation>
+    <translation culture="ja-JP">変換すると、ファイルで使用する ID3v2 のバージョンが変わります。未対応フレームを削除するか、複数値テキストを結合するかを選ぶ前に、警告を確認してください。</translation>
+    <translation culture="ko-KR">변환하면 파일에서 사용하는 ID3v2 버전이 변경됩니다. 지원되지 않는 프레임을 삭제하거나 다중 값 텍스트를 결합할지 선택하기 전에 경고를 검토하세요.</translation>
+    <translation culture="zh-CN">转换会更改文件使用的 ID3v2 版本。选择是否丢弃不支持的帧或合并多值文本之前，请查看警告。</translation>
+    <translation culture="zh-TW">轉換會變更檔案使用的 ID3v2 版本。選擇是否捨棄不支援的影格或合併多值文字之前，請檢閱警告。</translation>
+  </entry>
+  <entry key="Workbench.Inspector.Id3EncodingHelp">
+    <translation culture="de-DE">Codiert ID3-Text mit einer von der aktuellen Tag-Version unterstützten Richtlinie neu. Dies kann ändern, wie ältere Player Text interpretieren, ohne die angezeigten Werte zu ändern.</translation>
+    <translation culture="es-ES">Vuelve a codificar el texto ID3 mediante una política compatible con la versión actual de la etiqueta. Esto puede cambiar cómo interpretan el texto los reproductores antiguos sin modificar los valores mostrados.</translation>
+    <translation culture="fr-FR">Réencode le texte ID3 selon une règle prise en charge par la version actuelle de la balise. Cela peut modifier l’interprétation du texte par les anciens lecteurs sans changer les valeurs affichées.</translation>
+    <translation culture="it-IT">Ricodifica il testo ID3 usando un criterio supportato dalla versione tag corrente. Può cambiare il modo in cui i lettori meno recenti interpretano il testo senza modificare i valori visualizzati.</translation>
+    <translation culture="pt-BR">Recodifica o texto ID3 usando uma política compatível com a versão atual da tag. Isso pode mudar como aparelhos antigos interpretam o texto sem alterar os valores exibidos.</translation>
+    <translation culture="ja-JP">現在のタグバージョンで対応している方式を使用して ID3 テキストを再エンコードします。表示値を変えずに、古いプレーヤーによるテキストの解釈が変わる場合があります。</translation>
+    <translation culture="ko-KR">현재 태그 버전에서 지원하는 정책을 사용하여 ID3 텍스트를 다시 인코딩합니다. 표시된 값은 바꾸지 않으면서 이전 플레이어가 텍스트를 해석하는 방식이 달라질 수 있습니다.</translation>
+    <translation culture="zh-CN">使用当前标签版本支持的策略重新编码 ID3 文本。这可能会改变旧播放器解释文本的方式，但不会更改显示的值。</translation>
+    <translation culture="zh-TW">使用目前標籤版本支援的原則重新編碼 ID3 文字。這可能會改變舊播放器解讀文字的方式，但不會變更顯示的值。</translation>
+  </entry>
+  <entry key="Workbench.Inspector.LayerCopyHelp">
+    <translation culture="de-DE">Beim Kopieren von Werten zwischen ID3-Ebenen werden nur Felder vorgemerkt, die von der Zielebene dargestellt werden können. Die Quellebene bleibt erhalten, sofern Sie sie nicht gesondert entfernen.</translation>
+    <translation culture="es-ES">Al copiar valores entre capas ID3 solo se preparan los campos que puede representar la capa de destino. La capa de origen permanece a menos que la quite por separado.</translation>
+    <translation culture="fr-FR">La copie de valeurs entre couches ID3 ne prépare que les champs que la couche de destination peut représenter. La couche source reste présente, sauf si vous la supprimez séparément.</translation>
+    <translation culture="it-IT">La copia dei valori tra livelli ID3 prepara solo i campi rappresentabili dal livello di destinazione. Il livello di origine rimane presente, a meno che non venga rimosso separatamente.</translation>
+    <translation culture="pt-BR">A cópia de valores entre camadas ID3 prepara apenas os campos que a camada de destino pode representar. A camada de origem permanece, a menos que você a remova separadamente.</translation>
+    <translation culture="ja-JP">ID3 レイヤー間で値をコピーすると、コピー先レイヤーで表現できるフィールドだけが保留されます。コピー元レイヤーは、別途削除しない限り残ります。</translation>
+    <translation culture="ko-KR">ID3 레이어 간에 값을 복사하면 대상 레이어에서 표현할 수 있는 필드만 준비됩니다. 원본 레이어는 별도로 제거하지 않는 한 그대로 유지됩니다.</translation>
+    <translation culture="zh-CN">在 ID3 层之间复制值时，只会暂存目标层能够表示的字段。除非单独移除源层，否则源层会保留。</translation>
+    <translation culture="zh-TW">在 ID3 層之間複製值時，只會暫存目標層能夠表示的欄位。除非另外移除來源層，否則來源層會保留。</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.ArtworkCandidatesDescription">
+    <translation culture="de-DE">Wählen Sie nach Auswahl oder Zuordnung einer Veröffentlichung „Veröffentlichungscover suchen“. Kandidatenbilder werden hier zur Prüfung angezeigt.</translation>
+    <translation culture="es-ES">Seleccione «Buscar carátulas del lanzamiento» después de elegir o asignar un lanzamiento. Las imágenes candidatas aparecerán aquí para revisarlas.</translation>
+    <translation culture="fr-FR">Sélectionnez « Rechercher les illustrations de la parution » après avoir choisi ou associé une parution. Les images candidates s’afficheront ici pour vérification.</translation>
+    <translation culture="it-IT">Dopo aver selezionato o associato una pubblicazione, scegli «Trova copertine della pubblicazione». Le immagini candidate verranno visualizzate qui per la revisione.</translation>
+    <translation culture="pt-BR">Depois de selecionar ou mapear um lançamento, escolha “Localizar capas do lançamento”. As imagens candidatas aparecerão aqui para revisão.</translation>
+    <translation culture="ja-JP">リリースを選択または対応付けした後、［リリースのアートワークを検索］を選択します。候補画像が確認用にここに表示されます。</translation>
+    <translation culture="ko-KR">릴리스를 선택하거나 매핑한 후 릴리스 아트워크 찾기를 선택하세요. 검토할 후보 이미지가 여기에 표시됩니다.</translation>
+    <translation culture="zh-CN">选择或映射发行版后，选择“查找发行版封面”。候选图像会显示在此处供审核。</translation>
+    <translation culture="zh-TW">選取或對應發行版後，選取「尋找發行版封面」。候選影像會顯示在這裡供檢閱。</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.ArtworkCandidatesTitle">
+    <translation culture="de-DE">Noch keine Kandidaten für Veröffentlichungscover</translation>
+    <translation culture="es-ES">Aún no hay carátulas candidatas para el lanzamiento</translation>
+    <translation culture="fr-FR">Aucune illustration candidate pour la parution</translation>
+    <translation culture="it-IT">Nessuna copertina candidata per la pubblicazione</translation>
+    <translation culture="pt-BR">Nenhuma capa candidata para o lançamento</translation>
+    <translation culture="ja-JP">リリースのアートワーク候補はまだありません</translation>
+    <translation culture="ko-KR">릴리스 아트워크 후보가 아직 없습니다</translation>
+    <translation culture="zh-CN">尚无发行版封面候选项</translation>
+    <translation culture="zh-TW">尚無發行版封面候選項目</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.ArtworkDescription">
+    <translation culture="de-DE">Fügen Sie ein Bild hinzu oder laden Sie die eingebetteten Cover der ausgewählten Datei. Prüfen Sie anschließend Rolle, Beschreibung und Optimierungsoptionen.</translation>
+    <translation culture="es-ES">Añada una imagen o cargue el conjunto de carátulas incrustadas de un archivo seleccionado y revise su función, descripción y opciones de optimización.</translation>
+    <translation culture="fr-FR">Ajoutez une image ou chargez l’ensemble d’illustrations incorporées d’un fichier sélectionné, puis vérifiez son rôle, sa description et ses options d’optimisation.</translation>
+    <translation culture="it-IT">Aggiungi un’immagine o carica il set di copertine incorporate di un file selezionato, quindi rivedi il ruolo, la descrizione e le opzioni di ottimizzazione.</translation>
+    <translation culture="pt-BR">Adicione uma imagem ou carregue o conjunto de capas incorporadas de um arquivo selecionado e revise sua função, descrição e opções de otimização.</translation>
+    <translation culture="ja-JP">画像を追加するか、選択したファイルの埋め込みアートワーク一式を読み込み、役割、説明、最適化オプションを確認します。</translation>
+    <translation culture="ko-KR">이미지를 추가하거나 선택한 파일의 포함된 아트워크 세트를 불러온 다음 역할, 설명 및 최적화 옵션을 검토하세요.</translation>
+    <translation culture="zh-CN">添加图像或加载所选文件的嵌入式封面集，然后审核其角色、说明和优化选项。</translation>
+    <translation culture="zh-TW">加入影像或載入所選檔案的內嵌封面集，然後檢閱其角色、描述與最佳化選項。</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.ArtworkTitle">
+    <translation culture="de-DE">Keine eingebetteten Cover vorgemerkt</translation>
+    <translation culture="es-ES">No hay carátulas incrustadas preparadas</translation>
+    <translation culture="fr-FR">Aucune illustration incorporée préparée</translation>
+    <translation culture="it-IT">Nessuna copertina incorporata preparata</translation>
+    <translation culture="pt-BR">Nenhuma capa incorporada preparada</translation>
+    <translation culture="ja-JP">埋め込みアートワークは保留されていません</translation>
+    <translation culture="ko-KR">준비된 포함 아트워크가 없습니다</translation>
+    <translation culture="zh-CN">未暂存嵌入式封面</translation>
+    <translation culture="zh-TW">未暫存內嵌封面</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.AwaitingDiscoveryDescription">
+    <translation culture="de-DE">Wählen Sie einen Umfang und schließen Sie die Audiosuche ab. Fingerabdruckkandidaten werden hier auch dann angezeigt, wenn die abgeschlossene Suche keinen Treffer findet.</translation>
+    <translation culture="es-ES">Elija un ámbito y complete la detección de audio. Los candidatos de huella aparecerán aquí aunque la búsqueda completada no encuentre coincidencias.</translation>
+    <translation culture="fr-FR">Choisissez une étendue et terminez la découverte audio. Les candidats d’empreinte s’afficheront ici même si la recherche terminée ne trouve aucune correspondance.</translation>
+    <translation culture="it-IT">Scegli un ambito e completa il rilevamento audio. I candidati dell’impronta verranno visualizzati qui anche se la ricerca completata non trova corrispondenze.</translation>
+    <translation culture="pt-BR">Escolha um escopo e conclua a descoberta de áudio. Os candidatos de impressão digital aparecerão aqui mesmo quando a busca concluída não encontrar correspondências.</translation>
+    <translation culture="ja-JP">範囲を選択して音声検出を完了します。完了した検索で一致が見つからなくても、フィンガープリント候補がここに表示されます。</translation>
+    <translation culture="ko-KR">범위를 선택하고 오디오 검색을 완료하세요. 완료된 조회에서 일치 항목을 찾지 못해도 지문 후보가 여기에 표시됩니다.</translation>
+    <translation culture="zh-CN">选择范围并完成音频发现。即使已完成的查询未找到匹配项，指纹候选项也会显示在此处。</translation>
+    <translation culture="zh-TW">選取範圍並完成音訊探索。即使已完成的查詢找不到相符項目，指紋候選項目也會顯示在這裡。</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.AwaitingSearchDescription">
+    <translation culture="de-DE">Wählen Sie einen Anbieter, geben Sie Suchkriterien ein und schließen Sie die Suche ab. Veröffentlichungsausgaben werden hier zur Prüfung angezeigt.</translation>
+    <translation culture="es-ES">Elija un proveedor, introduzca los criterios y complete la búsqueda. Las ediciones del lanzamiento aparecerán aquí para revisarlas.</translation>
+    <translation culture="fr-FR">Choisissez un fournisseur, saisissez des critères et terminez la recherche. Les éditions de la parution s’afficheront ici pour vérification.</translation>
+    <translation culture="it-IT">Scegli un provider, inserisci i criteri e completa la ricerca. Le edizioni della pubblicazione verranno visualizzate qui per la revisione.</translation>
+    <translation culture="pt-BR">Escolha um provedor, insira os critérios e conclua a pesquisa. As edições do lançamento aparecerão aqui para revisão.</translation>
+    <translation culture="ja-JP">プロバイダーを選び、検索条件を入力して検索を完了します。リリース版が確認用にここに表示されます。</translation>
+    <translation culture="ko-KR">공급자를 선택하고 검색 조건을 입력한 다음 검색을 완료하세요. 검토할 릴리스 판본이 여기에 표시됩니다.</translation>
+    <translation culture="zh-CN">选择提供程序，输入搜索条件并完成搜索。发行版本会显示在此处供审核。</translation>
+    <translation culture="zh-TW">選取提供者、輸入搜尋條件並完成搜尋。發行版本會顯示在這裡供檢閱。</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.AwaitingTitle">
+    <translation culture="de-DE">Vorherigen Schritt abschließen</translation>
+    <translation culture="es-ES">Complete el paso anterior</translation>
+    <translation culture="fr-FR">Terminez l’étape précédente</translation>
+    <translation culture="it-IT">Completa il passaggio precedente</translation>
+    <translation culture="pt-BR">Conclua a etapa anterior</translation>
+    <translation culture="ja-JP">前の手順を完了してください</translation>
+    <translation culture="ko-KR">이전 단계를 완료하세요</translation>
+    <translation culture="zh-CN">完成上一步</translation>
+    <translation culture="zh-TW">完成上一步</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.MappingDescription">
+    <translation culture="de-DE">Wählen Sie eine Veröffentlichungsausgabe aus und erstellen Sie die Zuordnung von Dateien zu Titeln, bevor Sie eine Metadatenvorschau anzeigen.</translation>
+    <translation culture="es-ES">Seleccione una edición del lanzamiento y cree la asignación de archivos a pistas antes de previsualizar los metadatos.</translation>
+    <translation culture="fr-FR">Sélectionnez une édition de la parution et créez sa correspondance entre fichiers et pistes avant de prévisualiser les métadonnées.</translation>
+    <translation culture="it-IT">Seleziona un’edizione della pubblicazione e crea la corrispondenza tra file e tracce prima di visualizzare l’anteprima dei metadati.</translation>
+    <translation culture="pt-BR">Selecione uma edição do lançamento e crie o mapeamento de arquivos para faixas antes de visualizar os metadados.</translation>
+    <translation culture="ja-JP">リリース版を選択し、メタデータをプレビューする前にファイルとトラックの対応付けを作成します。</translation>
+    <translation culture="ko-KR">릴리스 판본을 선택하고 메타데이터를 미리 보기 전에 파일-트랙 매핑을 만드세요.</translation>
+    <translation culture="zh-CN">选择发行版本并建立文件到音轨的映射，然后再预览元数据。</translation>
+    <translation culture="zh-TW">選取發行版本並建立檔案到曲目的對應，然後再預覽中繼資料。</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.MappingTitle">
+    <translation culture="de-DE">Noch keine Titelzuordnung</translation>
+    <translation culture="es-ES">Aún no hay una asignación de pistas</translation>
+    <translation culture="fr-FR">Aucune correspondance de pistes</translation>
+    <translation culture="it-IT">Nessuna corrispondenza delle tracce</translation>
+    <translation culture="pt-BR">Nenhum mapeamento de faixas</translation>
+    <translation culture="ja-JP">トラックの対応付けはまだありません</translation>
+    <translation culture="ko-KR">트랙 매핑이 아직 없습니다</translation>
+    <translation culture="zh-CN">尚无音轨映射</translation>
+    <translation culture="zh-TW">尚無曲目對應</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.NoResultsDescription">
+    <translation culture="de-DE">Die abgeschlossene Suche lieferte für diese Ansicht keine Ergebnisse. Ändern Sie den Umfang oder die Suchkriterien und versuchen Sie es erneut.</translation>
+    <translation culture="es-ES">La búsqueda completada no devolvió resultados para esta vista. Ajuste el ámbito o los criterios de búsqueda e inténtelo de nuevo.</translation>
+    <translation culture="fr-FR">La recherche terminée n’a renvoyé aucun résultat pour cette vue. Modifiez l’étendue ou les critères de recherche, puis réessayez.</translation>
+    <translation culture="it-IT">La ricerca completata non ha restituito risultati per questa vista. Modifica l’ambito o i criteri di ricerca e riprova.</translation>
+    <translation culture="pt-BR">A busca concluída não retornou resultados para esta exibição. Ajuste o escopo ou os critérios de pesquisa e tente novamente.</translation>
+    <translation culture="ja-JP">完了した検索では、このビューに表示する結果がありませんでした。範囲または検索条件を調整して、もう一度お試しください。</translation>
+    <translation culture="ko-KR">완료된 조회에서 이 보기에 표시할 결과가 없습니다. 범위나 검색 조건을 조정하고 다시 시도하세요.</translation>
+    <translation culture="zh-CN">已完成的查询没有返回此视图所需的结果。请调整范围或搜索条件后重试。</translation>
+    <translation culture="zh-TW">已完成的查詢沒有傳回此檢視所需的結果。請調整範圍或搜尋條件後再試一次。</translation>
+  </entry>
+  <entry key="Workbench.Online.Empty.NoResultsTitle">
+    <translation culture="de-DE">Keine passenden Ergebnisse</translation>
+    <translation culture="es-ES">No hay resultados coincidentes</translation>
+    <translation culture="fr-FR">Aucun résultat correspondant</translation>
+    <translation culture="it-IT">Nessun risultato corrispondente</translation>
+    <translation culture="pt-BR">Nenhum resultado correspondente</translation>
+    <translation culture="ja-JP">一致する結果がありません</translation>
+    <translation culture="ko-KR">일치하는 결과가 없습니다</translation>
+    <translation culture="zh-CN">没有匹配的结果</translation>
+    <translation culture="zh-TW">沒有相符的結果</translation>
+  </entry>
+  <entry key="Workbench.Playlists.EmptyPreviewDescription">
+    <translation culture="de-DE">Wählen Sie das Wiedergabelistenlayout und dann „Vorschau“ aus. Geprüfte Wiedergabelistendateien werden hier angezeigt, bevor etwas geschrieben wird.</translation>
+    <translation culture="es-ES">Elija el diseño de la lista de reproducción y seleccione «Previsualizar». Los archivos de lista revisados aparecerán aquí antes de escribir nada.</translation>
+    <translation culture="fr-FR">Choisissez la disposition de la liste de lecture, puis sélectionnez « Prévisualiser ». Les fichiers vérifiés s’afficheront ici avant toute écriture.</translation>
+    <translation culture="it-IT">Scegli il layout della playlist e seleziona «Anteprima». I file della playlist revisionati verranno visualizzati qui prima che venga scritto qualcosa.</translation>
+    <translation culture="pt-BR">Escolha o layout da playlist e selecione “Visualizar”. Os arquivos de playlist revisados aparecerão aqui antes que algo seja gravado.</translation>
+    <translation culture="ja-JP">プレイリストのレイアウトを選び、［プレビュー］を選択します。何かを書き込む前に、確認済みのプレイリストファイルがここに表示されます。</translation>
+    <translation culture="ko-KR">재생 목록 레이아웃을 선택한 다음 미리 보기를 선택하세요. 무엇이든 기록하기 전에 검토된 재생 목록 파일이 여기에 표시됩니다.</translation>
+    <translation culture="zh-CN">选择播放列表布局，然后选择“预览”。写入任何内容之前，已审核的播放列表文件会显示在此处。</translation>
+    <translation culture="zh-TW">選取播放清單配置，然後選取「預覽」。寫入任何內容之前，已檢閱的播放清單檔案會顯示在這裡。</translation>
+  </entry>
+  <entry key="Workbench.Playlists.EmptyPreviewTitle">
+    <translation culture="de-DE">Noch keine Wiedergabelistenvorschau</translation>
+    <translation culture="es-ES">Aún no hay una vista previa de la lista de reproducción</translation>
+    <translation culture="fr-FR">Aucun aperçu de liste de lecture</translation>
+    <translation culture="it-IT">Nessuna anteprima della playlist</translation>
+    <translation culture="pt-BR">Nenhuma visualização da playlist</translation>
+    <translation culture="ja-JP">プレイリストのプレビューはまだありません</translation>
+    <translation culture="ko-KR">재생 목록 미리 보기가 아직 없습니다</translation>
+    <translation culture="zh-CN">尚无播放列表预览</translation>
+    <translation culture="zh-TW">尚無播放清單預覽</translation>
+  </entry>
+  <entry key="Workbench.Reports.EmptyPreviewDescription">
+    <translation culture="de-DE">Wählen Sie das Berichtslayout und dann „Vorschau“ aus. Geprüfte Ausgabedateien werden hier angezeigt, bevor etwas geschrieben wird.</translation>
+    <translation culture="es-ES">Elija el diseño del informe y seleccione «Previsualizar». Los archivos de salida revisados aparecerán aquí antes de escribir nada.</translation>
+    <translation culture="fr-FR">Choisissez la disposition du rapport, puis sélectionnez « Prévisualiser ». Les fichiers de sortie vérifiés s’afficheront ici avant toute écriture.</translation>
+    <translation culture="it-IT">Scegli il layout del rapporto e seleziona «Anteprima». I file di output revisionati verranno visualizzati qui prima che venga scritto qualcosa.</translation>
+    <translation culture="pt-BR">Escolha o layout do relatório e selecione “Visualizar”. Os arquivos de saída revisados aparecerão aqui antes que algo seja gravado.</translation>
+    <translation culture="ja-JP">レポートのレイアウトを選び、［プレビュー］を選択します。何かを書き込む前に、確認済みの出力ファイルがここに表示されます。</translation>
+    <translation culture="ko-KR">보고서 레이아웃을 선택한 다음 미리 보기를 선택하세요. 무엇이든 기록하기 전에 검토된 출력 파일이 여기에 표시됩니다.</translation>
+    <translation culture="zh-CN">选择报告布局，然后选择“预览”。写入任何内容之前，已审核的输出文件会显示在此处。</translation>
+    <translation culture="zh-TW">選取報告配置，然後選取「預覽」。寫入任何內容之前，已檢閱的輸出檔案會顯示在這裡。</translation>
+  </entry>
+  <entry key="Workbench.Reports.EmptyPreviewTitle">
+    <translation culture="de-DE">Noch keine Berichtsvorschau</translation>
+    <translation culture="es-ES">Aún no hay una vista previa del informe</translation>
+    <translation culture="fr-FR">Aucun aperçu de rapport</translation>
+    <translation culture="it-IT">Nessuna anteprima del rapporto</translation>
+    <translation culture="pt-BR">Nenhuma visualização do relatório</translation>
+    <translation culture="ja-JP">レポートのプレビューはまだありません</translation>
+    <translation culture="ko-KR">보고서 미리 보기가 아직 없습니다</translation>
+    <translation culture="zh-CN">尚无报告预览</translation>
+    <translation culture="zh-TW">尚無報告預覽</translation>
+  </entry>
+  <entry key="Workbench.Tools.EmptyPreviewDescription">
+    <translation culture="de-DE">Konfigurieren Sie den Aufruf und wählen Sie „Vorschau“. Das genaue Programm, die Argumente, das Arbeitsverzeichnis und die Dateigruppen werden hier angezeigt, bevor etwas ausgeführt wird.</translation>
+    <translation culture="es-ES">Configure la invocación y seleccione «Previsualizar». El ejecutable, los argumentos, el directorio de trabajo y los lotes de archivos exactos aparecerán aquí antes de ejecutar nada.</translation>
+    <translation culture="fr-FR">Configurez l’appel, puis sélectionnez « Prévisualiser ». L’exécutable, les arguments, le répertoire de travail et les lots de fichiers exacts s’afficheront ici avant toute exécution.</translation>
+    <translation culture="it-IT">Configura l’invocazione e seleziona «Anteprima». L’eseguibile, gli argomenti, la directory di lavoro e i batch di file esatti verranno visualizzati qui prima dell’esecuzione.</translation>
+    <translation culture="pt-BR">Configure a invocação e selecione “Visualizar”. O executável, os argumentos, a pasta de trabalho e os lotes de arquivos exatos aparecerão aqui antes da execução.</translation>
+    <translation culture="ja-JP">呼び出しを構成して［プレビュー］を選択します。実行前に、正確な実行ファイル、引数、作業ディレクトリ、ファイルバッチがここに表示されます。</translation>
+    <translation culture="ko-KR">호출을 구성한 다음 미리 보기를 선택하세요. 실행하기 전에 정확한 실행 파일, 인수, 작업 디렉터리 및 파일 배치가 여기에 표시됩니다.</translation>
+    <translation culture="zh-CN">配置调用，然后选择“预览”。执行之前，确切的可执行文件、参数、工作目录和文件批次会显示在此处。</translation>
+    <translation culture="zh-TW">設定叫用方式，然後選取「預覽」。執行之前，確切的可執行檔、引數、工作目錄與檔案批次會顯示在這裡。</translation>
+  </entry>
+  <entry key="Workbench.Tools.EmptyPreviewTitle">
+    <translation culture="de-DE">Noch keine Vorschau für den Programmaufruf</translation>
+    <translation culture="es-ES">Aún no hay una vista previa de la invocación de la herramienta</translation>
+    <translation culture="fr-FR">Aucun aperçu de l’appel d’outil</translation>
+    <translation culture="it-IT">Nessuna anteprima dell’invocazione dello strumento</translation>
+    <translation culture="pt-BR">Nenhuma visualização da invocação da ferramenta</translation>
+    <translation culture="ja-JP">ツール呼び出しのプレビューはまだありません</translation>
+    <translation culture="ko-KR">도구 호출 미리 보기가 아직 없습니다</translation>
+    <translation culture="zh-CN">尚无工具调用预览</translation>
+    <translation culture="zh-TW">尚無工具叫用預覽</translation>
+  </entry>
+  <entry key="Library.PendingChanges.FieldChanged">
+    <translation culture="de-DE">Der Wert für {0} wurde nach Beginn der Bearbeitung geändert. Laden Sie die Datei neu, bevor Sie die ausstehende Änderung anwenden.</translation>
+    <translation culture="es-ES">El valor de {0} cambió después de iniciar la edición. Vuelva a cargar el archivo antes de aplicar el cambio pendiente.</translation>
+    <translation culture="fr-FR">La valeur de {0} a changé après le début de la modification. Rechargez le fichier avant d’appliquer la modification en attente.</translation>
+    <translation culture="it-IT">Il valore di {0} è cambiato dopo l’inizio della modifica. Ricarica il file prima di applicare la modifica in sospeso.</translation>
+    <translation culture="pt-BR">O valor de {0} foi alterado depois que a edição começou. Recarregue o arquivo antes de aplicar a alteração pendente.</translation>
+    <translation culture="ja-JP">編集を開始した後に {0} の値が変更されました。保留中の変更を適用する前にファイルを再読み込みしてください。</translation>
+    <translation culture="ko-KR">편집을 시작한 후 {0} 값이 변경되었습니다. 보류 중인 변경 내용을 적용하기 전에 파일을 다시 불러오세요.</translation>
+    <translation culture="zh-CN">开始编辑后，{0} 值已更改。请先重新加载文件，再应用待处理的更改。</translation>
+    <translation culture="zh-TW">開始編輯後，{0} 值已變更。請先重新載入檔案，再套用待處理的變更。</translation>
+  </entry>
+  <entry key="Library.PendingChanges.SourceChanged">
+    <translation culture="de-DE">Die Datei wurde nach Beginn der Bearbeitung geändert. Laden Sie sie neu, bevor Sie die ausstehende Änderung anwenden.</translation>
+    <translation culture="es-ES">El archivo cambió después de iniciar la edición. Vuelva a cargarlo antes de aplicar el cambio pendiente.</translation>
+    <translation culture="fr-FR">Le fichier a changé après le début de la modification. Rechargez-le avant d’appliquer la modification en attente.</translation>
+    <translation culture="it-IT">Il file è cambiato dopo l’inizio della modifica. Ricaricalo prima di applicare la modifica in sospeso.</translation>
+    <translation culture="pt-BR">O arquivo foi alterado depois que a edição começou. Recarregue-o antes de aplicar a alteração pendente.</translation>
+    <translation culture="ja-JP">編集を開始した後にファイルが変更されました。保留中の変更を適用する前に再読み込みしてください。</translation>
+    <translation culture="ko-KR">편집을 시작한 후 파일이 변경되었습니다. 보류 중인 변경 내용을 적용하기 전에 다시 불러오세요.</translation>
+    <translation culture="zh-CN">开始编辑后，文件已更改。请先重新加载文件，再应用待处理的更改。</translation>
+    <translation culture="zh-TW">開始編輯後，檔案已變更。請先重新載入檔案，再套用待處理的變更。</translation>
   </entry>
 </editorial-overrides>

@@ -68,7 +68,14 @@ public sealed class ReviewedChangeBatchService(
             throw new InvalidOperationException(
                 "The reviewed change contains a blocking issue.");
 
-        await ReconcilePendingAsync(ct).ConfigureAwait(false);
+        ReviewedChangeReconciliationResult reconciliation =
+            await ReconcilePendingAsync(ct).ConfigureAwait(false);
+        if (!reconciliation.BlockedManifests.IsDefaultOrEmpty)
+        {
+            throw new InvalidOperationException(
+                "A previous reviewed change could not be reconciled. " +
+                "Resolve its recovery state before applying another reviewed change.");
+        }
         ValidateAllParticipants(plan.Participants);
         IProgress<OperationProgress>? safeProgress =
             progress is null
@@ -179,18 +186,25 @@ public sealed class ReviewedChangeBatchService(
     public async Task<ReviewedChangeReconciliationResult> ReconcilePendingAsync(
         CancellationToken ct = default)
     {
-        string[] pending = LoadPendingManifests();
+        string[] pending =
+        [
+            .. LoadPendingManifests()
+                .Distinct(PathComparer),
+        ];
         if (pending.Length == 0)
             return new(0, 0, 0, []);
         int rolledBack = 0;
         int committed = 0;
-        var blocked = new List<string>();
+        var blocked = new HashSet<string>(PathComparer);
         foreach (string manifest in pending)
         {
             ct.ThrowIfCancellationRequested();
             if (!File.Exists(manifest))
             {
-                RemovePendingManifest(manifest);
+                // A missing path can mean that the coordinator volume is temporarily offline.
+                // Retain the durable pointer and fail closed rather than forgetting a potentially
+                // partially applied transaction on the remaining participant volumes.
+                blocked.Add(manifest);
                 continue;
             }
             string[] lines = File.ReadAllLines(manifest);
@@ -225,7 +239,7 @@ public sealed class ReviewedChangeBatchService(
             pending.Length,
             rolledBack,
             committed,
-            [.. blocked]);
+            [.. blocked.OrderBy(item => item, PathComparer)]);
     }
 
     private async Task RollBackParticipantsAsync(
@@ -298,12 +312,18 @@ public sealed class ReviewedChangeBatchService(
                     summary,
                     candidates,
                     ct).ConfigureAwait(false);
-            if (restore.CanApply)
-                plans.Add(restore);
+            if (!restore.CanApply)
+            {
+                throw new InvalidOperationException(
+                    "A committed reviewed-change participant has no usable recovery payload: " +
+                    journalPath);
+            }
+            plans.Add(restore);
         }
-        if (plans.Count == 0)
+        if (plans.Count != participantJournals.Length)
             throw new InvalidOperationException(
-                "Committed reviewed-change participants have no usable recovery payload.");
+                "Every committed reviewed-change participant must have exactly one usable " +
+                "recovery plan before rollback can begin.");
         OperationRestoreBatchPlan batch =
             await journals.PreviewRestoreBatchAsync(plans, ct)
                 .ConfigureAwait(false);

@@ -179,7 +179,12 @@ public sealed class AnalyzerViewModelTests
             "3 actions");
 
         var aac = run.RepresentationActionGroups.Single(
-            group => group.Category == "Derive missing AAC");
+            group => group.Artists
+                .SelectMany(artist => artist.Albums)
+                .SelectMany(album => album.Items)
+                .All(item =>
+                    item.Action.Kind ==
+                    RepresentationRepairKind.DeriveAac));
         Assert.Equal(0, aac.ActiveCount);
         Assert.All(run.RepresentationActionItems,
             item => Assert.Equal(AnalysisRepairDisposition.Ignored, item.Disposition));
@@ -710,7 +715,10 @@ public sealed class AnalyzerViewModelTests
         Assert.False(typo.IsApplied);
         Assert.Equal(AnalysisRepairDisposition.Active, typo.Disposition);
         Assert.Equal(MessageTone.Warning, viewModel.StatusTone);
-        Assert.Contains("cancelled", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            LocalizedText.Get(
+                "Health.Status.ArtistMerge.Cancelled"),
+            viewModel.StatusText);
     }
 
     [Fact]

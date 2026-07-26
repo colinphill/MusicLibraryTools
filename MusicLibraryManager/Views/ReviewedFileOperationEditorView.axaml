@@ -96,10 +96,29 @@
     <controls:AppDataGrid x:Name="ReviewedFileOperationPreviewGrid"
                           Grid.Row="2"
                           MinHeight="72"
+                          IsVisible="{Binding PreviewItems.Count}"
                           ItemsSource="{Binding PreviewItems}"
         AutomationProperties.Name="{DynamicResource Loc.ReviewedFileOperation.PreviewAutomation}" />
+    <Border x:Name="ReviewedFileOperationPreviewEmptyState"
+            Grid.Row="2"
+            Classes="empty-state"
+            IsVisible="{Binding !PreviewItems.Count}">
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  MaxWidth="420"
+                  Spacing="8">
+        <TextBlock FontWeight="SemiBold"
+                   TextAlignment="Center"
+                   Text="{DynamicResource Loc.ReviewedFileOperation.EmptyPreviewTitle}" />
+        <TextBlock Classes="muted"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   Text="{DynamicResource Loc.ReviewedFileOperation.EmptyPreviewDescription}" />
+      </StackPanel>
+    </Border>
 
-    <Border Grid.Row="3"
+    <Border x:Name="ReviewedFileOperationStickyFooter"
+            Grid.Row="3"
             Classes="sticky-footer">
       <Grid ColumnDefinitions="*,160,Auto,Auto"
             ColumnSpacing="8">

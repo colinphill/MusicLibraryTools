@@ -23,6 +23,10 @@ public partial class PersistedSplitView : UserControl
         AvaloniaProperty.Register<PersistedSplitView, double>(nameof(MaxLeftWidth), 700);
     public static readonly StyledProperty<double> MinRightWidthProperty =
         AvaloniaProperty.Register<PersistedSplitView, double>(nameof(MinRightWidth), 160);
+    public static readonly StyledProperty<double> MaxRightWidthProperty =
+        AvaloniaProperty.Register<PersistedSplitView, double>(
+            nameof(MaxRightWidth),
+            double.PositiveInfinity);
     public static readonly StyledProperty<string?> PersistenceKeyProperty =
         AvaloniaProperty.Register<PersistedSplitView, string?>(nameof(PersistenceKey));
     public static readonly StyledProperty<string> LabelProperty =
@@ -36,6 +40,7 @@ public partial class PersistedSplitView : UserControl
     public double MinLeftWidth { get => GetValue(MinLeftWidthProperty); set => SetValue(MinLeftWidthProperty, value); }
     public double MaxLeftWidth { get => GetValue(MaxLeftWidthProperty); set => SetValue(MaxLeftWidthProperty, value); }
     public double MinRightWidth { get => GetValue(MinRightWidthProperty); set => SetValue(MinRightWidthProperty, value); }
+    public double MaxRightWidth { get => GetValue(MaxRightWidthProperty); set => SetValue(MaxRightWidthProperty, value); }
     public string? PersistenceKey { get => GetValue(PersistenceKeyProperty); set => SetValue(PersistenceKeyProperty, value); }
     public string Label { get => GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
 
@@ -70,6 +75,8 @@ public partial class PersistedSplitView : UserControl
     internal PersistedSplitView(SplitStateService state) : this() => _state = state;
 
     internal double CurrentLeftWidth => SplitGrid.ColumnDefinitions[0].Width.Value;
+    internal double CurrentRightWidth =>
+        SplitGrid.ColumnDefinitions[2].ActualWidth;
     internal double PreferredLeftWidth =>
         _expandedLeftWidth;
     internal double
@@ -139,6 +146,8 @@ public partial class PersistedSplitView : UserControl
             EffectiveMinimumLeftWidth;
         SplitGrid.ColumnDefinitions[0].MaxWidth = MaxLeftWidth;
         SplitGrid.ColumnDefinitions[2].MinWidth = MinRightWidth;
+        SplitGrid.ColumnDefinitions[2].MaxWidth =
+            MaxRightWidth;
         double width = PersistenceKey is null ? InitialLeftWidth : _state.Load(PersistenceKey) ?? InitialLeftWidth;
         _expandedLeftWidth = Math.Clamp(width, MinLeftWidth, MaxLeftWidth);
         if (_compact)
@@ -157,6 +166,14 @@ public partial class PersistedSplitView : UserControl
         if (!_compact && SplitGrid.Bounds.Width > 0)
         {
             double splitterWidth = SplitGrid.ColumnDefinitions[1].ActualWidth;
+            if (double.IsFinite(MaxRightWidth))
+            {
+                minimum = Math.Max(
+                    minimum,
+                    SplitGrid.Bounds.Width -
+                    splitterWidth -
+                    MaxRightWidth);
+            }
             maximum = Math.Min(maximum,
                 Math.Max(
                     minimum,
@@ -257,6 +274,7 @@ public partial class PersistedSplitView : UserControl
         left.Width = new GridLength(1, GridUnitType.Star);
         divider.Width = new GridLength(0);
         right.MinWidth = 0;
+        right.MaxWidth = double.PositiveInfinity;
         right.Width = new GridLength(0);
     }
 
@@ -270,6 +288,7 @@ public partial class PersistedSplitView : UserControl
         left.MaxWidth = MaxLeftWidth;
         divider.Width = new GridLength(10);
         right.MinWidth = MinRightWidth;
+        right.MaxWidth = MaxRightWidth;
         right.Width = new GridLength(1, GridUnitType.Star);
         SetLeftWidth(_expandedLeftWidth > 0 ? _expandedLeftWidth : InitialLeftWidth);
     }

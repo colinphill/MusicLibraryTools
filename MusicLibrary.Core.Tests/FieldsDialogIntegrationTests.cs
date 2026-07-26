@@ -133,7 +133,14 @@ public class FieldsDialogIntegrationTests
         return new(
             documents,
             operations,
-            [path]);
+            [path],
+            async (plan, cancellationToken) =>
+            {
+                await operations.ApplyAsync(
+                    plan,
+                    ct: cancellationToken);
+                return true;
+            });
     }
 
     private sealed class TestMedia : IDisposable

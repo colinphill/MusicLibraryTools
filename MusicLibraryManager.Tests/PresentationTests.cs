@@ -594,6 +594,11 @@ public sealed class PresentationTests
         Assert.True(artist.IsMixed);
 
         artist.Value = "Canonical Artist";
+        Assert.All(
+            inspector.CreatePendingChangeRows(),
+            row => Assert.Equal(
+                artist.Label,
+                row.Field));
         MetadataOperationPlan? plan =
             await inspector.PreviewPendingChangesAsync(
                 new Progress<OperationProgress>(),
@@ -612,6 +617,24 @@ public sealed class PresentationTests
         Assert.Equal(
             ["Canonical Artist"],
             edit.Values);
+        Assert.Equal(
+            2,
+            operations
+                .PreviewedSourceExpectations
+                .Count);
+        Assert.Equal(
+            ["Artist A"],
+            operations
+                .PreviewedSourceExpectations[
+                    @"C:\one.flac"]
+                .OriginalValues[
+                    MetadataFieldKey.Known(
+                        TagFields.Artist)]);
+        Assert.Null(
+            operations
+                .PreviewedSourceExpectations[
+                    @"C:\one.flac"]
+                .MetadataHash);
         Assert.Empty(activities.Activities);
     }
 
@@ -624,7 +647,9 @@ public sealed class PresentationTests
             [
                 new TagFieldValue(TagFields.Title, "One"),
                 new TagFieldValue(TagFields.Artist, "Artist"),
-                new TagFieldValue(TagFields.Genre, "Rock"),
+                new TagFieldValue(
+                    TagFields.Genre,
+                    "Rock; Roll"),
                 new TagFieldValue(TagFields.Genre, "Alternative"),
             ],
         };
@@ -642,9 +667,127 @@ public sealed class PresentationTests
         await inspector.LoadAsync(new SelectionContext([model.Path]));
 
         EditableTagField genre = inspector.Fields.Single(field => field.Field == TagFields.Genre);
-        Assert.True(genre.IsMixed);
-        Assert.Null(genre.Value);
+        Assert.False(genre.IsMixed);
+        Assert.Equal(
+            @"Rock\; Roll; Alternative",
+            genre.Value);
         Assert.False(genre.IsModified);
+
+        genre.Value =
+            @"Rock\; Roll; Alternative; Indie";
+        MetadataValueEdit edit = Assert.Single(
+            Assert.Single(
+                inspector
+                    .CreatePendingOperationInputs()
+                    .ValueEdits!)
+                .Value);
+        Assert.Equal(
+            ["Rock; Roll", "Alternative", "Indie"],
+            edit.Values);
+
+        genre.Value =
+            @"Rock\; Roll; Alternative";
+        Assert.False(genre.IsModified);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_media_fallback_captures_file_identity_and_original_values()
+    {
+        string path = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-inspector-expectation-" +
+            Guid.NewGuid().ToString("N") +
+            ".flac");
+        try
+        {
+            await File.WriteAllBytesAsync(
+                path,
+                [1, 2, 3, 4, 5],
+                TestContext.Current
+                    .CancellationToken);
+            File.SetLastWriteTimeUtc(
+                path,
+                new DateTime(
+                    2026,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    DateTimeKind.Utc));
+            var file = new FileInfo(path);
+            MediaFileModel model =
+                Model(
+                    path,
+                    "Fallback title",
+                    "Fallback artist");
+            var inspector =
+                new SelectionInspectorViewModel(
+                    new FakeMediaService(model),
+                    new FakeLibrary([]),
+                    new FakeTagWriter(),
+                    new FakeArtworkService(),
+                    new FakeFilePicker(),
+                    new FakeDialogs(),
+                    new FakeFieldsEditor(),
+                    new FakeThumbnails(),
+                    new AppActivityService());
+            var staleRecord = new TrackRecord
+            {
+                Path = path,
+                Title = "Fallback title",
+                Artist = "Fallback artist",
+                Length = 999,
+                LastWriteTime =
+                    new DateTime(
+                        2020,
+                        1,
+                        1,
+                        0,
+                        0,
+                        0,
+                        DateTimeKind.Utc),
+            };
+
+            await inspector.LoadAsync(
+                new SelectionContext(
+                    [path],
+                    [staleRecord]));
+
+            MetadataEditSourceExpectation
+                expectation = Assert.Single(
+                    inspector
+                        .CreatePendingSourceExpectations())
+                    .Value;
+            Assert.Equal(
+                file.Length,
+                expectation.Length);
+            Assert.Equal(
+                file.LastWriteTimeUtc,
+                expectation
+                    .LastWriteTimeUtc);
+            Assert.Null(
+                expectation.MetadataHash);
+            Assert.Equal(
+                "",
+                expectation
+                    .ArtworkFingerprint);
+            Assert.Equal(
+                ["Fallback title"],
+                expectation.OriginalValues[
+                    MetadataFieldKey.Known(
+                        TagFields.Title)]);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+            }
+        }
     }
 
     [Fact]
@@ -697,6 +840,8 @@ public sealed class PresentationTests
                         DateTime.UtcNow,
                         "document-hash"),
                     true));
+        var operations =
+            new FakeMetadataOperationService();
         var inspector = new SelectionInspectorViewModel(
             new FakeMediaService(
                 Model(
@@ -711,6 +856,7 @@ public sealed class PresentationTests
             new FakeFieldsEditor(),
             new FakeThumbnails(),
             new AppActivityService(),
+            metadataOperations: operations,
             metadataDocuments: documents);
 
         await inspector.LoadAsync(
@@ -725,8 +871,10 @@ public sealed class PresentationTests
             inspector.Fields.Single(field =>
                 field.Field ==
                 TagFields.Genre);
-        Assert.True(genre.IsMixed);
-        Assert.Null(genre.Value);
+        Assert.False(genre.IsMixed);
+        Assert.Equal(
+            "Rock; Alternative",
+            genre.Value);
         ArtworkPreviewItem artwork =
             Assert.Single(inspector.ArtworkItems);
         Assert.Equal(
@@ -735,6 +883,46 @@ public sealed class PresentationTests
         Assert.Equal(
             "Lossless rear scan",
             artwork.Description);
+        MetadataEditSourceExpectation expectation =
+            Assert.Single(
+                inspector
+                    .CreatePendingSourceExpectations())
+                .Value;
+        Assert.Equal(10, expectation.Length);
+        Assert.Equal(
+            MetadataDocumentService
+                .CreateMetadataFingerprint(
+                    documents.Document(path)),
+            expectation.MetadataHash);
+        Assert.Equal(
+            MetadataDocumentService
+                .CreateArtworkFingerprint(
+                    documents.Document(path)),
+            expectation
+                .ArtworkFingerprint);
+        Assert.Equal(
+            ["Authoritative title"],
+            expectation.OriginalValues[
+                MetadataFieldKey.Known(
+                    TagFields.Title)]);
+
+        inspector.Fields.Single(field =>
+                field.Field == TagFields.Title)
+            .Value = "Reviewed title";
+        await inspector
+            .PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current
+                    .CancellationToken);
+
+        Assert.Equal(
+            MetadataDocumentService
+                .CreateMetadataFingerprint(
+                    documents.Document(path)),
+            operations
+                .PreviewedSourceExpectations[
+                    path]
+                .MetadataHash);
     }
 
     [Fact]
@@ -760,6 +948,8 @@ public sealed class PresentationTests
                 null,
                 new(path, 10, DateTime.UtcNow, "hash"),
                 true));
+        var operations =
+            new FakeMetadataOperationService();
         var inspector = new SelectionInspectorViewModel(
             new FakeMediaService(),
             new FakeLibrary([]),
@@ -770,6 +960,7 @@ public sealed class PresentationTests
             new FakeFieldsEditor(),
             new FakeThumbnails(),
             new AppActivityService(),
+            metadataOperations: operations,
             metadataDocuments: documents);
 
         await inspector.LoadAsync(new SelectionContext(
@@ -777,6 +968,112 @@ public sealed class PresentationTests
 
         ArtworkPreviewItem artwork = Assert.Single(inspector.ArtworkItems);
         Assert.Equal("Ad-hoc cover", artwork.Description);
+        artwork.Description = "Reviewed cover";
+
+        await inspector
+            .PreviewPendingChangesAsync(
+                new Progress<OperationProgress>(),
+                TestContext.Current
+                    .CancellationToken);
+
+        Assert.Equal(
+            MetadataDocumentService
+                .CreateMetadataFingerprint(
+                    documents.Document(path)),
+            operations
+                .PreviewedArtworkSourceExpectations[
+                    path]
+                .MetadataHash);
+        Assert.Equal(
+            MetadataDocumentService
+                .CreateArtworkFingerprint(
+                    documents.Document(path)),
+            operations
+                .PreviewedArtworkSourceExpectations[
+                    path]
+                .ArtworkFingerprint);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_cancels_an_artwork_mutation_when_the_selection_changes()
+    {
+        const string firstPath =
+            @"C:\first.flac";
+        const string secondPath =
+            @"C:\second.flac";
+        MediaDocument Document(string path) =>
+            new(
+                path,
+                [],
+                [],
+                null,
+                new(
+                    path,
+                    10,
+                    new DateTime(
+                        2026,
+                        2,
+                        4,
+                        0,
+                        0,
+                        0,
+                        DateTimeKind.Utc),
+                    "hash"),
+                true);
+        var documents =
+            new BlockingArtworkMetadataDocumentService(
+                Document(firstPath),
+                Document(secondPath));
+        var inspector =
+            new SelectionInspectorViewModel(
+                new FakeMediaService(),
+                new FakeLibrary([]),
+                new FakeTagWriter(),
+                new FakeArtworkService(),
+                new FakeFilePicker(),
+                new FakeDialogs(),
+                new FakeFieldsEditor(),
+                new FakeThumbnails(),
+                new AppActivityService(),
+                metadataDocuments:
+                    documents);
+        await inspector.LoadAsync(
+            new SelectionContext([firstPath]));
+
+        Task mutation =
+            inspector.ScrubArtworkCommand
+                .ExecuteAsync(null);
+        await documents.ArtworkReadStarted
+            .Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current
+                    .CancellationToken);
+
+        await inspector.LoadAsync(
+            new SelectionContext([secondPath]));
+        await mutation.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current
+                .CancellationToken);
+
+        Assert.Equal(
+            secondPath,
+            Assert.Single(
+                inspector.Selection.Paths));
+        Assert.False(
+            inspector
+                .HasUnsavedArtworkChanges);
+        Assert.Null(
+            inspector
+                .CreatePendingOperationInputs()
+                .ArtworkEdits);
+        Assert.Equal(
+            secondPath,
+            Assert.Single(
+                    inspector
+                        .CreatePendingSourceExpectations())
+                .Key);
+        Assert.False(inspector.IsBusy);
     }
 
     [Fact]
@@ -833,7 +1130,38 @@ public sealed class PresentationTests
     public async Task Selection_inspector_uses_full_cache_for_large_selections_and_marks_other_fields_unverified()
     {
         TrackRecord[] records = Enumerable.Range(0, 201)
-            .Select(index => Track("Shared artist", "Album", $"Track {index}", "FLAC", $@"C:\Music\{index}.flac"))
+            .Select(index =>
+                Track(
+                    "Shared artist",
+                    "Album",
+                    $"Track {index}",
+                    "FLAC",
+                    $@"C:\Music\{index}.flac") with
+                {
+                    Length = 1_000 + index,
+                    LastWriteTime =
+                        new DateTime(
+                            2026,
+                            2,
+                            1,
+                            0,
+                            0,
+                            index % 60,
+                            DateTimeKind.Utc),
+                    Metadata =
+                        new Dictionary<
+                            string,
+                            string[]>
+                        {
+                            [nameof(
+                                TagFields.Genre)] =
+                                ["Rock"],
+                            [CachedMetadataKeys
+                                .Custom(
+                                    "NATIVE_GENRE")] =
+                                ["Mapped rock"],
+                        },
+                })
             .ToArray();
         var writer = new FakeTagWriter();
         var operations =
@@ -856,6 +1184,39 @@ public sealed class PresentationTests
         Assert.Equal(FieldValueVerification.Unverified, genre.Verification);
         Assert.Null(genre.Value);
         Assert.False(genre.IsModified);
+        IReadOnlyDictionary<
+            string,
+            MetadataEditSourceExpectation>
+            expectations =
+                inspector
+                    .CreatePendingSourceExpectations();
+        Assert.Equal(
+            records.Length,
+            expectations.Count);
+        MetadataEditSourceExpectation
+            firstExpectation =
+                expectations[
+                    records[0].Path];
+        Assert.Equal(
+            records[0].Length,
+            firstExpectation.Length);
+        Assert.Equal(
+            records[0].LastWriteTime,
+            firstExpectation
+                .LastWriteTimeUtc);
+        Assert.Null(
+            firstExpectation.MetadataHash);
+        Assert.All(
+            firstExpectation
+                .OriginalValues.Keys,
+            field => Assert.True(
+                field.IsKnown));
+        Assert.Equal(
+            ["Rock"],
+            firstExpectation
+                .OriginalValues[
+                    MetadataFieldKey.Known(
+                        TagFields.Genre)]);
 
         genre.Value = "Ambient";
         MetadataOperationPlan? plan =
@@ -871,6 +1232,14 @@ public sealed class PresentationTests
                 records[0].Path]);
         Assert.Equal(TagFields.Genre, edit.Field.KnownField);
         Assert.Equal(["Ambient"], edit.Values);
+        Assert.Equal(
+            ["Rock"],
+            operations
+                .PreviewedSourceExpectations[
+                    records[0].Path]
+                .OriginalValues[
+                    MetadataFieldKey.Known(
+                        TagFields.Genre)]);
     }
 
     [Fact]
@@ -1006,6 +1375,18 @@ public sealed class PresentationTests
         viewModel.Inspector.Fields.Single(field =>
             field.Field == TagFields.Title).Value =
             "Applied title";
+        for (int attempt = 0;
+             attempt < 100 &&
+             !viewModel
+                 .IsDirectPendingPreviewReady;
+             attempt++)
+            await Task.Delay(
+                20,
+                TestContext.Current
+                    .CancellationToken);
+        Assert.True(
+            viewModel
+                .IsDirectPendingPreviewReady);
         await viewModel.ApplyLibraryOperationCommand
             .ExecuteAsync(null);
 
@@ -1097,6 +1478,101 @@ public sealed class PresentationTests
                 Assert.Contains("Rear scan", back.Summary);
             });
         Assert.Equal("2 embedded images", inspector.ArtworkSummary);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_clears_artwork_draft_when_the_visible_set_returns_to_its_baseline()
+    {
+        const string path = @"C:\artwork-no-op.flac";
+        var library = new FakeLibrary([]);
+        MediaFileModel model =
+            Model(
+                path,
+                "Title",
+                "Artist") with
+            {
+                Artwork =
+                [
+                    new ArtworkModel
+                    {
+                        Category = "FrontCover",
+                        Description = "Original",
+                        ImageType = "image/jpeg",
+                        Width = 800,
+                        Height = 800,
+                        Size = 3,
+                        Data = [1, 2, 3],
+                    },
+                ],
+            };
+        library.ImageSignatures[path] =
+            MetadataDocumentService
+                .CreateArtworkFingerprint(
+                    model.Artwork);
+        var inspector =
+            new SelectionInspectorViewModel(
+                new FakeMediaService(model),
+                library,
+                new FakeTagWriter(),
+                new FakeArtworkService(),
+                new FakeFilePicker(),
+                new FakeDialogs(),
+                new FakeFieldsEditor(),
+                new FakeThumbnails(),
+                new AppActivityService());
+
+        await inspector.LoadAsync(
+            new SelectionContext([path]));
+        ArtworkPreviewItem item =
+            Assert.Single(
+                inspector.ArtworkItems);
+
+        item.Description = "Edited";
+        Assert.True(
+            inspector.HasUnsavedArtworkChanges);
+        Assert.Single(
+            inspector.CreatePendingChangeRows());
+
+        item.Description = "Original";
+        Assert.False(
+            inspector.HasUnsavedArtworkChanges);
+        Assert.False(
+            inspector.HasUnsavedChanges);
+        Assert.Empty(
+            inspector.CreatePendingChangeRows());
+    }
+
+    [Fact]
+    public async Task Removing_an_already_empty_artwork_set_is_not_a_pending_change()
+    {
+        const string path = @"C:\empty-artwork.flac";
+        var inspector =
+            new SelectionInspectorViewModel(
+                new FakeMediaService(
+                    Model(
+                        path,
+                        "Title",
+                        "Artist")),
+                new FakeLibrary([]),
+                new FakeTagWriter(),
+                new FakeArtworkService(),
+                new FakeFilePicker(),
+                new FakeDialogs(),
+                new FakeFieldsEditor(),
+                new FakeThumbnails(),
+                new AppActivityService());
+
+        await inspector.LoadAsync(
+            new SelectionContext([path]));
+        await inspector.RemoveArtworkCommand
+            .ExecuteAsync(null);
+
+        Assert.False(
+            inspector.HasUnsavedArtworkChanges);
+        Assert.False(
+            inspector.HasUnsavedChanges);
+        Assert.Empty(
+            inspector.CreatePendingChangeRows());
     }
 
     [Fact]
@@ -2960,7 +3436,25 @@ public sealed class PresentationTests
         libraryEditor.InlineEditable = true;
         libraryEditor.SaveColumnCommand.Execute(null);
 
-        Assert.Null(Assert.Single(store.Library).EditTarget);
+        Assert.Equal(
+            TagFields.CatalogNumber,
+            Assert.Single(store.Library)
+                .EditTarget!.KnownField);
+
+        libraryEditor.NewColumnCommand.Execute(null);
+        libraryEditor.Label = "Editable DJ set";
+        libraryEditor.FieldKind =
+            MetadataGridFieldKind.Custom;
+        libraryEditor.CustomFieldName = "DJ_SET";
+        libraryEditor.InlineEditable = true;
+        libraryEditor.SaveColumnCommand.Execute(null);
+
+        Assert.Equal(
+            "DJ_SET",
+            store.Library.Single(column =>
+                    column.Field.CustomName ==
+                        "DJ_SET")
+                .EditTarget!.CustomName);
     }
 
     [Fact]
@@ -3986,6 +4480,10 @@ internal sealed class FakeMetadataDocumentService(
                 ? StringComparer.OrdinalIgnoreCase
                 : StringComparer.Ordinal);
 
+    public MediaDocument Document(
+        string path) =>
+        _documents[path];
+
     public Task<MediaDocument> LoadAsync(
         string path,
         bool includeArtwork = true,
@@ -3996,19 +4494,86 @@ internal sealed class FakeMetadataDocumentService(
     }
 }
 
+internal sealed class
+    BlockingArtworkMetadataDocumentService(
+        params MediaDocument[] documents) :
+        IMetadataDocumentService
+{
+    private readonly Dictionary<
+        string,
+        MediaDocument> _documents =
+            documents.ToDictionary(
+                document => document.Path,
+                OperatingSystem.IsWindows()
+                    ? StringComparer
+                        .OrdinalIgnoreCase
+                    : StringComparer.Ordinal);
+
+    public TaskCompletionSource<bool>
+        ArtworkReadStarted { get; } =
+            new(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+
+    public async Task<MediaDocument> LoadAsync(
+        string path,
+        bool includeArtwork = true,
+        CancellationToken ct = default)
+    {
+        if (includeArtwork)
+        {
+            ArtworkReadStarted
+                .TrySetResult(true);
+            await Task.Delay(
+                Timeout.InfiniteTimeSpan,
+                ct);
+        }
+        ct.ThrowIfCancellationRequested();
+        return _documents[path];
+    }
+}
+
 internal class FakeMetadataOperationService : IMetadataOperationService
 {
+    private static readonly StringComparer
+        PathComparer =
+        OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+    public Dictionary<string, MediaFileSnapshot>
+        Snapshots { get; } =
+            new(PathComparer);
+    public Func<
+        MetadataOperationPlan,
+        MetadataOperationPlan>?
+        ValuePlanTransform { get; set; }
     public IReadOnlyList<string> PreviewedPaths { get; private set; } = [];
     public OperationRecipe? PreviewedRecipe { get; private set; }
     public IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>>
         PreviewedValueEdits { get; private set; } =
             new Dictionary<string, IReadOnlyList<MetadataValueEdit>>();
+    public IReadOnlyDictionary<
+        string,
+        MetadataEditSourceExpectation>
+        PreviewedSourceExpectations
+        { get; private set; } =
+            new Dictionary<
+                string,
+                MetadataEditSourceExpectation>();
     public IReadOnlyDictionary<string, ArtworkValueEdit>
         PreviewedArtworkEdits { get; private set; } =
             new Dictionary<string, ArtworkValueEdit>();
     public IReadOnlyDictionary<string, ArtworkSetPreviewRequest>
         PreviewedArtworkSets { get; private set; } =
             new Dictionary<string, ArtworkSetPreviewRequest>();
+    public IReadOnlyDictionary<
+        string,
+        MetadataEditSourceExpectation>
+        PreviewedArtworkSourceExpectations
+        { get; private set; } =
+            new Dictionary<
+                string,
+                MetadataEditSourceExpectation>();
     public IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>>
         PreviewedTagLayerEdits { get; private set; } =
             new Dictionary<string, IReadOnlyList<TagLayerEdit>>();
@@ -4019,6 +4584,13 @@ internal class FakeMetadataOperationService : IMetadataOperationService
         PreviewedTagLayerConversions { get; private set; } =
         new Dictionary<string, TagLayerConversionEdit>();
     public MetadataOperationPlan? AppliedPlan { get; private set; }
+    public TaskCompletionSource<bool> ApplyStarted
+        { get; } =
+            new(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+    public TaskCompletionSource<bool>?
+        ApplyRelease { get; set; }
     public bool WaitForCancellation { get; init; }
     public bool CancellationObserved { get; private set; }
     public TaskCompletionSource<bool> PreviewStarted { get; } =
@@ -4067,7 +4639,7 @@ internal class FakeMetadataOperationService : IMetadataOperationService
             ["Reviewed"]);
         var file = new MetadataFilePlan(
             path,
-            new(path, 1, DateTime.UtcNow, "hash"),
+            SnapshotFor(path),
             [change],
             [new(change.Field, change.After)],
             []);
@@ -4092,7 +4664,46 @@ internal class FakeMetadataOperationService : IMetadataOperationService
         string name,
         IProgress<OperationProgress>? progress,
         CancellationToken ct = default)
+        => PreviewValueEditsCoreAsync(
+            editsByPath,
+            sourceExpectations: null,
+            name,
+            progress,
+            ct);
+
+    public Task<MetadataOperationPlan> PreviewValueEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
+        IReadOnlyDictionary<string, MetadataEditSourceExpectation>
+            sourceExpectations,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default)
     {
+        PreviewedSourceExpectations =
+            sourceExpectations;
+        return PreviewValueEditsCoreAsync(
+            editsByPath,
+            sourceExpectations,
+            name,
+            progress,
+            ct);
+    }
+
+    private Task<MetadataOperationPlan>
+        PreviewValueEditsCoreAsync(
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MetadataValueEdit>>
+                editsByPath,
+            IReadOnlyDictionary<
+                string,
+                MetadataEditSourceExpectation>?
+                sourceExpectations,
+            string name,
+            IProgress<OperationProgress>? progress,
+            CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
         PreviewedValueEdits = editsByPath;
         progress?.Report(new(
             OperationPhase.Planning,
@@ -4108,25 +4719,31 @@ internal class FakeMetadataOperationService : IMetadataOperationService
                         .. pair.Value.Select(edit =>
                             new MetadataFieldDifference(
                                 edit.Field,
+                                sourceExpectations
+                                    ?.GetValueOrDefault(
+                                        pair.Key)
+                                    ?.OriginalValues
+                                    .GetValueOrDefault(
+                                        edit.Field,
+                                        ["Before"]) ??
                                 ["Before"],
                                 edit.Values)),
                     ];
                 return new MetadataFilePlan(
                     pair.Key,
-                    new(
-                        pair.Key,
-                        1,
-                        DateTime.UtcNow,
-                        "hash"),
+                    SnapshotFor(pair.Key),
                     differences,
                     [.. pair.Value],
                     []);
             }).ToArray();
-        return Task.FromResult(new MetadataOperationPlan(
+        MetadataOperationPlan plan = new(
             Guid.NewGuid(),
             name,
             [.. files],
-            DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow);
+        return Task.FromResult(
+            ValuePlanTransform?.Invoke(plan) ??
+            plan);
     }
 
     public Task<MetadataOperationPlan> PreviewArtworkEditsAsync(
@@ -4171,7 +4788,7 @@ internal class FakeMetadataOperationService : IMetadataOperationService
                 : [image];
             return new MetadataFilePlan(
                 pair.Key,
-                new(pair.Key, 1, DateTime.UtcNow, "hash"),
+                SnapshotFor(pair.Key),
                 [],
                 [],
                 [],
@@ -4188,7 +4805,43 @@ internal class FakeMetadataOperationService : IMetadataOperationService
         string name,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
+        => PreviewArtworkSetsCoreAsync(
+            requestsByPath,
+            name,
+            progress,
+            ct);
+
+    public Task<MetadataOperationPlan> PreviewArtworkSetsAsync(
+        IReadOnlyDictionary<string, ArtworkSetPreviewRequest>
+            requestsByPath,
+        IReadOnlyDictionary<
+            string,
+            MetadataEditSourceExpectation>
+            sourceExpectations,
+        string name,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
     {
+        PreviewedArtworkSourceExpectations =
+            sourceExpectations;
+        return PreviewArtworkSetsCoreAsync(
+            requestsByPath,
+            name,
+            progress,
+            ct);
+    }
+
+    private Task<MetadataOperationPlan>
+        PreviewArtworkSetsCoreAsync(
+            IReadOnlyDictionary<
+                string,
+                ArtworkSetPreviewRequest>
+                requestsByPath,
+            string name,
+            IProgress<OperationProgress>? progress,
+            CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
         PreviewedArtworkSets = requestsByPath;
         progress?.Report(new(
             OperationPhase.Planning,
@@ -4209,7 +4862,7 @@ internal class FakeMetadataOperationService : IMetadataOperationService
             ];
             return new MetadataFilePlan(
                 pair.Key,
-                new(pair.Key, 1, DateTime.UtcNow, "hash"),
+                SnapshotFor(pair.Key),
                 [],
                 [],
                 [],
@@ -4292,14 +4945,42 @@ internal class FakeMetadataOperationService : IMetadataOperationService
             Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
     }
 
-    public virtual Task<MetadataApplyResult> ApplyAsync(
+    public virtual async Task<MetadataApplyResult> ApplyAsync(
         MetadataOperationPlan plan,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
     {
         AppliedPlan = plan;
-        return Task.FromResult(new MetadataApplyResult(
-            plan.ChangedFileCount, [], []));
+        ApplyStarted.TrySetResult(true);
+        if (ApplyRelease is not null)
+            await ApplyRelease.Task.WaitAsync(ct);
+        return new MetadataApplyResult(
+            plan.ChangedFileCount,
+            [],
+            []);
+    }
+
+    private MediaFileSnapshot SnapshotFor(
+        string path)
+    {
+        if (Snapshots.TryGetValue(
+                path,
+                out MediaFileSnapshot? snapshot))
+            return snapshot;
+        snapshot = new(
+            path,
+            1,
+            new DateTime(
+                2026,
+                1,
+                1,
+                0,
+                0,
+                0,
+                DateTimeKind.Utc),
+            "hash");
+        Snapshots[path] = snapshot;
+        return snapshot;
     }
 }
 

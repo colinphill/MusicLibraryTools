@@ -56,7 +56,7 @@ public sealed class WorkbenchSourceReconciliationTests
                     StringComparer.Ordinal);
 
         Assert.Equal(
-            87,
+            86,
             WorkbenchSourceReconciliationContract
                 .CompatibilityAliases.Length);
         foreach (string alias in
@@ -376,7 +376,6 @@ internal static class WorkbenchSourceReconciliationContract
         "Workbench.Section.AllFields",
         "Workbench.Section.AllFieldsAutomation",
         "Workbench.Section.BulkOperation",
-        "Workbench.Section.BulkOperationAutomation",
         "Workbench.Section.Files",
         "Workbench.Section.OnlineMetadata",
         "Workbench.Section.Session",

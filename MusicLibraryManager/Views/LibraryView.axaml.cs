@@ -9,7 +9,12 @@ using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Media;
 using global::Avalonia.Threading;
 using global::Avalonia.VisualTree;
+using System.Collections;
 using System.ComponentModel;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using MusicFileUtilities;
+using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Controls;
@@ -43,8 +48,10 @@ public partial class LibraryView : UserControl
     private bool _shellRequestedCompact;
     private bool _responsiveCompact;
     private bool _drawerOpen;
-    private Control? _pendingChangesFocusReturn;
-    private Control? _inspectorFocusReturn;
+    private readonly OverlayInteractionController
+        _pendingChangesOverlay = new();
+    private readonly OverlayInteractionController
+        _inspectorOverlay = new();
 
     public LibraryView()
     {
@@ -101,28 +108,44 @@ public partial class LibraryView : UserControl
                 CellTemplate: artworkTemplate, Sortable: false,
                 HeaderResourceKey: "Column.Artwork"),
             new("Title", "Title", "Title", 280, 140,
-                HeaderResourceKey: "Column.Title"),
+                Editable: true, HeaderResourceKey: "Column.Title"),
             new("Artist", "Artist", "Artist", 190, 100,
-                HeaderResourceKey: "Column.Artist"),
+                Editable: true, HeaderResourceKey: "Column.Artist"),
             new("AlbumArtist", "Album artist", "AlbumArtist", 190, 100, false,
-                HeaderResourceKey: "Column.AlbumArtist"),
+                Editable: true, HeaderResourceKey: "Column.AlbumArtist"),
             new("Album", "Album", "Album", 230, 120,
-                HeaderResourceKey: "Column.Album"),
+                Editable: true, HeaderResourceKey: "Column.Album"),
             new("Genre", "Genre", "Genre", 150, 90, false,
-                HeaderResourceKey: "Column.Genre"),
+                Editable: true, HeaderResourceKey: "Column.Genre"),
             new("Composer", "Composer", "Composer", 190, 100, false,
-                HeaderResourceKey: "Column.Composer"),
+                Editable: true, HeaderResourceKey: "Column.Composer"),
             new("Grouping", "Grouping", "Grouping", 170, 100, false,
-                HeaderResourceKey: "Column.Grouping"),
+                Editable: true, HeaderResourceKey: "Column.Grouping"),
             new("Year", "Year", "Year", 70, 58, false,
-                HeaderResourceKey: "Column.Year"),
-            new("Track", "Track", "Track", 70, 58,
+                Editable: true, HeaderResourceKey: "Column.Year"),
+            new("Track", "Track", "TrackEditValue", 70, 58,
+                Editable: true,
+                CustomSortComparer:
+                    new LibraryNumericColumnComparer(
+                        row => row.TrackEditValue),
                 HeaderResourceKey: "Column.Track"),
-            new("TrackTotal", "Track total", "TrackTotal", 90, 72, false,
+            new("TrackTotal", "Track total", "TrackTotalEditValue", 90, 72, false,
+                Editable: true,
+                CustomSortComparer:
+                    new LibraryNumericColumnComparer(
+                        row => row.TrackTotalEditValue),
                 HeaderResourceKey: "Column.TrackTotal"),
-            new("Disc", "Disc", "Disc", 65, 58, false,
+            new("Disc", "Disc", "DiscEditValue", 65, 58, false,
+                Editable: true,
+                CustomSortComparer:
+                    new LibraryNumericColumnComparer(
+                        row => row.DiscEditValue),
                 HeaderResourceKey: "Column.Disc"),
-            new("DiscTotal", "Disc total", "DiscTotal", 85, 70, false,
+            new("DiscTotal", "Disc total", "DiscTotalEditValue", 85, 70, false,
+                Editable: true,
+                CustomSortComparer:
+                    new LibraryNumericColumnComparer(
+                        row => row.DiscTotalEditValue),
                 HeaderResourceKey: "Column.DiscTotal"),
             new("Codec", "Codec", "Codec", 105, 80,
                 HeaderResourceKey: "Column.Codec"),
@@ -158,6 +181,10 @@ public partial class LibraryView : UserControl
         {
             UserMetadataColumnDescriptor descriptor =
                 row.Descriptor;
+            string? editPath =
+                descriptor.EditTarget is { } target
+                    ? LibraryEditPath(target)
+                    : null;
             _columns.Insert(
                 Math.Clamp(
                     descriptor.Order,
@@ -166,16 +193,90 @@ public partial class LibraryView : UserControl
                 new(
                     descriptor.ColumnKey,
                     descriptor.Label,
-                    $"MetadataValues[{descriptor.ValueKey}]",
+                    editPath ??
+                        $"MetadataValues[{descriptor.ValueKey}]",
                     descriptor.Width,
                     70,
                     descriptor.Visible,
+                    Editable: editPath is not null,
                     CustomSortComparer:
-                        new MetadataGridRowComparer(
-                            descriptor.ValueKey,
-                            descriptor.SortType)));
+                        editPath is null ||
+                        editPath.StartsWith(
+                            "MetadataValues[",
+                            StringComparison.Ordinal)
+                            ? new MetadataGridRowComparer(
+                                descriptor.ValueKey,
+                                descriptor.SortType)
+                            : new LibraryMetadataColumnComparer(
+                                library =>
+                                    LibraryEditValue(
+                                        library,
+                                        descriptor.EditTarget!),
+                                descriptor.SortType)));
         }
     }
+
+    private static string? LibraryEditValue(
+        LibraryRow row,
+        MetadataFieldKey field) =>
+        field.KnownField switch
+        {
+            TagFields.Title => row.Title,
+            TagFields.Artist => row.Artist,
+            TagFields.AlbumArtist =>
+                row.AlbumArtist,
+            TagFields.Album => row.Album,
+            TagFields.Genre => row.Genre,
+            TagFields.Composer => row.Composer,
+            TagFields.Grouping => row.Grouping,
+            TagFields.Date => row.Year,
+            TagFields.TrackNumber =>
+                row.TrackEditValue,
+            TagFields.TotalTracks =>
+                row.TrackTotalEditValue,
+            TagFields.DiscNumber =>
+                row.DiscEditValue,
+            TagFields.TotalDiscs =>
+                row.DiscTotalEditValue,
+            TagFields.Comment => row.Comment,
+            _ => row.MetadataValues.GetValueOrDefault(
+                MetadataGridValueKey.For(field)),
+        };
+
+    private static string LibraryEditPath(
+        MetadataFieldKey field) =>
+        field.KnownField switch
+        {
+            TagFields.Title =>
+                nameof(LibraryRow.Title),
+            TagFields.Artist =>
+                nameof(LibraryRow.Artist),
+            TagFields.AlbumArtist =>
+                nameof(LibraryRow.AlbumArtist),
+            TagFields.Album =>
+                nameof(LibraryRow.Album),
+            TagFields.Genre =>
+                nameof(LibraryRow.Genre),
+            TagFields.Composer =>
+                nameof(LibraryRow.Composer),
+            TagFields.Grouping =>
+                nameof(LibraryRow.Grouping),
+            TagFields.Date =>
+                nameof(LibraryRow.Year),
+            TagFields.TrackNumber =>
+                nameof(LibraryRow.TrackEditValue),
+            TagFields.TotalTracks =>
+                nameof(LibraryRow.TrackTotalEditValue),
+            TagFields.DiscNumber =>
+                nameof(LibraryRow.DiscEditValue),
+            TagFields.TotalDiscs =>
+                nameof(LibraryRow.DiscTotalEditValue),
+            TagFields.Comment =>
+                nameof(LibraryRow.Comment),
+            _ =>
+                $"MetadataValues[" +
+                $"{MetadataGridValueKey.For(field)}]",
+        };
 
     private void RebuildMetadataColumns()
     {
@@ -363,27 +464,29 @@ public partial class LibraryView : UserControl
             }
         }
 
-        if (e.Key == Key.Tab)
+        if (LibraryPendingChangesPopover.IsOpen &&
+            _pendingChangesOverlay.HandleKeyDown(
+                e,
+                LibraryPendingChangesSurface,
+                canDismiss: true,
+                () => ClosePendingChanges(
+                    restoreFocus: true)))
         {
-            bool reverse =
-                e.KeyModifiers.HasFlag(
-                    KeyModifiers.Shift);
-            if (LibraryPendingChangesPopover.IsOpen)
-            {
-                if (TryCyclePendingChangesFocus(
-                        reverse))
-                    e.Handled = true;
-                return;
-            }
+            return;
+        }
 
-            if (_responsiveCompact &&
-                _drawerOpen &&
-                InspectorScrim.IsVisible &&
-                TryCycleInspectorFocus(reverse))
-            {
-                e.Handled = true;
-                return;
-            }
+        if (_responsiveCompact &&
+            _drawerOpen &&
+            InspectorScrim.IsVisible &&
+            _inspectorOverlay.HandleKeyDown(
+                e,
+                InspectorView,
+                canDismiss: true,
+                () => CloseCompactInspector(
+                    closePreference: false,
+                    restoreFocus: true)))
+        {
+            return;
         }
 
         if (e.Key != Key.Escape)
@@ -392,11 +495,6 @@ public partial class LibraryView : UserControl
         {
             ColumnPopover.IsOpen = false;
             ColumnsButton.Focus();
-            e.Handled = true;
-        }
-        else if (LibraryPendingChangesPopover.IsOpen)
-        {
-            ClosePendingChanges(restoreFocus: true);
             e.Handled = true;
         }
         else if (ViewsPopover.IsOpen)
@@ -415,14 +513,6 @@ public partial class LibraryView : UserControl
         {
             VisualFilterPopover.IsOpen = false;
             VisualFilterButton.Focus();
-            e.Handled = true;
-        }
-        else if (_responsiveCompact &&
-                 _drawerOpen)
-        {
-            CloseCompactInspector(
-                closePreference: false,
-                restoreFocus: true);
             e.Handled = true;
         }
     }
@@ -447,10 +537,8 @@ public partial class LibraryView : UserControl
 
     private void OpenPendingChanges()
     {
-        _pendingChangesFocusReturn =
-            TopLevel.GetTopLevel(this)?
-                .FocusManager?
-                .GetFocusedElement() as Control;
+        _pendingChangesOverlay
+            .CaptureFocus(this);
         CloseTransientPopups();
         ApplyOverlayBounds();
         LibraryPendingChangesPopover.IsOpen = true;
@@ -467,104 +555,17 @@ public partial class LibraryView : UserControl
         bool restoreFocus)
     {
         LibraryPendingChangesPopover.IsOpen = false;
-        if (!restoreFocus)
-            return;
-        Control? target =
-            _pendingChangesFocusReturn is
-            {
-                IsEffectivelyEnabled: true,
-                IsEffectivelyVisible: true,
-            }
-                ? _pendingChangesFocusReturn
-                : LibraryPendingChangesButton;
-        _pendingChangesFocusReturn = null;
-        target.Focus();
-    }
-
-    private bool TryCyclePendingChangesFocus(
-        bool reverse)
-    {
-        Control[] focusable =
-        [
-            .. LibraryPendingChangesSurface
-                .GetVisualDescendants()
-                .OfType<Control>()
-                .Where(control =>
-                    control.Focusable &&
-                    control.IsEffectivelyEnabled &&
-                    control.IsEffectivelyVisible),
-        ];
-        if (focusable.Length == 0)
-            return false;
-
-        object? focused =
-            TopLevel.GetTopLevel(this)?
-                .FocusManager?
-                .GetFocusedElement();
-        int index = Array.IndexOf(
-            focusable,
-            focused);
-        if (index < 0)
+        if (restoreFocus)
         {
-            (reverse
-                ? focusable[^1]
-                : focusable[0]).Focus();
-            return true;
+            _pendingChangesOverlay
+                .RestoreFocus(
+                    LibraryPendingChangesButton);
         }
-
-        bool atBoundary =
-            reverse
-                ? index == 0
-                : index == focusable.Length - 1;
-        if (!atBoundary)
-            return false;
-        (reverse
-            ? focusable[^1]
-            : focusable[0]).Focus();
-        return true;
-    }
-
-    private bool TryCycleInspectorFocus(
-        bool reverse)
-    {
-        Control[] focusable =
-        [
-            .. InspectorView
-                .GetVisualDescendants()
-                .OfType<Control>()
-                .Where(control =>
-                    control.Focusable &&
-                    control.IsEffectivelyEnabled &&
-                    control.IsEffectivelyVisible),
-        ];
-        if (focusable.Length == 0)
-            return false;
-
-        object? focused =
-            TopLevel.GetTopLevel(this)?
-                .FocusManager?
-                .GetFocusedElement();
-        int index = Array.IndexOf(
-            focusable,
-            focused);
-        if (index < 0)
+        else
         {
-            (reverse
-                ? focusable[^1]
-                : focusable[0]).Focus();
-            return true;
+            _pendingChangesOverlay
+                .ClearFocusReturn();
         }
-
-        bool atBoundary =
-            reverse
-                ? index == 0
-                : index == focusable.Length - 1;
-        if (!atBoundary)
-            return false;
-        (reverse
-            ? focusable[^1]
-            : focusable[0]).Focus();
-        return true;
     }
 
     private void OnVisualFilterClick(
@@ -782,10 +783,8 @@ public partial class LibraryView : UserControl
 
         if (_responsiveCompact)
         {
-            _inspectorFocusReturn =
-                TopLevel.GetTopLevel(this)?
-                    .FocusManager?
-                    .GetFocusedElement() as Control;
+            _inspectorOverlay
+                .CaptureFocus(this);
         }
         if (_viewModel.InspectorPreference !=
             LibraryInspectorPreference.Pinned)
@@ -841,7 +840,8 @@ public partial class LibraryView : UserControl
         if (!compact)
         {
             _drawerOpen = false;
-            _inspectorFocusReturn = null;
+            _inspectorOverlay
+                .ClearFocusReturn();
         }
         ApplyInspectorVisibility();
     }
@@ -1027,19 +1027,17 @@ public partial class LibraryView : UserControl
                 LibraryInspectorPreference.Closed);
         }
         ApplyInspectorVisibility();
-        if (!restoreFocus)
-            return;
-
-        Control target =
-            _inspectorFocusReturn is
-            {
-                IsEffectivelyEnabled: true,
-                IsEffectivelyVisible: true,
-            }
-                ? _inspectorFocusReturn
-                : InspectorToggle;
-        _inspectorFocusReturn = null;
-        target.Focus();
+        if (restoreFocus)
+        {
+            _inspectorOverlay
+                .RestoreFocus(
+                    InspectorToggle);
+        }
+        else
+        {
+            _inspectorOverlay
+                .ClearFocusReturn();
+        }
     }
 
     private void ApplyInspectorVisibility()
@@ -1084,10 +1082,14 @@ public partial class LibraryView : UserControl
 
     private void OnInspectorScrimPressed(object? sender, PointerPressedEventArgs e)
     {
-        CloseCompactInspector(
-            closePreference: false,
-            restoreFocus: true);
-        e.Handled = true;
+        _inspectorOverlay
+            .HandleScrimPressed(
+                e,
+                InspectorScrim,
+                canDismiss: true,
+                () => CloseCompactInspector(
+                    closePreference: false,
+                    restoreFocus: true));
     }
 
     private void OnViewsClick(object? sender, RoutedEventArgs e)
@@ -1121,9 +1123,17 @@ public partial class LibraryView : UserControl
 
     private void ApplyOverlayBounds()
     {
-        double availableWidth = Math.Max(320, Bounds.Width - 24);
+        double availableWidth = Math.Max(
+            320,
+            Bounds.Width - 24);
         double availableHeight = Math.Max(320, Bounds.Height - 32);
-        LibraryPendingChangesSurface.Width = Math.Min(430, availableWidth);
+        LibraryPendingChangesSurface.Width =
+            OverlayInteractionController
+                .ConstrainLength(
+                    Bounds.Width,
+                    300,
+                    430,
+                    viewportInset: 24);
         LibraryPendingChangesSurface.Height = Math.Min(620, availableHeight);
         LibraryColumnsSurface.Width =
             Math.Min(650, availableWidth);
@@ -1170,5 +1180,149 @@ public partial class LibraryView : UserControl
             compact ? 0 : 1);
         VisualFilterConditionList.MaxHeight =
             compact ? 96 : 360;
+    }
+
+    private sealed class LibraryNumericColumnComparer(
+        Func<LibraryRow, string?> value) :
+        IComparer
+    {
+        public int Compare(
+            object? x,
+            object? y)
+        {
+            string? left =
+                x is LibraryRow leftRow
+                    ? value(leftRow)
+                    : null;
+            string? right =
+                y is LibraryRow rightRow
+                    ? value(rightRow)
+                    : null;
+            bool hasLeft = decimal.TryParse(
+                left,
+                NumberStyles.Number,
+                CultureInfo.CurrentCulture,
+                out decimal leftNumber);
+            bool hasRight = decimal.TryParse(
+                right,
+                NumberStyles.Number,
+                CultureInfo.CurrentCulture,
+                out decimal rightNumber);
+            if (hasLeft && hasRight)
+                return leftNumber.CompareTo(
+                    rightNumber);
+            if (hasLeft != hasRight)
+                return hasLeft ? 1 : -1;
+            return string.Compare(
+                left,
+                right,
+                StringComparison
+                    .CurrentCultureIgnoreCase);
+        }
+    }
+
+    private sealed class LibraryMetadataColumnComparer(
+        Func<LibraryRow, string?> value,
+        MetadataGridColumnSortType sortType) :
+        IComparer
+    {
+        private static readonly Regex Number = new(
+            @"[-+]?\d+(?:[.,]\d+)?",
+            RegexOptions.CultureInvariant,
+            TimeSpan.FromMilliseconds(100));
+
+        public int Compare(
+            object? x,
+            object? y)
+        {
+            string left =
+                x is LibraryRow leftRow
+                    ? value(leftRow) ?? ""
+                    : "";
+            string right =
+                y is LibraryRow rightRow
+                    ? value(rightRow) ?? ""
+                    : "";
+            if (left.Length == 0 ||
+                right.Length == 0)
+                return left.Length.CompareTo(
+                    right.Length);
+            return sortType switch
+            {
+                MetadataGridColumnSortType.Numeric =>
+                    CompareNumbers(
+                        left,
+                        right),
+                MetadataGridColumnSortType.Date =>
+                    CompareDates(
+                        left,
+                        right),
+                _ => string.Compare(
+                    left,
+                    right,
+                    StringComparison
+                        .CurrentCultureIgnoreCase),
+            };
+        }
+
+        private static int CompareNumbers(
+            string left,
+            string right)
+        {
+            decimal leftNumber =
+                ParseNumber(left);
+            decimal rightNumber =
+                ParseNumber(right);
+            return leftNumber.CompareTo(
+                rightNumber);
+        }
+
+        private static decimal ParseNumber(
+            string value)
+        {
+            Match match = Number.Match(value);
+            if (!match.Success)
+                return decimal.MinValue;
+            return decimal.TryParse(
+                       match.Value,
+                       NumberStyles.Number,
+                       CultureInfo.CurrentCulture,
+                       out decimal parsed) ||
+                   decimal.TryParse(
+                       match.Value,
+                       NumberStyles.Number,
+                       CultureInfo.InvariantCulture,
+                       out parsed)
+                ? parsed
+                : decimal.MinValue;
+        }
+
+        private static int CompareDates(
+            string left,
+            string right)
+        {
+            bool hasLeft =
+                DateTimeOffset.TryParse(
+                    left,
+                    CultureInfo.CurrentCulture,
+                    DateTimeStyles.AllowWhiteSpaces,
+                    out DateTimeOffset leftDate);
+            bool hasRight =
+                DateTimeOffset.TryParse(
+                    right,
+                    CultureInfo.CurrentCulture,
+                    DateTimeStyles.AllowWhiteSpaces,
+                    out DateTimeOffset rightDate);
+            if (hasLeft && hasRight)
+                return leftDate.CompareTo(
+                    rightDate);
+            if (hasLeft != hasRight)
+                return hasLeft ? 1 : -1;
+            return string.Compare(
+                left,
+                right,
+                StringComparison
+                    .CurrentCultureIgnoreCase);
+        }
     }
 }

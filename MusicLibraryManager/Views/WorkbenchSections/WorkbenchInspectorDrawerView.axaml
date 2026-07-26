@@ -23,8 +23,14 @@
               ResourceKey="Workbench.Inspector.CurrentLayersFormat"
               Value="{Binding SelectedFile.LayerSummary}"
               TextWrapping="Wrap" />
-          <CheckBox Content="{DynamicResource Loc.Workbench.Inspector.CopyPrimaryMetadata}"
-                    IsChecked="{Binding CopyPrimaryMetadataToNewLayer, Mode=TwoWay}" />
+          <StackPanel Classes="field">
+            <CheckBox Content="{DynamicResource Loc.Workbench.Inspector.CopyPrimaryMetadata}"
+                      IsChecked="{Binding CopyPrimaryMetadataToNewLayer, Mode=TwoWay}"
+                      AutomationProperties.HelpText="{DynamicResource Loc.Workbench.Inspector.CopyPrimaryMetadataHelp}" />
+            <TextBlock Classes="field-help"
+                       TextWrapping="Wrap"
+                       Text="{DynamicResource Loc.Workbench.Inspector.CopyPrimaryMetadataHelp}" />
+          </StackPanel>
           <Border Classes="card dense-card">
             <Grid ColumnDefinitions="*,Auto,Auto"
                   ColumnSpacing="8">
@@ -130,6 +136,9 @@
                         Classes="content-stack">
               <TextBlock FontWeight="SemiBold"
                          Text="{DynamicResource Loc.Workbench.Inspector.Id3Conversion}" />
+              <TextBlock Classes="field-help"
+                         TextWrapping="Wrap"
+                         Text="{DynamicResource Loc.Workbench.Inspector.Id3ConversionHelp}" />
               <controls:LocalizedFormatTextBlock
                   Classes="muted"
                   ResourceKey="Workbench.Inspector.CurrentValueFormat"
@@ -152,6 +161,9 @@
                       Content="{DynamicResource Loc.Workbench.Inspector.PreviewConversion}"
                       AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.PreviewConversionAutomation}"
                       Command="{Binding PreviewId3VersionCommand}" />
+              <TextBlock Classes="field-help"
+                         TextWrapping="Wrap"
+                         Text="{DynamicResource Loc.Workbench.Inspector.LayerCopyHelp}" />
               <WrapPanel>
                 <Button Classes="app"
                         Margin="0,0,8,8"
@@ -172,7 +184,11 @@
                           DisplayMemberBinding="{Binding Label}"
                           SelectedValueBinding="{Binding Value}"
                           SelectedValue="{Binding SelectedId3EncodingPolicy, Mode=TwoWay}"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.Id3EncodingAutomation}" />
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.Id3EncodingAutomation}"
+                          AutomationProperties.HelpText="{DynamicResource Loc.Workbench.Inspector.Id3EncodingHelp}" />
+                <TextBlock Classes="field-help"
+                           TextWrapping="Wrap"
+                           Text="{DynamicResource Loc.Workbench.Inspector.Id3EncodingHelp}" />
               </StackPanel>
               <Button Classes="app"
                       Content="{DynamicResource Loc.Workbench.Inspector.PreviewEncoding}"

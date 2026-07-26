@@ -251,6 +251,144 @@ public sealed class WorkbenchMetadataCompositionTests
         Assert.False(inspector.HasUnsavedChanges);
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Inspector_drafts_report_metadata_artwork_and_mixed_intent_kinds(
+        bool editMetadata,
+        bool editArtwork)
+    {
+        string path = Path.GetFullPath(
+            $"inspector-intent-{editMetadata}-{editArtwork}.flac");
+        MediaDocument document = Document(path) with
+        {
+            Artwork =
+            [
+                new ArtworkModel
+                {
+                    Category = "FrontCover",
+                    ImageType = "image/jpeg",
+                    Width = 800,
+                    Height = 800,
+                    Size = 3,
+                    Data = [7, 8, 9],
+                },
+            ],
+        };
+        var operations =
+            new FakeMetadataOperationService();
+        WorkbenchSelectionInspectorViewModel inspector =
+            CreateInspector(
+                document,
+                operations);
+        WorkbenchViewModel viewModel =
+            CreateWorkbench(
+                document,
+                operations,
+                inspector);
+        await viewModel.AddSourcesAsync([path]);
+        Assert.True(
+            await viewModel.TrySetSelectedFilesAsync(
+                viewModel.Files));
+
+        if (editMetadata)
+        {
+            inspector.Fields.Single(field =>
+                field.Field == TagFields.Artist).Value =
+                    "Reviewed artist";
+        }
+        if (editArtwork)
+        {
+            await inspector.RemoveArtworkCommand
+                .ExecuteAsync(null);
+        }
+
+        Assert.Equal(
+            editMetadata,
+            inspector.HasUnsavedMetadataChanges);
+        Assert.Equal(
+            editArtwork,
+            inspector.HasUnsavedArtworkChanges);
+        ReviewedMediaMutationUnit unit =
+            Assert.Single(
+                viewModel.PendingMutationUnits);
+        ReviewedMediaMutationKind[] expected =
+        [
+            .. new[]
+            {
+                editMetadata
+                    ? ReviewedMediaMutationKind
+                        .Metadata
+                    : (ReviewedMediaMutationKind?)null,
+                editArtwork
+                    ? ReviewedMediaMutationKind
+                        .Artwork
+                    : null,
+            }.Where(kind => kind.HasValue)
+                .Select(kind => kind!.Value),
+        ];
+        Assert.Equal(
+            expected,
+            unit.MutationKinds);
+    }
+
+    [Fact]
+    public async Task Online_workflow_records_successfully_completed_discovery_and_search_steps()
+    {
+        string path = Path.GetFullPath(
+            "online-completion.flac");
+        MediaDocument document =
+            Document(path);
+        WorkbenchViewModel viewModel =
+            CreateWorkbench(
+                document,
+                new FakeMetadataOperationService());
+        await viewModel.AddSourcesAsync([path]);
+        viewModel.SelectedFile =
+            Assert.Single(viewModel.Files);
+
+        Assert.False(
+            viewModel.HasCompletedOnlineDiscovery);
+        await viewModel.DiscoverOnlineAudioCommand
+            .ExecuteAsync(null);
+        Assert.True(
+            viewModel.HasCompletedOnlineDiscovery);
+
+        viewModel.ReleaseSearch.Artist =
+            "Matched Artist";
+        viewModel.ReleaseSearch.Album =
+            "Matched Album";
+        Assert.False(
+            viewModel.HasCompletedOnlineSearch);
+        await viewModel.SearchOnlineReleasesCommand
+            .ExecuteAsync(null);
+        Assert.True(
+            viewModel.HasCompletedOnlineSearch);
+        Assert.Single(
+            viewModel.ReleaseMatches);
+
+        viewModel.ReleaseSearch.Album =
+            "Changed Album";
+        Assert.False(
+            viewModel.HasCompletedOnlineSearch);
+
+        viewModel.HasCompletedOnlineDiscovery =
+            true;
+        viewModel.HasCompletedOnlineSearch =
+            true;
+        viewModel.SelectedOnlineMetadataScope =
+            viewModel.OnlineMetadataScopeOptions
+                .Single(option =>
+                    option.Scope ==
+                    WorkbenchOnlineMetadataScope
+                        .AllFiles);
+        Assert.False(
+            viewModel.HasCompletedOnlineDiscovery);
+        Assert.False(
+            viewModel.HasCompletedOnlineSearch);
+    }
+
     [Fact]
     public async Task Conflicting_metadata_intent_is_rejected_without_consuming_existing_preview()
     {

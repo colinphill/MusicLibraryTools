@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Text.Json;
@@ -52,7 +53,23 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly IPlatformService? _platform;
     private readonly IEditHistoryService? _history;
     private readonly ILocalizationService? _localization;
+    private readonly EventHandler
+        _inlineRowChangedHandler;
     private MetadataOperationPlan? _libraryOperationPlan;
+    private MetadataOperationPlan?
+        _effectiveReviewedPlanSource;
+    private MetadataOperationPlan?
+        _effectiveDirectPlanSource;
+    private MetadataOperationPlan?
+        _effectiveMetadataPlan;
+    private DirectPendingPreviewState?
+        _directPendingPreview;
+    private CancellationTokenSource?
+        _directPendingPreviewCancellation;
+    private Task? _directPendingPreviewTask;
+    private int _directPendingPreviewGeneration;
+    private bool _suppressDirectPendingPreview;
+    private bool _directPendingPreviewFailed;
     private ReportExportPlan? _reportPlan;
     private PlaylistWorkspacePlan? _playlistPlan;
     private ExternalToolPlan? _externalToolPlan;
@@ -65,6 +82,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private CancellationTokenSource _thumbnailLifetime = new();
     private const int ThumbnailCacheLimit = 256;
     private List<LibraryRow> _allRows = [];
+    private readonly HashSet<LibraryRow>
+        _inlinePendingRows = [];
+    private readonly Dictionary<
+        string,
+        CommittedLibraryRowOverlay>
+        _committedRowOverlays =
+            new(PathComparer);
     private HashSet<string> _healthFilterPaths = new(PathComparer);
     private IReadOnlyList<string> _selectedPaths = [];
     private CancellationTokenSource? _loadCancellation;
@@ -78,6 +102,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private object?[] _operationStatusArguments = [];
     private long? _operationStatusCount;
     private string? _visualFilterStatusKey;
+    private readonly BulkResetObservableCollection<
+        MetadataPreviewRow> _pendingChanges = new();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
@@ -346,6 +372,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _platform = platform;
         _history = history;
         _localization = localization;
+        _inlineRowChangedHandler =
+            OnLibraryRowPendingChangesChanged;
         ReleaseSearch = new(localization);
         DiscogsSearch = new(localization);
         SetStatusText(
@@ -439,7 +467,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 nameof(SelectionInspectorViewModel.HasUnsavedChanges) or
                 nameof(SelectionInspectorViewModel.PendingChangesVersion))
             {
-                RebuildPendingChanges();
+                InvalidateDirectPendingPreview(
+                    schedule: true);
                 OnPropertyChanged(nameof(HasUnsavedSelectionChanges));
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 ApplyLibraryOperationCommand
@@ -473,7 +502,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         LocalizedChoice<DelimitedMetadataEmptyCellMode>>
         ImportEmptyCellModeChoices { get; } = [];
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
-    public ObservableCollection<MetadataPreviewRow> PendingChanges { get; } = [];
+    public ObservableCollection<MetadataPreviewRow> PendingChanges =>
+        _pendingChanges;
     public bool HasPendingChanges => PendingChanges.Count > 0;
     public bool HasNoPendingChanges => PendingChanges.Count == 0;
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
@@ -539,8 +569,34 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public int SelectedPathCount => _selectedPaths.Count;
     public bool HasSelection => _selectedPaths.Count > 0;
     public bool HasUnsavedSelectionChanges => Inspector.HasUnsavedChanges;
+    public bool HasInlinePendingChanges =>
+        _inlinePendingRows.Count > 0;
+    public bool IsDirectPendingPreviewReady =>
+        _directPendingPreview is not null &&
+        !IsDirectPendingPreviewBusy &&
+        DirectPendingPreviewMatchesCurrent(
+            _directPendingPreview);
+    public bool IsDirectPendingPreviewBusy =>
+        _directPendingPreviewTask is
+            { IsCompleted: false };
+    public bool HasDirectPendingPreviewFailure =>
+        _directPendingPreviewFailed;
+    public bool CanRetryDirectPendingPreview =>
+        _directPendingPreviewFailed &&
+        HasDirectPendingDrafts &&
+        !IsBusy &&
+        !IsOperationBusy &&
+        !IsDirectPendingPreviewBusy &&
+        _metadataOperations is not null;
+    public bool CanEditPendingChanges =>
+        !IsBusy && !IsOperationBusy;
+    public bool IsPendingEditReadOnly =>
+        IsBusy || IsOperationBusy;
+    public bool CanApplyPendingChanges =>
+        CanApplyLibraryOperation();
     public bool HasUnsavedChanges =>
         HasUnsavedSelectionChanges ||
+        HasInlinePendingChanges ||
         _libraryOperationPlan is not null ||
         _reportPlan is not null ||
         _playlistPlan is not null ||
@@ -612,6 +668,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     private async void OnConfigurationChanged(object? sender, EventArgs args)
     {
+        _committedRowOverlays.Clear();
         SavedViews.Clear();
         LoadViews();
         LoadWorkspace();
@@ -791,7 +848,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _loadCancellation = cancellation;
         if (!_library.IsReady)
         {
-            _allRows = [];
+            ReplaceLibraryRows([]);
             Rows = [];
             PageState = LibraryPageState.NoConfiguration;
             SetStatusText(
@@ -809,14 +866,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             var records = await _library.GetAllRecordsAsync(cancellation.Token);
             var rows = await Task.Run(() => records.Select(record => new LibraryRow(record)).ToList(), cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
-            if (_inspector.HasUnsavedChanges && _selectedPaths.Count > 0)
-            {
-                var loadedPaths = rows.Select(row => row.Path).ToHashSet(PathComparer);
-                rows.AddRange(_allRows.Where(row =>
-                    _selectedPaths.Contains(row.Path, PathComparer) &&
-                    loadedPaths.Add(row.Path)));
-            }
-            _allRows = rows;
+            PreserveDraftRows(rows);
+            ReplaceLibraryRows(rows);
             await ApplyFilterAsync(immediate: true);
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -843,6 +894,119 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [RelayCommand]
     private void Cancel() => _loadCancellation?.Cancel();
 
+    private void PreserveDraftRows(
+        List<LibraryRow> rows)
+    {
+        if (_allRows.Count == 0)
+            return;
+        HashSet<string> inspectorPaths =
+            _inspector.HasUnsavedChanges
+                ? _selectedPaths.ToHashSet(
+                    PathComparer)
+                : new(PathComparer);
+        Dictionary<string, int> loaded =
+            rows.Select((row, index) =>
+                    (row.Path, index))
+                .GroupBy(
+                    item => item.Path,
+                    PathComparer)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.First().index,
+                    PathComparer);
+        foreach (LibraryRow draft in _allRows.Where(
+                     row =>
+                         row.HasChanges ||
+                         inspectorPaths.Contains(
+                             row.Path)))
+        {
+            if (loaded.TryGetValue(
+                    draft.Path,
+                    out int index))
+            {
+                if (draft.HasChanges)
+                    draft.CopyPendingChangesTo(
+                        rows[index]);
+            }
+            else
+            {
+                loaded[draft.Path] = rows.Count;
+                rows.Add(draft);
+            }
+        }
+        foreach ((string path,
+                     CommittedLibraryRowOverlay
+                         overlay) in
+                 _committedRowOverlays
+                     .ToArray())
+        {
+            if (_inlinePendingRows.Contains(
+                    overlay.Row))
+                continue;
+            if (!loaded.TryGetValue(
+                    path,
+                    out int index))
+            {
+                loaded[path] = rows.Count;
+                rows.Add(overlay.Row);
+                continue;
+            }
+            TrackRecord cached = rows[index].Record;
+            if (overlay.MatchesPost(cached) ||
+                !overlay.MatchesPre(cached))
+            {
+                _committedRowOverlays.Remove(
+                    path);
+                continue;
+            }
+            rows[index] = overlay.Row;
+        }
+    }
+
+    private void ReplaceLibraryRows(
+        IReadOnlyList<LibraryRow> rows)
+    {
+        foreach (LibraryRow row in _allRows)
+            row.PendingChangesChanged -=
+                _inlineRowChangedHandler;
+        _allRows = rows.ToList();
+        _inlinePendingRows.Clear();
+        foreach (LibraryRow row in _allRows)
+        {
+            row.PendingChangesChanged +=
+                _inlineRowChangedHandler;
+            if (row.HasChanges)
+                _inlinePendingRows.Add(row);
+        }
+        InvalidateDirectPendingPreview(
+            schedule: true);
+        OnPropertyChanged(
+            nameof(HasInlinePendingChanges));
+        OnPropertyChanged(
+            nameof(HasUnsavedChanges));
+    }
+
+    private void OnLibraryRowPendingChangesChanged(
+        object? sender,
+        EventArgs e)
+    {
+        if (sender is LibraryRow row)
+        {
+            if (row.HasChanges)
+                _inlinePendingRows.Add(row);
+            else
+                _inlinePendingRows.Remove(row);
+        }
+        InvalidateDirectPendingPreview(
+            schedule: true);
+        OnPropertyChanged(
+            nameof(HasInlinePendingChanges));
+        OnPropertyChanged(
+            nameof(HasUnsavedChanges));
+        ApplyLibraryOperationCommand
+            .NotifyCanExecuteChanged();
+    }
+
     public async Task<bool> SelectAsync(IReadOnlyList<LibraryRow> rows)
     {
         ArgumentNullException.ThrowIfNull(rows);
@@ -858,19 +1022,31 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     /// <summary>Navigation hosts call this before replacing the Library view.</summary>
     public async Task<bool> ConfirmCanNavigateAwayAsync()
     {
-        if (!await _inspector.ConfirmDiscardChangesAsync())
+        bool hasInspectorChanges =
+            _inspector.HasUnsavedChanges;
+        bool hasOtherChanges =
+            _libraryOperationPlan is not null ||
+            HasInlinePendingChanges ||
+            _reportPlan is not null ||
+            _playlistPlan is not null ||
+            _externalToolPlan is not null ||
+            FileOperations?.HasUnsavedChanges == true;
+        if (!hasOtherChanges)
+            return await _inspector
+                .ConfirmDiscardChangesAsync();
+        if (_dialogs is null)
+            return !hasInspectorChanges ||
+                await _inspector
+                    .ConfirmDiscardChangesAsync();
+        if (!await _dialogs.ConfirmDestructiveAsync(
+                L("Library.Dialog.Leave.Title"),
+                L("Library.Dialog.Leave.Message"),
+                L("Library.Dialog.Leave.Confirm")))
             return false;
-        if ((_libraryOperationPlan is null &&
-             _reportPlan is null &&
-             _playlistPlan is null &&
-             _externalToolPlan is null &&
-             FileOperations?.HasUnsavedChanges != true) ||
-            _dialogs is null)
-            return true;
-        return await _dialogs.ConfirmDestructiveAsync(
-            L("Library.Dialog.Leave.Title"),
-            L("Library.Dialog.Leave.Message"),
-            L("Library.Dialog.Leave.Confirm"));
+        if (hasInspectorChanges)
+            await _inspector
+                .DiscardPendingChangesAsync();
+        return true;
     }
 
     public Task<bool> ConfirmNavigationAsync() => ConfirmCanNavigateAwayAsync();
@@ -914,6 +1090,47 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         PreviewRemoveLibraryFrontCoverCommand.NotifyCanExecuteChanged();
         PreviewRemoveAllLibraryArtworkCommand.NotifyCanExecuteChanged();
     }
+
+    private async Task RefreshInspectorSelectionAsync(
+        SelectionContext previousSelection)
+    {
+        var rowsByPath = _allRows
+            .GroupBy(
+                row => row.Path,
+                PathComparer)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                PathComparer);
+        LibraryRow[] selectedRows =
+        [
+            .. previousSelection.Paths
+                .Where(rowsByPath.ContainsKey)
+                .Select(path => rowsByPath[path]),
+        ];
+        string[] paths =
+        [
+            .. selectedRows.Select(row =>
+                row.Path),
+        ];
+        SetSelectedPaths(paths);
+        await _inspector.LoadAsync(
+            new(
+                paths,
+                selectedRows
+                    .Select(row => row.Record)
+                    .ToArray(),
+                previousSelection
+                    .ReadArtworkDirectly));
+    }
+
+    private static bool SelectionPathsEqual(
+        IReadOnlyList<string> first,
+        IReadOnlyList<string> second) =>
+        first.Count == second.Count &&
+        first.SequenceEqual(
+            second,
+            PathComparer);
 
     [RelayCommand(CanExecute = nameof(CanOpenInWorkbench))]
     private async Task OpenInWorkbenchAsync()
@@ -1399,28 +1616,33 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_metadataOperations is null ||
             _libraryOperationPlan is null &&
-            !_inspector.HasUnsavedChanges)
+            !_inspector.HasUnsavedChanges &&
+            !HasInlinePendingChanges)
             return;
+        DirectPendingPreviewState?
+            directPreview =
+            HasDirectPendingDrafts
+                ? _directPendingPreview
+                : null;
+        if (HasDirectPendingDrafts &&
+            (directPreview is null ||
+             !DirectPendingPreviewMatchesCurrent(
+                 directPreview)))
+        {
+            InvalidateDirectPendingPreview(
+                schedule: true);
+            return;
+        }
         BeginLibraryOperation(
             "Library.Progress.ApplyingMetadataChanges");
         try
         {
-            MetadataOperationPlan? inspectorPlan =
-                _inspector.HasUnsavedChanges
-                    ? await _inspector.PreviewPendingChangesAsync(
-                        CreateOperationProgress(),
-                        _operationCancellation!.Token)
-                    : null;
+            MetadataOperationPlan? directPlan =
+                directPreview?.Plan;
             MetadataOperationPlan? effectivePlan =
-                _libraryOperationPlan is null
-                    ? inspectorPlan
-                    : inspectorPlan is null
-                        ? _libraryOperationPlan
-                        : MetadataOperationPlanComposer.Combine(
-                            L(
-                                "Library.PendingChanges.Title"),
-                            _libraryOperationPlan,
-                            inspectorPlan);
+                ComposeLibraryPendingPlans(
+                    _libraryOperationPlan,
+                    directPlan);
             if (effectivePlan is null)
             {
                 SetOperationStatus(
@@ -1443,28 +1665,50 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 else
                     SetOperationFailure(
                         "Library.Operation.Apply.Blocked",
-                        blocker.Message);
+                        DescribePendingIssue(
+                            blocker));
                 return;
             }
+            SelectionContext inspectorSelection =
+                _inspector.Selection;
+            int inspectorVersion =
+                _inspector.PendingChangesVersion;
+            bool refreshInspector =
+                effectivePlan.Files.Any(file =>
+                    file.CanApply &&
+                    inspectorSelection.Paths.Contains(
+                        file.Path,
+                        PathComparer));
             MetadataApplyResult result =
                 await _metadataOperations.ApplyAsync(
                     effectivePlan,
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
-            bool appliedInspectorDraft =
-                inspectorPlan?.ChangedFileCount > 0;
+            _suppressDirectPendingPreview = true;
+            _directPendingPreviewCancellation
+                ?.Cancel();
+            await ApplyCommittedPlanToRowsAsync(
+                effectivePlan,
+                _operationCancellation!.Token);
             _libraryOperationPlan = null;
             OperationPreviewChanges.Clear();
-            if (appliedInspectorDraft &&
-                _inspector.HasUnsavedChanges)
-                await _inspector.LoadAsync(
-                    _inspector.Selection);
+            _directPendingPreview = null;
+            if (refreshInspector &&
+                inspectorVersion ==
+                _inspector.PendingChangesVersion &&
+                SelectionPathsEqual(
+                    inspectorSelection.Paths,
+                    _inspector.Selection.Paths))
+                await RefreshInspectorSelectionAsync(
+                    inspectorSelection);
+            await ApplyFilterAsync(
+                immediate: true,
+                _operationCancellation.Token);
             RebuildPendingChanges();
             HasApplicableOperationPreview = false;
             SetCountOperationStatus(
                 "Library.Operation.Apply.Complete",
                 result.ChangedFiles);
-            await ReloadAsync();
         }
         catch (OperationCanceledException)
         {
@@ -1479,7 +1723,11 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
         finally
         {
+            _suppressDirectPendingPreview = false;
             EndLibraryOperation();
+            if (HasDirectPendingDrafts)
+                InvalidateDirectPendingPreview(
+                    schedule: true);
             NotifyHistoryCommands();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -1494,8 +1742,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
         _libraryOperationPlan = null;
         OperationPreviewChanges.Clear();
+        foreach (LibraryRow row in
+                 _inlinePendingRows.ToArray())
+            row.RevertPendingChanges();
         if (_inspector.HasUnsavedChanges)
             await _inspector.DiscardPendingChangesAsync();
+        await ApplyFilterAsync(immediate: true);
         RebuildPendingChanges();
         HasApplicableOperationPreview = false;
         SetOperationStatus(
@@ -1504,6 +1756,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     }
 
     private bool CanRevertPendingChanges() =>
+        !IsBusy &&
         !IsOperationBusy &&
         HasPendingChanges;
 
@@ -3020,18 +3273,884 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     private void RebuildPendingChanges()
     {
-        PendingChanges.Clear();
-        foreach (MetadataPreviewRow row in
-                 OperationPreviewChanges)
-            PendingChanges.Add(row);
-        foreach (MetadataPreviewRow row in
-                 _inspector.CreatePendingChangeRows())
-            PendingChanges.Add(row);
+        var pending = new List<
+            MetadataPreviewRow>();
+        if (_directPendingPreview is
+                { } preview &&
+            DirectPendingPreviewMatchesCurrent(
+                preview))
+        {
+            MetadataOperationPlan effective =
+                ComposeLibraryPendingPlans(
+                    _libraryOperationPlan,
+                    preview.Plan)!;
+            var rows =
+                new ObservableCollection<
+                    MetadataPreviewRow>();
+            MetadataPreviewRowBuilder.Populate(
+                rows,
+                effective,
+                _localization);
+            foreach (MetadataPreviewRow row in rows)
+                pending.Add(row);
+            foreach (MetadataFilePlan file in
+                     effective.Files)
+            {
+                foreach (OperationIssue issue in
+                         file.Issues)
+                {
+                    pending.Add(new(
+                        Path.GetFileName(file.Path),
+                        L(
+                            $"Operations.Choice." +
+                            $"OperationIssueSeverity." +
+                            $"{issue.Severity}"),
+                        "",
+                        DescribePendingIssue(issue),
+                        issue.Message));
+                }
+            }
+        }
+        else
+        {
+            foreach (MetadataPreviewRow row in
+                     OperationPreviewChanges)
+                pending.Add(row);
+            foreach (MetadataPreviewRow row in
+                     _inlinePendingRows
+                         .OrderBy(
+                             item => item.Path,
+                             PathComparer)
+                         .SelectMany(item =>
+                             item.CreatePendingChangeRows(
+                                 field =>
+                                     MetadataPreviewRowBuilder
+                                         .DisplayFieldName(
+                                             field,
+                                             _localization))))
+                pending.Add(row);
+            foreach (MetadataPreviewRow row in
+                     _inspector.CreatePendingChangeRows())
+                pending.Add(row);
+        }
+        _pendingChanges.ReplaceAll(pending);
         OnPropertyChanged(nameof(HasPendingChanges));
         OnPropertyChanged(nameof(HasNoPendingChanges));
+        OnPropertyChanged(
+            nameof(CanApplyPendingChanges));
         RevertPendingChangesCommand
             .NotifyCanExecuteChanged();
+        ApplyLibraryOperationCommand
+            .NotifyCanExecuteChanged();
     }
+
+    private MetadataOperationPlan?
+        CurrentEffectiveMetadataPlan()
+    {
+        if (HasDirectPendingDrafts &&
+            (_directPendingPreview is not
+                 { } preview ||
+             !DirectPendingPreviewMatchesCurrent(
+                 preview)))
+            return null;
+        return ComposeLibraryPendingPlans(
+            _libraryOperationPlan,
+            _directPendingPreview?.Plan);
+    }
+
+    private MetadataOperationPlan?
+        ComposeLibraryPendingPlans(
+            MetadataOperationPlan? reviewed,
+            MetadataOperationPlan? direct)
+    {
+        if (ReferenceEquals(
+                reviewed,
+                _effectiveReviewedPlanSource) &&
+            ReferenceEquals(
+                direct,
+                _effectiveDirectPlanSource))
+            return _effectiveMetadataPlan;
+
+        _effectiveReviewedPlanSource =
+            reviewed;
+        _effectiveDirectPlanSource =
+            direct;
+        if (reviewed is null)
+            return _effectiveMetadataPlan =
+                direct;
+        if (direct is null)
+            return _effectiveMetadataPlan =
+                reviewed;
+
+        MetadataOperationPlan combined =
+            MetadataOperationPlanComposer.Combine(
+                L(
+                    "Library.PendingChanges.Title"),
+                reviewed,
+                direct);
+        Dictionary<string, MetadataFilePlan[]>
+            partsByPath =
+            reviewed.Files
+                .Concat(direct.Files)
+                .GroupBy(
+                    file => file.Path,
+                    PathComparer)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.ToArray(),
+                    PathComparer);
+
+        return _effectiveMetadataPlan =
+            combined with
+        {
+            Files =
+            [
+                .. combined.Files.Select(file =>
+                {
+                    MetadataFilePlan[] parts =
+                        partsByPath[file.Path];
+                    var issues =
+                        file.Issues.ToList();
+                    if (parts.Skip(1).Any(part =>
+                            !SnapshotsMatch(
+                                parts[0].Snapshot,
+                                part.Snapshot)))
+                    {
+                        issues.Add(new(
+                            "library.pending-snapshot-conflict",
+                            OperationIssueSeverity.Blocker,
+                            "Pending previews were created from " +
+                            "different source snapshots.",
+                            file.Path));
+                    }
+
+                    var edits = new Dictionary<
+                        string,
+                        MetadataValueEdit>(
+                        StringComparer.OrdinalIgnoreCase);
+                    foreach (MetadataValueEdit edit in
+                             parts.SelectMany(
+                                 part => part.Edits))
+                    {
+                        string key =
+                            MetadataGridValueKey.For(
+                                edit.Field);
+                        if (edits.TryGetValue(
+                                key,
+                                out MetadataValueEdit?
+                                    existing))
+                        {
+                            if (!existing.Values
+                                    .SequenceEqual(
+                                        edit.Values,
+                                        StringComparer.Ordinal))
+                            {
+                                issues.Add(new(
+                                    $"library.pending-edit-conflict:{key}",
+                                    OperationIssueSeverity.Blocker,
+                                    "Pending previews contain " +
+                                    "different values for " +
+                                    $"{edit.Field.DisplayName}.",
+                                    file.Path));
+                            }
+                            continue;
+                        }
+                        edits[key] = edit;
+                    }
+
+                    ArtworkSetDifference[] artwork =
+                    [
+                        .. parts.Select(part =>
+                                part.ArtworkDifference)
+                            .Where(value =>
+                                value is not null)
+                            .Cast<
+                                ArtworkSetDifference>(),
+                    ];
+                    if (artwork.Skip(1).Any(value =>
+                            !ArtworkDifferencesMatch(
+                                artwork[0],
+                                value)))
+                    {
+                        issues.Add(new(
+                            "library.pending-artwork-conflict",
+                            OperationIssueSeverity.Blocker,
+                            "Pending previews contain " +
+                            "different artwork sets.",
+                            file.Path));
+                    }
+
+                    ImmutableArray<
+                        MetadataFieldDifference>
+                        differences =
+                    [
+                        .. parts.SelectMany(
+                                part =>
+                                    part.Differences)
+                            .Distinct(
+                                MetadataFieldDifferenceComparer
+                                    .Instance),
+                    ];
+                    return file with
+                    {
+                        Snapshot =
+                            parts[0].Snapshot,
+                        Differences =
+                            differences,
+                        Edits =
+                            [.. edits.Values],
+                        Issues =
+                            [.. issues.Distinct()],
+                        ArtworkEdit =
+                            parts.Select(part =>
+                                    part.ArtworkEdit)
+                                .FirstOrDefault(
+                                    value =>
+                                        value is not
+                                            null),
+                        ArtworkDifference =
+                            artwork.FirstOrDefault(),
+                    };
+                }),
+            ],
+        };
+    }
+
+    private static bool SnapshotsMatch(
+        MediaFileSnapshot first,
+        MediaFileSnapshot second) =>
+        first.Length == second.Length &&
+        first.LastWriteTimeUtc ==
+            second.LastWriteTimeUtc &&
+        StringComparer.Ordinal.Equals(
+            first.MetadataHash,
+            second.MetadataHash);
+
+    private static bool ArtworkDifferencesMatch(
+        ArtworkSetDifference first,
+        ArtworkSetDifference second) =>
+        first.Before.SequenceEqual(
+            second.Before) &&
+        first.After.SequenceEqual(
+            second.After);
+
+    private async Task<DirectPendingPreviewState?>
+        PreviewDirectPendingChangesAsync(
+            IProgress<OperationProgress>? progress,
+            CancellationToken cancellationToken)
+    {
+        if (_metadataOperations is null)
+            return null;
+        ImmutableArray<InlineDraftSnapshot>
+            inlineDrafts =
+            [
+                .. _inlinePendingRows
+                    .OrderBy(
+                        row => row.Path,
+                        PathComparer)
+                    .Select(row => new
+                        InlineDraftSnapshot(
+                            row,
+                            row.PendingChangesVersion,
+                            [.. row
+                                .CreatePendingEditStates()],
+                            row
+                                .CreatePendingSourceExpectation())),
+            ];
+        int inspectorVersion =
+            _inspector.PendingChangesVersion;
+        bool hadInspectorChanges =
+            _inspector.HasUnsavedChanges;
+        var editsByPath = new Dictionary<
+            string,
+            Dictionary<string, MetadataValueEdit>>(
+            PathComparer);
+        var expectations = new Dictionary<
+            string,
+            MetadataEditSourceExpectation>(
+            PathComparer);
+        foreach (InlineDraftSnapshot draft in
+                 inlineDrafts)
+        {
+            Dictionary<string, MetadataValueEdit>
+                edits = GetOrCreate(
+                    draft.Row.Path);
+            foreach (LibraryPendingMetadataEdit
+                         pending in draft.Edits)
+            {
+                MetadataValueEdit edit =
+                    pending.Edit;
+                edits[
+                    MetadataGridValueKey.For(
+                        edit.Field)] = edit;
+            }
+            expectations[draft.Row.Path] =
+                draft.Expectation;
+        }
+
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest>? artworkEdits =
+            null;
+        var conflicts =
+            new List<PendingEditConflict>();
+        var sourceExpectationConflicts =
+            new HashSet<string>(
+                PathComparer);
+        if (_inspector.HasUnsavedChanges)
+        {
+            var inspectorInputs =
+                _inspector.CreatePendingOperationInputs();
+            foreach ((string path,
+                         MetadataEditSourceExpectation
+                             expectation) in
+                     _inspector
+                         .CreatePendingSourceExpectations())
+            {
+                if (!expectations.TryGetValue(
+                        path,
+                        out MetadataEditSourceExpectation?
+                            existing))
+                {
+                    expectations[path] =
+                        expectation;
+                    continue;
+                }
+                expectations[path] =
+                    MergeExpectations(
+                        path,
+                        existing,
+                        expectation);
+            }
+            if (inspectorInputs.ValueEdits is not null)
+            {
+                foreach ((string path,
+                             IReadOnlyList<
+                                 MetadataValueEdit> edits)
+                         in inspectorInputs.ValueEdits)
+                {
+                    Dictionary<string,
+                        MetadataValueEdit> fileEdits =
+                        GetOrCreate(path);
+                    foreach (MetadataValueEdit edit in
+                             edits)
+                    {
+                        string key =
+                            MetadataGridValueKey.For(
+                                edit.Field);
+                        if (fileEdits.TryGetValue(
+                                key,
+                                out MetadataValueEdit?
+                                    existing) &&
+                            !existing.Values
+                                .SequenceEqual(
+                                    edit.Values,
+                                    StringComparer.Ordinal))
+                        {
+                            conflicts.Add(new(
+                                path,
+                                edit.Field));
+                        }
+                        fileEdits[key] = edit;
+                    }
+                }
+            }
+            artworkEdits =
+                inspectorInputs.ArtworkEdits;
+        }
+
+        MetadataOperationPlan? valuesPlan =
+            editsByPath.Count == 0
+                ? null
+                : await _metadataOperations
+                    .PreviewValueEditsAsync(
+                        editsByPath.ToDictionary(
+                            pair => pair.Key,
+                            pair =>
+                                (IReadOnlyList<
+                                    MetadataValueEdit>)
+                                pair.Value.Values
+                                    .ToArray(),
+                            PathComparer),
+                        expectations,
+                        L(
+                            "Library.PendingChanges.Title"),
+                        progress,
+                        cancellationToken);
+        MetadataOperationPlan? artworkPlan =
+            artworkEdits is null
+                ? null
+                : await _metadataOperations
+                    .PreviewArtworkSetsAsync(
+                        artworkEdits,
+                        expectations,
+                        L(
+                            "Library.PendingChanges.Title"),
+                        progress,
+                        cancellationToken);
+        if (valuesPlan is null &&
+            artworkPlan is null)
+            return null;
+        MetadataOperationPlan plan =
+            MetadataOperationPlanComposer.Combine(
+            L("Library.PendingChanges.Title"),
+            valuesPlan,
+            artworkPlan);
+        if (conflicts.Count > 0 ||
+            sourceExpectationConflicts.Count > 0)
+        {
+            plan = plan with
+            {
+                Files =
+                [
+                    .. plan.Files.Select(file =>
+                    {
+                        PendingEditConflict[] fileConflicts =
+                        [
+                            .. conflicts.Where(
+                                conflict =>
+                                    PathComparer.Equals(
+                                        conflict.Path,
+                                        file.Path)),
+                        ];
+                        if (fileConflicts.Length == 0 &&
+                            !sourceExpectationConflicts
+                                .Contains(file.Path))
+                            return file;
+                        IEnumerable<OperationIssue>
+                            issues =
+                            fileConflicts.Select(
+                                conflict => new
+                                    OperationIssue(
+                                        "library.pending-edit-conflict",
+                                        OperationIssueSeverity.Blocker,
+                                        "Two pending editors contain " +
+                                        "different values for " +
+                                        $"{conflict.Field.DisplayName}.",
+                                        file.Path));
+                        if (sourceExpectationConflicts
+                            .Contains(file.Path))
+                        {
+                            issues = issues.Append(
+                                new(
+                                    "library.pending-snapshot-conflict",
+                                    OperationIssueSeverity.Blocker,
+                                    "Pending editors were loaded " +
+                                    "from different source snapshots.",
+                                    file.Path));
+                        }
+                        return file with
+                        {
+                            Issues =
+                            [
+                                .. file.Issues,
+                                .. issues,
+                            ],
+                        };
+                    }),
+                ],
+            };
+        }
+        return new(
+            plan,
+            inlineDrafts,
+            inspectorVersion,
+            hadInspectorChanges);
+
+        Dictionary<string, MetadataValueEdit>
+            GetOrCreate(string path)
+        {
+            if (!editsByPath.TryGetValue(
+                    path,
+                    out Dictionary<string,
+                        MetadataValueEdit>? edits))
+            {
+                edits = new(
+                    StringComparer.OrdinalIgnoreCase);
+                editsByPath[path] = edits;
+            }
+            return edits;
+        }
+
+        MetadataEditSourceExpectation
+            MergeExpectations(
+                string path,
+                MetadataEditSourceExpectation first,
+                MetadataEditSourceExpectation second)
+        {
+            bool identityConflict =
+                first.Length is { } firstLength &&
+                second.Length is { } secondLength &&
+                firstLength != secondLength ||
+                first.LastWriteTimeUtc is
+                    { } firstWrite &&
+                second.LastWriteTimeUtc is
+                    { } secondWrite &&
+                firstWrite != secondWrite ||
+                !string.IsNullOrWhiteSpace(
+                    first.MetadataHash) &&
+                !string.IsNullOrWhiteSpace(
+                    second.MetadataHash) &&
+                !StringComparer.Ordinal.Equals(
+                    first.MetadataHash,
+                    second.MetadataHash) ||
+                first.ArtworkFingerprint is not
+                    null &&
+                second.ArtworkFingerprint is not
+                    null &&
+                !StringComparer.Ordinal.Equals(
+                    first.ArtworkFingerprint,
+                    second.ArtworkFingerprint);
+            var originals =
+                first.OriginalValues.ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value);
+            foreach ((MetadataFieldKey field,
+                         ImmutableArray<string> values)
+                     in second.OriginalValues)
+            {
+                if (originals.TryGetValue(
+                        field,
+                        out ImmutableArray<string>
+                            existingValues) &&
+                    !existingValues.SequenceEqual(
+                        values,
+                        StringComparer.Ordinal))
+                    identityConflict = true;
+                else
+                    originals[field] = values;
+            }
+            if (identityConflict)
+                sourceExpectationConflicts.Add(
+                    path);
+            return new(
+                first.Length ??
+                second.Length,
+                first.LastWriteTimeUtc ??
+                second.LastWriteTimeUtc,
+                originals,
+                first.MetadataHash ??
+                second.MetadataHash,
+                first.ArtworkFingerprint ??
+                second.ArtworkFingerprint);
+        }
+    }
+
+    [RelayCommand(
+        CanExecute =
+            nameof(CanRetryDirectPendingPreview))]
+    private void RetryDirectPendingPreview()
+    {
+        if (!CanRetryDirectPendingPreview)
+            return;
+        InvalidateDirectPendingPreview(
+            schedule: true);
+    }
+
+    private void InvalidateDirectPendingPreview(
+        bool schedule)
+    {
+        _directPendingPreviewCancellation
+            ?.Cancel();
+        _directPendingPreview = null;
+        SetDirectPendingPreviewFailure(false);
+        OnPropertyChanged(
+            nameof(IsDirectPendingPreviewReady));
+        OnPropertyChanged(
+            nameof(IsDirectPendingPreviewBusy));
+        RebuildPendingChanges();
+        if (!schedule ||
+            _suppressDirectPendingPreview ||
+            IsBusy ||
+            IsOperationBusy ||
+            !HasDirectPendingDrafts ||
+            _metadataOperations is null)
+            return;
+
+        int generation =
+            ++_directPendingPreviewGeneration;
+        var cancellation =
+            new CancellationTokenSource();
+        _directPendingPreviewCancellation =
+            cancellation;
+        _directPendingPreviewTask =
+            RefreshDirectPendingPreviewAsync(
+                generation,
+                cancellation);
+        OnPropertyChanged(
+            nameof(IsDirectPendingPreviewBusy));
+        OnPropertyChanged(
+            nameof(CanRetryDirectPendingPreview));
+        RetryDirectPendingPreviewCommand
+            .NotifyCanExecuteChanged();
+    }
+
+    private async Task
+        RefreshDirectPendingPreviewAsync(
+            int generation,
+            CancellationTokenSource cancellation)
+    {
+        try
+        {
+            await Task.Delay(
+                100,
+                cancellation.Token);
+            DirectPendingPreviewState? preview =
+                await PreviewDirectPendingChangesAsync(
+                    progress: null,
+                    cancellation.Token);
+            cancellation.Token
+                .ThrowIfCancellationRequested();
+            if (generation !=
+                    _directPendingPreviewGeneration ||
+                preview is null ||
+                !DirectPendingPreviewMatchesCurrent(
+                    preview))
+                return;
+            _directPendingPreview = preview;
+            SetDirectPendingPreviewFailure(false);
+            RebuildPendingChanges();
+            OnPropertyChanged(
+                nameof(IsDirectPendingPreviewReady));
+        }
+        catch (OperationCanceledException) when (
+            cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception error)
+        {
+            if (generation ==
+                _directPendingPreviewGeneration)
+            {
+                SetDirectPendingPreviewFailure(
+                    true);
+                SetOperationFailure(
+                    "Library.Operation.PreviewFailed",
+                    error.Message);
+            }
+        }
+        finally
+        {
+            if (generation ==
+                _directPendingPreviewGeneration)
+            {
+                _directPendingPreviewTask = null;
+                _directPendingPreviewCancellation =
+                    null;
+                OnPropertyChanged(
+                    nameof(IsDirectPendingPreviewBusy));
+                OnPropertyChanged(
+                    nameof(IsDirectPendingPreviewReady));
+                OnPropertyChanged(
+                    nameof(CanApplyPendingChanges));
+                ApplyLibraryOperationCommand
+                    .NotifyCanExecuteChanged();
+                OnPropertyChanged(
+                    nameof(CanRetryDirectPendingPreview));
+                RetryDirectPendingPreviewCommand
+                    .NotifyCanExecuteChanged();
+            }
+            cancellation.Dispose();
+        }
+    }
+
+    private void SetDirectPendingPreviewFailure(
+        bool value)
+    {
+        if (_directPendingPreviewFailed == value)
+            return;
+        _directPendingPreviewFailed = value;
+        OnPropertyChanged(
+            nameof(HasDirectPendingPreviewFailure));
+        OnPropertyChanged(
+            nameof(CanRetryDirectPendingPreview));
+        RetryDirectPendingPreviewCommand
+            .NotifyCanExecuteChanged();
+    }
+
+    private bool DirectPendingPreviewMatchesCurrent(
+        DirectPendingPreviewState preview)
+    {
+        if (preview.HadInspectorChanges !=
+                _inspector.HasUnsavedChanges ||
+            preview.InspectorVersion !=
+                _inspector.PendingChangesVersion ||
+            preview.InlineDrafts.Length !=
+                _inlinePendingRows.Count)
+            return false;
+        foreach (InlineDraftSnapshot draft in
+                 preview.InlineDrafts)
+        {
+            if (!_inlinePendingRows.Contains(
+                    draft.Row) ||
+                draft.Row.PendingChangesVersion !=
+                    draft.Version)
+                return false;
+        }
+        return true;
+    }
+
+    private bool HasDirectPendingDrafts =>
+        _inlinePendingRows.Count > 0 ||
+        _inspector.HasUnsavedChanges;
+
+    private string DescribePendingIssue(
+        OperationIssue issue) =>
+        issue.Code switch
+        {
+            "metadata.edit-source-changed" =>
+                L(
+                    "Library.PendingChanges.SourceChanged"),
+            _ when issue.Code.StartsWith(
+                "metadata.edit-field-changed",
+                StringComparison.Ordinal) =>
+                LF(
+                    "Library.PendingChanges.FieldChanged",
+                    PendingIssueField(issue)),
+            "library.pending-snapshot-conflict" =>
+                L(
+                    "Library.PendingChanges.SourceChanged"),
+            _ when issue.Code.StartsWith(
+                "library.pending-edit-conflict",
+                StringComparison.Ordinal) =>
+                L(
+                    "Workbench.Dialog.PendingConflict.MetadataPlan"),
+            "library.pending-artwork-conflict" =>
+                L(
+                    "Workbench.Dialog.PendingConflict.MetadataPlan"),
+            _ => issue.Message,
+        };
+
+    private string PendingIssueField(
+        OperationIssue issue)
+    {
+        int separator =
+            issue.Code.IndexOf(':');
+        if (separator >= 0 &&
+            separator + 1 <
+                issue.Code.Length &&
+            LibraryMetadataValueMap
+                .TryParseField(
+                    issue.Code[
+                        (separator + 1)..],
+                    out MetadataFieldKey field))
+            return MetadataPreviewRowBuilder
+                .DisplayFieldName(
+                    field,
+                    _localization);
+
+        const string prefix = "The ";
+        const string suffix = " value changed";
+        int start = issue.Message.IndexOf(
+            prefix,
+            StringComparison.Ordinal);
+        int end = issue.Message.IndexOf(
+            suffix,
+            StringComparison.Ordinal);
+        return start >= 0 && end > start
+            ? issue.Message[
+                (start + prefix.Length)..end]
+            : "";
+    }
+
+    private async Task ApplyCommittedPlanToRowsAsync(
+        MetadataOperationPlan plan,
+        CancellationToken cancellationToken)
+    {
+        foreach (MetadataFilePlan file in
+                 plan.Files.Where(file =>
+                     file.CanApply &&
+                     (!file.Edits.IsDefaultOrEmpty ||
+                      file.ArtworkDifference is not
+                          null)))
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+            LibraryRow? row = _allRows
+                .FirstOrDefault(candidate =>
+                    PathComparer.Equals(
+                        candidate.Path,
+                        file.Path));
+            if (row is null)
+                continue;
+            long preLength =
+                row.Record.Length;
+            DateTime preLastWriteTimeUtc =
+                NormalizeUtc(
+                    row.Record.LastWriteTime);
+            (long? length,
+                DateTime? lastWriteTimeUtc) =
+                await ReadFileIdentityAsync(
+                    file.Path,
+                    cancellationToken);
+            row.AcceptAppliedEdits(
+                file.Edits,
+                length,
+                lastWriteTimeUtc);
+            if (file.ArtworkDifference is not null)
+                InvalidateThumbnail(
+                    row);
+            _committedRowOverlays[
+                file.Path] = new(
+                row,
+                preLength,
+                preLastWriteTimeUtc,
+                length,
+                lastWriteTimeUtc);
+        }
+    }
+
+    private void InvalidateThumbnail(
+        LibraryRow row)
+    {
+        lock (_thumbnailSync)
+        {
+            if (_thumbnailLoads.TryGetValue(
+                    row,
+                    out CancellationTokenSource?
+                        cancellation))
+            {
+                cancellation.Cancel();
+                _thumbnailLoads.Remove(row);
+            }
+            if (_thumbnailCache.Remove(
+                    row.Path,
+                    out ThumbnailCacheItem? cached))
+                _thumbnailLru.Remove(
+                    cached.Node);
+        }
+        row.InvalidateThumbnail();
+    }
+
+    private static async Task<(
+        long? Length,
+        DateTime? LastWriteTimeUtc)>
+        ReadFileIdentityAsync(
+            string path,
+            CancellationToken cancellationToken) =>
+        await Task.Run(
+            () =>
+            {
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+                var file = new FileInfo(path);
+                if (!file.Exists)
+                    return (
+                        (long?)null,
+                        (DateTime?)null);
+                return (
+                    (long?)file.Length,
+                    (DateTime?)file
+                        .LastWriteTimeUtc);
+            },
+            cancellationToken);
+
+    private static DateTime NormalizeUtc(
+        DateTime value) =>
+        value == default ||
+        value.Kind == DateTimeKind.Utc
+            ? value
+            : value.ToUniversalTime();
 
     private void ScheduleRepresentativePreview()
     {
@@ -3049,6 +4168,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private string? FileOperationPreflightMessage()
     {
         if (_inspector.HasUnsavedChanges ||
+            HasInlinePendingChanges ||
             _libraryOperationPlan is not null)
             return L(
                 "Library.FileOperation.MetadataEditsPending");
@@ -3065,6 +4185,46 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
         NotifyHistoryCommands();
+    }
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(
+            nameof(CanEditPendingChanges));
+        OnPropertyChanged(
+            nameof(IsPendingEditReadOnly));
+        OnPropertyChanged(
+            nameof(CanApplyPendingChanges));
+        RevertPendingChangesCommand
+            .NotifyCanExecuteChanged();
+        ApplyLibraryOperationCommand
+            .NotifyCanExecuteChanged();
+        OnPropertyChanged(
+            nameof(CanRetryDirectPendingPreview));
+        RetryDirectPendingPreviewCommand
+            .NotifyCanExecuteChanged();
+        if (HasDirectPendingDrafts)
+            InvalidateDirectPendingPreview(
+                schedule: !value);
+    }
+
+    partial void OnIsOperationBusyChanged(
+        bool value)
+    {
+        OnPropertyChanged(
+            nameof(CanEditPendingChanges));
+        OnPropertyChanged(
+            nameof(IsPendingEditReadOnly));
+        OnPropertyChanged(
+            nameof(CanApplyPendingChanges));
+        RevertPendingChangesCommand
+            .NotifyCanExecuteChanged();
+        ApplyLibraryOperationCommand
+            .NotifyCanExecuteChanged();
+        OnPropertyChanged(
+            nameof(CanRetryDirectPendingPreview));
+        RetryDirectPendingPreviewCommand
+            .NotifyCanExecuteChanged();
     }
 
     partial void OnRowsChanged(IReadOnlyList<LibraryRow> value)
@@ -3113,10 +4273,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ResolveOperationPaths().Length > 0;
 
     private bool CanApplyLibraryOperation() =>
+        !IsBusy &&
         !IsOperationBusy &&
-        (_libraryOperationPlan is not null &&
-             HasApplicableOperationPreview ||
-         _inspector.HasUnsavedChanges);
+        CurrentEffectiveMetadataPlan()
+            ?.CanApply == true;
 
     private bool CanUndoLibraryOperation() =>
         _history?.CanUndo == true &&
@@ -3710,16 +4870,48 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         SelectionContext? updatedSelection = null;
         if (!_inspector.HasUnsavedChanges && _selectedPaths.Count > 0)
         {
-            var selectedPaths = _selectedPaths.ToHashSet(PathComparer);
-            LibraryRow[] visibleSelection = filtered.Where(row => selectedPaths.Contains(row.Path)).ToArray();
-            if (visibleSelection.Length != _selectedPaths.Count)
+            Dictionary<string, LibraryRow>
+                visibleByPath = filtered
+                    .GroupBy(
+                        row => row.Path,
+                        PathComparer)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.First(),
+                        PathComparer);
+            LibraryRow[] visibleSelection =
+            [
+                .. _selectedPaths
+                    .Where(
+                        visibleByPath
+                            .ContainsKey)
+                    .Select(path =>
+                        visibleByPath[path]),
+            ];
+            bool pathsChanged =
+                visibleSelection.Length !=
+                _selectedPaths.Count;
+            if (pathsChanged)
+                SetSelectedPaths(
+                    visibleSelection
+                        .Select(row => row.Path)
+                        .ToArray());
+            if (pathsChanged ||
+                !InspectorSelectionUsesRows(
+                    visibleSelection))
             {
-                SetSelectedPaths(visibleSelection.Select(row => row.Path).ToArray());
                 updatedSelection = new SelectionContext(
                     visibleSelection.Select(row => row.Path).ToArray(),
-                    visibleSelection.Select(row => row.Record).ToArray());
+                    visibleSelection.Select(row => row.Record).ToArray(),
+                    _inspector.Selection
+                        .ReadArtworkDirectly);
             }
         }
+        else if (!_inspector.HasUnsavedChanges &&
+                 _selectedPaths.Count == 0 &&
+                 _inspector.Selection.HasSelection)
+            updatedSelection =
+                SelectionContext.Empty;
 
         // Replace the view once. Raising one collection notification per cached track makes a
         // virtualized table spend seconds processing changes on the UI thread and also starves
@@ -3761,6 +4953,31 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         OnPropertyChanged(nameof(ResultCountText));
         if (updatedSelection is not null)
             await _inspector.LoadAsync(updatedSelection);
+    }
+
+    private bool InspectorSelectionUsesRows(
+        IReadOnlyList<LibraryRow> rows)
+    {
+        SelectionContext selection =
+            _inspector.Selection;
+        if (!SelectionPathsEqual(
+                selection.Paths,
+                rows.Select(row => row.Path)
+                    .ToArray()) ||
+            selection.Records is not
+                { } records ||
+            records.Count != rows.Count)
+            return false;
+        for (int index = 0;
+             index < rows.Count;
+             index++)
+        {
+            if (!ReferenceEquals(
+                    records[index],
+                    rows[index].Record))
+                return false;
+        }
+        return true;
     }
 
     private void LoadViews()
@@ -4046,6 +5263,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 OperationPreviewChanges,
                 _libraryOperationPlan,
                 _localization);
+        RebuildPendingChanges();
     }
 
     private static string ColumnResourceKey(
@@ -4056,12 +5274,122 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _ => $"Column.{key}",
         };
 
+    private sealed class
+        MetadataFieldDifferenceComparer :
+        IEqualityComparer<
+            MetadataFieldDifference>
+    {
+        public static
+            MetadataFieldDifferenceComparer
+            Instance { get; } = new();
+
+        public bool Equals(
+            MetadataFieldDifference? left,
+            MetadataFieldDifference? right) =>
+            ReferenceEquals(left, right) ||
+            left is not null &&
+            right is not null &&
+            Equals(left.Field, right.Field) &&
+            left.Before.SequenceEqual(
+                right.Before,
+                StringComparer.Ordinal) &&
+            left.After.SequenceEqual(
+                right.After,
+                StringComparer.Ordinal);
+
+        public int GetHashCode(
+            MetadataFieldDifference value)
+        {
+            var hash = new HashCode();
+            hash.Add(value.Field);
+            foreach (string item in value.Before)
+                hash.Add(
+                    item,
+                    StringComparer.Ordinal);
+            hash.Add(0x5f3759df);
+            foreach (string item in value.After)
+                hash.Add(
+                    item,
+                    StringComparer.Ordinal);
+            return hash.ToHashCode();
+        }
+    }
+
+    private sealed record InlineDraftSnapshot(
+        LibraryRow Row,
+        long Version,
+        ImmutableArray<LibraryPendingMetadataEdit>
+            Edits,
+        MetadataEditSourceExpectation Expectation);
+
+    private sealed record DirectPendingPreviewState(
+        MetadataOperationPlan Plan,
+        ImmutableArray<InlineDraftSnapshot>
+            InlineDrafts,
+        int InspectorVersion,
+        bool HadInspectorChanges);
+
+    private sealed record PendingEditConflict(
+        string Path,
+        MetadataFieldKey Field);
+
+    private sealed record CommittedLibraryRowOverlay(
+        LibraryRow Row,
+        long PreLength,
+        DateTime PreLastWriteTimeUtc,
+        long? PostLength,
+        DateTime? PostLastWriteTimeUtc)
+    {
+        public bool MatchesPre(
+            TrackRecord record) =>
+            record.Length == PreLength &&
+            NormalizeUtc(
+                record.LastWriteTime) ==
+            PreLastWriteTimeUtc;
+
+        public bool MatchesPost(
+            TrackRecord record) =>
+            PostLength is { } length &&
+            PostLastWriteTimeUtc is
+                { } lastWriteTimeUtc &&
+            record.Length == length &&
+            NormalizeUtc(
+                record.LastWriteTime) ==
+            lastWriteTimeUtc;
+    }
+
     private sealed record LibraryWorkspaceSnapshot(
         string? Filter,
         FilterMode Mode,
         bool? InspectorOpen = null,
         LibraryVisualFilterNode? VisualFilter = null,
         LibraryInspectorPreference? InspectorPreference = null);
+
+    private sealed class
+        BulkResetObservableCollection<T> :
+        ObservableCollection<T>
+    {
+        public void ReplaceAll(
+            IEnumerable<T> values)
+        {
+            ArgumentNullException.ThrowIfNull(
+                values);
+            CheckReentrancy();
+            Items.Clear();
+            foreach (T value in values)
+                Items.Add(value);
+            OnPropertyChanged(
+                new(
+                    nameof(Count)));
+            OnPropertyChanged(
+                new("Item[]"));
+            OnCollectionChanged(
+                new(
+                    NotifyCollectionChangedAction
+                        .Reset));
+        }
+    }
+
     private sealed record ThumbnailCacheItem(object? Image, LinkedListNode<string> Node);
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase

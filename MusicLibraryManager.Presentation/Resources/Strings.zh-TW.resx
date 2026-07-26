@@ -905,7 +905,7 @@
     <value>驗證解碼後的音訊</value>
   </data>
   <data name="Health.Audit.Run" xml:space="preserve">
-    <value>執行稽核…</value>
+    <value>執行稽核</value>
   </data>
   <data name="Health.Audit.RunAutomation" xml:space="preserve">
     <value>選擇要執行的稽核</value>
@@ -1025,7 +1025,7 @@
     <value>相似的演出者名稱</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
-    <value>準備修復…</value>
+    <value>準備修復</value>
   </data>
   <data name="Health.Repair.PrepareAutomation" xml:space="preserve">
     <value>選擇要準備的修復計畫</value>
@@ -1742,6 +1742,12 @@
   <data name="Library.PendingChanges.Action.Apply" xml:space="preserve">
     <value>套用</value>
   </data>
+  <data name="Library.PendingChanges.FieldChanged" xml:space="preserve">
+    <value>開始編輯後，{0} 值已變更。請先重新載入檔案，再套用待處理的變更。</value>
+  </data>
+  <data name="Library.PendingChanges.SourceChanged" xml:space="preserve">
+    <value>開始編輯後，檔案已變更。請先重新載入檔案，再套用待處理的變更。</value>
+  </data>
   <data name="Library.Action.CopyPaths" xml:space="preserve">
     <value>複製路徑</value>
   </data>
@@ -1818,7 +1824,7 @@
     <value>清除選取範圍</value>
   </data>
   <data name="Operations.Action.Maintenance" xml:space="preserve">
-    <value>維護…</value>
+    <value>維護</value>
   </data>
   <data name="Operations.Action.MaintenanceAutomation" xml:space="preserve">
     <value>復原維護動作</value>
@@ -1913,6 +1919,8 @@
   <data name="ReviewedFileOperation.DestinationAutomation" xml:space="preserve">
     <value>檔案操作目的地</value>
   </data>
+  <data name="ReviewedFileOperation.EmptyPreviewDescription" xml:space="preserve"><value>選擇一項操作，然後選取「預覽」。所有建議的路徑與處理方式都會先顯示在這裡，再加入「檢閱變更」。</value></data>
+  <data name="ReviewedFileOperation.EmptyPreviewTitle" xml:space="preserve"><value>尚無檔案操作預覽</value></data>
   <data name="ReviewedFileOperation.DestinationFolderPlaceholder" xml:space="preserve"><value>目的地資料夾</value></data>
   <data name="ReviewedFileOperation.DestinationPlaceholder" xml:space="preserve">
     <value>目的地或隔離資料夾</value>
@@ -2011,7 +2019,7 @@
     <value>顯示語言</value>
   </data>
   <data name="Settings.Appearance.DisplayLanguageDescription" xml:space="preserve">
-    <value>立即變更應用程式介面文字。音樂庫中繼資料、檔案名稱、地區格式、剖析與排序不會改變。目前可使用英文（美國）。</value>
+    <value>立即變更應用程式介面文字。標示為測試版的語言使用機器輔助翻譯。音樂庫中繼資料、檔案名稱、地區格式、剖析與排序不會改變。</value>
   </data>
   <data name="Activity.Cancelling" xml:space="preserve">
     <value>正在取消…</value>
@@ -5122,6 +5130,8 @@
   <data name="Workbench.Bulk.ConditionField" xml:space="preserve"><value>條件欄位</value></data>
   <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>條件值</value></data>
   <data name="Workbench.Bulk.Description" xml:space="preserve"><value>建立可重複使用的中繼資料配方，預覽其效果，並僅套用已檢查的變更。</value></data>
+  <data name="Workbench.Bulk.EmptyPreviewDescription" xml:space="preserve"><value>至少加入一個配方步驟，然後選取「預覽」。建議的欄位變更會先顯示在這裡，再進入「檢閱變更」。</value></data>
+  <data name="Workbench.Bulk.EmptyPreviewTitle" xml:space="preserve"><value>尚無批次編輯預覽</value></data>
   <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>目標欄位</value></data>
   <data name="Workbench.Bulk.EnableCondition" xml:space="preserve"><value>啟用條件</value></data>
   <data name="Workbench.Bulk.ExtractionPattern" xml:space="preserve"><value>擷取模式</value></data>
@@ -5188,7 +5198,7 @@
   <data name="Workbench.Columns.AllowInlineEditing" xml:space="preserve"><value>允許內嵌編輯</value></data>
   <data name="Workbench.Columns.Close" xml:space="preserve"><value>關閉</value></data>
   <data name="Workbench.Columns.Description" xml:space="preserve"><value>選擇顯示欄或建立中繼資料欄，而不變更已儲存的中繼資料。</value></data>
-  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>行內編輯僅適用於支援的已知欄位。</value></data>
+  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>支援的標準欄位與自訂文字欄位可以進行行內編輯。在多值欄位中，分號用來分隔值；輸入 \; 可插入常值分號。</value></data>
   <data name="Workbench.Columns.InlineEditingLabel" xml:space="preserve"><value>內嵌編輯</value></data>
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>已知欄位</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>標籤</value></data>
@@ -5277,6 +5287,7 @@
   <data name="Workbench.Inspector.AddId3v1Automation" xml:space="preserve"><value>新增 ID3v1 標籤圖層</value></data>
   <data name="Workbench.Inspector.AddId3v2Automation" xml:space="preserve"><value>新增 ID3v2 標籤圖層</value></data>
   <data name="Workbench.Inspector.CopyPrimaryMetadata" xml:space="preserve"><value>複製主要中繼資料</value></data>
+  <data name="Workbench.Inspector.CopyPrimaryMetadataHelp" xml:space="preserve"><value>加入缺少的標籤層時，將檔案中已檢閱的主要值複製到新層。清除此選項可加入空白層。</value></data>
   <data name="Workbench.Inspector.CopyV1ToV2" xml:space="preserve"><value>將 ID3v1 複製到 ID3v2</value></data>
   <data name="Workbench.Inspector.CopyV1ToV2Automation" xml:space="preserve"><value>將 ID3v1 複製到 ID3v2</value></data>
   <data name="Workbench.Inspector.CopyV2ToV1" xml:space="preserve"><value>將 ID3v2 複製到 ID3v1</value></data>
@@ -5285,8 +5296,11 @@
   <data name="Workbench.Inspector.CurrentValueFormat" xml:space="preserve"><value>目前的 ID3 版本：{0}</value></data>
   <data name="Workbench.Inspector.DropUnsupportedFrames" xml:space="preserve"><value>捨棄不支援的框架</value></data>
   <data name="Workbench.Inspector.Id3Conversion" xml:space="preserve"><value>ID3 轉換</value></data>
+  <data name="Workbench.Inspector.Id3ConversionHelp" xml:space="preserve"><value>轉換會變更檔案使用的 ID3v2 版本。選擇是否捨棄不支援的影格或合併多值文字之前，請檢閱警告。</value></data>
   <data name="Workbench.Inspector.Id3EncodingAutomation" xml:space="preserve"><value>ID3 編碼</value></data>
+  <data name="Workbench.Inspector.Id3EncodingHelp" xml:space="preserve"><value>使用目前標籤版本支援的原則重新編碼 ID3 文字。這可能會改變舊播放器解讀文字的方式，但不會變更顯示的值。</value></data>
   <data name="Workbench.Inspector.JoinMultiValueText" xml:space="preserve"><value>合併多值文字</value></data>
+  <data name="Workbench.Inspector.LayerCopyHelp" xml:space="preserve"><value>在 ID3 層之間複製值時，只會暫存目標層能夠表示的欄位。除非另外移除來源層，否則來源層會保留。</value></data>
   <data name="Workbench.Inspector.PreviewConversion" xml:space="preserve"><value>預覽轉換</value></data>
   <data name="Workbench.Inspector.PreviewConversionAutomation" xml:space="preserve"><value>預覽轉換</value></data>
   <data name="Workbench.Inspector.PreviewEncoding" xml:space="preserve"><value>預覽編碼</value></data>
@@ -5340,6 +5354,17 @@
   <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>為所選檔案產生指紋，並在 AcoustID 與 MusicBrainz 中尋找錄音候選項目。不會提交任何資料。</value></data>
   <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>識別音訊</value></data>
   <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>內嵌封面集</value></data>
+  <data name="Workbench.Online.Empty.ArtworkCandidatesDescription" xml:space="preserve"><value>選取或對應發行版後，選取「尋找發行版封面」。候選影像會顯示在這裡供檢閱。</value></data>
+  <data name="Workbench.Online.Empty.ArtworkCandidatesTitle" xml:space="preserve"><value>尚無發行版封面候選項目</value></data>
+  <data name="Workbench.Online.Empty.ArtworkDescription" xml:space="preserve"><value>加入影像或載入所選檔案的內嵌封面集，然後檢閱其角色、描述與最佳化選項。</value></data>
+  <data name="Workbench.Online.Empty.ArtworkTitle" xml:space="preserve"><value>未暫存內嵌封面</value></data>
+  <data name="Workbench.Online.Empty.AwaitingDiscoveryDescription" xml:space="preserve"><value>選取範圍並完成音訊探索。即使已完成的查詢找不到相符項目，指紋候選項目也會顯示在這裡。</value></data>
+  <data name="Workbench.Online.Empty.AwaitingSearchDescription" xml:space="preserve"><value>選取提供者、輸入搜尋條件並完成搜尋。發行版本會顯示在這裡供檢閱。</value></data>
+  <data name="Workbench.Online.Empty.AwaitingTitle" xml:space="preserve"><value>完成上一步</value></data>
+  <data name="Workbench.Online.Empty.MappingDescription" xml:space="preserve"><value>選取發行版本並建立檔案到曲目的對應，然後再預覽中繼資料。</value></data>
+  <data name="Workbench.Online.Empty.MappingTitle" xml:space="preserve"><value>尚無曲目對應</value></data>
+  <data name="Workbench.Online.Empty.NoResultsDescription" xml:space="preserve"><value>已完成的查詢沒有傳回此檢視所需的結果。請調整範圍或搜尋條件後再試一次。</value></data>
+  <data name="Workbench.Online.Empty.NoResultsTitle" xml:space="preserve"><value>沒有相符的結果</value></data>
   <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>匯出封面</value></data>
   <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>匯出封面</value></data>
   <data name="Workbench.Online.Field.AlbumArtistDate" xml:space="preserve"><value>專輯、演出者與日期</value></data>
@@ -5444,6 +5469,8 @@
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>寫入</value></data>
   <data name="Workbench.Playlists.DefaultName" xml:space="preserve"><value>音樂播放清單</value></data>
   <data name="Workbench.Playlists.Description" xml:space="preserve"><value>寫入前預覽播放清單的目的地與內容。</value></data>
+  <data name="Workbench.Playlists.EmptyPreviewDescription" xml:space="preserve"><value>選取播放清單配置，然後選取「預覽」。寫入任何內容之前，已檢閱的播放清單檔案會顯示在這裡。</value></data>
+  <data name="Workbench.Playlists.EmptyPreviewTitle" xml:space="preserve"><value>尚無播放清單預覽</value></data>
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>字元編碼</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>延伸資訊</value></data>
   <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>行尾</value></data>
@@ -5465,6 +5492,8 @@
   <data name="Workbench.Reports.ColumnActions" xml:space="preserve"><value>欄操作</value></data>
   <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>音樂資料庫報告</value></data>
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>遞減</value></data>
+  <data name="Workbench.Reports.EmptyPreviewDescription" xml:space="preserve"><value>選取報告配置，然後選取「預覽」。寫入任何內容之前，已檢閱的輸出檔案會顯示在這裡。</value></data>
+  <data name="Workbench.Reports.EmptyPreviewTitle" xml:space="preserve"><value>尚無報告預覽</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>選擇欄位、分組與排序，然後檢查每個輸出目的地。</value></data>
   <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>每取樣位元數</value></data>
   <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>編解碼器類型</value></data>
@@ -5527,8 +5556,8 @@
   <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>{0:N0} 張封面</value></data>
   <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>{0:N0} 張封面</value></data>
   <data name="Workbench.Session.Columns" xml:space="preserve"><value>欄</value></data>
-  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>空白儲存格</value></data>
-  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>如何處理匯入的空白儲存格</value></data>
+  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>匯入空白儲存格原則</value></data>
+  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>選擇匯入的空白儲存格如何影響現有中繼資料。</value></data>
   <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>新增音訊檔案或資料夾，以開始檢閱及編輯工作階段。</value></data>
   <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>此工作階段中沒有檔案</value></data>
   <data name="Workbench.Session.FieldsCount.One" xml:space="preserve"><value>{0:N0} 個欄位</value></data>
@@ -5747,6 +5776,8 @@
   <data name="Workbench.Tools.BrowseFolder" xml:space="preserve"><value>選擇資料夾</value></data>
   <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>外部工具</value></data>
   <data name="Workbench.Tools.Delete" xml:space="preserve"><value>刪除工具</value></data>
+  <data name="Workbench.Tools.EmptyPreviewDescription" xml:space="preserve"><value>設定叫用方式，然後選取「預覽」。執行之前，確切的可執行檔、引數、工作目錄與檔案批次會顯示在這裡。</value></data>
+  <data name="Workbench.Tools.EmptyPreviewTitle" xml:space="preserve"><value>尚無工具叫用預覽</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>可執行檔</value></data>
   <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>呼叫模式</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>載入</value></data>

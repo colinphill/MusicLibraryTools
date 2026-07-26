@@ -905,7 +905,7 @@
     <value>디코딩된 오디오 확인</value>
   </data>
   <data name="Health.Audit.Run" xml:space="preserve">
-    <value>감사 실행…</value>
+    <value>감사 실행</value>
   </data>
   <data name="Health.Audit.RunAutomation" xml:space="preserve">
     <value>실행할 감사 선택</value>
@@ -1025,7 +1025,7 @@
     <value>비슷한 아티스트 이름</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
-    <value>복구 준비…</value>
+    <value>복구 준비</value>
   </data>
   <data name="Health.Repair.PrepareAutomation" xml:space="preserve">
     <value>준비할 복구 계획 선택</value>
@@ -1742,6 +1742,12 @@
   <data name="Library.PendingChanges.Action.Apply" xml:space="preserve">
     <value>적용</value>
   </data>
+  <data name="Library.PendingChanges.FieldChanged" xml:space="preserve">
+    <value>편집을 시작한 후 {0} 값이 변경되었습니다. 보류 중인 변경 내용을 적용하기 전에 파일을 다시 불러오세요.</value>
+  </data>
+  <data name="Library.PendingChanges.SourceChanged" xml:space="preserve">
+    <value>편집을 시작한 후 파일이 변경되었습니다. 보류 중인 변경 내용을 적용하기 전에 다시 불러오세요.</value>
+  </data>
   <data name="Library.Action.CopyPaths" xml:space="preserve">
     <value>경로 복사</value>
   </data>
@@ -1818,7 +1824,7 @@
     <value>선택 해제</value>
   </data>
   <data name="Operations.Action.Maintenance" xml:space="preserve">
-    <value>유지 관리…</value>
+    <value>유지 관리</value>
   </data>
   <data name="Operations.Action.MaintenanceAutomation" xml:space="preserve">
     <value>복구 유지 관리 작업</value>
@@ -1913,6 +1919,8 @@
   <data name="ReviewedFileOperation.DestinationAutomation" xml:space="preserve">
     <value>파일 작업 대상</value>
   </data>
+  <data name="ReviewedFileOperation.EmptyPreviewDescription" xml:space="preserve"><value>작업을 선택한 다음 미리 보기를 선택하세요. 제안된 모든 경로와 처리 방식이 변경 내용 검토에 추가되기 전에 여기에 표시됩니다.</value></data>
+  <data name="ReviewedFileOperation.EmptyPreviewTitle" xml:space="preserve"><value>파일 작업 미리 보기가 아직 없습니다</value></data>
   <data name="ReviewedFileOperation.DestinationFolderPlaceholder" xml:space="preserve"><value>대상 폴더</value></data>
   <data name="ReviewedFileOperation.DestinationPlaceholder" xml:space="preserve">
     <value>대상 또는 격리 폴더</value>
@@ -2011,7 +2019,7 @@
     <value>표시 언어</value>
   </data>
   <data name="Settings.Appearance.DisplayLanguageDescription" xml:space="preserve">
-    <value>애플리케이션의 표시 텍스트를 즉시 변경합니다. 라이브러리 메타데이터, 파일 이름, 지역 형식, 구문 분석 및 정렬은 변경되지 않습니다. 현재 영어(미국)를 사용할 수 있습니다.</value>
+    <value>애플리케이션의 표시 텍스트를 즉시 변경합니다. 베타로 표시된 언어는 기계 보조 번역을 사용합니다. 라이브러리 메타데이터, 파일 이름, 지역 형식, 구문 분석 및 정렬은 변경되지 않습니다.</value>
   </data>
   <data name="Activity.Cancelling" xml:space="preserve">
     <value>취소 중…</value>
@@ -5122,6 +5130,8 @@
   <data name="Workbench.Bulk.ConditionField" xml:space="preserve"><value>조건 필드</value></data>
   <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>조건 값</value></data>
   <data name="Workbench.Bulk.Description" xml:space="preserve"><value>재사용 가능한 메타데이터 레시피를 만들고 결과를 미리 본 후 검토한 변경 사항만 적용하세요.</value></data>
+  <data name="Workbench.Bulk.EmptyPreviewDescription" xml:space="preserve"><value>레시피 단계를 하나 이상 추가한 다음 미리 보기를 선택하세요. 제안된 필드 변경 내용이 변경 내용 검토에 들어가기 전에 여기에 표시됩니다.</value></data>
+  <data name="Workbench.Bulk.EmptyPreviewTitle" xml:space="preserve"><value>일괄 편집 미리 보기가 아직 없습니다</value></data>
   <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>대상 필드</value></data>
   <data name="Workbench.Bulk.EnableCondition" xml:space="preserve"><value>조건 사용</value></data>
   <data name="Workbench.Bulk.ExtractionPattern" xml:space="preserve"><value>추출 패턴</value></data>
@@ -5188,7 +5198,7 @@
   <data name="Workbench.Columns.AllowInlineEditing" xml:space="preserve"><value>인라인 편집 허용</value></data>
   <data name="Workbench.Columns.Close" xml:space="preserve"><value>닫기</value></data>
   <data name="Workbench.Columns.Description" xml:space="preserve"><value>저장된 메타데이터를 변경하지 않고 표시할 열을 선택하거나 메타데이터 열을 만들 수 있습니다.</value></data>
-  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>인라인 편집은 지원되는 알려진 필드에서만 사용할 수 있습니다.</value></data>
+  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>인라인 편집은 지원되는 표준 필드와 사용자 지정 텍스트 필드에서 사용할 수 있습니다. 다중 값 필드에서는 세미콜론으로 값을 구분합니다. 세미콜론 자체를 입력하려면 \;을(를) 입력하세요.</value></data>
   <data name="Workbench.Columns.InlineEditingLabel" xml:space="preserve"><value>인라인 편집</value></data>
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>알려진 필드</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>레이블</value></data>
@@ -5277,6 +5287,7 @@
   <data name="Workbench.Inspector.AddId3v1Automation" xml:space="preserve"><value>ID3v1 태그 레이어 추가</value></data>
   <data name="Workbench.Inspector.AddId3v2Automation" xml:space="preserve"><value>ID3v2 태그 레이어 추가</value></data>
   <data name="Workbench.Inspector.CopyPrimaryMetadata" xml:space="preserve"><value>기본 메타데이터 복사</value></data>
+  <data name="Workbench.Inspector.CopyPrimaryMetadataHelp" xml:space="preserve"><value>누락된 태그 레이어를 추가할 때 파일의 검토된 기본값을 새 레이어에 복사합니다. 빈 레이어를 추가하려면 이 옵션을 해제하세요.</value></data>
   <data name="Workbench.Inspector.CopyV1ToV2" xml:space="preserve"><value>ID3v1을 ID3v2로 복사</value></data>
   <data name="Workbench.Inspector.CopyV1ToV2Automation" xml:space="preserve"><value>ID3v1을 ID3v2로 복사</value></data>
   <data name="Workbench.Inspector.CopyV2ToV1" xml:space="preserve"><value>ID3v2를 ID3v1로 복사</value></data>
@@ -5285,8 +5296,11 @@
   <data name="Workbench.Inspector.CurrentValueFormat" xml:space="preserve"><value>현재 ID3 버전: {0}</value></data>
   <data name="Workbench.Inspector.DropUnsupportedFrames" xml:space="preserve"><value>지원되지 않는 프레임 버리기</value></data>
   <data name="Workbench.Inspector.Id3Conversion" xml:space="preserve"><value>ID3 변환</value></data>
+  <data name="Workbench.Inspector.Id3ConversionHelp" xml:space="preserve"><value>변환하면 파일에서 사용하는 ID3v2 버전이 변경됩니다. 지원되지 않는 프레임을 삭제하거나 다중 값 텍스트를 결합할지 선택하기 전에 경고를 검토하세요.</value></data>
   <data name="Workbench.Inspector.Id3EncodingAutomation" xml:space="preserve"><value>ID3 인코딩</value></data>
+  <data name="Workbench.Inspector.Id3EncodingHelp" xml:space="preserve"><value>현재 태그 버전에서 지원하는 정책을 사용하여 ID3 텍스트를 다시 인코딩합니다. 표시된 값은 바꾸지 않으면서 이전 플레이어가 텍스트를 해석하는 방식이 달라질 수 있습니다.</value></data>
   <data name="Workbench.Inspector.JoinMultiValueText" xml:space="preserve"><value>다중 값 텍스트 결합</value></data>
+  <data name="Workbench.Inspector.LayerCopyHelp" xml:space="preserve"><value>ID3 레이어 간에 값을 복사하면 대상 레이어에서 표현할 수 있는 필드만 준비됩니다. 원본 레이어는 별도로 제거하지 않는 한 그대로 유지됩니다.</value></data>
   <data name="Workbench.Inspector.PreviewConversion" xml:space="preserve"><value>변환 미리 보기</value></data>
   <data name="Workbench.Inspector.PreviewConversionAutomation" xml:space="preserve"><value>변환 미리 보기</value></data>
   <data name="Workbench.Inspector.PreviewEncoding" xml:space="preserve"><value>인코딩 미리 보기</value></data>
@@ -5340,6 +5354,17 @@
   <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>선택한 파일의 지문을 생성하고 AcoustID 및 MusicBrainz에서 녹음 후보를 찾습니다. 데이터는 전송되지 않습니다.</value></data>
   <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>오디오 식별</value></data>
   <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>포함된 아트워크 세트</value></data>
+  <data name="Workbench.Online.Empty.ArtworkCandidatesDescription" xml:space="preserve"><value>릴리스를 선택하거나 매핑한 후 릴리스 아트워크 찾기를 선택하세요. 검토할 후보 이미지가 여기에 표시됩니다.</value></data>
+  <data name="Workbench.Online.Empty.ArtworkCandidatesTitle" xml:space="preserve"><value>릴리스 아트워크 후보가 아직 없습니다</value></data>
+  <data name="Workbench.Online.Empty.ArtworkDescription" xml:space="preserve"><value>이미지를 추가하거나 선택한 파일의 포함된 아트워크 세트를 불러온 다음 역할, 설명 및 최적화 옵션을 검토하세요.</value></data>
+  <data name="Workbench.Online.Empty.ArtworkTitle" xml:space="preserve"><value>준비된 포함 아트워크가 없습니다</value></data>
+  <data name="Workbench.Online.Empty.AwaitingDiscoveryDescription" xml:space="preserve"><value>범위를 선택하고 오디오 검색을 완료하세요. 완료된 조회에서 일치 항목을 찾지 못해도 지문 후보가 여기에 표시됩니다.</value></data>
+  <data name="Workbench.Online.Empty.AwaitingSearchDescription" xml:space="preserve"><value>공급자를 선택하고 검색 조건을 입력한 다음 검색을 완료하세요. 검토할 릴리스 판본이 여기에 표시됩니다.</value></data>
+  <data name="Workbench.Online.Empty.AwaitingTitle" xml:space="preserve"><value>이전 단계를 완료하세요</value></data>
+  <data name="Workbench.Online.Empty.MappingDescription" xml:space="preserve"><value>릴리스 판본을 선택하고 메타데이터를 미리 보기 전에 파일-트랙 매핑을 만드세요.</value></data>
+  <data name="Workbench.Online.Empty.MappingTitle" xml:space="preserve"><value>트랙 매핑이 아직 없습니다</value></data>
+  <data name="Workbench.Online.Empty.NoResultsDescription" xml:space="preserve"><value>완료된 조회에서 이 보기에 표시할 결과가 없습니다. 범위나 검색 조건을 조정하고 다시 시도하세요.</value></data>
+  <data name="Workbench.Online.Empty.NoResultsTitle" xml:space="preserve"><value>일치하는 결과가 없습니다</value></data>
   <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>아트워크 내보내기</value></data>
   <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>아트워크 내보내기</value></data>
   <data name="Workbench.Online.Field.AlbumArtistDate" xml:space="preserve"><value>앨범, 아티스트 및 날짜</value></data>
@@ -5444,6 +5469,8 @@
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>쓰기</value></data>
   <data name="Workbench.Playlists.DefaultName" xml:space="preserve"><value>음악 재생 목록</value></data>
   <data name="Workbench.Playlists.Description" xml:space="preserve"><value>쓰기 전에 재생 목록의 대상과 내용을 미리 확인하세요.</value></data>
+  <data name="Workbench.Playlists.EmptyPreviewDescription" xml:space="preserve"><value>재생 목록 레이아웃을 선택한 다음 미리 보기를 선택하세요. 무엇이든 기록하기 전에 검토된 재생 목록 파일이 여기에 표시됩니다.</value></data>
+  <data name="Workbench.Playlists.EmptyPreviewTitle" xml:space="preserve"><value>재생 목록 미리 보기가 아직 없습니다</value></data>
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>문자 인코딩</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>확장 정보</value></data>
   <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>줄 바꿈</value></data>
@@ -5465,6 +5492,8 @@
   <data name="Workbench.Reports.ColumnActions" xml:space="preserve"><value>열 작업</value></data>
   <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>음악 라이브러리 보고서</value></data>
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>내림차순</value></data>
+  <data name="Workbench.Reports.EmptyPreviewDescription" xml:space="preserve"><value>보고서 레이아웃을 선택한 다음 미리 보기를 선택하세요. 무엇이든 기록하기 전에 검토된 출력 파일이 여기에 표시됩니다.</value></data>
+  <data name="Workbench.Reports.EmptyPreviewTitle" xml:space="preserve"><value>보고서 미리 보기가 아직 없습니다</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>필드, 그룹화 및 정렬을 선택한 다음 각 출력 대상을 검토하세요.</value></data>
   <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>샘플당 비트 수</value></data>
   <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>코덱 유형</value></data>
@@ -5527,8 +5556,8 @@
   <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>아트워크 {0:N0}개</value></data>
   <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>아트워크 {0:N0}개</value></data>
   <data name="Workbench.Session.Columns" xml:space="preserve"><value>열</value></data>
-  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>빈 셀</value></data>
-  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>가져온 빈 셀 처리</value></data>
+  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>가져온 빈 셀 처리 정책</value></data>
+  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>가져온 빈 셀이 기존 메타데이터에 미치는 영향을 선택합니다.</value></data>
   <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>오디오 파일이나 폴더를 추가하여 세션 검토 및 편집을 시작하세요.</value></data>
   <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>이 세션에 파일이 없습니다</value></data>
   <data name="Workbench.Session.FieldsCount.One" xml:space="preserve"><value>필드 {0:N0}개</value></data>
@@ -5747,6 +5776,8 @@
   <data name="Workbench.Tools.BrowseFolder" xml:space="preserve"><value>폴더 선택</value></data>
   <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>외부 도구</value></data>
   <data name="Workbench.Tools.Delete" xml:space="preserve"><value>도구 삭제</value></data>
+  <data name="Workbench.Tools.EmptyPreviewDescription" xml:space="preserve"><value>호출을 구성한 다음 미리 보기를 선택하세요. 실행하기 전에 정확한 실행 파일, 인수, 작업 디렉터리 및 파일 배치가 여기에 표시됩니다.</value></data>
+  <data name="Workbench.Tools.EmptyPreviewTitle" xml:space="preserve"><value>도구 호출 미리 보기가 아직 없습니다</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>실행 파일</value></data>
   <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>호출 모드</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>불러오기</value></data>

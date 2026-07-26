@@ -905,7 +905,7 @@
     <value>デコードした音声を検証</value>
   </data>
   <data name="Health.Audit.Run" xml:space="preserve">
-    <value>監査を実行…</value>
+    <value>監査を実行</value>
   </data>
   <data name="Health.Audit.RunAutomation" xml:space="preserve">
     <value>実行する監査を選択</value>
@@ -1025,7 +1025,7 @@
     <value>類似するアーティスト名</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
-    <value>修復を準備…</value>
+    <value>修復を準備</value>
   </data>
   <data name="Health.Repair.PrepareAutomation" xml:space="preserve">
     <value>準備する修復プランを選択</value>
@@ -1742,6 +1742,12 @@
   <data name="Library.PendingChanges.Action.Apply" xml:space="preserve">
     <value>適用</value>
   </data>
+  <data name="Library.PendingChanges.FieldChanged" xml:space="preserve">
+    <value>編集を開始した後に {0} の値が変更されました。保留中の変更を適用する前にファイルを再読み込みしてください。</value>
+  </data>
+  <data name="Library.PendingChanges.SourceChanged" xml:space="preserve">
+    <value>編集を開始した後にファイルが変更されました。保留中の変更を適用する前に再読み込みしてください。</value>
+  </data>
   <data name="Library.Action.CopyPaths" xml:space="preserve">
     <value>パスをコピー</value>
   </data>
@@ -1818,7 +1824,7 @@
     <value>選択を解除</value>
   </data>
   <data name="Operations.Action.Maintenance" xml:space="preserve">
-    <value>メンテナンス…</value>
+    <value>メンテナンス</value>
   </data>
   <data name="Operations.Action.MaintenanceAutomation" xml:space="preserve">
     <value>復元データのメンテナンス操作</value>
@@ -1913,6 +1919,8 @@
   <data name="ReviewedFileOperation.DestinationAutomation" xml:space="preserve">
     <value>ファイル操作の宛先</value>
   </data>
+  <data name="ReviewedFileOperation.EmptyPreviewDescription" xml:space="preserve"><value>操作を選択して［プレビュー］を選びます。提案されたすべてのパスと処理方法が［変更を確認］に追加される前に、ここに表示されます。</value></data>
+  <data name="ReviewedFileOperation.EmptyPreviewTitle" xml:space="preserve"><value>ファイル操作のプレビューはまだありません</value></data>
   <data name="ReviewedFileOperation.DestinationFolderPlaceholder" xml:space="preserve"><value>保存先フォルダー</value></data>
   <data name="ReviewedFileOperation.DestinationPlaceholder" xml:space="preserve">
     <value>宛先または隔離フォルダー</value>
@@ -2011,7 +2019,7 @@
     <value>表示言語</value>
   </data>
   <data name="Settings.Appearance.DisplayLanguageDescription" xml:space="preserve">
-    <value>アプリケーションの表示テキストをすぐに変更します。ライブラリのメタデータ、ファイル名、地域別の書式、解析、並べ替えには影響しません。現在は英語（米国）を利用できます。</value>
+    <value>アプリケーションの表示テキストをすぐに変更します。ベータと表示された言語では機械支援翻訳を使用しています。ライブラリのメタデータ、ファイル名、地域別の書式、解析、並べ替えには影響しません。</value>
   </data>
   <data name="Activity.Cancelling" xml:space="preserve">
     <value>キャンセルしています…</value>
@@ -5122,6 +5130,8 @@
   <data name="Workbench.Bulk.ConditionField" xml:space="preserve"><value>条件フィールド</value></data>
   <data name="Workbench.Bulk.ConditionValuePlaceholder" xml:space="preserve"><value>条件値</value></data>
   <data name="Workbench.Bulk.Description" xml:space="preserve"><value>再利用できるメタデータレシピを作成し、その結果をプレビューして、確認済みの変更だけを適用します。</value></data>
+  <data name="Workbench.Bulk.EmptyPreviewDescription" xml:space="preserve"><value>レシピの手順を少なくとも 1 つ追加してから、［プレビュー］を選択します。提案されたフィールド変更が［変更を確認］に入る前に、ここに表示されます。</value></data>
+  <data name="Workbench.Bulk.EmptyPreviewTitle" xml:space="preserve"><value>一括編集のプレビューはまだありません</value></data>
   <data name="Workbench.Bulk.DestinationField" xml:space="preserve"><value>対象フィールド</value></data>
   <data name="Workbench.Bulk.EnableCondition" xml:space="preserve"><value>条件を有効にする</value></data>
   <data name="Workbench.Bulk.ExtractionPattern" xml:space="preserve"><value>抽出パターン</value></data>
@@ -5188,7 +5198,7 @@
   <data name="Workbench.Columns.AllowInlineEditing" xml:space="preserve"><value>インライン編集を許可</value></data>
   <data name="Workbench.Columns.Close" xml:space="preserve"><value>閉じる</value></data>
   <data name="Workbench.Columns.Description" xml:space="preserve"><value>保存済みのメタデータを変更せずに、表示する列を選択したりメタデータ列を作成したりできます。</value></data>
-  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>インライン編集は、対応している既知のフィールドでのみ使用できます。</value></data>
+  <data name="Workbench.Columns.InlineEditingDescription" xml:space="preserve"><value>インライン編集は、対応している標準フィールドとカスタムテキストフィールドで使用できます。複数値フィールドではセミコロンで値を区切ります。セミコロン自体を入力するには \; と入力します。</value></data>
   <data name="Workbench.Columns.InlineEditingLabel" xml:space="preserve"><value>インライン編集</value></data>
   <data name="Workbench.Columns.KnownFieldPlaceholder" xml:space="preserve"><value>既知のフィールド</value></data>
   <data name="Workbench.Columns.LabelPlaceholder" xml:space="preserve"><value>ラベル</value></data>
@@ -5277,6 +5287,7 @@
   <data name="Workbench.Inspector.AddId3v1Automation" xml:space="preserve"><value>ID3v1 タグレイヤーを追加</value></data>
   <data name="Workbench.Inspector.AddId3v2Automation" xml:space="preserve"><value>ID3v2 タグレイヤーを追加</value></data>
   <data name="Workbench.Inspector.CopyPrimaryMetadata" xml:space="preserve"><value>プライマリメタデータをコピー</value></data>
+  <data name="Workbench.Inspector.CopyPrimaryMetadataHelp" xml:space="preserve"><value>不足しているタグレイヤーを追加するとき、ファイルの確認済みプライマリ値を新しいレイヤーにコピーします。このオプションをオフにすると空のレイヤーが追加されます。</value></data>
   <data name="Workbench.Inspector.CopyV1ToV2" xml:space="preserve"><value>ID3v1 から ID3v2 へコピー</value></data>
   <data name="Workbench.Inspector.CopyV1ToV2Automation" xml:space="preserve"><value>ID3v1 から ID3v2 へコピー</value></data>
   <data name="Workbench.Inspector.CopyV2ToV1" xml:space="preserve"><value>ID3v2 から ID3v1 へコピー</value></data>
@@ -5285,8 +5296,11 @@
   <data name="Workbench.Inspector.CurrentValueFormat" xml:space="preserve"><value>現在の ID3 バージョン: {0}</value></data>
   <data name="Workbench.Inspector.DropUnsupportedFrames" xml:space="preserve"><value>未対応のフレームを破棄</value></data>
   <data name="Workbench.Inspector.Id3Conversion" xml:space="preserve"><value>ID3 変換</value></data>
+  <data name="Workbench.Inspector.Id3ConversionHelp" xml:space="preserve"><value>変換すると、ファイルで使用する ID3v2 のバージョンが変わります。未対応フレームを削除するか、複数値テキストを結合するかを選ぶ前に、警告を確認してください。</value></data>
   <data name="Workbench.Inspector.Id3EncodingAutomation" xml:space="preserve"><value>ID3 エンコーディング</value></data>
+  <data name="Workbench.Inspector.Id3EncodingHelp" xml:space="preserve"><value>現在のタグバージョンで対応している方式を使用して ID3 テキストを再エンコードします。表示値を変えずに、古いプレーヤーによるテキストの解釈が変わる場合があります。</value></data>
   <data name="Workbench.Inspector.JoinMultiValueText" xml:space="preserve"><value>複数値テキストを結合</value></data>
+  <data name="Workbench.Inspector.LayerCopyHelp" xml:space="preserve"><value>ID3 レイヤー間で値をコピーすると、コピー先レイヤーで表現できるフィールドだけが保留されます。コピー元レイヤーは、別途削除しない限り残ります。</value></data>
   <data name="Workbench.Inspector.PreviewConversion" xml:space="preserve"><value>変換をプレビュー</value></data>
   <data name="Workbench.Inspector.PreviewConversionAutomation" xml:space="preserve"><value>変換をプレビュー</value></data>
   <data name="Workbench.Inspector.PreviewEncoding" xml:space="preserve"><value>エンコーディングをプレビュー</value></data>
@@ -5340,6 +5354,17 @@
   <data name="Workbench.Online.DiscoverDescription" xml:space="preserve"><value>選択したファイルのフィンガープリントを生成し、AcoustID と MusicBrainz で録音候補を検索します。データは送信されません。</value></data>
   <data name="Workbench.Online.DiscoverTitle" xml:space="preserve"><value>オーディオを識別</value></data>
   <data name="Workbench.Online.EmbeddedArtworkSet" xml:space="preserve"><value>埋め込みアートワークセット</value></data>
+  <data name="Workbench.Online.Empty.ArtworkCandidatesDescription" xml:space="preserve"><value>リリースを選択または対応付けした後、［リリースのアートワークを検索］を選択します。候補画像が確認用にここに表示されます。</value></data>
+  <data name="Workbench.Online.Empty.ArtworkCandidatesTitle" xml:space="preserve"><value>リリースのアートワーク候補はまだありません</value></data>
+  <data name="Workbench.Online.Empty.ArtworkDescription" xml:space="preserve"><value>画像を追加するか、選択したファイルの埋め込みアートワーク一式を読み込み、役割、説明、最適化オプションを確認します。</value></data>
+  <data name="Workbench.Online.Empty.ArtworkTitle" xml:space="preserve"><value>埋め込みアートワークは保留されていません</value></data>
+  <data name="Workbench.Online.Empty.AwaitingDiscoveryDescription" xml:space="preserve"><value>範囲を選択して音声検出を完了します。完了した検索で一致が見つからなくても、フィンガープリント候補がここに表示されます。</value></data>
+  <data name="Workbench.Online.Empty.AwaitingSearchDescription" xml:space="preserve"><value>プロバイダーを選び、検索条件を入力して検索を完了します。リリース版が確認用にここに表示されます。</value></data>
+  <data name="Workbench.Online.Empty.AwaitingTitle" xml:space="preserve"><value>前の手順を完了してください</value></data>
+  <data name="Workbench.Online.Empty.MappingDescription" xml:space="preserve"><value>リリース版を選択し、メタデータをプレビューする前にファイルとトラックの対応付けを作成します。</value></data>
+  <data name="Workbench.Online.Empty.MappingTitle" xml:space="preserve"><value>トラックの対応付けはまだありません</value></data>
+  <data name="Workbench.Online.Empty.NoResultsDescription" xml:space="preserve"><value>完了した検索では、このビューに表示する結果がありませんでした。範囲または検索条件を調整して、もう一度お試しください。</value></data>
+  <data name="Workbench.Online.Empty.NoResultsTitle" xml:space="preserve"><value>一致する結果がありません</value></data>
   <data name="Workbench.Online.ExportArtwork" xml:space="preserve"><value>アートワークをエクスポート</value></data>
   <data name="Workbench.Online.ExportArtworkAutomation" xml:space="preserve"><value>アートワークをエクスポート</value></data>
   <data name="Workbench.Online.Field.AlbumArtistDate" xml:space="preserve"><value>アルバム、アーティスト、日付</value></data>
@@ -5444,6 +5469,8 @@
   <data name="Workbench.Playlists.Action.Write" xml:space="preserve"><value>書き込む</value></data>
   <data name="Workbench.Playlists.DefaultName" xml:space="preserve"><value>音楽プレイリスト</value></data>
   <data name="Workbench.Playlists.Description" xml:space="preserve"><value>書き込み前に、プレイリストの出力先と内容を確認します。</value></data>
+  <data name="Workbench.Playlists.EmptyPreviewDescription" xml:space="preserve"><value>プレイリストのレイアウトを選び、［プレビュー］を選択します。何かを書き込む前に、確認済みのプレイリストファイルがここに表示されます。</value></data>
+  <data name="Workbench.Playlists.EmptyPreviewTitle" xml:space="preserve"><value>プレイリストのプレビューはまだありません</value></data>
   <data name="Workbench.Playlists.Encoding" xml:space="preserve"><value>文字エンコーディング</value></data>
   <data name="Workbench.Playlists.ExtendedInfo" xml:space="preserve"><value>拡張情報</value></data>
   <data name="Workbench.Playlists.LineEnding" xml:space="preserve"><value>改行コード</value></data>
@@ -5465,6 +5492,8 @@
   <data name="Workbench.Reports.ColumnActions" xml:space="preserve"><value>列の操作</value></data>
   <data name="Workbench.Reports.DefaultName" xml:space="preserve"><value>音楽ライブラリレポート</value></data>
   <data name="Workbench.Reports.Descending" xml:space="preserve"><value>降順</value></data>
+  <data name="Workbench.Reports.EmptyPreviewDescription" xml:space="preserve"><value>レポートのレイアウトを選び、［プレビュー］を選択します。何かを書き込む前に、確認済みの出力ファイルがここに表示されます。</value></data>
+  <data name="Workbench.Reports.EmptyPreviewTitle" xml:space="preserve"><value>レポートのプレビューはまだありません</value></data>
   <data name="Workbench.Reports.Description" xml:space="preserve"><value>フィールド、グループ化、並べ替えを選択し、すべての出力先を確認します。</value></data>
   <data name="Workbench.Reports.Field.BitsPerSample" xml:space="preserve"><value>サンプルあたりのビット数</value></data>
   <data name="Workbench.Reports.Field.CodecType" xml:space="preserve"><value>コーデックの種類</value></data>
@@ -5527,8 +5556,8 @@
   <data name="Workbench.Session.ArtworkCount.One" xml:space="preserve"><value>{0:N0} 件のアートワーク</value></data>
   <data name="Workbench.Session.ArtworkCount.Other" xml:space="preserve"><value>{0:N0} 件のアートワーク</value></data>
   <data name="Workbench.Session.Columns" xml:space="preserve"><value>列</value></data>
-  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>空のセル</value></data>
-  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>インポートした空のセルの処理</value></data>
+  <data name="Workbench.Session.EmptyCellAutomation" xml:space="preserve"><value>インポート時の空セル処理</value></data>
+  <data name="Workbench.Session.EmptyCellTooltip" xml:space="preserve"><value>インポートした空のセルを既存のメタデータにどう反映するかを選択します。</value></data>
   <data name="Workbench.Session.EmptyDescription" xml:space="preserve"><value>オーディオファイルまたはフォルダーを追加して、セッションの確認と編集を始めます。</value></data>
   <data name="Workbench.Session.EmptyTitle" xml:space="preserve"><value>このセッションにはファイルがありません</value></data>
   <data name="Workbench.Session.FieldsCount.One" xml:space="preserve"><value>{0:N0} 件のフィールド</value></data>
@@ -5747,6 +5776,8 @@
   <data name="Workbench.Tools.BrowseFolder" xml:space="preserve"><value>フォルダーを選択</value></data>
   <data name="Workbench.Tools.DefaultName" xml:space="preserve"><value>外部ツール</value></data>
   <data name="Workbench.Tools.Delete" xml:space="preserve"><value>ツールを削除</value></data>
+  <data name="Workbench.Tools.EmptyPreviewDescription" xml:space="preserve"><value>呼び出しを構成して［プレビュー］を選択します。実行前に、正確な実行ファイル、引数、作業ディレクトリ、ファイルバッチがここに表示されます。</value></data>
+  <data name="Workbench.Tools.EmptyPreviewTitle" xml:space="preserve"><value>ツール呼び出しのプレビューはまだありません</value></data>
   <data name="Workbench.Tools.ExecutablePlaceholder" xml:space="preserve"><value>実行ファイル</value></data>
   <data name="Workbench.Tools.InvocationMode" xml:space="preserve"><value>呼び出しモード</value></data>
   <data name="Workbench.Tools.Load" xml:space="preserve"><value>読み込む</value></data>

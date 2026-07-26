@@ -98,7 +98,8 @@
           </ContextMenu>
         </controls:AppDataGrid.ContextMenu>
       </controls:AppDataGrid>
-      <Border Classes="empty-state"
+      <Border x:Name="SessionEmptyState"
+              Classes="empty-state"
               HorizontalAlignment="Center"
               VerticalAlignment="Center"
               IsVisible="{Binding !HasFiles}"
@@ -117,8 +118,9 @@
       </Border>
     </Grid>
 
-    <Border Grid.Row="2"
-            Classes="inset-card"
+    <Border x:Name="SessionStatusFooter"
+            Grid.Row="2"
+            Classes="inset-card sticky-footer"
             AutomationProperties.LiveSetting="Polite">
       <Grid ColumnDefinitions="Auto,*"
             RowDefinitions="Auto,Auto"

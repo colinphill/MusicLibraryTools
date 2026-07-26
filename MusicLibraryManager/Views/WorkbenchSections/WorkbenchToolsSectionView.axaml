@@ -129,7 +129,25 @@
       <controls:AppDataGrid x:Name="ExternalToolInvocationGrid"
                             Grid.Row="1"
                             MinHeight="150"
+                            IsVisible="{Binding ExternalToolInvocations.Count}"
                             ItemsSource="{Binding ExternalToolInvocations}" />
+      <Border x:Name="ExternalToolPreviewEmptyState"
+              Grid.Row="1"
+              Classes="empty-state"
+              IsVisible="{Binding !ExternalToolInvocations.Count}">
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="360"
+                    Spacing="8">
+          <TextBlock FontWeight="SemiBold"
+                     TextAlignment="Center"
+                     Text="{DynamicResource Loc.Workbench.Tools.EmptyPreviewTitle}" />
+          <TextBlock Classes="muted"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap"
+                     Text="{DynamicResource Loc.Workbench.Tools.EmptyPreviewDescription}" />
+        </StackPanel>
+      </Border>
       <Border Grid.Row="2" Classes="status-banner info">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding StatusText}"
@@ -143,7 +161,8 @@
               IsVisible="{Binding HasStatusDiagnosticDetail}" />
         </StackPanel>
       </Border>
-      <Border Grid.Row="3"
+      <Border x:Name="ToolsStickyFooter"
+              Grid.Row="3"
               Classes="sticky-footer">
         <WrapPanel HorizontalAlignment="Right">
           <Button x:Name="PreviewExternalToolButton"
@@ -158,5 +177,33 @@
         </WrapPanel>
       </Border>
     </Grid>
+    <Border x:Name="ToolsSourceEmptyState"
+            Grid.ColumnSpan="3"
+            Grid.RowSpan="3"
+            Classes="empty-state"
+            IsVisible="{Binding !HasFiles}">
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  MaxWidth="360"
+                  Spacing="8">
+        <TextBlock Classes="faint caption"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   Text="{DynamicResource Loc.Workbench.Section.ToolsAutomation}" />
+        <TextBlock FontSize="17"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
+        <TextBlock Classes="muted"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   Text="{DynamicResource Loc.Workbench.Session.EmptyDescription}" />
+        <Button x:Name="ToolsAddFilesButton"
+                Classes="app"
+                HorizontalAlignment="Center"
+                Content="{DynamicResource Loc.Workbench.Action.AddFiles}"
+                Command="{Binding BrowseFilesCommand}" />
+      </StackPanel>
+    </Border>
   </Grid>
 </UserControl>

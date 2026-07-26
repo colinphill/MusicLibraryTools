@@ -58,7 +58,8 @@ public partial class WorkbenchView : UserControl
     private bool _sectionSuppressesInspector;
     private bool _inspectorPreference;
     private bool _resumeInspectorAfterTransientDrawer;
-    private Control? _drawerFocusOwner;
+    private readonly OverlayInteractionController
+        _drawerOverlay = new();
 
     internal static double
         SectionRailActivationWidth(
@@ -380,7 +381,8 @@ public partial class WorkbenchView : UserControl
             IsTransientDrawer(surface) &&
             resumeInspector;
         _activeDrawer = surface;
-        _drawerFocusOwner = focusOwner;
+        _drawerOverlay.RememberFocus(
+            focusOwner);
         ApplyDrawerState();
 
         Control initialFocus =
@@ -455,12 +457,16 @@ public partial class WorkbenchView : UserControl
             : WorkbenchDrawerSurface.None;
         _resumeInspectorAfterTransientDrawer = false;
 
-        Control? focusOwner =
-            _drawerFocusOwner;
-        _drawerFocusOwner = null;
         ApplyDrawerState();
         if (restoreFocus)
-            RestoreDrawerFocus(focusOwner);
+        {
+            _drawerOverlay.RestoreFocus(
+                WorkbenchInspectorToggle);
+        }
+        else
+        {
+            _drawerOverlay.ClearFocusReturn();
+        }
     }
 
     private static bool IsTransientDrawer(
@@ -505,12 +511,12 @@ public partial class WorkbenchView : UserControl
         if (presenter is not null)
         {
             double drawerWidth =
-                Math.Min(
-                    430,
-                    Math.Max(
+                OverlayInteractionController
+                    .ConstrainLength(
+                        WorkbenchSplit.Bounds.Width,
                         300,
-                        WorkbenchSplit.Bounds.Width -
-                        24));
+                        430,
+                        viewportInset: 24);
             presenter.Width =
                 _responsiveCompact
                     ? drawerWidth
@@ -552,19 +558,13 @@ public partial class WorkbenchView : UserControl
         object? sender,
         PointerPressedEventArgs e)
     {
-        CloseActiveDrawer(
-            restoreFocus: true);
-        e.Handled = true;
-    }
-
-    private static void RestoreDrawerFocus(
-        Control? focusOwner)
-    {
-        if (focusOwner is null)
-            return;
-        Dispatcher.UIThread.Post(
-            () => focusOwner.Focus(),
-            DispatcherPriority.Input);
+        _drawerOverlay.HandleScrimPressed(
+            e,
+            sender as Visual ??
+            WorkbenchInspectorScrim,
+            canDismiss: true,
+            () => CloseActiveDrawer(
+                restoreFocus: true));
     }
 
     public void ApplyResponsiveLayout(
@@ -732,15 +732,22 @@ public partial class WorkbenchView : UserControl
                 .FocusManager?
                 .GetFocusedElement() as Control;
 
-        if (e.Key == Key.Tab &&
+        bool modalDrawer =
             _activeDrawer != WorkbenchDrawerSurface.None &&
             (WorkbenchInspectorScrim.IsVisible ||
-             WorkbenchHeaderScrim.IsVisible) &&
-            TryCycleDrawerFocus(
-                e.KeyModifiers.HasFlag(
-                    KeyModifiers.Shift)))
+             WorkbenchHeaderScrim.IsVisible);
+        if (_activeDrawer !=
+                WorkbenchDrawerSurface.None &&
+            (e.Key == Key.Escape ||
+             e.Key == Key.Tab &&
+             modalDrawer) &&
+            _drawerOverlay.HandleKeyDown(
+                e,
+                WorkbenchDrawerPane,
+                canDismiss: true,
+                () => CloseActiveDrawer(
+                    restoreFocus: true)))
         {
-            e.Handled = true;
             return;
         }
 
@@ -767,16 +774,6 @@ public partial class WorkbenchView : UserControl
         {
             sessionMenu.Open(
                 sessionGrid);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Escape &&
-            _activeDrawer !=
-                WorkbenchDrawerSurface.None)
-        {
-            CloseActiveDrawer(
-                restoreFocus: true);
             e.Handled = true;
             return;
         }
@@ -817,50 +814,6 @@ public partial class WorkbenchView : UserControl
         e.Handled = true;
         await _viewModel.ExecuteShortcutAsync(
             binding);
-    }
-
-    private bool TryCycleDrawerFocus(
-        bool reverse)
-    {
-        Control[] focusable =
-        [
-            .. WorkbenchDrawerPane
-                .GetVisualDescendants()
-                .OfType<Control>()
-                .Where(control =>
-                    control.IsEffectivelyVisible &&
-                    control.IsEffectivelyEnabled &&
-                    control.Focusable),
-        ];
-        if (focusable.Length == 0)
-            return false;
-
-        object? focused =
-            TopLevel.GetTopLevel(this)?
-                .FocusManager?
-                .GetFocusedElement();
-        int index = Array.IndexOf(
-            focusable,
-            focused);
-        if (index < 0)
-        {
-            (reverse
-                ? focusable[^1]
-                : focusable[0]).Focus();
-            return true;
-        }
-
-        bool atBoundary =
-            reverse
-                ? index == 0
-                : index == focusable.Length - 1;
-        if (!atBoundary)
-            return false;
-
-        (reverse
-            ? focusable[^1]
-            : focusable[0]).Focus();
-        return true;
     }
 
     private string L(string key) =>

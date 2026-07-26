@@ -2,12 +2,16 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Controls.Presenters;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Views;
+using MusicLibraryManager.Views.WorkbenchSections;
+using MusicFileUtilities;
 using MusicLibraryTools;
 using Xunit;
 
@@ -315,6 +319,414 @@ public sealed class
         }
     }
 
+    [AvaloniaTheory]
+    [InlineData(1440, "1")]
+    [InlineData(1440, "99999")]
+    [InlineData(1920, "1")]
+    [InlineData(1920, "99999")]
+    [InlineData(2560, "1")]
+    [InlineData(2560, "99999")]
+    public void Workbench_drawer_stays_within_its_bounds_for_overlay_docked_and_extreme_persisted_widths(
+        double width,
+        string persistedWidth)
+    {
+        var settings =
+            new TestSettings();
+        settings.SetPreference(
+            "manager.split.workbench",
+            persistedWidth);
+        using ServiceProvider services =
+            BuildServices(settings);
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(
+                    window,
+                    services,
+                    width,
+                    900);
+            PersistedSplitView split =
+                view.FindControl<PersistedSplitView>(
+                    "WorkbenchSplit")!;
+            ContentPresenter presenter =
+                split.FindControl<ContentPresenter>(
+                    "RightPresenter")!;
+            Border drawer =
+                view.FindControl<Border>(
+                    "WorkbenchDrawerPane")!;
+            if (!drawer.IsEffectivelyVisible)
+            {
+                view.FindControl<Button>(
+                        "WorkbenchInspectorToggle")!
+                    .RaiseEvent(
+                        new Avalonia.Interactivity
+                            .RoutedEventArgs(
+                                Button.ClickEvent));
+                Render();
+            }
+
+            Assert.True(
+                drawer.IsEffectivelyVisible,
+                $"Drawer did not open at {width:0}px.");
+            Assert.InRange(
+                presenter.Bounds.Width,
+                300,
+                430);
+            Assert.InRange(
+                drawer.Bounds.Width,
+                300,
+                430);
+            Assert.True(
+                presenter.Bounds.Right <=
+                split.Bounds.Width + 1,
+                $"Drawer exceeded host at {width:0}px: " +
+                $"{presenter.Bounds.Right:0}/" +
+                $"{split.Bounds.Width:0}.");
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Every_workbench_section_has_a_contextual_empty_and_populated_minimum_size_contract()
+    {
+        using (ServiceProvider emptyServices =
+               BuildServices())
+        {
+            App.UseServicesForTests(
+                emptyServices);
+            MainWindow emptyWindow =
+                emptyServices.GetRequiredService<
+                    MainWindow>();
+            try
+            {
+                WorkbenchView emptyView =
+                    ShowWorkbench(
+                        emptyWindow,
+                        emptyServices,
+                        900,
+                        600);
+                WorkbenchViewModel model =
+                    emptyServices.GetRequiredService<
+                        WorkbenchViewModel>();
+                (
+                    WorkbenchSection Section,
+                    string State)[]
+                    emptyContracts =
+                [
+                    (
+                        WorkbenchSection.Session,
+                        "SessionEmptyState"),
+                    (
+                        WorkbenchSection.BulkOperation,
+                        "BulkEmptyState"),
+                    (
+                        WorkbenchSection.AllFields,
+                        "AllFieldsEmptyState"),
+                    (
+                        WorkbenchSection.Files,
+                        "FileOperationsEmptyState"),
+                    (
+                        WorkbenchSection.OnlineMetadata,
+                        "OnlineMetadataSourceEmptyState"),
+                    (
+                        WorkbenchSection.Reports,
+                        "ReportsSourceEmptyState"),
+                    (
+                        WorkbenchSection.Playlists,
+                        "PlaylistsSourceEmptyState"),
+                    (
+                        WorkbenchSection.Tools,
+                        "ToolsSourceEmptyState"),
+                    (
+                        WorkbenchSection.Shortcuts,
+                        "ShortcutsEmptyState"),
+                ];
+                foreach (var contract in
+                         emptyContracts)
+                {
+                    model.SelectedSection =
+                        contract.Section;
+                    Render();
+                    Control state =
+                        emptyView.FindControl<Control>(
+                            contract.State)!;
+                    Assert.True(
+                        state.IsEffectivelyVisible,
+                        $"{contract.Section} did not expose " +
+                        $"its empty state at 900x600.");
+                    Assert.True(
+                        state.Bounds.Width <=
+                        emptyView.Bounds.Width + 1);
+                    Assert.True(
+                        state.Bounds.Height <=
+                        emptyView.Bounds.Height + 1);
+                }
+            }
+            finally
+            {
+                emptyWindow.Hide();
+            }
+        }
+
+        using ServiceProvider populatedServices =
+            BuildServices();
+        App.UseServicesForTests(
+            populatedServices);
+        WorkbenchViewModel populatedModel =
+            populatedServices.GetRequiredService<
+                WorkbenchViewModel>();
+        WorkbenchTrackViewModel track =
+            Track("section-contract.flac");
+        populatedModel.Files.Add(track);
+        populatedModel.SelectedFile = track;
+        populatedModel.SetSelectedFiles([track]);
+        MainWindow populatedWindow =
+            populatedServices.GetRequiredService<
+                MainWindow>();
+        try
+        {
+            WorkbenchView populatedView =
+                ShowWorkbench(
+                    populatedWindow,
+                    populatedServices,
+                    900,
+                    600);
+            populatedModel.SelectedMetadataField =
+                new(
+                    MetadataFieldKey.Known(
+                        TagFields.Title),
+                    "Vorbis comments",
+                    ["Contract title"]);
+            (
+                WorkbenchSection Section,
+                string Footer,
+                string? EmptyResult)[]
+                populatedContracts =
+            [
+                (
+                    WorkbenchSection.Session,
+                    "SessionStatusFooter",
+                    null),
+                (
+                    WorkbenchSection.BulkOperation,
+                    "BulkStickyFooter",
+                    "BulkPreviewEmptyState"),
+                (
+                    WorkbenchSection.AllFields,
+                    "AllFieldsStickyFooter",
+                    null),
+                (
+                    WorkbenchSection.Files,
+                    "ReviewedFileOperationStickyFooter",
+                    "ReviewedFileOperationPreviewEmptyState"),
+                (
+                    WorkbenchSection.OnlineMetadata,
+                    "OnlineMetadataStickyFooter",
+                    "AudioResultsEmptyState"),
+                (
+                    WorkbenchSection.Reports,
+                    "ReportsStickyFooter",
+                    "ReportPreviewEmptyState"),
+                (
+                    WorkbenchSection.Playlists,
+                    "PlaylistsStickyFooter",
+                    "PlaylistPreviewEmptyState"),
+                (
+                    WorkbenchSection.Tools,
+                    "ToolsStickyFooter",
+                    "ExternalToolPreviewEmptyState"),
+                (
+                    WorkbenchSection.Shortcuts,
+                    "ShortcutsStickyFooter",
+                    null),
+            ];
+            foreach (var contract in
+                     populatedContracts)
+            {
+                populatedModel.SelectedSection =
+                    contract.Section;
+                Render();
+                if (contract.Section ==
+                    WorkbenchSection.Shortcuts)
+                {
+                    populatedView.FindControl<Button>(
+                            "NewShortcutEmptyButton")!
+                        .RaiseEvent(
+                            new Avalonia.Interactivity
+                                .RoutedEventArgs(
+                                    Button.ClickEvent));
+                    Render();
+                }
+
+                Control footer =
+                    populatedView.FindControl<Control>(
+                        contract.Footer)!;
+                Assert.True(
+                    footer.IsEffectivelyVisible,
+                    $"{contract.Section} did not keep " +
+                    $"its current action reachable at " +
+                    "900x600.");
+                Point footerBottom =
+                    footer.TranslatePoint(
+                        new Point(
+                            0,
+                            footer.Bounds.Height),
+                        populatedView) ??
+                    throw new
+                        InvalidOperationException(
+                            $"{contract.Section} footer " +
+                            "was detached.");
+                Assert.InRange(
+                    footerBottom.Y,
+                    0,
+                    populatedView.Bounds.Height + 1);
+
+                if (contract.EmptyResult is not null)
+                {
+                    Control resultState =
+                        populatedView.FindControl<Control>(
+                            contract.EmptyResult)!;
+                    Assert.True(
+                        resultState.IsVisible,
+                        $"{contract.Section} did not " +
+                        "retain its contextual pre-preview " +
+                        "state.");
+                }
+            }
+        }
+        finally
+        {
+            populatedWindow.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Online_metadata_summaries_and_sticky_action_advance_only_after_completed_steps()
+    {
+        using ServiceProvider services =
+            BuildServices();
+        App.UseServicesForTests(services);
+        WorkbenchViewModel model =
+            services.GetRequiredService<
+                WorkbenchViewModel>();
+        WorkbenchTrackViewModel track =
+            Track("online-step-contract.flac");
+        model.Files.Add(track);
+        model.SelectedFile = track;
+        model.SetSelectedFiles([track]);
+        MainWindow window =
+            services.GetRequiredService<
+                MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(
+                    window,
+                    services,
+                    900,
+                    600);
+            model.SelectedSection =
+                WorkbenchSection.OnlineMetadata;
+            Render();
+            Expander discovery =
+                view.FindControl<Expander>(
+                    "DiscoveryStep")!;
+            Expander search =
+                view.FindControl<Expander>(
+                    "SearchStep")!;
+            TextBlock discoverySummary =
+                view.FindControl<TextBlock>(
+                    "DiscoveryStepSummary")!;
+            StackPanel searchSummary =
+                view.FindControl<StackPanel>(
+                    "SearchStepSummary")!;
+            Border footer =
+                view.FindControl<Border>(
+                    "OnlineMetadataStickyFooter")!;
+
+            Assert.True(
+                discovery.IsExpanded,
+                "Discovery was not the initial active step.");
+            Assert.False(
+                discoverySummary.IsVisible);
+            discovery.IsExpanded = false;
+            Render();
+            Assert.False(
+                discoverySummary.IsVisible);
+            discovery.IsExpanded = true;
+            Render();
+            Assert.Single(
+                footer
+                    .GetVisualDescendants()
+                    .OfType<Button>(),
+                button =>
+                    button.IsEffectivelyVisible &&
+                    button.Classes.Contains(
+                        "primary"));
+
+            await model.DiscoverOnlineAudioCommand
+                .ExecuteAsync(null);
+            Render();
+            Assert.True(
+                model.HasCompletedOnlineDiscovery,
+                "The completed discovery was not recorded.");
+            Assert.False(
+                discovery.IsExpanded,
+                "Discovery did not collapse after completion.");
+            Assert.True(
+                discoverySummary.IsVisible,
+                "The completed discovery summary was hidden.");
+            Assert.True(
+                view.FindControl<TabControl>(
+                        "OnlineMetadataResultsTabs")!
+                    .Bounds.Height > 100,
+                "Results did not retain the remaining viewport.");
+
+            search.IsExpanded = true;
+            Render();
+            Assert.False(
+                searchSummary.IsVisible);
+            search.IsExpanded = false;
+            Render();
+            Assert.False(
+                searchSummary.IsVisible);
+            model.ReleaseSearch.Artist =
+                "Contract artist";
+            search.IsExpanded = true;
+            model.HasCompletedOnlineSearch =
+                true;
+            Render();
+
+            Assert.True(
+                model.HasCompletedOnlineSearch,
+                "The completed search was not recorded.");
+            Assert.False(
+                search.IsExpanded,
+                "Search did not collapse after completion.");
+            Assert.True(
+                searchSummary.IsVisible,
+                "The completed search summary was hidden.");
+            Assert.Single(
+                footer
+                    .GetVisualDescendants()
+                    .OfType<Button>(),
+                button =>
+                    button.IsEffectivelyVisible &&
+                    button.Classes.Contains(
+                        "primary"));
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
     private static WorkbenchView ShowWorkbench(
         MainWindow window,
         IServiceProvider services,
@@ -357,9 +769,10 @@ public sealed class
     }
 
     private static ServiceProvider
-        BuildServices()
+        BuildServices(
+            TestSettings? settings = null)
     {
-        var settings =
+        settings ??=
             new TestSettings();
         settings.SetPreference(
             AppearancePreferences

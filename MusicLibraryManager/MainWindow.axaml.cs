@@ -33,6 +33,8 @@ public partial class MainWindow : Window
     private readonly Dictionary<ShellDestination, Button> _navigationButtons;
     private readonly Dictionary<ShellDestination, Control> _views = [];
     private readonly ContentControl _contentHost;
+    private readonly OverlayInteractionController
+        _navigationOverlayInteraction = new();
     private PixelPoint _normalPosition = new(80, 60);
     private Size _normalSize = new(1440, 900);
     private bool _restoring;
@@ -377,20 +379,16 @@ public partial class MainWindow : Window
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape &&
-            _navigationOverlayOpen)
+        if (_navigationOverlayOpen &&
+            _navigationOverlayInteraction
+                .HandleKeyDown(
+                    e,
+                    NavigationRail,
+                    canDismiss: true,
+                    () => CloseNavigationOverlay(
+                        restoreFocus: true),
+                    moveEveryTab: true))
         {
-            CloseNavigationOverlay(restoreFocus: true);
-            e.Handled = true;
-            return;
-        }
-        if (e.Key == Key.Tab &&
-            _navigationOverlayOpen)
-        {
-            CycleNavigationOverlayFocus(
-                reverse: e.KeyModifiers.HasFlag(
-                    KeyModifiers.Shift));
-            e.Handled = true;
             return;
         }
 
@@ -444,8 +442,17 @@ public partial class MainWindow : Window
             // not the persisted expansion preference. Keep all intermediate
             // widths for the destination and expose the labeled rail above it.
             _useOverlayRailPresentation = true;
-            _navigationOverlayOpen =
+            bool openOverlay =
                 !_navigationOverlayDismissed;
+            if (openOverlay &&
+                !_navigationOverlayOpen)
+            {
+                _navigationOverlayInteraction
+                    .CaptureFocus(this);
+            }
+
+            _navigationOverlayOpen =
+                openOverlay;
         }
 
         bool dockExpanded =
@@ -534,6 +541,8 @@ public partial class MainWindow : Window
         }
         else
         {
+            _navigationOverlayInteraction
+                .CaptureFocus(this);
             _shellRailExpanded = true;
             _navigationOverlayOpen = true;
             _navigationOverlayDismissed = false;
@@ -551,8 +560,13 @@ public partial class MainWindow : Window
         object? sender,
         PointerPressedEventArgs e)
     {
-        CloseNavigationOverlay(restoreFocus: true);
-        e.Handled = true;
+        _navigationOverlayInteraction
+            .HandleScrimPressed(
+                e,
+                NavigationScrim,
+                canDismiss: true,
+                () => CloseNavigationOverlay(
+                    restoreFocus: true));
     }
 
     private void CloseNavigationOverlay(
@@ -578,37 +592,16 @@ public partial class MainWindow : Window
         }
         ApplyResponsiveLayout();
         if (restoreFocus)
-            NavigationRailToggle.Focus();
-    }
-
-    private void CycleNavigationOverlayFocus(
-        bool reverse)
-    {
-        Control[] focusable =
-            NavigationRail
-                .GetVisualDescendants()
-                .OfType<Control>()
-                .Where(control =>
-                    control.Focusable &&
-                    control.IsEffectivelyEnabled &&
-                    control.IsEffectivelyVisible)
-                .ToArray();
-        if (focusable.Length == 0)
-            return;
-        object? focused =
-            FocusManager?.GetFocusedElement();
-        int index = Array.IndexOf(
-            focusable,
-            focused);
-        int next = reverse
-            ? index <= 0
-                ? focusable.Length - 1
-                : index - 1
-            : index < 0 ||
-              index >= focusable.Length - 1
-                ? 0
-                : index + 1;
-        focusable[next].Focus();
+        {
+            _navigationOverlayInteraction
+                .RestoreFocus(
+                    NavigationRailToggle);
+        }
+        else
+        {
+            _navigationOverlayInteraction
+                .ClearFocusReturn();
+        }
     }
 
     private void OnNavigationKeyDown(

@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MetadataCaching;
 using MusicFileUtilities;
@@ -96,8 +97,41 @@ public sealed record SelectionContext(
     };
 }
 
+public sealed record LibraryPendingMetadataEdit(
+    MetadataValueEdit Edit,
+    ImmutableArray<string> OriginalValues);
+
 public partial class LibraryRow : ObservableObject
 {
+    private static readonly TagFields[]
+        InlineEditFields =
+        [
+            TagFields.Title,
+            TagFields.Artist,
+            TagFields.AlbumArtist,
+            TagFields.Album,
+            TagFields.Genre,
+            TagFields.Composer,
+            TagFields.Grouping,
+            TagFields.Date,
+            TagFields.TrackNumber,
+            TagFields.TotalTracks,
+            TagFields.DiscNumber,
+            TagFields.TotalDiscs,
+            TagFields.Comment,
+        ];
+    private readonly string?[] _originalKnownValues;
+    private readonly ImmutableArray<string>[]
+        _originalKnownValueSets;
+    private bool _suppressPendingNotification;
+    private bool _synchronizingMetadataProjection;
+    private long? _pendingSourceLength;
+    private DateTime? _pendingSourceLastWriteTimeUtc;
+    private Dictionary<
+        MetadataFieldKey,
+        ImmutableArray<string>>?
+        _pendingExpectedOriginalValues;
+
     public LibraryRow(TrackRecord record)
     {
         // Older caches can contain the FLAC tag implementation name (Vorbis) in the codec field.
@@ -110,23 +144,64 @@ public partial class LibraryRow : ObservableObject
         Record = flacWithTagNameAsCodec
             ? record with { CodecName = "FLAC" }
             : record;
-        MetadataValues = BuildMetadataValues(Record.Metadata);
+        MetadataValues = BuildMetadataValues(
+            Record.Metadata);
+        MetadataValues.Changed +=
+            OnMetadataValuesChanged;
+        _title = Record.Title ?? "";
+        _artist = Record.Artist ?? "";
+        _albumArtist = Record.AlbumArtist ?? "";
+        _album = Record.Album ?? "";
+        _genre = Record.Genre ?? "";
+        _composer = Record.Composer ?? "";
+        _grouping = Record.Grouping ?? "";
+        _year =
+            Record.ReleaseDate ??
+            Record.Year?.ToString() ??
+            "";
+        _trackEditValue =
+            Record.TrackNumber?.ToString();
+        _trackTotalEditValue =
+            Record.TrackTotal?.ToString();
+        _discEditValue =
+            Record.DiscNumber?.ToString();
+        _discTotalEditValue =
+            Record.DiscTotal?.ToString();
+        _comment =
+            MetadataValues.GetValueOrDefault(
+                MetadataGridValueKey.For(
+                    MetadataFieldKey.Known(
+                        TagFields.Comment))) ??
+            "";
+        _originalKnownValues =
+        [
+            Title,
+            Artist,
+            AlbumArtist,
+            Album,
+            Genre,
+            Composer,
+            Grouping,
+            Year,
+            TrackEditValue,
+            TrackTotalEditValue,
+            DiscEditValue,
+            DiscTotalEditValue,
+            Comment,
+        ];
+        _originalKnownValueSets =
+        [
+            .. InlineEditFields.Select(
+                OriginalKnownValues),
+        ];
         Details = new DetailsRow(Record);
         Details.RebuildSearchText(DetailsColumns.All.Select(column => column.Key).ToArray());
     }
 
-    public TrackRecord Record { get; }
-    public IReadOnlyDictionary<string, string> MetadataValues { get; }
-    public DetailsRow Details { get; }
+    public TrackRecord Record { get; private set; }
+    public LibraryMetadataValueMap MetadataValues { get; }
+    public DetailsRow Details { get; private set; }
     public string Path => Record.Path;
-    public string Title => Record.Title ?? System.IO.Path.GetFileNameWithoutExtension(Record.Path);
-    public string Artist => Record.Artist ?? "";
-    public string AlbumArtist => Record.AlbumArtist ?? "";
-    public string Album => Record.Album ?? "";
-    public string Genre => Record.Genre ?? "";
-    public string Composer => Record.Composer ?? "";
-    public string Grouping => Record.Grouping ?? "";
-    public string Year => Record.Year?.ToString() ?? "";
     public int? Track => Record.TrackNumber;
     public int? TrackTotal => Record.TrackTotal;
     public int? Disc => Record.DiscNumber;
@@ -142,6 +217,48 @@ public partial class LibraryRow : ObservableObject
     public string FileSize => Details["FileSize"];
     public string Modified => Details["Modified"];
     public string SearchText => Details.SearchText;
+    public bool HasChanges =>
+        HasKnownChanges() ||
+        MetadataValues.HasChanges;
+
+    [ObservableProperty]
+    private string _title;
+
+    [ObservableProperty]
+    private string _artist;
+
+    [ObservableProperty]
+    private string _albumArtist;
+
+    [ObservableProperty]
+    private string _album;
+
+    [ObservableProperty]
+    private string _genre;
+
+    [ObservableProperty]
+    private string _composer;
+
+    [ObservableProperty]
+    private string _grouping;
+
+    [ObservableProperty]
+    private string _year;
+
+    [ObservableProperty]
+    private string? _trackEditValue;
+
+    [ObservableProperty]
+    private string? _trackTotalEditValue;
+
+    [ObservableProperty]
+    private string? _discEditValue;
+
+    [ObservableProperty]
+    private string? _discTotalEditValue;
+
+    [ObservableProperty]
+    private string _comment;
 
     [ObservableProperty]
     private object? _thumbnailSource;
@@ -149,11 +266,353 @@ public partial class LibraryRow : ObservableObject
     [ObservableProperty]
     private bool _thumbnailLoaded;
 
-    private static IReadOnlyDictionary<string, string>
+    public event EventHandler? PendingChangesChanged;
+    public long PendingChangesVersion { get; private set; }
+
+    public IReadOnlyList<MetadataValueEdit>
+        CreatePendingEdits()
+        => CreatePendingEditStates()
+            .Select(state => state.Edit)
+            .ToArray();
+
+    public IReadOnlyList<LibraryPendingMetadataEdit>
+        CreatePendingEditStates()
+    {
+        var edits = new Dictionary<
+            string,
+            LibraryPendingMetadataEdit>(
+            StringComparer.OrdinalIgnoreCase);
+        for (int index = 0;
+             index < InlineEditFields.Length;
+             index++)
+        {
+            TagFields field =
+                InlineEditFields[index];
+            MetadataFieldKey key =
+                MetadataFieldKey.Known(field);
+            if (MetadataValues.IsPending(key))
+                continue;
+            string? original =
+                _originalKnownValues[index];
+            string? current = KnownValue(field);
+            if (StringComparer.Ordinal.Equals(
+                    original,
+                    current))
+                continue;
+            edits[MetadataGridValueKey.For(key)] =
+                new(
+                    new(
+                        key,
+                        LibraryMetadataValueMap
+                            .ParseEditorValues(
+                                current ?? "")),
+                    _originalKnownValueSets[index]);
+        }
+        foreach (LibraryPendingMetadataEdit edit in
+                 MetadataValues
+                     .CreatePendingEditStates())
+        {
+            string key =
+                MetadataGridValueKey.For(
+                    edit.Edit.Field);
+            edits[key] = edit;
+        }
+        return edits.Values.ToArray();
+    }
+
+    public MetadataEditSourceExpectation
+        CreatePendingSourceExpectation()
+    {
+        IReadOnlyList<LibraryPendingMetadataEdit>
+            pending = CreatePendingEditStates();
+        return new(
+            _pendingSourceLength,
+            _pendingSourceLastWriteTimeUtc,
+            pending.ToDictionary(
+                item => item.Edit.Field,
+                item =>
+                    _pendingExpectedOriginalValues
+                        ?.GetValueOrDefault(
+                            item.Edit.Field,
+                            item.OriginalValues) ??
+                    item.OriginalValues));
+    }
+
+    public IEnumerable<MetadataPreviewRow>
+        CreatePendingChangeRows(
+            Func<MetadataFieldKey, string>?
+                fieldLabel = null)
+    {
+        for (int index = 0;
+             index < InlineEditFields.Length;
+             index++)
+        {
+            TagFields field =
+                InlineEditFields[index];
+            if (MetadataValues.IsPending(
+                    MetadataFieldKey.Known(
+                        field)))
+                continue;
+            string? original =
+                _originalKnownValues[index];
+            string? current = KnownValue(field);
+            if (StringComparer.Ordinal.Equals(
+                    original,
+                    current))
+                continue;
+            yield return new(
+                System.IO.Path.GetFileName(Path),
+                fieldLabel?.Invoke(
+                    MetadataFieldKey.Known(
+                        field)) ??
+                MetadataFieldKey.Known(field)
+                    .DisplayName,
+                LibraryMetadataValueMap
+                    .FormatEditorValues(
+                        _originalKnownValueSets[
+                            index]),
+                current ?? "");
+        }
+        foreach ((MetadataFieldKey field,
+                     string before,
+                     string after) in
+                 MetadataValues.CreatePendingRows())
+        {
+            yield return new(
+                System.IO.Path.GetFileName(Path),
+                fieldLabel?.Invoke(field) ??
+                field.DisplayName,
+                before,
+                after);
+        }
+    }
+
+    /// <summary>
+    /// Overlays only this row's pending metadata values onto a freshly loaded cache row.
+    /// Untouched fields continue to come from the new cache record while edit-time originals
+    /// and source identity remain immutable for stale-source validation.
+    /// </summary>
+    public void CopyPendingChangesTo(
+        LibraryRow destination)
+    {
+        ArgumentNullException.ThrowIfNull(
+            destination);
+        if (!StringComparer.OrdinalIgnoreCase.Equals(
+                Path,
+                destination.Path))
+            throw new ArgumentException(
+                nameof(destination));
+
+        IReadOnlyList<LibraryPendingMetadataEdit>
+            pending = CreatePendingEditStates();
+        if (pending.Count == 0)
+            return;
+        MetadataEditSourceExpectation
+            expectation =
+                CreatePendingSourceExpectation();
+
+        destination._suppressPendingNotification =
+            true;
+        destination
+            ._synchronizingMetadataProjection =
+            true;
+        try
+        {
+            foreach (LibraryPendingMetadataEdit
+                         state in pending)
+            {
+                MetadataFieldKey field =
+                    state.Edit.Field;
+                if (field.KnownField is
+                        { } known &&
+                    TryInlineEditIndex(
+                        known,
+                        out int index) &&
+                    !MetadataValues.IsPending(
+                        field))
+                {
+                    string current =
+                        KnownValue(known) ?? "";
+                    destination.SetKnownValue(
+                        known,
+                        current);
+                    destination.MetadataValues
+                        .SetProjection(
+                            field,
+                            current);
+                    continue;
+                }
+
+                ImmutableArray<string>
+                    destinationOriginal =
+                    field.KnownField is
+                            { } destinationKnown &&
+                        TryInlineEditIndex(
+                            destinationKnown,
+                            out int destinationIndex)
+                        ? destination
+                            ._originalKnownValueSets[
+                                destinationIndex]
+                        : destination
+                            .MetadataValues
+                            .OriginalValues(field);
+                destination.MetadataValues
+                    .ImportPendingEdit(
+                        state with
+                        {
+                            OriginalValues =
+                                destinationOriginal,
+                        });
+                if (field.KnownField is
+                        { } projected &&
+                    TryInlineEditIndex(
+                        projected,
+                        out _))
+                {
+                    destination.SetKnownValue(
+                        projected,
+                        LibraryMetadataValueMap
+                            .FormatEditorValues(
+                                state.Edit.Values));
+                }
+            }
+            destination._pendingSourceLength =
+                _pendingSourceLength;
+            destination
+                ._pendingSourceLastWriteTimeUtc =
+                _pendingSourceLastWriteTimeUtc;
+            destination
+                ._pendingExpectedOriginalValues =
+                expectation.OriginalValues
+                    .ToDictionary(
+                        pair => pair.Key,
+                        pair => pair.Value);
+            destination.PendingChangesVersion =
+                PendingChangesVersion;
+        }
+        finally
+        {
+            destination
+                ._synchronizingMetadataProjection =
+                false;
+            destination
+                ._suppressPendingNotification =
+                false;
+        }
+        destination.NotifyPendingChangesChanged();
+    }
+
+    public void InvalidateThumbnail()
+    {
+        ThumbnailSource = null;
+        ThumbnailLoaded = false;
+    }
+
+    public void RevertPendingChanges()
+    {
+        _suppressPendingNotification = true;
+        _synchronizingMetadataProjection =
+            true;
+        try
+        {
+            MetadataValues
+                .RevertPendingChanges();
+            for (int index = 0;
+                 index < InlineEditFields.Length;
+                 index++)
+            {
+                SetKnownValue(
+                    InlineEditFields[index],
+                    _originalKnownValues[index]);
+                MetadataValues.SetProjection(
+                    MetadataFieldKey.Known(
+                        InlineEditFields[index]),
+                    LibraryMetadataValueMap
+                        .FormatEditorValues(
+                            _originalKnownValueSets[
+                                index]));
+            }
+        }
+        finally
+        {
+            _synchronizingMetadataProjection =
+                false;
+            _suppressPendingNotification = false;
+        }
+        NotifyPendingChangesChanged();
+    }
+
+    public void AcceptPendingChanges()
+    {
+        AcceptAppliedEdits(
+            CreatePendingEdits(),
+            Record.Length,
+            Record.LastWriteTime);
+    }
+
+    public void AcceptAppliedEdits(
+        IReadOnlyList<MetadataValueEdit> appliedEdits,
+        long? postLength,
+        DateTime? postLastWriteTimeUtc)
+    {
+        ArgumentNullException.ThrowIfNull(
+            appliedEdits);
+        _suppressPendingNotification = true;
+        try
+        {
+            foreach (MetadataValueEdit edit in
+                     appliedEdits)
+                AcceptAppliedEdit(edit);
+            if (postLength is { } length)
+                Record = Record with
+                {
+                    Length = length,
+                };
+            if (postLastWriteTimeUtc is
+                { } lastWriteTimeUtc)
+                Record = Record with
+                {
+                    LastWriteTime =
+                        lastWriteTimeUtc,
+                };
+            Details = new(Record);
+            Details.RebuildSearchText(
+                DetailsColumns.All
+                    .Select(column => column.Key)
+                    .ToArray());
+            OnPropertyChanged(nameof(Details));
+            OnPropertyChanged(nameof(SearchText));
+        }
+        finally
+        {
+            _suppressPendingNotification = false;
+        }
+        if (HasChanges)
+        {
+            _pendingSourceLength =
+                postLength;
+            _pendingSourceLastWriteTimeUtc =
+                postLastWriteTimeUtc;
+            _pendingExpectedOriginalValues =
+                CreatePendingEditStates()
+                    .ToDictionary(
+                        state =>
+                            state.Edit.Field,
+                        state =>
+                            state.OriginalValues);
+        }
+        else
+            ClearPendingSourceSnapshot();
+        NotifyPendingChangesChanged();
+    }
+
+    private static LibraryMetadataValueMap
         BuildMetadataValues(
             IReadOnlyDictionary<string, string[]> metadata)
     {
-        var values = new Dictionary<string, string>(
+        var values = new Dictionary<
+            string,
+            ImmutableArray<string>>(
             StringComparer.OrdinalIgnoreCase);
         foreach ((string key, string[] fieldValues) in metadata)
         {
@@ -169,11 +628,817 @@ public partial class LibraryRow : ObservableObject
                      known != TagFields.NullField)
                 field = MetadataFieldKey.Known(known);
             if (field is not null)
-                values[MetadataGridValueKey.For(field)] =
-                    string.Join("; ", fieldValues);
+            {
+                string valueKey =
+                    MetadataGridValueKey.For(field);
+                values[valueKey] =
+                    [.. fieldValues];
+            }
         }
-        return values;
+        return new(values);
     }
+
+    private string? KnownValue(TagFields field) =>
+        field switch
+        {
+            TagFields.Title => Title,
+            TagFields.Artist => Artist,
+            TagFields.AlbumArtist => AlbumArtist,
+            TagFields.Album => Album,
+            TagFields.Genre => Genre,
+            TagFields.Composer => Composer,
+            TagFields.Grouping => Grouping,
+            TagFields.Date => Year,
+            TagFields.TrackNumber => TrackEditValue,
+            TagFields.TotalTracks =>
+                TrackTotalEditValue,
+            TagFields.DiscNumber => DiscEditValue,
+            TagFields.TotalDiscs =>
+                DiscTotalEditValue,
+            TagFields.Comment => Comment,
+            _ => null,
+        };
+
+    private void SetKnownValue(
+        TagFields field,
+        string? value)
+    {
+        switch (field)
+        {
+            case TagFields.Title:
+                Title = value ?? "";
+                break;
+            case TagFields.Artist:
+                Artist = value ?? "";
+                break;
+            case TagFields.AlbumArtist:
+                AlbumArtist = value ?? "";
+                break;
+            case TagFields.Album:
+                Album = value ?? "";
+                break;
+            case TagFields.Genre:
+                Genre = value ?? "";
+                break;
+            case TagFields.Composer:
+                Composer = value ?? "";
+                break;
+            case TagFields.Grouping:
+                Grouping = value ?? "";
+                break;
+            case TagFields.Date:
+                Year = value ?? "";
+                break;
+            case TagFields.TrackNumber:
+                TrackEditValue = value;
+                break;
+            case TagFields.TotalTracks:
+                TrackTotalEditValue = value;
+                break;
+            case TagFields.DiscNumber:
+                DiscEditValue = value;
+                break;
+            case TagFields.TotalDiscs:
+                DiscTotalEditValue = value;
+                break;
+            case TagFields.Comment:
+                Comment = value ?? "";
+                break;
+        }
+    }
+
+    private void OnKnownValueChanged(
+        TagFields field,
+        string? value)
+    {
+        if (!_synchronizingMetadataProjection)
+            MetadataValues.SetProjection(
+                MetadataFieldKey.Known(field),
+                value ?? "");
+        NotifyPendingChangesChanged();
+    }
+
+    private void OnMetadataValuesChanged(
+        object? sender,
+        EventArgs e)
+    {
+        _synchronizingMetadataProjection = true;
+        try
+        {
+            foreach (TagFields field in
+                     InlineEditFields)
+            {
+                MetadataFieldKey key =
+                    MetadataFieldKey.Known(field);
+                if (!MetadataValues.IsPending(key))
+                    continue;
+                string? projected =
+                    LibraryMetadataValueMap
+                        .FormatEditorValues(
+                            MetadataValues
+                                .CurrentValues(
+                                    key));
+                if (!StringComparer.Ordinal.Equals(
+                        projected,
+                        KnownValue(field)))
+                    SetKnownValue(
+                        field,
+                        projected);
+            }
+        }
+        finally
+        {
+            _synchronizingMetadataProjection = false;
+        }
+        NotifyPendingChangesChanged();
+    }
+
+    private void NotifyPendingChangesChanged()
+    {
+        if (_suppressPendingNotification)
+            return;
+        if (HasChanges)
+            CapturePendingSourceSnapshot();
+        else
+            ClearPendingSourceSnapshot();
+        PendingChangesVersion++;
+        OnPropertyChanged(nameof(HasChanges));
+        PendingChangesChanged?.Invoke(
+            this,
+            EventArgs.Empty);
+    }
+
+    private static bool IsInlineEditField(
+        TagFields field) =>
+        Array.IndexOf(
+            InlineEditFields,
+            field) >= 0;
+
+    private bool HasKnownChanges()
+    {
+        for (int index = 0;
+             index < InlineEditFields.Length;
+             index++)
+        {
+            if (!StringComparer.Ordinal.Equals(
+                    _originalKnownValues[index],
+                    KnownValue(
+                        InlineEditFields[index])))
+                return true;
+        }
+        return false;
+    }
+
+    private void AcceptAppliedEdit(
+        MetadataValueEdit edit)
+    {
+        ImmutableArray<string> currentValues =
+            CurrentValues(edit.Field);
+        bool preserveCurrent =
+            IsFieldPending(edit.Field) &&
+            !currentValues.SequenceEqual(
+                edit.Values,
+                StringComparer.Ordinal);
+        if (edit.Field.KnownField is
+            { } known &&
+            TryInlineEditIndex(
+                known,
+                out int index))
+        {
+            _originalKnownValueSets[index] =
+                edit.Values;
+            _originalKnownValues[index] =
+                LibraryMetadataValueMap
+                    .FormatEditorValues(
+                        edit.Values);
+            if (!preserveCurrent)
+                SetKnownValue(
+                    known,
+                    _originalKnownValues[index]);
+        }
+        MetadataValues.AcceptAppliedEdit(
+            edit,
+            preserveCurrent);
+        UpdateRecord(edit);
+    }
+
+    private bool IsFieldPending(
+        MetadataFieldKey field)
+    {
+        if (MetadataValues.IsPending(field))
+            return true;
+        return field.KnownField is
+            { } known &&
+            TryInlineEditIndex(
+                known,
+                out int index) &&
+            !StringComparer.Ordinal.Equals(
+                _originalKnownValues[index],
+                KnownValue(known));
+    }
+
+    private ImmutableArray<string>
+        CurrentValues(
+            MetadataFieldKey field)
+    {
+        if (MetadataValues.IsPending(field))
+            return MetadataValues.CurrentValues(
+                field);
+        if (field.KnownField is
+            { } known &&
+            IsInlineEditField(known))
+        {
+            string? value = KnownValue(known);
+            return LibraryMetadataValueMap
+                .ParseEditorValues(
+                    value ?? "");
+        }
+        return MetadataValues.CurrentValues(field);
+    }
+
+    private static bool TryInlineEditIndex(
+        TagFields field,
+        out int index)
+    {
+        index = Array.IndexOf(
+            InlineEditFields,
+            field);
+        return index >= 0;
+    }
+
+    private void UpdateRecord(
+        MetadataValueEdit edit)
+    {
+        string? value =
+            edit.Values.FirstOrDefault();
+        if (edit.Field.KnownField is
+            { } known)
+        {
+            Record = known switch
+            {
+                TagFields.Title =>
+                    Record with
+                    {
+                        Title = value,
+                    },
+                TagFields.Artist =>
+                    Record with
+                    {
+                        Artist = value,
+                    },
+                TagFields.AlbumArtist =>
+                    Record with
+                    {
+                        AlbumArtist = value,
+                    },
+                TagFields.Album =>
+                    Record with
+                    {
+                        Album = value,
+                    },
+                TagFields.Genre =>
+                    Record with
+                    {
+                        Genre = value,
+                    },
+                TagFields.Composer =>
+                    Record with
+                    {
+                        Composer = value,
+                    },
+                TagFields.Grouping =>
+                    Record with
+                    {
+                        Grouping = value,
+                    },
+                TagFields.Date =>
+                    Record with
+                    {
+                        ReleaseDate = value,
+                        Year = ParseYear(value),
+                    },
+                TagFields.TrackNumber =>
+                    Record with
+                    {
+                        TrackNumber =
+                            ParseNumber(value),
+                    },
+                TagFields.TotalTracks =>
+                    Record with
+                    {
+                        TrackTotal =
+                            ParseNumber(value),
+                    },
+                TagFields.DiscNumber =>
+                    Record with
+                    {
+                        DiscNumber =
+                            ParseNumber(value),
+                    },
+                TagFields.TotalDiscs =>
+                    Record with
+                    {
+                        DiscTotal =
+                            ParseNumber(value),
+                    },
+                _ => Record,
+            };
+        }
+        var metadata = Record.Metadata.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value,
+            StringComparer.OrdinalIgnoreCase);
+        string metadataKey =
+            edit.Field.KnownField?.ToString() ??
+            CachedMetadataKeys.Custom(
+                edit.Field.CustomName!);
+        if (edit.Values.IsEmpty)
+            metadata.Remove(metadataKey);
+        else
+            metadata[metadataKey] =
+                [.. edit.Values];
+        Record = Record with
+        {
+            Metadata = metadata,
+        };
+    }
+
+    private static int? ParseNumber(
+        string? value) =>
+        int.TryParse(
+            value,
+            out int number)
+            ? number
+            : null;
+
+    private static int? ParseYear(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        string prefix = value.Length >= 4
+            ? value[..4]
+            : value;
+        return ParseNumber(prefix);
+    }
+
+    private ImmutableArray<string>
+        OriginalKnownValues(
+            TagFields field)
+    {
+        ImmutableArray<string> mapped =
+            MetadataValues.OriginalValues(
+                MetadataFieldKey.Known(field));
+        if (!mapped.IsDefaultOrEmpty)
+            return mapped;
+        string? value = KnownValue(field);
+        return string.IsNullOrWhiteSpace(value)
+            ? []
+            : [value];
+    }
+
+    private void CapturePendingSourceSnapshot()
+    {
+        if (_pendingSourceLength is not null &&
+            _pendingSourceLastWriteTimeUtc is not
+                null)
+            return;
+        _pendingSourceLength =
+            Record.Length > 0
+                ? Record.Length
+                : null;
+        _pendingSourceLastWriteTimeUtc =
+            Record.LastWriteTime == default
+                ? null
+                : Record.LastWriteTime.Kind ==
+                    DateTimeKind.Utc
+                    ? Record.LastWriteTime
+                    : Record.LastWriteTime
+                        .ToUniversalTime();
+    }
+
+    private void ClearPendingSourceSnapshot()
+    {
+        _pendingSourceLength = null;
+        _pendingSourceLastWriteTimeUtc = null;
+        _pendingExpectedOriginalValues =
+            null;
+    }
+
+    partial void OnTitleChanged(string value) =>
+        OnKnownValueChanged(
+            TagFields.Title,
+            value);
+    partial void OnArtistChanged(string value) =>
+        OnKnownValueChanged(
+            TagFields.Artist,
+            value);
+    partial void OnAlbumArtistChanged(string value) =>
+        OnKnownValueChanged(
+            TagFields.AlbumArtist,
+            value);
+    partial void OnAlbumChanged(string value) =>
+        OnKnownValueChanged(
+            TagFields.Album,
+            value);
+    partial void OnGenreChanged(string value) =>
+        OnKnownValueChanged(
+            TagFields.Genre,
+            value);
+    partial void OnComposerChanged(string value) =>
+        OnKnownValueChanged(
+            TagFields.Composer,
+            value);
+    partial void OnGroupingChanged(string value) =>
+        OnKnownValueChanged(
+            TagFields.Grouping,
+            value);
+    partial void OnYearChanged(string value) =>
+        OnKnownValueChanged(
+            TagFields.Date,
+            value);
+    partial void OnTrackEditValueChanged(
+        string? value) =>
+        OnKnownValueChanged(
+            TagFields.TrackNumber,
+            value);
+    partial void OnTrackTotalEditValueChanged(
+        string? value) =>
+        OnKnownValueChanged(
+            TagFields.TotalTracks,
+            value);
+    partial void OnDiscEditValueChanged(
+        string? value) =>
+        OnKnownValueChanged(
+            TagFields.DiscNumber,
+            value);
+    partial void OnDiscTotalEditValueChanged(
+        string? value) =>
+        OnKnownValueChanged(
+            TagFields.TotalDiscs,
+            value);
+    partial void OnCommentChanged(string value) =>
+        OnKnownValueChanged(
+            TagFields.Comment,
+            value);
+}
+
+public sealed class LibraryMetadataValueMap :
+    ObservableObject,
+    IReadOnlyDictionary<string, string>
+{
+    private readonly Dictionary<string, string>
+        _values;
+    private readonly Dictionary<
+        string,
+        ImmutableArray<string>>
+        _originalValues;
+    private Dictionary<
+        string,
+        ImmutableArray<string>>?
+        _editedOriginals;
+    private bool _suppressChanged;
+
+    public LibraryMetadataValueMap(
+        IReadOnlyDictionary<
+            string,
+            ImmutableArray<string>> values)
+    {
+        _originalValues = new(
+            values,
+            StringComparer.OrdinalIgnoreCase);
+        _values = values.ToDictionary(
+            pair => pair.Key,
+            pair => Display(pair.Value),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    public event EventHandler? Changed;
+
+    public string this[string key]
+    {
+        get => _values.GetValueOrDefault(key) ?? "";
+        set
+        {
+            string normalized = value ?? "";
+            if (StringComparer.Ordinal.Equals(
+                    this[key],
+                    normalized))
+                return;
+            if (!TryParseField(
+                    key,
+                    out _))
+                return;
+            if (_editedOriginals?.TryGetValue(
+                    key,
+                    out ImmutableArray<string>
+                        original) != true)
+                original =
+                    _originalValues
+                        .GetValueOrDefault(
+                            key,
+                            []);
+            (_editedOriginals ??= new(
+                    StringComparer.OrdinalIgnoreCase))
+                .TryAdd(
+                key,
+                original);
+            _values[key] = normalized;
+            if (ParseValues(normalized).SequenceEqual(
+                    original,
+                    StringComparer.Ordinal))
+                _editedOriginals.Remove(key);
+            OnPropertyChanged("Item[]");
+            NotifyChanged();
+        }
+    }
+
+    public IEnumerable<string> Keys => _values.Keys;
+    public IEnumerable<string> Values => _values.Values;
+    public int Count => _values.Count;
+    public bool HasChanges =>
+        _editedOriginals?.Count > 0;
+
+    public bool ContainsKey(string key) =>
+        _values.ContainsKey(key);
+
+    public bool TryGetValue(
+        string key,
+        out string value)
+    {
+        value = this[key];
+        return _values.ContainsKey(key);
+    }
+
+    public IEnumerator<KeyValuePair<string, string>>
+        GetEnumerator() =>
+        _values.GetEnumerator();
+
+    System.Collections.IEnumerator
+        System.Collections.IEnumerable.GetEnumerator() =>
+        GetEnumerator();
+
+    internal void SetProjection(
+        MetadataFieldKey field,
+        string value)
+    {
+        string key =
+            MetadataGridValueKey.For(field);
+        _values[key] = value;
+        _editedOriginals?.Remove(key);
+        OnPropertyChanged("Item[]");
+    }
+
+    internal void ImportPendingEdit(
+        LibraryPendingMetadataEdit state)
+    {
+        string key =
+            MetadataGridValueKey.For(
+                state.Edit.Field);
+        _originalValues[key] =
+            state.OriginalValues;
+        _values[key] =
+            Display(state.Edit.Values);
+        if (state.Edit.Values.SequenceEqual(
+                state.OriginalValues,
+                StringComparer.Ordinal))
+            _editedOriginals?.Remove(key);
+        else
+            (_editedOriginals ??= new(
+                StringComparer.OrdinalIgnoreCase))[
+                key] = state.OriginalValues;
+        OnPropertyChanged("Item[]");
+    }
+
+    internal bool IsPending(
+        MetadataFieldKey field) =>
+        _editedOriginals?.ContainsKey(
+            MetadataGridValueKey.For(field)) ==
+        true;
+
+    internal ImmutableArray<string>
+        CurrentValues(
+            MetadataFieldKey field) =>
+        ParseValues(
+            this[MetadataGridValueKey.For(field)]);
+
+    internal ImmutableArray<string>
+        OriginalValues(
+            MetadataFieldKey field) =>
+        _originalValues.GetValueOrDefault(
+            MetadataGridValueKey.For(field),
+            []);
+
+    internal IReadOnlyList<MetadataValueEdit>
+        CreatePendingEdits() =>
+        CreatePendingEditStates()
+            .Select(state => state.Edit)
+            .ToArray();
+
+    internal IReadOnlyList<LibraryPendingMetadataEdit>
+        CreatePendingEditStates() =>
+        (_editedOriginals ??
+         EmptyEditedOriginals)
+            .Select(pair =>
+            {
+                string current =
+                    _values.GetValueOrDefault(
+                        pair.Key) ??
+                    "";
+                if (!TryParseField(
+                        pair.Key,
+                        out MetadataFieldKey field))
+                    throw new InvalidOperationException(
+                        pair.Key);
+                return new LibraryPendingMetadataEdit(
+                    new(
+                        field,
+                        ParseValues(current)),
+                    pair.Value);
+            })
+            .ToArray();
+
+    internal IEnumerable<(
+        MetadataFieldKey Field,
+        string Before,
+        string After)> CreatePendingRows() =>
+        (_editedOriginals ??
+         EmptyEditedOriginals).Select(pair =>
+        {
+            if (!TryParseField(
+                    pair.Key,
+                    out MetadataFieldKey field))
+                throw new InvalidOperationException(
+                    pair.Key);
+            return (
+                field,
+                Display(pair.Value),
+                _values.GetValueOrDefault(
+                    pair.Key) ??
+                "");
+        });
+
+    internal void RevertPendingChanges()
+    {
+        if (_editedOriginals is not
+            { Count: > 0 } edited)
+            return;
+        _suppressChanged = true;
+        try
+        {
+            foreach ((string key,
+                         ImmutableArray<string> value)
+                     in edited)
+                _values[key] = Display(value);
+            edited.Clear();
+            OnPropertyChanged("Item[]");
+        }
+        finally
+        {
+            _suppressChanged = false;
+        }
+    }
+
+    internal void AcceptAppliedEdit(
+        MetadataValueEdit edit,
+        bool preserveCurrent)
+    {
+        string key =
+            MetadataGridValueKey.For(
+                edit.Field);
+        _originalValues[key] =
+            edit.Values;
+        if (preserveCurrent)
+        {
+            (_editedOriginals ??= new(
+                    StringComparer.OrdinalIgnoreCase))[
+                key] = edit.Values;
+        }
+        else
+        {
+            _values[key] = Display(
+                edit.Values);
+            _editedOriginals?.Remove(key);
+        }
+        OnPropertyChanged("Item[]");
+    }
+
+    private void NotifyChanged()
+    {
+        if (!_suppressChanged)
+            Changed?.Invoke(
+                this,
+                EventArgs.Empty);
+    }
+
+    internal static bool TryParseField(
+        string valueKey,
+        out MetadataFieldKey field)
+    {
+        field = null!;
+        if (valueKey.StartsWith(
+                "K_",
+                StringComparison.OrdinalIgnoreCase) &&
+            Enum.TryParse(
+                valueKey[2..],
+                ignoreCase: true,
+                out TagFields known) &&
+            known != TagFields.NullField)
+        {
+            field = MetadataFieldKey.Known(known);
+            return true;
+        }
+        if (!valueKey.StartsWith(
+                "C_",
+                StringComparison.OrdinalIgnoreCase))
+            return false;
+        try
+        {
+            string name = Encoding.UTF8.GetString(
+                Convert.FromHexString(
+                    valueKey[2..]));
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+            field = MetadataFieldKey.Custom(name);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    internal static ImmutableArray<string>
+        ParseEditorValues(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return [];
+        var values = new List<string>();
+        var current = new StringBuilder();
+        bool escaped = false;
+        foreach (char character in value)
+        {
+            if (escaped)
+            {
+                current.Append(character);
+                escaped = false;
+                continue;
+            }
+            if (character == '\\')
+            {
+                escaped = true;
+                continue;
+            }
+            if (character != ';')
+            {
+                current.Append(character);
+                continue;
+            }
+            AddCurrent();
+        }
+        if (escaped)
+            current.Append('\\');
+        AddCurrent();
+        return [.. values];
+
+        void AddCurrent()
+        {
+            string item = current.ToString().Trim();
+            current.Clear();
+            if (item.Length > 0)
+                values.Add(item);
+        }
+    }
+
+    internal static string FormatEditorValues(
+        ImmutableArray<string> values) =>
+        string.Join(
+            "; ",
+            values.Select(value =>
+                value.Replace(
+                        "\\",
+                        "\\\\",
+                        StringComparison.Ordinal)
+                    .Replace(
+                        ";",
+                        "\\;",
+                        StringComparison.Ordinal)));
+
+    private static ImmutableArray<string>
+        ParseValues(string value) =>
+        ParseEditorValues(value);
+
+    private static string Display(
+        ImmutableArray<string> values) =>
+        FormatEditorValues(values);
+
+    private static readonly IReadOnlyDictionary<
+        string,
+        ImmutableArray<string>>
+        EmptyEditedOriginals =
+        new Dictionary<
+            string,
+            ImmutableArray<string>>();
 }
 
 public partial class EditableTagField : ObservableObject
@@ -257,13 +1522,21 @@ public partial class EditableTagField : ObservableObject
         bool mixed,
         FieldValueVerification verification = FieldValueVerification.Exact)
     {
-        string[] distinctValues = values
+        ImmutableArray<string> distinctValues =
+        [
+            .. values
             .Where(value => !string.IsNullOrEmpty(value))
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
+            .Distinct(StringComparer.Ordinal),
+        ];
         Verification = verification;
-        Value = verification == FieldValueVerification.Exact && !mixed && distinctValues.Length == 1
-            ? distinctValues[0]
+        Value = verification ==
+                    FieldValueVerification.Exact &&
+                !mixed
+            ? distinctValues.Length == 0
+                ? null
+                : LibraryMetadataValueMap
+                    .FormatEditorValues(
+                        distinctValues)
             : null;
         IsMixed = mixed || verification == FieldValueVerification.Unverified;
         _loadedValue = Value;
@@ -276,8 +1549,16 @@ public partial class EditableTagField : ObservableObject
 
     partial void OnValueChanged(string? value)
     {
-        if (!IsMixed || value is not null)
-            IsModified = true;
+        IsModified = _loadedMixed
+            ? value is not null
+            : !LibraryMetadataValueMap
+                .ParseEditorValues(
+                    value ?? "")
+                .SequenceEqual(
+                    LibraryMetadataValueMap
+                        .ParseEditorValues(
+                            _loadedValue ?? ""),
+                    StringComparer.Ordinal);
     }
 }
 

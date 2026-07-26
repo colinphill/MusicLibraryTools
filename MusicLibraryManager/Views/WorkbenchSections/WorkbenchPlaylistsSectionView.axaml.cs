@@ -59,10 +59,8 @@ public partial class WorkbenchPlaylistsSectionView : UserControl
             _viewModel.PlaylistOutputs.Count > 0;
         PlaylistOutputGrid.IsVisible =
             hasPreview;
-        ReviewedPanel.RowDefinitions[1].Height =
-            hasPreview
-                ? GridLength.Star
-                : new GridLength(0);
+        PlaylistPreviewEmptyState.IsVisible =
+            !hasPreview;
     }
 
     private void ApplyResponsiveLayout()

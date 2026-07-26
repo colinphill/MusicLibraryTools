@@ -65,10 +65,13 @@
       </Grid>
     </Grid>
 
-    <ScrollViewer x:Name="EditorScroll"
-                  Grid.Column="2"
-                  VerticalScrollBarVisibility="Auto">
-      <StackPanel Classes="content-stack">
+    <Grid x:Name="EditorPanel"
+          Grid.Column="2"
+          RowDefinitions="*,Auto"
+          RowSpacing="8">
+      <ScrollViewer x:Name="EditorScroll"
+                    VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="content-stack">
         <Button x:Name="AllFieldsBackButton"
                 Classes="app"
                 HorizontalAlignment="Left"
@@ -140,23 +143,12 @@
                    Text="{Binding FieldValuesText, Mode=TwoWay}"
                    AutomationProperties.Name="{DynamicResource Loc.Workbench.AllFields.OrderedValues}" />
         </StackPanel>
-        <WrapPanel>
-          <Button x:Name="CopyWorkbenchMetadataFieldButton"
-                  Classes="app"
-                  Margin="0,0,8,8"
-                  Content="{DynamicResource Loc.Workbench.AllFields.Action.Copy}"
-                  Command="{Binding CopyMetadataFieldCommand}" />
-          <Button x:Name="PasteWorkbenchMetadataFieldButton"
-                  Classes="app"
-                  Margin="0,0,8,8"
-                  Content="{DynamicResource Loc.Workbench.AllFields.Action.PastePreview}"
-                  Command="{Binding PasteMetadataFieldCommand}" />
-          <Button Classes="app primary"
-                  Margin="0,0,8,8"
-                  Content="{DynamicResource Loc.Workbench.AllFields.Action.Preview}"
-                  Command="{Binding PreviewFieldValuesCommand}" />
-        </WrapPanel>
-        <Border Classes="status-banner info">
+        </StackPanel>
+      </ScrollViewer>
+      <Border x:Name="AllFieldsStickyFooter"
+              Grid.Row="1"
+              Classes="sticky-footer">
+        <StackPanel Spacing="8">
           <StackPanel Spacing="4">
             <TextBlock Text="{Binding StatusText}"
                        TextWrapping="Wrap" />
@@ -168,8 +160,25 @@
                 Value="{Binding StatusDiagnosticDetail}"
                 IsVisible="{Binding HasStatusDiagnosticDetail}" />
           </StackPanel>
-        </Border>
-      </StackPanel>
-    </ScrollViewer>
+          <WrapPanel HorizontalAlignment="Right">
+            <Button x:Name="CopyWorkbenchMetadataFieldButton"
+                    Classes="app"
+                    Margin="0,0,8,8"
+                    Content="{DynamicResource Loc.Workbench.AllFields.Action.Copy}"
+                    Command="{Binding CopyMetadataFieldCommand}" />
+            <Button x:Name="PasteWorkbenchMetadataFieldButton"
+                    Classes="app"
+                    Margin="0,0,8,8"
+                    Content="{DynamicResource Loc.Workbench.AllFields.Action.PastePreview}"
+                    Command="{Binding PasteMetadataFieldCommand}" />
+            <Button x:Name="PreviewAllFieldsButton"
+                    Classes="app primary"
+                    Margin="0,0,0,8"
+                    Content="{DynamicResource Loc.Workbench.AllFields.Action.Preview}"
+                    Command="{Binding PreviewFieldValuesCommand}" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
   </Grid>
 </UserControl>

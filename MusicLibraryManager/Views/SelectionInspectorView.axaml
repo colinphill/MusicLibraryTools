@@ -45,7 +45,8 @@
         <ProgressBar Classes="app" IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3" />
         <Border Height="1" Background="{DynamicResource AppBorderBrush}" />
 
-        <ItemsControl ItemsSource="{Binding Fields}">
+        <ItemsControl ItemsSource="{Binding Fields}"
+                      IsEnabled="{Binding !IsBusy}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <StackPanel Margin="0,0,0,12" Classes="field">

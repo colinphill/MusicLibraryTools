@@ -5,6 +5,8 @@ using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
 
@@ -14,17 +16,36 @@ public partial class WorkbenchOnlineMetadataSectionView :
     UserControl
 {
     private readonly ILocalizationService _localization;
+    private readonly WorkbenchViewModel _viewModel;
+    private bool _compactHeight;
 
     public WorkbenchOnlineMetadataSectionView()
     {
         InitializeComponent();
         _localization = App.GetService<ILocalizationService>();
+        _viewModel =
+            App.GetService<WorkbenchViewModel>();
         ConfigureColumns();
         UpdateStepSummaries();
         AttachedToVisualTree += (_, _) =>
+        {
             _localization.CultureChanged += OnCultureChanged;
+            _viewModel.PropertyChanged +=
+                OnViewModelPropertyChanged;
+            _viewModel.DiscogsTrackMappings
+                .CollectionChanged +=
+                OnDiscogsTrackMappingsChanged;
+            UpdateStepSummaries();
+        };
         DetachedFromVisualTree += (_, _) =>
+        {
             _localization.CultureChanged -= OnCultureChanged;
+            _viewModel.PropertyChanged -=
+                OnViewModelPropertyChanged;
+            _viewModel.DiscogsTrackMappings
+                .CollectionChanged -=
+                OnDiscogsTrackMappingsChanged;
+        };
         SizeChanged += (_, _) =>
             ApplyResponsiveLayout();
     }
@@ -91,6 +112,7 @@ public partial class WorkbenchOnlineMetadataSectionView :
             Bounds.Width < 880;
         bool compactHeight = Bounds.Height > 0 &&
             Bounds.Height < 620;
+        _compactHeight = compactHeight;
         DiscoverySupportingText.IsVisible =
             !compactHeight;
         SearchSupportingText.IsVisible =
@@ -101,10 +123,23 @@ public partial class WorkbenchOnlineMetadataSectionView :
             !compactHeight;
         ArtworkResultSupportingText.IsVisible =
             !compactHeight;
+        OnlineMetadataResultsHeader.IsVisible =
+            !compactHeight;
+        OnlineMetadataStepScroll.MaxHeight =
+            compactHeight
+                ? Math.Clamp(
+                    Bounds.Height * .34,
+                    120,
+                    190)
+                : Math.Clamp(
+                    Bounds.Height * .42,
+                    180,
+                    340);
         DiscoveryCard.Padding =
             new Thickness(compactHeight ? 8 : 12);
         SearchCard.Padding =
             new Thickness(compactHeight ? 8 : 12);
+        UpdateStepLayout();
         ArtworkEditorLayout.ColumnDefinitions.Clear();
         ArtworkEditorLayout.RowDefinitions.Clear();
         if (narrow)
@@ -168,24 +203,6 @@ public partial class WorkbenchOnlineMetadataSectionView :
         UpdateStepSummaries();
     }
 
-    private void OnDiscoveryStarted(
-        object? sender,
-        global::Avalonia.Interactivity
-            .RoutedEventArgs e)
-    {
-        DiscoveryStep.IsExpanded = false;
-        UpdateStepSummaries();
-    }
-
-    private void OnSearchStarted(
-        object? sender,
-        global::Avalonia.Interactivity
-            .RoutedEventArgs e)
-    {
-        SearchStep.IsExpanded = false;
-        UpdateStepSummaries();
-    }
-
     private void OnStepCollapsed(
         object? sender,
         global::Avalonia.Interactivity
@@ -194,10 +211,129 @@ public partial class WorkbenchOnlineMetadataSectionView :
 
     private void UpdateStepSummaries()
     {
+        UpdateStepLayout();
         DiscoveryStepSummary.IsVisible =
+            _viewModel
+                .HasCompletedOnlineDiscovery &&
             !DiscoveryStep.IsExpanded;
         SearchStepSummary.IsVisible =
+            _viewModel
+                .HasCompletedOnlineSearch &&
             !SearchStep.IsExpanded;
+        UpdateCurrentAction();
+    }
+
+    private void UpdateStepLayout()
+    {
+        OnlineMetadataStepPanel.Orientation =
+            _compactHeight &&
+            !DiscoveryStep.IsExpanded &&
+            !SearchStep.IsExpanded
+                ? global::Avalonia.Layout
+                    .Orientation.Horizontal
+                : global::Avalonia.Layout
+                    .Orientation.Vertical;
+    }
+
+    private void OnViewModelPropertyChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName ==
+                nameof(
+                    WorkbenchViewModel
+                        .HasCompletedOnlineDiscovery) &&
+            _viewModel
+                .HasCompletedOnlineDiscovery)
+        {
+            DiscoveryStep.IsExpanded = false;
+            SearchStep.IsExpanded = false;
+        }
+        else if (e.PropertyName ==
+                     nameof(
+                         WorkbenchViewModel
+                             .HasCompletedOnlineSearch) &&
+                 _viewModel
+                     .HasCompletedOnlineSearch)
+        {
+            SearchStep.IsExpanded = false;
+            DiscoveryStep.IsExpanded = false;
+        }
+
+        if (e.PropertyName is
+            nameof(
+                WorkbenchViewModel
+                    .HasCompletedOnlineDiscovery) or
+            nameof(
+                WorkbenchViewModel
+                    .HasCompletedOnlineSearch) or
+            nameof(
+                WorkbenchViewModel
+                    .SelectedOnlineMetadataResultStep) or
+            nameof(
+                WorkbenchViewModel
+                    .SelectedOnlineMetadataProvider))
+        {
+            UpdateStepSummaries();
+        }
+    }
+
+    private void OnDiscogsTrackMappingsChanged(
+        object? sender,
+        NotifyCollectionChangedEventArgs e) =>
+        UpdateCurrentAction();
+
+    private void UpdateCurrentAction()
+    {
+        Button[] actions =
+        [
+            OnlineMetadataDiscoverButton,
+            OnlineMetadataSearchButton,
+            OnlineMetadataPreviewAudioButton,
+            OnlineMetadataBuildReleaseMappingButton,
+            OnlineMetadataBuildDiscogsMappingButton,
+            OnlineMetadataPreviewDiscogsMappingButton,
+            OnlineMetadataPreviewReleaseMappingButton,
+            PreviewStagedArtworkButton,
+        ];
+        foreach (Button action in actions)
+            action.IsVisible = false;
+
+        Button current =
+            DiscoveryStep.IsExpanded
+                ? OnlineMetadataDiscoverButton
+                : SearchStep.IsExpanded
+                    ? OnlineMetadataSearchButton
+                    : _viewModel
+                        .SelectedOnlineMetadataResultStep
+                        switch
+                        {
+                            WorkbenchOnlineMetadataResultStep
+                                    .AudioCandidates =>
+                                OnlineMetadataPreviewAudioButton,
+                            WorkbenchOnlineMetadataResultStep
+                                    .MusicBrainzReleases =>
+                                OnlineMetadataBuildReleaseMappingButton,
+                            WorkbenchOnlineMetadataResultStep
+                                    .DiscogsReleases =>
+                                _viewModel
+                                    .DiscogsTrackMappings
+                                    .Count == 0
+                                    ? OnlineMetadataBuildDiscogsMappingButton
+                                    : OnlineMetadataPreviewDiscogsMappingButton,
+                            WorkbenchOnlineMetadataResultStep
+                                    .TrackMapping =>
+                                _viewModel
+                                    .IsDiscogsOnlineMetadataProvider
+                                    ? OnlineMetadataPreviewDiscogsMappingButton
+                                    : OnlineMetadataPreviewReleaseMappingButton,
+                            WorkbenchOnlineMetadataResultStep
+                                    .Artwork =>
+                                PreviewStagedArtworkButton,
+                            _ =>
+                                OnlineMetadataPreviewAudioButton,
+                        };
+        current.IsVisible = true;
     }
 
     private void ConfigureDiscogsGrid() =>

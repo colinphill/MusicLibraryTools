@@ -2,7 +2,8 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
-  <Grid RowDefinitions="*,Auto"
+  <Grid x:Name="SectionLayout"
+        RowDefinitions="*,Auto"
         RowSpacing="8">
     <ScrollViewer x:Name="SectionScroll"
                   Margin="0,4,0,0"
@@ -488,13 +489,32 @@
             </Grid>
           </StackPanel>
         </Border>
-        <controls:AppDataGrid x:Name="PreviewGrid"
-                              MinHeight="180"
-                              ItemsSource="{Binding PreviewChanges}" />
+        <Grid MinHeight="180">
+          <controls:AppDataGrid x:Name="PreviewGrid"
+                                IsVisible="{Binding PreviewChanges.Count}"
+                                ItemsSource="{Binding PreviewChanges}" />
+          <Border x:Name="BulkPreviewEmptyState"
+                  Classes="empty-state"
+                  IsVisible="{Binding !PreviewChanges.Count}">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        MaxWidth="420"
+                        Spacing="8">
+              <TextBlock FontWeight="SemiBold"
+                         TextAlignment="Center"
+                         Text="{DynamicResource Loc.Workbench.Bulk.EmptyPreviewTitle}" />
+              <TextBlock Classes="muted"
+                         TextAlignment="Center"
+                         TextWrapping="Wrap"
+                         Text="{DynamicResource Loc.Workbench.Bulk.EmptyPreviewDescription}" />
+            </StackPanel>
+          </Border>
+        </Grid>
       </StackPanel>
       </StackPanel>
     </ScrollViewer>
-    <Border Grid.Row="1"
+    <Border x:Name="BulkStickyFooter"
+            Grid.Row="1"
             Classes="sticky-footer">
       <Grid ColumnDefinitions="*,Auto"
             ColumnSpacing="8">
@@ -507,6 +527,34 @@
                 Content="{DynamicResource Loc.Workbench.Bulk.Action.PreviewOperation}"
                 Command="{Binding PreviewOperationCommand}" />
       </Grid>
+    </Border>
+    <Border x:Name="BulkEmptyState"
+            Grid.RowSpan="2"
+            Classes="empty-state"
+            IsVisible="{Binding !HasFiles}">
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="8"
+                  MaxWidth="360">
+        <TextBlock x:Name="BulkEmptyContext"
+                   Classes="faint caption"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   Text="{DynamicResource Loc.Workbench.Section.BulkOperationAutomation}" />
+        <TextBlock FontSize="17"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
+        <TextBlock Classes="muted"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   Text="{DynamicResource Loc.Workbench.Session.EmptyDescription}" />
+        <Button x:Name="BulkAddFilesButton"
+                Classes="app"
+                HorizontalAlignment="Center"
+                Content="{DynamicResource Loc.Workbench.Action.AddFiles}"
+                Command="{Binding BrowseFilesCommand}" />
+      </StackPanel>
     </Border>
   </Grid>
 </UserControl>

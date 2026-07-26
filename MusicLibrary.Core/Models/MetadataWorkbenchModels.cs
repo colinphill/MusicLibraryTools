@@ -318,6 +318,22 @@ public sealed record MetadataValueEdit(
     MetadataFieldKey Field,
     ImmutableArray<string> Values);
 
+/// <summary>
+/// The source state against which an interactive metadata draft was created. The optional
+/// filesystem identity catches ordinary external replacement, <see cref="OriginalValues"/>
+/// detects same-field changes, <see cref="MetadataHash"/> is the canonical metadata fingerprint
+/// excluding artwork, and <see cref="ArtworkFingerprint"/> identifies the unordered embedded
+/// image payload set when artwork was part of the reviewed draft.
+/// </summary>
+public sealed record MetadataEditSourceExpectation(
+    long? Length,
+    DateTime? LastWriteTimeUtc,
+    IReadOnlyDictionary<
+        MetadataFieldKey,
+        ImmutableArray<string>> OriginalValues,
+    string? MetadataHash = null,
+    string? ArtworkFingerprint = null);
+
 public enum TagLayerEditMode
 {
     Add,

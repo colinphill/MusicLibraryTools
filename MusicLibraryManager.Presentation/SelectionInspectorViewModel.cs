@@ -1,7 +1,7 @@
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
-using System.Security.Cryptography;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicFileUtilities;
@@ -27,9 +27,20 @@ public partial class SelectionInspectorViewModel : ObservableObject
         Func<string>> _artworkSummaryFactories = [];
     private int _generation;
     private CancellationTokenSource? _cancellation;
-    private bool _artworkSetModified;
+    private ArtworkMutationLease?
+        _artworkMutation;
+    private ImmutableArray<ArtworkInput>
+        _loadedArtworkInputs = [];
     private Dictionary<string, ArtworkSetPreviewRequest>?
         _pendingArtworkRequests;
+    private IReadOnlyDictionary<
+        string,
+        MetadataEditSourceExpectation>
+        _sourceExpectations =
+            new Dictionary<
+                string,
+                MetadataEditSourceExpectation>(
+                PathComparer);
     private string? _statusMessageKey;
     private object?[] _statusMessageArguments = [];
     private long? _statusMessageCount;
@@ -63,6 +74,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUnsavedChanges))]
+    [NotifyPropertyChangedFor(nameof(HasUnsavedArtworkChanges))]
     [NotifyPropertyChangedFor(nameof(UnsavedChangesSummary))]
     private bool _hasPendingArtworkChanges;
 
@@ -139,14 +151,20 @@ public partial class SelectionInspectorViewModel : ObservableObject
     };
     public string SelectionSummary => Selection.Summary;
     public int PendingChangesVersion { get; private set; }
-    public bool HasUnsavedChanges => Fields.Any(item => item.IsModified) ||
-        HasPendingArtworkChanges || ArtworkItems.Any(item => item.IsModified);
+    public bool HasUnsavedMetadataChanges =>
+        Fields.Any(item => item.IsModified);
+    public bool HasUnsavedArtworkChanges =>
+        HasArtworkSetEdits();
+    public bool HasUnsavedChanges =>
+        HasUnsavedMetadataChanges ||
+        HasUnsavedArtworkChanges;
     public string UnsavedChangesSummary
     {
         get
         {
             int tagCount = Fields.Count(item => item.IsModified);
-            bool artwork = HasPendingArtworkChanges || ArtworkItems.Any(item => item.IsModified);
+            bool artwork =
+                HasArtworkSetEdits();
             return (tagCount, artwork) switch
             {
                 (0, false) => L(
@@ -173,8 +191,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
             {
                 rows.Add(new(
                     Path.GetFileName(path),
-                    MetadataFieldKey.Known(
-                        field.Field).DisplayName,
+                    field.Label,
                     field.OriginalDisplayValue,
                     string.IsNullOrWhiteSpace(field.Value)
                         ? ""
@@ -210,9 +227,15 @@ public partial class SelectionInspectorViewModel : ObservableObject
             CreatePendingOperationInputs();
         if (valueEdits is null && artworkEdits is null)
             return null;
+        IReadOnlyDictionary<
+            string,
+            MetadataEditSourceExpectation>
+            sourceExpectations =
+                CreatePendingSourceExpectations();
         return await PreviewInspectorChangesAsync(
             valueEdits,
             artworkEdits,
+            sourceExpectations,
             progress,
             cancellationToken);
     }
@@ -237,7 +260,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 MetadataFieldKey.Known(field.Field),
                 string.IsNullOrWhiteSpace(field.Value)
                     ? []
-                    : [field.Value]))
+                    : LibraryMetadataValueMap
+                        .ParseEditorValues(
+                            field.Value)))
             .ToArray();
         IReadOnlyDictionary<
             string,
@@ -267,6 +292,32 @@ public partial class SelectionInspectorViewModel : ObservableObject
                                 [.. CurrentArtworkInputs()]),
                             PathComparer);
         return (editsByPath, artworkByPath);
+    }
+
+    internal IReadOnlyDictionary<
+        string,
+        MetadataEditSourceExpectation>
+        CreatePendingSourceExpectations()
+    {
+        var result = new Dictionary<
+            string,
+            MetadataEditSourceExpectation>(
+            PathComparer);
+        foreach (string path in Selection.Paths)
+        {
+            if (!_sourceExpectations.TryGetValue(
+                    path,
+                    out MetadataEditSourceExpectation?
+                        expectation))
+                continue;
+            result[path] = expectation with
+            {
+                OriginalValues =
+                    expectation.OriginalValues
+                        .ToImmutableDictionary(),
+            };
+        }
+        return result;
     }
 
     private string PendingArtworkSummary()
@@ -351,6 +402,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
     public async Task LoadAsync(SelectionContext selection)
     {
         int generation = ++_generation;
+        CancelArtworkMutation();
         _cancellation?.Cancel();
         var cancellation = new CancellationTokenSource();
         _cancellation = cancellation;
@@ -360,8 +412,13 @@ public partial class SelectionInspectorViewModel : ObservableObject
         ClearStatus();
         ArtworkSource = null;
         ClearArtworkItems();
-        _artworkSetModified = false;
+        _loadedArtworkInputs = [];
         _pendingArtworkRequests = null;
+        _sourceExpectations =
+            new Dictionary<
+                string,
+                MetadataEditSourceExpectation>(
+                PathComparer);
         HasPendingArtworkChanges = false;
         IsArtworkMixed = false;
         ArtworkSummary = L(
@@ -377,9 +434,22 @@ public partial class SelectionInspectorViewModel : ObservableObject
             _overviewFactory = () => L(
                 "Inspector.Overview.SelectTrack");
             Overview = _overviewFactory();
+            if (ReferenceEquals(
+                    _cancellation,
+                    cancellation))
+                _cancellation = null;
+            IsBusy = false;
+            NotifyCommands();
+            cancellation.Dispose();
             return;
         }
 
+        Dictionary<
+            string,
+            MetadataEditSourceExpectation>
+            sourceExpectations =
+                BuildRecordSourceExpectations(
+                    selection);
         IsBusy = true;
         NotifyCommands();
         try
@@ -399,11 +469,18 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 {
                     try
                     {
-                        documents.Add(
-                            await _metadataDocuments.LoadAsync(
-                                path,
-                                includeArtwork: false,
-                                cancellation.Token));
+                        MediaDocument document =
+                            await _metadataDocuments
+                                .LoadAsync(
+                                    path,
+                                    includeArtwork: false,
+                                    cancellation.Token);
+                        documents.Add(document);
+                        MergeDocumentExpectation(
+                            sourceExpectations,
+                            document,
+                            includeArtworkFingerprint:
+                                false);
                     }
                     catch (Exception error) when (
                         error is not OperationCanceledException)
@@ -427,9 +504,20 @@ public partial class SelectionInspectorViewModel : ObservableObject
                             cancellation.Token);
                     if (result.Success &&
                         result.Value is not null)
+                    {
                         models.Add(result.Value);
+                        MergeMediaModelExpectation(
+                            sourceExpectations,
+                            result.Value,
+                            includeArtworkFingerprint:
+                                false);
+                    }
                 }
             }
+            await RefreshSourceIdentitiesAsync(
+                sourceExpectations,
+                selection.Paths,
+                cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
             if (generation != _generation)
                 return;
@@ -473,8 +561,16 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     cancellation.Token.ThrowIfCancellationRequested();
                     MediaDocument document = await _metadataDocuments.LoadAsync(
                         path, includeArtwork: true, cancellation.Token);
+                    MergeDocumentExpectation(
+                        sourceExpectations,
+                        document,
+                        includeArtworkFingerprint:
+                            true);
                     directlyLoadedArtwork ??= document;
-                    signatures.Add(ArtworkSignature(document.Artwork));
+                    signatures.Add(
+                        MetadataDocumentService
+                            .CreateArtworkFingerprint(
+                                document));
                 }
                 artworkSignatures = signatures;
             }
@@ -482,6 +578,20 @@ public partial class SelectionInspectorViewModel : ObservableObject
             {
                 artworkSignatures = await _library.GetImageSignaturesAsync(
                     selection.Paths, cancellation.Token);
+                if (artworkSignatures.Count ==
+                    selection.Paths.Count)
+                {
+                    for (int index = 0;
+                         index <
+                         selection.Paths.Count;
+                         index++)
+                    {
+                        MergeArtworkFingerprint(
+                            sourceExpectations,
+                            selection.Paths[index],
+                            artworkSignatures[index]);
+                    }
+                }
             }
             string[] distinctArtwork = artworkSignatures.Distinct(StringComparer.Ordinal).ToArray();
             IsArtworkMixed = distinctArtwork.Length > 1;
@@ -507,6 +617,11 @@ public partial class SelectionInspectorViewModel : ObservableObject
                         selection.Paths[0],
                         includeArtwork: true,
                         cancellation.Token);
+                MergeDocumentExpectation(
+                    sourceExpectations,
+                    artwork,
+                    includeArtworkFingerprint:
+                        true);
                 embeddedArtwork =
                     artwork.Artwork.ToArray();
             }
@@ -517,6 +632,12 @@ public partial class SelectionInspectorViewModel : ObservableObject
                         selection.Paths[0],
                         includeArtwork: true,
                         cancellation.Token);
+                if (artwork.Value is not null)
+                    MergeMediaModelExpectation(
+                        sourceExpectations,
+                        artwork.Value,
+                        includeArtworkFingerprint:
+                            true);
                 embeddedArtwork =
                     artwork.Value?.Artwork.ToArray() ??
                     [];
@@ -571,6 +692,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     "Inspector.Artwork.Embedded",
                     embeddedArtwork.Length);
             UpdateArtworkSharingSummary();
+            _loadedArtworkInputs =
+                [.. CurrentArtworkInputs()];
             if (invalidArtwork > 0)
             {
                 SetCountStatus(
@@ -592,6 +715,12 @@ public partial class SelectionInspectorViewModel : ObservableObject
         {
             if (generation == _generation)
             {
+                _sourceExpectations =
+                    sourceExpectations
+                        .ToDictionary(
+                            pair => pair.Key,
+                            pair => pair.Value,
+                            PathComparer);
                 _cancellation = null;
                 IsBusy = false;
                 NotifyCommands();
@@ -599,6 +728,425 @@ public partial class SelectionInspectorViewModel : ObservableObject
             cancellation.Dispose();
         }
     }
+
+    private static Dictionary<
+        string,
+        MetadataEditSourceExpectation>
+        BuildRecordSourceExpectations(
+            SelectionContext selection)
+    {
+        var result = new Dictionary<
+            string,
+            MetadataEditSourceExpectation>(
+            PathComparer);
+        Dictionary<string, TrackRecord> records =
+            (selection.Records ?? [])
+                .GroupBy(
+                    record => record.Path,
+                    PathComparer)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.First(),
+                    PathComparer);
+        foreach (string path in selection.Paths
+                     .Distinct(PathComparer))
+        {
+            if (records.TryGetValue(
+                    path,
+                    out TrackRecord? record))
+            {
+                result[path] = new(
+                    record.Length > 0
+                        ? record.Length
+                        : null,
+                    record.LastWriteTime == default
+                        ? null
+                        : NormalizeUtc(
+                            record.LastWriteTime),
+                    OriginalValues(record));
+            }
+            else
+            {
+                result[path] = new(
+                    null,
+                    null,
+                    ImmutableDictionary<
+                        MetadataFieldKey,
+                        ImmutableArray<string>>
+                        .Empty);
+            }
+        }
+        return result;
+    }
+
+    private static void MergeDocumentExpectation(
+        Dictionary<
+            string,
+            MetadataEditSourceExpectation>
+            expectations,
+        MediaDocument document,
+        bool includeArtworkFingerprint)
+    {
+        expectations.TryGetValue(
+            document.Path,
+            out MetadataEditSourceExpectation?
+                existing);
+        expectations[document.Path] = new(
+            document.Snapshot.Length,
+            document.Snapshot.LastWriteTimeUtc,
+            OriginalValues(document),
+            existing?.MetadataHash ??
+                MetadataDocumentService
+                    .CreateMetadataFingerprint(
+                        document),
+            includeArtworkFingerprint
+                ? MetadataDocumentService
+                    .CreateArtworkFingerprint(
+                        document)
+                : existing
+                    ?.ArtworkFingerprint);
+    }
+
+    private static void MergeMediaModelExpectation(
+        Dictionary<
+            string,
+            MetadataEditSourceExpectation>
+            expectations,
+        MediaFileModel model,
+        bool includeArtworkFingerprint)
+    {
+        expectations.TryGetValue(
+            model.Path,
+            out MetadataEditSourceExpectation?
+                existing);
+        expectations[model.Path] = new(
+            existing?.Length,
+            existing?.LastWriteTimeUtc,
+            OriginalValues(model),
+            existing?.MetadataHash,
+            includeArtworkFingerprint
+                ? MetadataDocumentService
+                    .CreateArtworkFingerprint(
+                        model.Artwork)
+                : existing
+                    ?.ArtworkFingerprint);
+    }
+
+    private static void MergeArtworkFingerprint(
+        Dictionary<
+            string,
+            MetadataEditSourceExpectation>
+            expectations,
+        string path,
+        string fingerprint)
+    {
+        if (!expectations.TryGetValue(
+                path,
+                out MetadataEditSourceExpectation?
+                    existing))
+        {
+            existing = new(
+                null,
+                null,
+                ImmutableDictionary<
+                    MetadataFieldKey,
+                    ImmutableArray<string>>
+                    .Empty);
+        }
+        expectations[path] = existing with
+        {
+            ArtworkFingerprint =
+                fingerprint,
+        };
+    }
+
+    private static async Task
+        RefreshSourceIdentitiesAsync(
+            Dictionary<
+                string,
+                MetadataEditSourceExpectation>
+                expectations,
+            IReadOnlyList<string> paths,
+            CancellationToken ct)
+    {
+        string[] targets = paths
+            .Distinct(PathComparer)
+            .ToArray();
+        if (targets.Length == 0)
+            return;
+        (string Path, long? Length,
+            DateTime? LastWriteTimeUtc)[] stats =
+            await Task.Run(
+                () =>
+                {
+                    var loaded = new List<(
+                        string Path,
+                        long? Length,
+                        DateTime?
+                            LastWriteTimeUtc)>(
+                        targets.Length);
+                    foreach (string path in targets)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        var file = new FileInfo(path);
+                        loaded.Add(
+                            file.Exists
+                                ? (
+                                    path,
+                                    file.Length,
+                                    file.LastWriteTimeUtc)
+                                : (
+                                    path,
+                                    null,
+                                    null));
+                    }
+                    return loaded.ToArray();
+                },
+                ct);
+        foreach ((string path, long? length,
+                     DateTime? lastWriteTimeUtc) in
+                 stats)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!expectations.TryGetValue(
+                    path,
+                    out MetadataEditSourceExpectation?
+                        existing))
+            {
+                existing = new(
+                    null,
+                    null,
+                    ImmutableDictionary<
+                        MetadataFieldKey,
+                        ImmutableArray<string>>
+                        .Empty);
+            }
+            expectations[path] = existing with
+            {
+                Length = length ??
+                    existing.Length,
+                LastWriteTimeUtc =
+                    lastWriteTimeUtc ??
+                    existing.LastWriteTimeUtc,
+            };
+        }
+    }
+
+    private static IReadOnlyDictionary<
+        MetadataFieldKey,
+        ImmutableArray<string>>
+        OriginalValues(
+            MediaDocument document)
+    {
+        var result = ImmutableDictionary
+            .CreateBuilder<
+                MetadataFieldKey,
+                ImmutableArray<string>>();
+        TagLayerDocument? primary =
+            document.TagLayers.FirstOrDefault();
+        if (primary is not null)
+        {
+            foreach (IGrouping<
+                         MetadataFieldKey,
+                         MetadataValueSet> group in
+                     primary.Fields.GroupBy(
+                         value => value.Field))
+            {
+                result[group.Key] =
+                    [
+                        .. group.SelectMany(
+                            value => value.Values),
+                    ];
+            }
+        }
+        AddMissingInspectorValues(
+            result,
+            field => document
+                .TagLayers
+                .FirstOrDefault()
+                ?.Fields
+                .Where(value =>
+                    value.Field.KnownField == field)
+                .SelectMany(value => value.Values)
+                .ToImmutableArray() ??
+                []);
+        return result.ToImmutable();
+    }
+
+    private static IReadOnlyDictionary<
+        MetadataFieldKey,
+        ImmutableArray<string>>
+        OriginalValues(
+            MediaFileModel model)
+    {
+        var result = ImmutableDictionary
+            .CreateBuilder<
+                MetadataFieldKey,
+                ImmutableArray<string>>();
+        foreach (IGrouping<
+                     TagFields,
+                     TagFieldValue> group in
+                 model.KnownFields.GroupBy(
+                     value => value.Field))
+        {
+            result[MetadataFieldKey.Known(
+                group.Key)] =
+                [
+                    .. group.Select(
+                        value => value.Value),
+                ];
+        }
+        AddMissingInspectorValues(
+            result,
+            field => ModelValues(
+                model,
+                field));
+        return result.ToImmutable();
+    }
+
+    private static IReadOnlyDictionary<
+        MetadataFieldKey,
+        ImmutableArray<string>>
+        OriginalValues(
+            TrackRecord record)
+    {
+        var result = ImmutableDictionary
+            .CreateBuilder<
+                MetadataFieldKey,
+                ImmutableArray<string>>();
+        foreach ((TagFields field, _) in
+                 FieldDefinitions)
+        {
+            KeyValuePair<string, string[]>
+                cached = record.Metadata
+                    .FirstOrDefault(pair =>
+                        string.Equals(
+                            pair.Key,
+                            field.ToString(),
+                            StringComparison
+                                .OrdinalIgnoreCase));
+            result[MetadataFieldKey.Known(
+                field)] =
+                cached.Key is not null
+                    ? [.. cached.Value]
+                    : RecordValues(
+                        record,
+                        field);
+        }
+        return result.ToImmutable();
+    }
+
+    private static void AddMissingInspectorValues(
+        ImmutableDictionary<
+            MetadataFieldKey,
+            ImmutableArray<string>>.Builder
+            values,
+        Func<
+            TagFields,
+            ImmutableArray<string>>
+            fallback)
+    {
+        foreach ((TagFields field, _) in
+                 FieldDefinitions)
+        {
+            MetadataFieldKey key =
+                MetadataFieldKey.Known(field);
+            if (!values.ContainsKey(key))
+                values[key] = fallback(field);
+        }
+    }
+
+    private static ImmutableArray<string>
+        ModelValues(
+            MediaFileModel model,
+            TagFields field)
+    {
+        string? value = field switch
+        {
+            TagFields.Title => model.Title,
+            TagFields.Artist => model.Artist,
+            TagFields.AlbumArtist =>
+                model.AlbumArtist,
+            TagFields.Album => model.Album,
+            TagFields.TrackNumber =>
+                model.TrackNumber
+                    ?.ToString(
+                        CultureInfo
+                            .InvariantCulture),
+            TagFields.TotalTracks =>
+                model.TrackTotal
+                    ?.ToString(
+                        CultureInfo
+                            .InvariantCulture),
+            TagFields.DiscNumber =>
+                model.DiscNumber
+                    ?.ToString(
+                        CultureInfo
+                            .InvariantCulture),
+            TagFields.TotalDiscs =>
+                model.DiscTotal
+                    ?.ToString(
+                        CultureInfo
+                            .InvariantCulture),
+            TagFields.Date =>
+                model.ReleaseDate,
+            _ => null,
+        };
+        return string.IsNullOrEmpty(value)
+            ? []
+            : [value];
+    }
+
+    private static ImmutableArray<string>
+        RecordValues(
+            TrackRecord record,
+            TagFields field)
+    {
+        string? value = field switch
+        {
+            TagFields.Title => record.Title,
+            TagFields.Artist => record.Artist,
+            TagFields.AlbumArtist =>
+                record.AlbumArtist,
+            TagFields.Album => record.Album,
+            TagFields.TrackNumber =>
+                record.TrackNumber
+                    ?.ToString(
+                        CultureInfo
+                            .InvariantCulture),
+            TagFields.TotalTracks =>
+                record.TrackTotal
+                    ?.ToString(
+                        CultureInfo
+                            .InvariantCulture),
+            TagFields.DiscNumber =>
+                record.DiscNumber
+                    ?.ToString(
+                        CultureInfo
+                            .InvariantCulture),
+            TagFields.TotalDiscs =>
+                record.DiscTotal
+                    ?.ToString(
+                        CultureInfo
+                            .InvariantCulture),
+            TagFields.Date =>
+                record.ReleaseDate,
+            TagFields.Genre =>
+                record.Genre,
+            TagFields.Composer =>
+                record.Composer,
+            _ => null,
+        };
+        return string.IsNullOrEmpty(value)
+            ? []
+            : [value];
+    }
+
+    private static DateTime NormalizeUtc(
+        DateTime value) =>
+        value.Kind == DateTimeKind.Utc
+            ? value
+            : value.ToUniversalTime();
 
     private void LoadFields(IReadOnlyList<MediaFileModel> models, SelectionContext selection)
     {
@@ -718,11 +1266,12 @@ public partial class SelectionInspectorViewModel : ObservableObject
         }
         bool mixed = valuesByFile.Skip(1).Any(values =>
             !values.SequenceEqual(valuesByFile[0], StringComparer.Ordinal));
-        mixed |= valuesByFile.Any(values => values.Length > 1);
-        string[] displayValues = valuesByFile
-            .SelectMany(values => values)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
+        string[] displayValues = mixed
+            ? valuesByFile
+                .SelectMany(values => values)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray()
+            : valuesByFile[0];
         field.SetLoaded(displayValues, mixed, verification);
     }
 
@@ -781,9 +1330,45 @@ public partial class SelectionInspectorViewModel : ObservableObject
     private bool CanRevert() => HasUnsavedChanges && !IsBusy;
     private bool CanEditArtworkSet() => CanEdit() && !IsArtworkMixed;
     private bool HasArtworkSetEdits() =>
-        _pendingArtworkRequests is { Count: > 0 } ||
-        _artworkSetModified ||
-        ArtworkItems.Any(item => item.IsModified);
+        _pendingArtworkRequests is { Count: > 0 }
+            pending
+            ? pending.Values.Any(request =>
+                request.MaxDimension > 0 &&
+                request.Images.Length > 0 ||
+                !ArtworkSetsEqual(
+                    request.Images,
+                    _loadedArtworkInputs))
+            : !ArtworkSetsEqual(
+                CurrentArtworkInputs(),
+                _loadedArtworkInputs);
+
+    private static bool ArtworkSetsEqual(
+        IReadOnlyList<ArtworkInput> left,
+        IReadOnlyList<ArtworkInput> right)
+    {
+        if (left.Count != right.Count)
+            return false;
+        for (int index = 0;
+             index < left.Count;
+             index++)
+        {
+            ArtworkInput first = left[index];
+            ArtworkInput second = right[index];
+            if (first.Type != second.Type ||
+                !StringComparer.OrdinalIgnoreCase
+                    .Equals(
+                        first.MimeType,
+                        second.MimeType) ||
+                !StringComparer.Ordinal.Equals(
+                    first.Description ?? "",
+                    second.Description ?? "") ||
+                !first.Data.AsSpan()
+                    .SequenceEqual(
+                        second.Data))
+                return false;
+        }
+        return true;
+    }
 
     private async Task<MetadataOperationPlan>
         PreviewInspectorChangesAsync(
@@ -795,6 +1380,10 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 string,
                 ArtworkSetPreviewRequest>?
                 artworkByPath,
+            IReadOnlyDictionary<
+                string,
+                MetadataEditSourceExpectation>
+                sourceExpectations,
             IProgress<OperationProgress> progress,
             CancellationToken ct)
     {
@@ -805,6 +1394,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
             return await _metadataOperations
                 .PreviewArtworkSetsAsync(
                     artworkByPath!,
+                    sourceExpectations,
                     L(
                         "Inspector.Operation.EditArtwork"),
                     progress,
@@ -813,6 +1403,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
             return await _metadataOperations
                 .PreviewValueEditsAsync(
                     editsByPath,
+                    sourceExpectations,
                     L(
                         "Inspector.Operation.EditFields"),
                     progress,
@@ -822,6 +1413,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
             await _metadataOperations
                 .PreviewValueEditsAsync(
                     editsByPath,
+                    sourceExpectations,
                     L(
                         "Inspector.Operation.EditFields"),
                     progress,
@@ -830,6 +1422,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
             await _metadataOperations
                 .PreviewArtworkSetsAsync(
                     artworkByPath,
+                    sourceExpectations,
                     L(
                         "Inspector.Operation.EditArtwork"),
                     progress,
@@ -888,52 +1481,135 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     item.Description)
                     ? null
                     : item.Description.Trim()))
-            .ToArray();
+        .ToArray();
+
+    private ArtworkMutationLease
+        BeginArtworkMutation()
+    {
+        CancelArtworkMutation();
+        var lease = new ArtworkMutationLease(
+            _generation,
+            [.. Selection.Paths],
+            new CancellationTokenSource());
+        _artworkMutation = lease;
+        IsBusy = true;
+        NotifyCommands();
+        return lease;
+    }
+
+    private bool CanPublishArtworkMutation(
+        ArtworkMutationLease lease) =>
+        ReferenceEquals(
+            _artworkMutation,
+            lease) &&
+        !lease.Cancellation
+            .IsCancellationRequested &&
+        lease.Generation == _generation &&
+        lease.Paths.SequenceEqual(
+            Selection.Paths,
+            PathComparer);
+
+    private void CancelArtworkMutation()
+    {
+        ArtworkMutationLease? current =
+            _artworkMutation;
+        _artworkMutation = null;
+        current?.Cancellation.Cancel();
+    }
+
+    private void CompleteArtworkMutation(
+        ArtworkMutationLease lease)
+    {
+        bool stillCurrent = ReferenceEquals(
+            _artworkMutation,
+            lease);
+        if (stillCurrent)
+            _artworkMutation = null;
+        lease.Cancellation.Dispose();
+        if (stillCurrent)
+        {
+            IsBusy = false;
+            NotifyCommands();
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanEditArtworkSet))]
     private async Task AddArtworkAsync()
     {
-        string? path = await _files.PickFileAsync(
-            L("Inspector.Picker.ChooseArtwork"),
-            [new FilePickerType(
-                L("Inspector.Picker.Images"),
-                [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"])]);
-        if (path is null)
-            return;
-
-        PreparedImage? prepared = await _artwork.PrepareFromFileAsync(path, ArtworkMaxDimension);
-        if (prepared is null)
+        ArtworkMutationLease lease =
+            BeginArtworkMutation();
+        try
         {
-            SetStatus(
-                MessageTone.Error,
-                "Inspector.Status.ImagePreparationFailed");
-            return;
-        }
+            string? path = await _files.PickFileAsync(
+                L("Inspector.Picker.ChooseArtwork"),
+                [new FilePickerType(
+                    L("Inspector.Picker.Images"),
+                    [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"])]);
+            if (path is null ||
+                !CanPublishArtworkMutation(
+                    lease))
+                return;
 
-        ID3v2Util.APICType type = ArtworkItems.Any(item => item.Type == ID3v2Util.APICType.FrontCover)
-            ? ID3v2Util.APICType.Other
-            : ID3v2Util.APICType.FrontCover;
-        object? source = await _thumbnails.CreateImageSourceAsync(prepared.Data);
-        var item = new ArtworkPreviewItem(
-            source,
-            type,
-            prepared.MimeType,
-            prepared.Data,
-            PreparedArtworkDetails(prepared),
-            null);
-        item.RefreshLocalizedText(
-            ArtworkTypeLabel);
-        _artworkSummaryFactories[item] =
-            () => PreparedArtworkDetails(prepared);
-        item.PropertyChanged += OnArtworkItemChanged;
-        ArtworkItems.Add(item);
-        ArtworkSource ??= item.Source;
-        _artworkSetModified = true;
-        SynchronizePendingArtworkRequestsFromVisibleSet();
-        HasPendingArtworkChanges = true;
-        UpdateArtworkSummary();
-        NotifyPendingChangeRowsChanged();
-        NotifyUnsavedChangesChanged();
+            PreparedImage? prepared =
+                await _artwork
+                    .PrepareFromFileAsync(
+                        path,
+                        ArtworkMaxDimension,
+                        lease.Cancellation.Token);
+            if (!CanPublishArtworkMutation(
+                    lease))
+                return;
+            if (prepared is null)
+            {
+                SetStatus(
+                    MessageTone.Error,
+                    "Inspector.Status.ImagePreparationFailed");
+                return;
+            }
+
+            ID3v2Util.APICType type = ArtworkItems.Any(item => item.Type == ID3v2Util.APICType.FrontCover)
+                ? ID3v2Util.APICType.Other
+                : ID3v2Util.APICType.FrontCover;
+            object? source =
+                await _thumbnails
+                    .CreateImageSourceAsync(
+                        prepared.Data,
+                        cancellationToken:
+                            lease.Cancellation
+                                .Token);
+            if (!CanPublishArtworkMutation(
+                    lease))
+                return;
+            var item = new ArtworkPreviewItem(
+                source,
+                type,
+                prepared.MimeType,
+                prepared.Data,
+                PreparedArtworkDetails(prepared),
+                null);
+            item.RefreshLocalizedText(
+                ArtworkTypeLabel);
+            _artworkSummaryFactories[item] =
+                () => PreparedArtworkDetails(prepared);
+            item.PropertyChanged += OnArtworkItemChanged;
+            ArtworkItems.Add(item);
+            ArtworkSource ??= item.Source;
+            SynchronizePendingArtworkRequestsFromVisibleSet();
+            HasPendingArtworkChanges = true;
+            UpdateArtworkSummary();
+            NotifyPendingChangeRowsChanged();
+            NotifyUnsavedChangesChanged();
+        }
+        catch (OperationCanceledException) when (
+            lease.Cancellation
+                .IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            CompleteArtworkMutation(
+                lease);
+        }
     }
 
     public void RemoveArtworkItem(ArtworkPreviewItem item)
@@ -944,7 +1620,6 @@ public partial class SelectionInspectorViewModel : ObservableObject
         _artworkSummaryFactories.Remove(item);
         ArtworkItems.Remove(item);
         ArtworkSource = ArtworkItems.FirstOrDefault()?.Source;
-        _artworkSetModified = true;
         SynchronizePendingArtworkRequestsFromVisibleSet();
         HasPendingArtworkChanges = true;
         UpdateArtworkSummary();
@@ -956,42 +1631,78 @@ public partial class SelectionInspectorViewModel : ObservableObject
     {
         if (!CanEditArtworkSet() || !ArtworkItems.Contains(item))
             return;
-        string? path = await _files.PickFileAsync(
-            L("Inspector.Picker.ChooseReplacementArtwork"),
-            [new FilePickerType(
-                L("Inspector.Picker.Images"),
-                [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"])]);
-        if (path is null)
-            return;
-
-        PreparedImage? prepared = await _artwork.PrepareFromFileAsync(path, ArtworkMaxDimension);
-        if (prepared is null)
+        ArtworkMutationLease lease =
+            BeginArtworkMutation();
+        try
         {
-            SetStatus(
-                MessageTone.Error,
-                "Inspector.Status.ImagePreparationFailed");
-            return;
-        }
+            string? path = await _files.PickFileAsync(
+                L("Inspector.Picker.ChooseReplacementArtwork"),
+                [new FilePickerType(
+                    L("Inspector.Picker.Images"),
+                    [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"])]);
+            if (path is null ||
+                !CanPublishArtworkMutation(
+                    lease) ||
+                !ArtworkItems.Contains(item))
+                return;
 
-        object? source = await _thumbnails.CreateImageSourceAsync(prepared.Data);
-        item.ReplaceContent(
-            source,
-            prepared.MimeType,
-            prepared.Data,
-            PreparedArtworkDetails(prepared));
-        _artworkSummaryFactories[item] =
-            () => PreparedArtworkDetails(prepared);
-        if (ReferenceEquals(ArtworkItems.FirstOrDefault(), item))
-            ArtworkSource = item.Source;
-        _artworkSetModified = true;
-        SynchronizePendingArtworkRequestsFromVisibleSet();
-        HasPendingArtworkChanges = true;
-        UpdateArtworkSummary();
-        NotifyPendingChangeRowsChanged();
-        SetStatus(
-            MessageTone.Info,
-            "Inspector.Status.ArtworkReplacementReady");
-        NotifyUnsavedChangesChanged();
+            PreparedImage? prepared =
+                await _artwork
+                    .PrepareFromFileAsync(
+                        path,
+                        ArtworkMaxDimension,
+                        lease.Cancellation.Token);
+            if (!CanPublishArtworkMutation(
+                    lease) ||
+                !ArtworkItems.Contains(item))
+                return;
+            if (prepared is null)
+            {
+                SetStatus(
+                    MessageTone.Error,
+                    "Inspector.Status.ImagePreparationFailed");
+                return;
+            }
+
+            object? source =
+                await _thumbnails
+                    .CreateImageSourceAsync(
+                        prepared.Data,
+                        cancellationToken:
+                            lease.Cancellation
+                                .Token);
+            if (!CanPublishArtworkMutation(
+                    lease) ||
+                !ArtworkItems.Contains(item))
+                return;
+            item.ReplaceContent(
+                source,
+                prepared.MimeType,
+                prepared.Data,
+                PreparedArtworkDetails(prepared));
+            _artworkSummaryFactories[item] =
+                () => PreparedArtworkDetails(prepared);
+            if (ReferenceEquals(ArtworkItems.FirstOrDefault(), item))
+                ArtworkSource = item.Source;
+            SynchronizePendingArtworkRequestsFromVisibleSet();
+            HasPendingArtworkChanges = true;
+            UpdateArtworkSummary();
+            NotifyPendingChangeRowsChanged();
+            SetStatus(
+                MessageTone.Info,
+                "Inspector.Status.ArtworkReplacementReady");
+            NotifyUnsavedChangesChanged();
+        }
+        catch (OperationCanceledException) when (
+            lease.Cancellation
+                .IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            CompleteArtworkMutation(
+                lease);
+        }
     }
 
     public async Task SaveArtworkItemToFileAsync(ArtworkPreviewItem item)
@@ -1044,23 +1755,37 @@ public partial class SelectionInspectorViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private async Task ScrubArtworkAsync()
     {
-        IsBusy = true;
-        NotifyCommands();
+        ArtworkMutationLease lease =
+            BeginArtworkMutation();
         try
         {
             var requests = new Dictionary<
                 string,
                 ArtworkSetPreviewRequest>(
                 PathComparer);
-            foreach (string path in Selection.Paths)
+            var updatedExpectations =
+                CreatePendingSourceExpectations()
+                    .ToDictionary(
+                        pair => pair.Key,
+                        pair => pair.Value,
+                        PathComparer);
+            foreach (string path in lease.Paths)
             {
+                lease.Cancellation.Token
+                    .ThrowIfCancellationRequested();
                 IReadOnlyList<ArtworkModel> artwork;
                 if (_metadataDocuments is not null)
                 {
                     MediaDocument loaded =
                         await _metadataDocuments.LoadAsync(
                             path,
-                            includeArtwork: true);
+                            includeArtwork: true,
+                            lease.Cancellation.Token);
+                    MergeDocumentExpectation(
+                        updatedExpectations,
+                        loaded,
+                        includeArtworkFingerprint:
+                            true);
                     artwork = loaded.Artwork;
                 }
                 else
@@ -1068,16 +1793,25 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     OperationResult<MediaFileModel> loaded =
                         await _media.LoadAsync(
                             path,
-                            includeArtwork: true);
+                            includeArtwork: true,
+                            lease.Cancellation.Token);
                     if (!loaded.Success ||
                         loaded.Value is null)
                     {
+                        if (!CanPublishArtworkMutation(
+                                lease))
+                            return;
                         SetStatusFailure(
                             "Inspector.Status.ReadArtworkFailed",
                             loaded.Error ??
                             path);
                         return;
                     }
+                    MergeMediaModelExpectation(
+                        updatedExpectations,
+                        loaded.Value,
+                        includeArtworkFingerprint:
+                            true);
                     artwork = loaded.Value.Artwork;
                 }
                 requests[path] = new(
@@ -1094,22 +1828,38 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     ],
                     ArtworkMaxDimension);
             }
+            await RefreshSourceIdentitiesAsync(
+                updatedExpectations,
+                lease.Paths,
+                lease.Cancellation.Token);
+            if (!CanPublishArtworkMutation(
+                    lease))
+                return;
+            _sourceExpectations =
+                updatedExpectations;
             _pendingArtworkRequests = requests;
             HasPendingArtworkChanges = true;
             NotifyPendingChangeRowsChanged();
             NotifyUnsavedChangesChanged();
         }
+        catch (OperationCanceledException) when (
+            lease.Cancellation
+                .IsCancellationRequested)
+        {
+        }
         catch (Exception error) when (
             error is not OperationCanceledException)
         {
-            SetStatusFailure(
-                "Inspector.Status.ReadArtworkFailed",
-                error.Message);
+            if (CanPublishArtworkMutation(
+                    lease))
+                SetStatusFailure(
+                    "Inspector.Status.ReadArtworkFailed",
+                    error.Message);
         }
         finally
         {
-            IsBusy = false;
-            NotifyCommands();
+            CompleteArtworkMutation(
+                lease);
         }
     }
 
@@ -1127,7 +1877,6 @@ public partial class SelectionInspectorViewModel : ObservableObject
         ArtworkSummary = L(
             "Inspector.Artwork.NoneEmbedded");
         ArtworkSharingSummary = "";
-        _artworkSetModified = true;
         HasPendingArtworkChanges = true;
         NotifyPendingChangeRowsChanged();
         NotifyUnsavedChangesChanged();
@@ -1194,6 +1943,12 @@ public partial class SelectionInspectorViewModel : ObservableObject
 
     private void NotifyUnsavedChangesChanged()
     {
+        HasPendingArtworkChanges =
+            HasArtworkSetEdits();
+        OnPropertyChanged(
+            nameof(HasUnsavedMetadataChanges));
+        OnPropertyChanged(
+            nameof(HasUnsavedArtworkChanges));
         OnPropertyChanged(nameof(HasUnsavedChanges));
         OnPropertyChanged(nameof(UnsavedChangesSummary));
         RevertCommand.NotifyCanExecuteChanged();
@@ -1220,12 +1975,6 @@ public partial class SelectionInspectorViewModel : ObservableObject
             .SequenceEqual(
                 right.Paths.OrderBy(path => path, PathComparer),
                 PathComparer);
-
-    private static string ArtworkSignature(
-        IReadOnlyList<ArtworkModel> artwork) =>
-        string.Join("|", artwork.Select(image =>
-            $"{image.Category}\u001f{image.Description}\u001f{image.ImageType}\u001f" +
-            $"{Convert.ToHexString(SHA256.HashData(image.Data))}"));
 
     private void UpdateArtworkSummary()
     {
@@ -1652,6 +2401,11 @@ public partial class SelectionInspectorViewModel : ObservableObject
             nameof(UnsavedChangesSummary));
         NotifyPendingChangeRowsChanged();
     }
+
+    private sealed record ArtworkMutationLease(
+        int Generation,
+        ImmutableArray<string> Paths,
+        CancellationTokenSource Cancellation);
 
     private static readonly StringComparer PathComparer =
         OperatingSystem.IsWindows()

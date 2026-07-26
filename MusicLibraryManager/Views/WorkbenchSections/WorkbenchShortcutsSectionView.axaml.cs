@@ -43,8 +43,8 @@ public partial class WorkbenchShortcutsSectionView : UserControl
                     new GridLength(
                         1,
                         GridUnitType.Star)));
-            Grid.SetColumn(EditorScroll, 0);
-            Grid.SetRow(EditorScroll, 0);
+            Grid.SetColumn(EditorPanel, 0);
+            Grid.SetRow(EditorPanel, 0);
         }
         else
         {
@@ -65,8 +65,8 @@ public partial class WorkbenchShortcutsSectionView : UserControl
                     new GridLength(
                         1,
                         GridUnitType.Star)));
-            Grid.SetColumn(EditorScroll, 2);
-            Grid.SetRow(EditorScroll, 0);
+            Grid.SetColumn(EditorPanel, 2);
+            Grid.SetRow(EditorPanel, 0);
         }
         ApplyPaneVisibility();
     }
@@ -77,6 +77,9 @@ public partial class WorkbenchShortcutsSectionView : UserControl
             !_narrow ||
             !_showNarrowEditor;
         EditorScroll.IsVisible =
+            !_narrow ||
+            _showNarrowEditor;
+        EditorPanel.IsVisible =
             !_narrow ||
             _showNarrowEditor;
         ShortcutBackButton.IsVisible =

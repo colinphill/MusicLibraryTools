@@ -9,7 +9,9 @@
       <controls:PageHeader.PrimaryAction>
         <Grid>
           <Button Classes="app"
-                  Classes.primary="{Binding !HasApplicablePreview}"
+                  Classes.primary="{Binding IsPreviewPrimary}"
+                  Classes.quiet="{Binding !IsConfigurationReady}"
+                  Opacity="{Binding PreviewActionOpacity}"
                   Content="{DynamicResource Loc.Ingest.Action.Preview}" Command="{Binding PreviewCommand}" />
           <Button Classes="app primary"
                   IsVisible="{Binding HasApplicablePreview}"

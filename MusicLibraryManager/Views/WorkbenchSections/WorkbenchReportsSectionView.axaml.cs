@@ -59,10 +59,8 @@ public partial class WorkbenchReportsSectionView : UserControl
             _viewModel.ReportOutputs.Count > 0;
         ReportOutputGrid.IsVisible =
             hasPreview;
-        ReviewedPanel.RowDefinitions[1].Height =
-            hasPreview
-                ? GridLength.Star
-                : new GridLength(0);
+        ReportPreviewEmptyState.IsVisible =
+            !hasPreview;
     }
 
     private void ApplyResponsiveLayout()

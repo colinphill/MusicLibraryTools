@@ -5,6 +5,7 @@ using global::Avalonia.Interactivity;
 using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Threading;
 using global::Avalonia.VisualTree;
+using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Services;
 
@@ -14,8 +15,9 @@ public partial class DialogHost : UserControl
 {
     private readonly DialogService _dialogs;
     private readonly ILocalizationService _localization;
+    private readonly OverlayInteractionController
+        _overlayInteraction = new();
     private DialogRequest? _renderedRequest;
-    private IInputElement? _priorFocus;
     private Button? _cancelButton;
     private Button? _primaryButton;
 
@@ -40,7 +42,7 @@ public partial class DialogHost : UserControl
         }
 
         if (_renderedRequest is null)
-            _priorFocus = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+            _overlayInteraction.CaptureFocus(this);
 
         _renderedRequest = request;
         IsVisible = true;
@@ -147,21 +149,14 @@ public partial class DialogHost : UserControl
             return;
         }
 
-        IInputElement? priorFocus = _priorFocus;
         _renderedRequest = null;
-        _priorFocus = null;
         _cancelButton = null;
         _primaryButton = null;
         DialogContent.Content = null;
         DialogButtons.Children.Clear();
         IsVisible = false;
 
-        if (priorFocus is not null)
-        {
-            Dispatcher.UIThread.Post(
-                () => priorFocus.Focus(NavigationMethod.Unspecified),
-                DispatcherPriority.Input);
-        }
+        _overlayInteraction.RestoreFocus();
     }
 
     private void FocusDefaultAction(DialogRequest request)
@@ -185,20 +180,27 @@ public partial class DialogHost : UserControl
 
     private void OnScrimPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.Pointer.Type == PointerType.Mouse &&
-            !e.GetCurrentPoint(DialogScrim).Properties.IsLeftButtonPressed)
+        DialogRequest? request = _dialogs.Current;
+        if (request is null)
         {
             e.Handled = true;
             return;
         }
 
-        DialogRequest? request = _dialogs.Current;
-        if (request?.DismissalPolicy.CanDismissFromScrim == true)
-            _dialogs.Complete(false);
-        else if (request is not null &&
-                 !RouteThroughEditorCancellation(request))
-            FocusDefaultAction(request);
-        e.Handled = true;
+        _overlayInteraction.HandleScrimPressed(
+            e,
+            DialogScrim,
+            request.DismissalPolicy
+                .CanDismissFromScrim,
+            () => _dialogs.Complete(false),
+            () =>
+            {
+                if (!RouteThroughEditorCancellation(
+                        request))
+                {
+                    FocusDefaultAction(request);
+                }
+            });
     }
 
     private void OnClose(object? sender, RoutedEventArgs e)
@@ -217,15 +219,26 @@ public partial class DialogHost : UserControl
         if (request is null)
             return;
 
-        if (e.Key == Key.Escape)
+        if (e.Key is Key.Escape or Key.Tab)
         {
-            if (request.DismissalPolicy.CanEscape)
-                _dialogs.Complete(false);
-            else if (!RouteThroughEditorCancellation(
-                         request))
-                FocusDefaultAction(request);
-            e.Handled = true;
-            return;
+            bool handled =
+                _overlayInteraction.HandleKeyDown(
+                    e,
+                    DialogCard,
+                    request.DismissalPolicy
+                        .CanEscape,
+                    () => _dialogs.Complete(false),
+                    () =>
+                    {
+                        if (!RouteThroughEditorCancellation(
+                                request))
+                        {
+                            FocusDefaultAction(request);
+                        }
+                    },
+                    moveEveryTab: true);
+            if (handled)
+                return;
         }
 
         if (e.Key != Key.Enter || e.Source is Button ||

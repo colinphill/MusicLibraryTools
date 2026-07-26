@@ -21,6 +21,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMediaCatalogIntegration, ItunesMediaCatalogIntegration>();
         services.AddSingleton<IFileInventoryService, FileInventoryService>();
         services.AddSingleton<IReverseDeltaService, ReverseDeltaService>();
+        services.AddSingleton<
+            IFileSystemVolumeIdentityProvider,
+            FileSystemVolumeIdentityProvider>();
         services.AddSingleton<IRecoverySpaceProbe>(
             SystemRecoverySpaceProbe.Instance);
         services.AddSingleton<IFileMutationPlanExecutor, FileMutationPlanExecutor>();

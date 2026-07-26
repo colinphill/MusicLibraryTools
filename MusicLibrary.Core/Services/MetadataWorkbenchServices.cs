@@ -100,6 +100,17 @@ public interface IMetadataOperationService
         CancellationToken ct = default) =>
         PreviewValueEditsAsync(editsByPath, name, ct);
 
+    Task<MetadataOperationPlan> PreviewValueEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
+        IReadOnlyDictionary<string, MetadataEditSourceExpectation>
+            sourceExpectations,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        Task.FromException<MetadataOperationPlan>(
+            new NotSupportedException(
+                "This metadata operation service cannot validate source expectations."));
+
     Task<MetadataOperationPlan> PreviewArtworkEditsAsync(
         IReadOnlyDictionary<string, ArtworkValueEdit> editsByPath,
         string name,
@@ -119,6 +130,21 @@ public interface IMetadataOperationService
         Task.FromException<MetadataOperationPlan>(
             new NotSupportedException(
                 "Multi-artwork metadata preview is not implemented."));
+
+    Task<MetadataOperationPlan> PreviewArtworkSetsAsync(
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest> requestsByPath,
+        IReadOnlyDictionary<
+            string,
+            MetadataEditSourceExpectation>
+            sourceExpectations,
+        string name,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default) =>
+        Task.FromException<MetadataOperationPlan>(
+            new NotSupportedException(
+                "This metadata operation service cannot validate artwork source expectations."));
 
     Task<MetadataOperationPlan> PreviewTagLayerEditsAsync(
         IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>> editsByPath,
@@ -374,6 +400,51 @@ public sealed class MetadataDocumentService(
                 .Append(layer.IsPrimary).Append('\n');
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())))
             .ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Returns the canonical metadata fingerprint used by interactive source expectations.
+    /// Embedded artwork is intentionally excluded so the value is stable for both lightweight
+    /// and artwork-inclusive document loads.
+    /// </summary>
+    public static string CreateMetadataFingerprint(
+        MediaDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        return
+        HashMetadata(
+            document.TagLayers,
+            [],
+            document.Chapters,
+            document.EditableTagLayers);
+    }
+
+    /// <summary>
+    /// Returns the canonical, order-independent fingerprint used by artwork source expectations.
+    /// It intentionally matches the library cache's sorted SHA-256 image-signature format.
+    /// </summary>
+    public static string CreateArtworkFingerprint(
+        MediaDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        return CreateArtworkFingerprint(
+            document.Artwork);
+    }
+
+    public static string CreateArtworkFingerprint(
+        IReadOnlyList<ArtworkModel> artwork)
+    {
+        ArgumentNullException.ThrowIfNull(artwork);
+        return string.Join(
+            "|",
+            artwork
+                .Select(image =>
+                    Convert.ToBase64String(
+                        SHA256.HashData(
+                            image.Data)))
+                .OrderBy(
+                    hash => hash,
+                    StringComparer.Ordinal));
     }
 }
 
@@ -681,9 +752,44 @@ public sealed class MetadataOperationService(
     IReindexService? reindex = null,
     IEditHistoryService? history = null,
     IMetadataFieldMappingService? fieldMappings = null,
-    IRecoverySpaceProbe? recoverySpace = null) : IMetadataOperationService
+    IRecoverySpaceProbe? recoverySpace = null,
+    IReviewedChangeBatchService? reviewedChanges = null,
+    IFileSystemVolumeIdentityProvider? volumeIdentities = null) :
+    IMetadataOperationService
 {
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(250);
+    private readonly IFileSystemVolumeIdentityProvider
+        _volumeIdentities =
+            volumeIdentities ??
+            new FileSystemVolumeIdentityProvider();
+
+    /// <summary>
+    /// Retains the public constructor signature used before reviewed batch and volume services
+    /// were added. Optional arguments are embedded by callers, so this overload also preserves
+    /// binary compatibility for clients compiled against that signature.
+    /// </summary>
+    public MetadataOperationService(
+        IMetadataDocumentService documents,
+        IMediaFormatRegistry formats,
+        IFileMutationPlanExecutor mutations,
+        IAppSettings settings,
+        IReindexService? reindex,
+        IEditHistoryService? history,
+        IMetadataFieldMappingService? fieldMappings,
+        IRecoverySpaceProbe? recoverySpace) :
+        this(
+            documents,
+            formats,
+            mutations,
+            settings,
+            reindex,
+            history,
+            fieldMappings,
+            recoverySpace,
+            reviewedChanges: null,
+            volumeIdentities: null)
+    {
+    }
 
     public async Task<MetadataOperationPlan> PreviewAsync(
         IReadOnlyList<string> paths,
@@ -765,7 +871,10 @@ public sealed class MetadataOperationService(
         ArgumentNullException.ThrowIfNull(editsByPath);
         var plans = new List<MetadataFilePlan>(editsByPath.Count);
         int index = 0;
-        foreach ((string path, IReadOnlyList<TagEdit> edits) in editsByPath)
+        foreach ((string path, IReadOnlyList<TagEdit> edits) in
+                 editsByPath.OrderBy(
+                     item => PathSortKey(item.Key),
+                     PathComparer))
         {
             ct.ThrowIfCancellationRequested();
             progress?.Report(new(
@@ -819,11 +928,52 @@ public sealed class MetadataOperationService(
         string name,
         IProgress<OperationProgress>? progress,
         CancellationToken ct = default)
+        => await PreviewValueEditsCoreAsync(
+            editsByPath,
+            sourceExpectations: null,
+            name,
+            progress,
+            ct);
+
+    public async Task<MetadataOperationPlan> PreviewValueEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
+        IReadOnlyDictionary<string, MetadataEditSourceExpectation>
+            sourceExpectations,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            sourceExpectations);
+        return await PreviewValueEditsCoreAsync(
+            editsByPath,
+            sourceExpectations,
+            name,
+            progress,
+            ct);
+    }
+
+    private async Task<MetadataOperationPlan>
+        PreviewValueEditsCoreAsync(
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MetadataValueEdit>>
+                editsByPath,
+            IReadOnlyDictionary<
+                string,
+                MetadataEditSourceExpectation>?
+                sourceExpectations,
+            string name,
+            IProgress<OperationProgress>? progress,
+            CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(editsByPath);
         var plans = new List<MetadataFilePlan>(editsByPath.Count);
         int index = 0;
-        foreach ((string path, IReadOnlyList<MetadataValueEdit> edits) in editsByPath)
+        foreach ((string path, IReadOnlyList<MetadataValueEdit> edits) in
+                 editsByPath.OrderBy(
+                     item => PathSortKey(item.Key),
+                     PathComparer))
         {
             ct.ThrowIfCancellationRequested();
             progress?.Report(new(
@@ -845,6 +995,18 @@ public sealed class MetadataOperationService(
             }
             Dictionary<MetadataFieldKey, ImmutableArray<string>> before = Flatten(document);
             var after = new Dictionary<MetadataFieldKey, ImmutableArray<string>>(before);
+            var operationIssues =
+                new List<OperationIssue>();
+            if (sourceExpectations?.TryGetValue(
+                    path,
+                    out MetadataEditSourceExpectation?
+                        expected) == true)
+                AddSourceExpectationIssues(
+                    document,
+                    expected,
+                    operationIssues,
+                    validateArtworkFingerprint:
+                        false);
             foreach (MetadataValueEdit edit in edits)
             {
                 if (edit.Values.Length == 0)
@@ -852,7 +1014,11 @@ public sealed class MetadataOperationService(
                 else
                     after[edit.Field] = edit.Values;
             }
-            plans.Add(BuildPlan(document, before, after));
+            plans.Add(BuildPlan(
+                document,
+                before,
+                after,
+                operationIssues));
         }
         AddRecoverySpaceIssues(plans);
         progress?.Report(new(
@@ -861,6 +1027,85 @@ public sealed class MetadataOperationService(
             editsByPath.Count,
             Message: $"Previewed {editsByPath.Count:N0} file(s)"));
         return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
+    }
+
+    private static ImmutableArray<string>
+        PrimaryValues(
+            MediaDocument document,
+            MetadataFieldKey field) =>
+        document.TagLayers
+            .FirstOrDefault()
+            ?.Fields
+            .Where(value =>
+                Equals(value.Field, field))
+            .SelectMany(value => value.Values)
+            .ToImmutableArray() ??
+        [];
+
+    private static void AddSourceExpectationIssues(
+        MediaDocument document,
+        MetadataEditSourceExpectation expected,
+        List<OperationIssue> issues,
+        bool validateArtworkFingerprint)
+    {
+        bool sourceChanged =
+            (expected.Length is { } length &&
+             document.Snapshot.Length != length) ||
+            (expected.LastWriteTimeUtc is
+                 { } lastWriteTimeUtc &&
+             document.Snapshot.LastWriteTimeUtc !=
+                 lastWriteTimeUtc) ||
+            (!string.IsNullOrWhiteSpace(
+                 expected.MetadataHash) &&
+             !StringComparer.Ordinal.Equals(
+                 expected.MetadataHash,
+                 MetadataDocumentService
+                     .CreateMetadataFingerprint(
+                         document))) ||
+            (validateArtworkFingerprint &&
+             expected.ArtworkFingerprint is
+                 not null &&
+             !StringComparer.Ordinal.Equals(
+                 expected.ArtworkFingerprint,
+                 MetadataDocumentService
+                     .CreateArtworkFingerprint(
+                         document)));
+        if (sourceChanged)
+        {
+            issues.Add(new(
+                "metadata.edit-source-changed",
+                OperationIssueSeverity.Blocker,
+                "The file changed after editing " +
+                "started. Reload it before " +
+                "applying the pending change.",
+                document.Path));
+        }
+
+        foreach ((MetadataFieldKey field,
+                     ImmutableArray<string>
+                         originalValues) in
+                 expected.OriginalValues)
+        {
+            ImmutableArray<string> currentValues =
+                PrimaryValues(
+                    document,
+                    field);
+            if (currentValues.SequenceEqual(
+                    originalValues,
+                    StringComparer.Ordinal))
+                continue;
+            string valueKey =
+                MetadataGridValueKey.For(field);
+            issues.Add(new(
+                "metadata.edit-field-changed:" +
+                valueKey,
+                OperationIssueSeverity.Blocker,
+                $"The {field.DisplayName} " +
+                "value changed after editing " +
+                "started. Reload it before " +
+                "applying the pending change.",
+                document.Path));
+        }
     }
 
     public async Task<MetadataOperationPlan> PreviewTagLayerEditsAsync(
@@ -879,7 +1124,10 @@ public sealed class MetadataOperationService(
         ArgumentNullException.ThrowIfNull(editsByPath);
         var plans = new List<MetadataFilePlan>(editsByPath.Count);
         int index = 0;
-        foreach ((string path, IReadOnlyList<TagLayerEdit> requested) in editsByPath)
+        foreach ((string path, IReadOnlyList<TagLayerEdit> requested) in
+                 editsByPath.OrderBy(
+                     item => PathSortKey(item.Key),
+                     PathComparer))
         {
             ct.ThrowIfCancellationRequested();
             progress?.Report(new(
@@ -1044,7 +1292,10 @@ public sealed class MetadataOperationService(
         ArgumentNullException.ThrowIfNull(editsByPath);
         var plans = new List<MetadataFilePlan>(editsByPath.Count);
         int index = 0;
-        foreach ((string path, TagLayerConversionEdit edit) in editsByPath)
+        foreach ((string path, TagLayerConversionEdit edit) in
+                 editsByPath.OrderBy(
+                     item => PathSortKey(item.Key),
+                     PathComparer))
         {
             ct.ThrowIfCancellationRequested();
             progress?.Report(new(
@@ -1151,7 +1402,10 @@ public sealed class MetadataOperationService(
         ArgumentNullException.ThrowIfNull(editsByPath);
         var plans = new List<MetadataFilePlan>(editsByPath.Count);
         int index = 0;
-        foreach ((string path, ArtworkValueEdit edit) in editsByPath)
+        foreach ((string path, ArtworkValueEdit edit) in
+                 editsByPath.OrderBy(
+                     item => PathSortKey(item.Key),
+                     PathComparer))
         {
             ct.ThrowIfCancellationRequested();
             progress?.Report(new(
@@ -1304,13 +1558,55 @@ public sealed class MetadataOperationService(
         return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
     }
 
-    public async Task<MetadataOperationPlan> PreviewArtworkSetsAsync(
+    public Task<MetadataOperationPlan> PreviewArtworkSetsAsync(
         IReadOnlyDictionary<
             string,
             ArtworkSetPreviewRequest> requestsByPath,
         string name,
         IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default) =>
+        PreviewArtworkSetsCoreAsync(
+            requestsByPath,
+            sourceExpectations: null,
+            name,
+            progress,
+            ct);
+
+    public Task<MetadataOperationPlan> PreviewArtworkSetsAsync(
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest> requestsByPath,
+        IReadOnlyDictionary<
+            string,
+            MetadataEditSourceExpectation>
+            sourceExpectations,
+        string name,
+        IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            sourceExpectations);
+        return PreviewArtworkSetsCoreAsync(
+            requestsByPath,
+            sourceExpectations,
+            name,
+            progress,
+            ct);
+    }
+
+    private async Task<MetadataOperationPlan>
+        PreviewArtworkSetsCoreAsync(
+            IReadOnlyDictionary<
+                string,
+                ArtworkSetPreviewRequest>
+                requestsByPath,
+            IReadOnlyDictionary<
+                string,
+                MetadataEditSourceExpectation>?
+                sourceExpectations,
+            string name,
+            IProgress<OperationProgress>? progress,
+            CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(requestsByPath);
         var plans = new List<MetadataFilePlan>(
@@ -1346,6 +1642,16 @@ public sealed class MetadataOperationService(
             }
 
             var issues = new List<OperationIssue>();
+            if (sourceExpectations?.TryGetValue(
+                    path,
+                    out MetadataEditSourceExpectation?
+                        expected) == true)
+                AddSourceExpectationIssues(
+                    document,
+                    expected,
+                    issues,
+                    validateArtworkFingerprint:
+                        true);
             LibraryArtworkPolicy policy =
                 ResolveArtworkPolicy(document.Path, issues);
             if (!formats.SupportsPath(
@@ -1496,7 +1802,10 @@ public sealed class MetadataOperationService(
         ArgumentNullException.ThrowIfNull(editsByPath);
         var plans = new List<MetadataFilePlan>(editsByPath.Count);
         int index = 0;
-        foreach ((string path, Id3VersionEdit edit) in editsByPath)
+        foreach ((string path, Id3VersionEdit edit) in
+                 editsByPath.OrderBy(
+                     item => PathSortKey(item.Key),
+                     PathComparer))
         {
             ct.ThrowIfCancellationRequested();
             progress?.Report(new(
@@ -1671,46 +1980,13 @@ public sealed class MetadataOperationService(
         MetadataOperationStageResult stage =
             await StageAsync(plan, progress, ct)
                 .ConfigureAwait(false);
-        var journals = new List<string>();
-        RecoveryStorageSummary recoveryStorage = RecoveryStorageSummary.Empty;
         try
         {
-            foreach (FileMutationPlan participant in
-                     stage.Participants)
-            {
-                FileMutationSummary result =
-                    await mutations.ApplyAsync(
-                        participant,
-                        progress,
-                        ct).ConfigureAwait(false);
-                if (result.JournalPath is not null)
-                    journals.Add(result.JournalPath);
-                if (result.RecoveryStorage is not null)
-                    recoveryStorage = recoveryStorage.Add(result.RecoveryStorage);
-            }
-            await CompleteStagedApplyAsync(
+            return await ApplyStagedAsync(
                     stage,
-                    journals,
-                    recordHistory: true,
+                    progress,
                     ct)
                 .ConfigureAwait(false);
-            progress?.Report(new(
-                OperationPhase.Completed,
-                stage.ChangedFiles,
-                stage.ChangedFiles,
-                Message:
-                    $"Saved metadata to " +
-                    $"{stage.ChangedFiles:N0} file(s)"));
-            return new(
-                stage.ChangedFiles,
-                [.. journals],
-                [.. stage.Plan.Files
-                    .Where(file => file.CanApply)
-                    .SelectMany(file => file.Issues)],
-                recoveryStorage.FullOriginalCount +
-                    recoveryStorage.ReverseDeltaCount > 0
-                    ? recoveryStorage
-                    : null);
         }
         finally
         {
@@ -1719,6 +1995,98 @@ public sealed class MetadataOperationService(
                     CancellationToken.None)
                 .ConfigureAwait(false);
         }
+    }
+
+    internal async Task<MetadataApplyResult>
+        ApplyStagedAsync(
+            MetadataOperationStageResult stage,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(stage);
+        IProgress<OperationProgress>? safeProgress =
+            progress is null
+                ? null
+                : new SafeOperationProgress(progress);
+        var journals = new List<string>();
+        RecoveryStorageSummary recoveryStorage = RecoveryStorageSummary.Empty;
+        IReadOnlyList<FileMutationSummary> results;
+        if (stage.Participants.Length == 1)
+        {
+            results =
+            [
+                await mutations.ApplyAsync(
+                        stage.Participants[0],
+                        safeProgress,
+                        ct)
+                    .ConfigureAwait(false),
+            ];
+        }
+        else
+        {
+            IReviewedChangeBatchService batchService =
+                reviewedChanges ??
+                throw new InvalidOperationException(
+                    "Multi-volume metadata changes require the reviewed-change batch service.");
+            ReviewedChangeBatchPlan batch =
+                batchService.CreatePlan(
+                    stage.Participants);
+            ReviewedChangeBatchResult batchResult =
+                await batchService.ApplyAsync(
+                        batch,
+                        safeProgress,
+                        ct)
+                    .ConfigureAwait(false);
+            results = batchResult.ParticipantResults;
+        }
+        foreach (FileMutationSummary result in results)
+        {
+            if (result.JournalPath is not null)
+                journals.Add(result.JournalPath);
+            if (result.RecoveryStorage is not null)
+                recoveryStorage =
+                    recoveryStorage.Add(
+                        result.RecoveryStorage);
+        }
+        var issues = stage.Plan.Files
+            .Where(file => file.CanApply)
+            .SelectMany(file => file.Issues)
+            .ToList();
+        try
+        {
+            // Every executor result represents a durable commit. Cancellation and presentation
+            // failures after this boundary must not turn a committed edit into a reported
+            // transaction failure or prevent best-effort history/cache finalization.
+            await CompleteStagedApplyAsync(
+                    stage,
+                    journals,
+                    recordHistory: true,
+                    CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception error)
+        {
+            issues.Add(new(
+                "metadata.post-commit-finalization",
+                OperationIssueSeverity.Warning,
+                "Metadata changes were committed, but post-commit " +
+                $"bookkeeping requires reconciliation: {error.Message}"));
+        }
+        ReportSafely(progress, new(
+            OperationPhase.Completed,
+            stage.ChangedFiles,
+            stage.ChangedFiles,
+            Message:
+                $"Saved metadata to " +
+                $"{stage.ChangedFiles:N0} file(s)"));
+        return new(
+            stage.ChangedFiles,
+            [.. journals],
+            [.. issues],
+            recoveryStorage.FullOriginalCount +
+                recoveryStorage.ReverseDeltaCount > 0
+                ? recoveryStorage
+                : null);
     }
 
     public async Task<MetadataOperationStageResult> StageAsync(
@@ -1732,7 +2100,13 @@ public sealed class MetadataOperationService(
                 "The metadata plan has no applicable changes or contains blockers.");
 
         MetadataFilePlan[] changed =
-            [.. plan.Files.Where(file => file.CanApply)];
+        [
+            .. plan.Files
+                .Where(file => file.CanApply)
+                .OrderBy(
+                    file => PathSortKey(file.Path),
+                    PathComparer),
+        ];
         foreach (MetadataFilePlan filePlan in changed)
         {
             ct.ThrowIfCancellationRequested();
@@ -1758,20 +2132,43 @@ public sealed class MetadataOperationService(
         int completed = 0;
         try
         {
-            foreach (IGrouping<string, MetadataFilePlan> volume in
-                     changed.GroupBy(
-                         file =>
-                             Path.GetPathRoot(file.Path) ?? "",
-                         PathComparer))
+            var volumeRows = changed
+                .Select(file => new
+                {
+                    File = file,
+                    Identity =
+                        _volumeIdentities.GetIdentity(
+                            file.Path),
+                })
+                .ToArray();
+            foreach (var volume in
+                     volumeRows
+                         .GroupBy(
+                             row =>
+                                 VolumePartitionKey(
+                                     row.Identity),
+                             StringComparer.Ordinal)
+                         .OrderBy(
+                             group => group.Key,
+                             StringComparer.Ordinal))
             {
                 ct.ThrowIfCancellationRequested();
-                MetadataFilePlan[] group = [.. volume];
+                var firstRow = volume.First();
+                FileSystemVolumeIdentity identity =
+                    firstRow.Identity;
+                MetadataFilePlan[] group =
+                [
+                    .. volume.Select(row =>
+                        row.File),
+                ];
                 string commonRoot =
                     CommonDirectory(group.Select(file =>
                         file.Path));
                 string container =
-                    commonRoot +
-                    ".MusicLibraryManager-recovery";
+                    RecoveryContainer(
+                        commonRoot,
+                        group[0].Path,
+                        identity);
                 string recoveryRoot = Path.Combine(
                     container,
                     DateTime.UtcNow.ToString(
@@ -1779,6 +2176,9 @@ public sealed class MetadataOperationService(
                         CultureInfo.InvariantCulture) +
                     "-" +
                     Guid.NewGuid().ToString("N"));
+                EnsureSameVolume(
+                    identity,
+                    recoveryRoot);
                 var actions =
                     new List<FileMutationAction>(
                         group.Length);
@@ -1857,10 +2257,14 @@ public sealed class MetadataOperationService(
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(stage);
-        ct.ThrowIfCancellationRequested();
         MetadataFilePlan[] changed =
-            [.. stage.Plan.Files.Where(file =>
-                file.CanApply)];
+        [
+            .. stage.Plan.Files
+                .Where(file => file.CanApply)
+                .OrderBy(
+                    file => PathSortKey(file.Path),
+                    PathComparer),
+        ];
         if (reindex is not null)
             QueueCacheRefresh(
                 changed,
@@ -2563,6 +2967,91 @@ public sealed class MetadataOperationService(
         return Path.TrimEndingDirectorySeparator(common);
     }
 
+    private string RecoveryContainer(
+        string commonRoot,
+        string firstPath,
+        FileSystemVolumeIdentity identity)
+    {
+        string firstDirectory =
+            Path.GetDirectoryName(
+                Path.GetFullPath(firstPath))!;
+        string commonName =
+            Path.GetFileName(
+                Path.TrimEndingDirectorySeparator(
+                    commonRoot));
+        string firstDirectoryName =
+            Path.GetFileName(
+                Path.TrimEndingDirectorySeparator(
+                    firstDirectory));
+        var candidates = new List<string>(3);
+        if (!string.IsNullOrWhiteSpace(commonName))
+        {
+            candidates.Add(
+                commonRoot +
+                ".MusicLibraryManager-recovery");
+        }
+        candidates.Add(
+            Path.Combine(
+                commonRoot,
+                (string.IsNullOrWhiteSpace(commonName)
+                    ? "library"
+                    : commonName) +
+                ".MusicLibraryManager-recovery"));
+        candidates.Add(
+            Path.Combine(
+                firstDirectory,
+                (string.IsNullOrWhiteSpace(
+                        firstDirectoryName)
+                    ? "library"
+                    : firstDirectoryName) +
+                ".MusicLibraryManager-recovery"));
+
+        foreach (string candidate in
+                 candidates.Distinct(PathComparer))
+        {
+            try
+            {
+                FileSystemVolumeIdentity candidateIdentity =
+                    _volumeIdentities.GetIdentity(candidate);
+                if (StringComparer.Ordinal.Equals(
+                        candidateIdentity.Key,
+                        identity.Key))
+                    return candidate;
+            }
+            catch
+            {
+            }
+        }
+        throw new InvalidOperationException(
+            $"No same-volume metadata recovery root is available for '{firstPath}'.");
+    }
+
+    private void EnsureSameVolume(
+        FileSystemVolumeIdentity expected,
+        string recoveryRoot)
+    {
+        FileSystemVolumeIdentity actual =
+            _volumeIdentities.GetIdentity(
+                recoveryRoot);
+        if (!StringComparer.Ordinal.Equals(
+                expected.Key,
+                actual.Key))
+        {
+            throw new InvalidOperationException(
+                $"Metadata recovery root '{recoveryRoot}' is not on the source volume.");
+        }
+    }
+
+    private static string VolumePartitionKey(
+        FileSystemVolumeIdentity identity)
+    {
+        string root = PathSortKey(
+            identity.RootPath);
+        if (OperatingSystem.IsWindows())
+            root = root.ToUpperInvariant();
+        return identity.Key + "\0" + root;
+    }
+
     private static bool IsWithin(string path, string root)
     {
         string prefix = Path.TrimEndingDirectorySeparator(root) +
@@ -2573,11 +3062,28 @@ public sealed class MetadataOperationService(
 
     private void AddRecoverySpaceIssues(List<MetadataFilePlan> plans)
     {
-        foreach (IGrouping<string, MetadataFilePlan> volume in plans
-                     .Where(plan => plan.HasChanges)
-                     .GroupBy(plan => Path.GetPathRoot(plan.Path) ?? "", PathComparer))
+        var volumeRows = plans
+            .Where(plan => plan.HasChanges)
+            .Select(plan => new
+            {
+                Plan = plan,
+                Identity =
+                    _volumeIdentities.GetIdentity(
+                        plan.Path),
+            })
+            .ToArray();
+        foreach (var volume in volumeRows
+                     .GroupBy(
+                         row =>
+                             VolumePartitionKey(
+                                 row.Identity),
+                         StringComparer.Ordinal)
+                     .OrderBy(
+                         group => group.Key,
+                         StringComparer.Ordinal))
         {
-            string root = volume.Key;
+            string root =
+                volume.First().Identity.RootPath;
             if (string.IsNullOrWhiteSpace(root))
                 continue;
             try
@@ -2586,14 +3092,18 @@ public sealed class MetadataOperationService(
                 // a small reverse delta is retained when possible and the existing full-original
                 // path remains the safe fallback. Apply performs the final capacity check while
                 // holding the mutation lease and before changing any live file.
-                long required = checked(volume.Sum(plan => plan.Snapshot.Length));
+                long required = checked(
+                    volume.Sum(row =>
+                        row.Plan.Snapshot.Length));
                 long? available =
                     (recoverySpace ?? SystemRecoverySpaceProbe.Instance)
                     .GetAvailableFreeSpace(root);
                 if (available is not null && available < required)
                 {
-                    foreach (MetadataFilePlan plan in volume)
+                    foreach (var row in volume)
                     {
+                        MetadataFilePlan plan =
+                            row.Plan;
                         var issue = new OperationIssue(
                             "metadata.recovery-space",
                             OperationIssueSeverity.Blocker,
@@ -2610,6 +3120,41 @@ public sealed class MetadataOperationService(
                 // surfaces a concrete I/O failure if storage cannot accept the data.
             }
         }
+    }
+
+    private static string PathSortKey(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path;
+        }
+    }
+
+    private static void ReportSafely(
+        IProgress<OperationProgress>? progress,
+        OperationProgress value)
+    {
+        try
+        {
+            progress?.Report(value);
+        }
+        catch
+        {
+            // A progress observer cannot change the outcome after the durable commit point.
+        }
+    }
+
+    private sealed class SafeOperationProgress(
+        IProgress<OperationProgress> inner) :
+        IProgress<OperationProgress>
+    {
+        public void Report(
+            OperationProgress value) =>
+            ReportSafely(inner, value);
     }
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()

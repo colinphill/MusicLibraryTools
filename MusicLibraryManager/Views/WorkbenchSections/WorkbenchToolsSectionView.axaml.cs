@@ -65,10 +65,8 @@ public partial class WorkbenchToolsSectionView : UserControl
             _viewModel.ExternalToolInvocations.Count > 0;
         ExternalToolInvocationGrid.IsVisible =
             hasPreview;
-        ReviewedPanel.RowDefinitions[1].Height =
-            hasPreview
-                ? GridLength.Star
-                : new GridLength(0);
+        ExternalToolPreviewEmptyState.IsVisible =
+            !hasPreview;
     }
 
     private void ApplyResponsiveLayout()

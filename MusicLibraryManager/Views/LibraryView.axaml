@@ -118,6 +118,7 @@
           <Border Classes="card" Padding="0" ClipToBounds="True">
             <Grid>
               <controls:AppDataGrid x:Name="LibraryGrid" ItemsSource="{Binding Rows}" FrozenColumnCount="1"
+                                    IsReadOnly="{Binding IsPendingEditReadOnly}"
                                     SelectionChanged="OnGridSelectionChanged" LoadingRow="OnLoadingRow"
                                     UnloadingRow="OnUnloadingRow"
                                     PointerPressed="OnLibraryGridPointerPressed"
@@ -156,7 +157,8 @@
         </controls:PersistedSplitView.Left>
         <controls:PersistedSplitView.Right>
           <Border Classes="card" Padding="0" ClipToBounds="True">
-            <views:SelectionInspectorView x:Name="InspectorView" />
+            <views:SelectionInspectorView x:Name="InspectorView"
+                                          IsEnabled="{Binding CanEditPendingChanges}" />
           </Border>
         </controls:PersistedSplitView.Right>
       </controls:PersistedSplitView>
@@ -265,6 +267,17 @@
                                    AutomationProperties.Name="{DynamicResource Loc.Library.Columns.Width}" />
                   </StackPanel>
                 </Grid>
+                <CheckBox x:Name="LibraryColumnInlineEditingToggle"
+                    Content="{DynamicResource Loc.Workbench.Columns.AllowInlineEditing}"
+                    IsEnabled="{Binding ColumnEditor.CanInlineEdit}"
+                    IsChecked="{Binding ColumnEditor.InlineEditable, Mode=TwoWay}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Columns.AllowInlineEditing}"
+                    AutomationProperties.HelpText="{DynamicResource Loc.Workbench.Columns.InlineEditingDescription}" />
+                <TextBlock
+                    Classes="muted"
+                    IsVisible="{Binding !ColumnEditor.CanInlineEdit}"
+                    Text="{DynamicResource Loc.Workbench.Columns.InlineEditingDescription}"
+                    TextWrapping="Wrap" />
                 <WrapPanel>
                   <Button Classes="app" Content="{DynamicResource Loc.Library.Columns.Action.New}"
                           Command="{Binding ColumnEditor.NewColumnCommand}" />
@@ -587,6 +600,13 @@
                                        TextWrapping="Wrap" />
                           </StackPanel>
                         </Grid>
+                        <Expander
+                            IsVisible="{Binding HasDiagnosticDetail}"
+                            Header="{DynamicResource Loc.Column.TechnicalDetails}">
+                          <TextBlock Classes="faint"
+                                     Text="{Binding DiagnosticDetail}"
+                                     TextWrapping="Wrap" />
+                        </Expander>
                       </StackPanel>
                     </Border>
                   </DataTemplate>
@@ -621,6 +641,12 @@
                 </StackPanel>
                 <WrapPanel Grid.Row="1"
                            HorizontalAlignment="Right">
+                  <Button x:Name="LibraryRetryPendingPreviewButton"
+                          Classes="app quiet"
+                          Margin="0,0,8,8"
+                          Content="{DynamicResource Loc.Common.Refresh}"
+                          IsVisible="{Binding HasDirectPendingPreviewFailure}"
+                          Command="{Binding RetryDirectPendingPreviewCommand}" />
                   <Button x:Name="LibraryRevertPendingChangesButton"
                           Classes="app danger"
                           Margin="0,0,8,8"
@@ -637,7 +663,7 @@
                           Classes="app primary"
                           Margin="0,0,0,8"
                           Content="{DynamicResource Loc.Library.PendingChanges.Action.Apply}"
-                          IsEnabled="{Binding HasPendingChanges}"
+                          IsEnabled="{Binding CanApplyPendingChanges}"
                           Command="{Binding ApplyLibraryOperationCommand}" />
                 </WrapPanel>
               </Grid>

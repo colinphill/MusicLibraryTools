@@ -40,6 +40,8 @@ public sealed class LibraryPendingCompositionTests
         Assert.True(
             viewModel.RevertPendingChangesCommand
                 .CanExecute(null));
+        await WaitForAuthoritativePreviewAsync(
+            viewModel);
 
         await viewModel.ApplyLibraryOperationCommand
             .ExecuteAsync(null);
@@ -121,6 +123,8 @@ public sealed class LibraryPendingCompositionTests
             "Legacy title";
         await viewModel.PreviewLibraryOperationCommand
             .ExecuteAsync(null);
+        await WaitForAuthoritativePreviewAsync(
+            viewModel);
 
         await viewModel.ApplyLibraryOperationCommand
             .ExecuteAsync(null);
@@ -137,6 +141,129 @@ public sealed class LibraryPendingCompositionTests
         Assert.True(
             viewModel.RevertPendingChangesCommand
                 .CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Conflicting_legacy_and_inline_values_block_the_combined_plan()
+    {
+        const string path =
+            @"C:\Music\Library-conflict.flac";
+        (LibraryViewModel viewModel,
+            FakeMetadataOperationService operations) =
+            CreateLibrary(path);
+        await viewModel.ReloadAsync();
+        LibraryRow row =
+            Assert.Single(viewModel.Rows);
+        await viewModel.SelectAsync([row]);
+        viewModel.OperationEditor.OperationValue =
+            "Legacy title";
+        await viewModel.PreviewLibraryOperationCommand
+            .ExecuteAsync(null);
+
+        row.Title = "Different inline title";
+        await WaitForAuthoritativePreviewAsync(
+            viewModel);
+
+        Assert.False(
+            viewModel.CanApplyPendingChanges);
+        Assert.False(
+            viewModel.ApplyLibraryOperationCommand
+                .CanExecute(null));
+        Assert.Contains(
+            viewModel.PendingChanges,
+            change =>
+                change.HasDiagnosticDetail &&
+                change.DiagnosticDetail!.Contains(
+                    "different values",
+                    StringComparison.Ordinal));
+        Assert.Null(operations.AppliedPlan);
+    }
+
+    [Fact]
+    public async Task Different_source_snapshots_cannot_bypass_a_stale_direct_draft()
+    {
+        const string path =
+            @"C:\Music\Library-snapshot-conflict.flac";
+        (LibraryViewModel viewModel,
+            FakeMetadataOperationService operations) =
+            CreateLibrary(path);
+        await viewModel.ReloadAsync();
+        LibraryRow row =
+            Assert.Single(viewModel.Rows);
+        await viewModel.SelectAsync([row]);
+        viewModel.OperationEditor.OperationValue =
+            "Legacy title";
+        await viewModel.PreviewLibraryOperationCommand
+            .ExecuteAsync(null);
+        operations.Snapshots[path] = new(
+            path,
+            2,
+            new DateTime(
+                2026,
+                7,
+                26,
+                1,
+                0,
+                0,
+                DateTimeKind.Utc),
+            "changed-hash");
+
+        row.Artist = "Inline artist";
+        await WaitForAuthoritativePreviewAsync(
+            viewModel);
+
+        Assert.False(
+            viewModel.CanApplyPendingChanges);
+        Assert.Contains(
+            viewModel.PendingChanges,
+            change =>
+                change.HasDiagnosticDetail &&
+                change.DiagnosticDetail!.Contains(
+                    "different source snapshots",
+                    StringComparison.Ordinal));
+        await viewModel.ApplyLibraryOperationCommand
+            .ExecuteAsync(null);
+        Assert.Null(operations.AppliedPlan);
+        Assert.True(row.HasChanges);
+    }
+
+    [Fact]
+    public async Task Identical_legacy_and_inline_edits_are_deduplicated()
+    {
+        const string path =
+            @"C:\Music\Library-identical.flac";
+        (LibraryViewModel viewModel,
+            FakeMetadataOperationService operations) =
+            CreateLibrary(path);
+        await viewModel.ReloadAsync();
+        LibraryRow row =
+            Assert.Single(viewModel.Rows);
+        await viewModel.SelectAsync([row]);
+        viewModel.OperationEditor.OperationValue =
+            "Legacy title";
+        await viewModel.PreviewLibraryOperationCommand
+            .ExecuteAsync(null);
+        row.Title = "Reviewed";
+        await WaitForAuthoritativePreviewAsync(
+            viewModel);
+
+        Assert.True(
+            viewModel.ApplyLibraryOperationCommand
+                .CanExecute(null));
+        await viewModel.ApplyLibraryOperationCommand
+            .ExecuteAsync(null);
+
+        MetadataFilePlan applied =
+            Assert.Single(
+                operations.AppliedPlan!.Files);
+        MetadataValueEdit edit =
+            Assert.Single(applied.Edits);
+        Assert.Equal(
+            TagFields.Title,
+            edit.Field.KnownField);
+        Assert.Equal(
+            ["Reviewed"],
+            edit.Values);
     }
 
     private static (
@@ -211,6 +338,24 @@ public sealed class LibraryPendingCompositionTests
                 operationCatalog:
                     new MetadataOperationCatalog()),
             operations);
+    }
+
+    private static async Task
+        WaitForAuthoritativePreviewAsync(
+            LibraryViewModel viewModel)
+    {
+        for (int attempt = 0;
+             attempt < 100 &&
+             !viewModel
+                 .IsDirectPendingPreviewReady;
+             attempt++)
+            await Task.Delay(
+                20,
+                TestContext.Current
+                    .CancellationToken);
+        Assert.True(
+            viewModel
+                .IsDirectPendingPreviewReady);
     }
 
     private sealed class

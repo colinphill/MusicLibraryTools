@@ -19,7 +19,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
 
-        Assert.Equal(3_626, manifest.Records.Count);
+        Assert.Equal(3_653, manifest.Records.Count);
         Assert.Equal(
             0,
             Count(
@@ -31,12 +31,12 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.InvariantApproved));
         Assert.Equal(
-            248,
+            247,
             Count(
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            3_263,
+            3_291,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -461,7 +461,7 @@ public sealed class EditorialReviewManifestTests
     }
 
     [Fact]
-    public void Checked_in_evidence_independently_reproduces_reviewed_provenance()
+    public void Checked_in_evidence_is_a_valid_rebase_seed_while_manifest_preserves_reviewed_provenance()
     {
         ReviewFixture fixture = LoadFixture();
         EditorialReviewManifest current =
@@ -474,29 +474,25 @@ public sealed class EditorialReviewManifestTests
             EditorialReviewInfrastructure.LoadReviewEvidence(
                 fixture.ReviewEvidencePath,
                 fixture.Sources);
-        Assert.Equal(847, seed.Catalogs.Count);
+        Assert.Empty(seed.Catalogs);
         Assert.Equal(
-            "gui-usability-editorial-2026-07-25",
+            "gui-usability-final-copy-2026-07-26",
             seed.Batch);
         Assert.Equal(
-            "Codex focused editorial batches",
+            "Codex usability localization review",
             seed.Reviewer);
-        Assert.Equal("2026-07-25", seed.Date);
-        Assert.All(
-            seed.Catalogs,
-            item =>
-            {
-                Assert.StartsWith(
+        Assert.Equal("2026-07-26", seed.Date);
+        Assert.Equal(
+            832,
+            current.Records.Values.Count(record =>
+                record.Disposition.StartsWith(
                     "review-set:v1:",
-                    item.Value.Disposition,
-                    StringComparison.Ordinal);
-                Assert.Equal(
-                    CatalogTranslationRoute.EditorialOverride,
-                    current.Records[item.Key].Route);
-                Assert.Equal(
-                    EditorialReviewStatus.EditorialReviewed,
-                    current.Records[item.Key].Status);
-            });
+                    StringComparison.Ordinal)));
+        Assert.Equal(
+            45,
+            current.Records.Values.Count(record =>
+                record.Batch ==
+                "gui-usability-final-copy-2026-07-26"));
 
         WithTemporaryDirectory(directory =>
         {
@@ -515,7 +511,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                3_263,
+                3_291,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));
@@ -530,7 +526,7 @@ public sealed class EditorialReviewManifestTests
                     refreshed,
                     EditorialReviewStatus.Pending));
             Assert.Equal(
-                248,
+                247,
                 Count(
                     refreshed,
                     EditorialReviewStatus.GlossaryReviewed));
@@ -539,6 +535,100 @@ public sealed class EditorialReviewManifestTests
                 EditorialReviewInfrastructure.SerializeManifest(
                     refreshed));
         });
+    }
+
+    [Fact]
+    public void Final_copy_review_batch_contains_exactly_the_approved_resources()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: false);
+        const string batch =
+            "gui-usability-final-copy-2026-07-26";
+        string[] expectedKeys =
+        [
+            "Health.Audit.Run",
+            "Health.Repair.Prepare",
+            "Library.PendingChanges.FieldChanged",
+            "Library.PendingChanges.SourceChanged",
+            "Operations.Action.Maintenance",
+            "ReviewedFileOperation.EmptyPreviewDescription",
+            "ReviewedFileOperation.EmptyPreviewTitle",
+            "Settings.Appearance.DisplayLanguageDescription",
+            "Workbench.Bulk.EmptyPreviewDescription",
+            "Workbench.Bulk.EmptyPreviewTitle",
+            "Workbench.Choice.ImportEmptyCellMode.RemoveField",
+            "Workbench.Columns.InlineEditingDescription",
+            "Workbench.Inspector.CopyPrimaryMetadataHelp",
+            "Workbench.Inspector.Id3ConversionHelp",
+            "Workbench.Inspector.Id3EncodingHelp",
+            "Workbench.Inspector.LayerCopyHelp",
+            "Workbench.Online.BuildMapping",
+            "Workbench.Online.Empty.ArtworkCandidatesDescription",
+            "Workbench.Online.Empty.ArtworkCandidatesTitle",
+            "Workbench.Online.Empty.ArtworkDescription",
+            "Workbench.Online.Empty.ArtworkTitle",
+            "Workbench.Online.Empty.AwaitingDiscoveryDescription",
+            "Workbench.Online.Empty.AwaitingSearchDescription",
+            "Workbench.Online.Empty.AwaitingTitle",
+            "Workbench.Online.Empty.MappingDescription",
+            "Workbench.Online.Empty.MappingTitle",
+            "Workbench.Online.Empty.NoResultsDescription",
+            "Workbench.Online.Empty.NoResultsTitle",
+            "Workbench.Online.ExportArtwork",
+            "Workbench.Online.ExportArtworkAutomation",
+            "Workbench.Online.PreviewCover",
+            "Workbench.Online.RemoveArtwork",
+            "Workbench.Online.RemoveArtworkAutomation",
+            "Workbench.Online.ReplaceArtwork",
+            "Workbench.Online.ReplaceArtworkAutomation",
+            "Workbench.Playlists.EmptyPreviewDescription",
+            "Workbench.Playlists.EmptyPreviewTitle",
+            "Workbench.Reports.EmptyPreviewDescription",
+            "Workbench.Reports.EmptyPreviewTitle",
+            "Workbench.Session.EmptyCellAutomation",
+            "Workbench.Session.EmptyCellTooltip",
+            "Workbench.Tools.BrowseExecutable",
+            "Workbench.Tools.BrowseFolder",
+            "Workbench.Tools.EmptyPreviewDescription",
+            "Workbench.Tools.EmptyPreviewTitle",
+        ];
+        EditorialReviewRecord[] records =
+            manifest.Records.Values
+                .Where(record =>
+                    record.Batch == batch)
+                .OrderBy(
+                    record => record.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        Assert.Equal(
+            expectedKeys,
+            records.Select(record =>
+                record.Key));
+        Assert.All(
+            records,
+            record =>
+            {
+                Assert.Equal(
+                    EditorialReviewStatus.EditorialReviewed,
+                    record.Status);
+                Assert.Equal(
+                    CatalogTranslationRoute.EditorialOverride,
+                    record.Route);
+                Assert.Equal(
+                    "Codex usability localization review",
+                    record.Reviewer);
+                Assert.Equal("2026-07-26", record.Date);
+                Assert.StartsWith(
+                    "packet:v1:",
+                    record.Disposition,
+                    StringComparison.Ordinal);
+            });
     }
 
     [Fact]
@@ -653,14 +743,14 @@ public sealed class EditorialReviewManifestTests
                     StringComparer.Ordinal)
                 .ToArray();
 
-        Assert.Equal(212, records.Length);
+        Assert.Equal(211, records.Length);
         Assert.Equal(
             176,
             records.Count(record =>
                 record.Status ==
                 EditorialReviewStatus.EditorialReviewed));
         Assert.Equal(
-            36,
+            35,
             records.Count(record =>
                 record.Status ==
                 EditorialReviewStatus.GlossaryReviewed));
@@ -670,7 +760,7 @@ public sealed class EditorialReviewManifestTests
                 record.Route ==
                 CatalogTranslationRoute.EditorialOverride));
         Assert.Equal(
-            35,
+            34,
             records.Count(record =>
                 record.Route ==
                 CatalogTranslationRoute.Glossary));
@@ -836,9 +926,9 @@ public sealed class EditorialReviewManifestTests
                     StringComparer.Ordinal)
                 .ToArray();
 
-        Assert.Equal(391, records.Length);
+        Assert.Equal(389, records.Length);
         Assert.Equal(
-            384,
+            382,
             records.Count(record =>
                 record.Status ==
                 EditorialReviewStatus.EditorialReviewed));
@@ -848,7 +938,7 @@ public sealed class EditorialReviewManifestTests
                 record.Status ==
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            384,
+            382,
             records.Count(record =>
                 record.Route ==
                 CatalogTranslationRoute.EditorialOverride));

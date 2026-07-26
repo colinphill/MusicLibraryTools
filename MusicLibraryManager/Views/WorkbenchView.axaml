@@ -157,8 +157,9 @@
                                  Grid.Row="2"
                                  InitialLeftWidth="982"
                                  MinLeftWidth="982"
-                                 MaxLeftWidth="1800"
-                                 MinRightWidth="320"
+                                 MaxLeftWidth="10000"
+                                 MinRightWidth="300"
+                                 MaxRightWidth="430"
                                  PersistenceKey="workbench"
                                  Label="{DynamicResource Loc.Workbench.Split.ResizeAutomation}">
       <controls:PersistedSplitView.Left>

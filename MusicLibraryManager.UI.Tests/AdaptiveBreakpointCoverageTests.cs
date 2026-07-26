@@ -1859,15 +1859,33 @@ public sealed class AdaptiveBreakpointCoverageTests
             StackPanel searchSummary =
                 online.FindControl<StackPanel>(
                     "SearchStepSummary")!;
+            Assert.False(discoverySummary.IsVisible);
+            Assert.False(searchSummary.IsVisible);
+            online.FindControl<Expander>(
+                    "DiscoveryStep")!
+                .IsExpanded = false;
+            Render();
+            Assert.False(discoverySummary.IsVisible);
+
+            model.HasCompletedOnlineDiscovery =
+                true;
+            Render();
             Assert.True(discoverySummary.IsVisible);
             Assert.Equal(
                 model.SelectedOnlineMetadataScope
                     .Label,
                 discoverySummary.Text);
+            online.FindControl<Expander>(
+                    "SearchStep")!
+                .IsExpanded = true;
+            Render();
             Assert.False(searchSummary.IsVisible);
             online.FindControl<Expander>(
                     "SearchStep")!
                 .IsExpanded = false;
+            Render();
+            Assert.False(searchSummary.IsVisible);
+            model.HasCompletedOnlineSearch = true;
             Render();
             Assert.True(searchSummary.IsVisible);
             Assert.Contains(
@@ -2730,16 +2748,26 @@ public sealed class AdaptiveBreakpointCoverageTests
             BoundsRelativeTo(
                 content,
                 tabs);
+        string ancestry = string.Join(
+            " -> ",
+            content
+                .GetVisualAncestors()
+                .OfType<Control>()
+                .Take(20)
+                .Select(control =>
+                    $"{control.Name ?? control.GetType().Name}" +
+                    $"[{control.Bounds.Width:0.##}x" +
+                    $"{control.Bounds.Height:0.##}]"));
         Assert.True(
             bounds.Left >= -1 &&
             bounds.Right <=
             tabs.Bounds.Width + 1,
-            $"{context}: selected tab content overflowed horizontally: {bounds} within {tabs.Bounds.Size}.");
+            $"{context}: selected tab content overflowed horizontally: {bounds} within {tabs.Bounds.Size}. Ancestors: {ancestry}.");
         Assert.True(
             bounds.Top >= -1 &&
             bounds.Bottom <=
             tabs.Bounds.Height + 1,
-            $"{context}: selected tab content overflowed vertically: {bounds} within {tabs.Bounds.Size}.");
+            $"{context}: selected tab content overflowed vertically: {bounds} within {tabs.Bounds.Size}. Ancestors: {ancestry}.");
     }
 
     private static void

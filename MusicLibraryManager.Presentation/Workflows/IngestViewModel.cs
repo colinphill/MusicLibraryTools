@@ -51,6 +51,7 @@ public partial class IngestViewModel :
      NotifyCanExecuteChangedFor(nameof(ClearExplicitSourcesCommand))]
     private bool _isBusy;
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
+    [NotifyPropertyChangedFor(nameof(IsPreviewPrimary))]
     private bool _hasApplicablePreview;
     [ObservableProperty]
     private string _statusText =
@@ -120,6 +121,13 @@ public partial class IngestViewModel :
             _sourceFiles.Count);
     public int InterruptedHistoryCount => History.Count(item => item.IsInterrupted);
     public bool IsConfigurationReady => GetConfigurationIssues().Count == 0;
+    public bool IsPreviewPrimary =>
+        IsConfigurationReady &&
+        !HasApplicablePreview;
+    public double PreviewActionOpacity =>
+        IsConfigurationReady
+            ? 1
+            : 0.52;
     public string ConfigurationReadinessIcon => IsConfigurationReady ? "i" : "⚠";
     public string ConfigurationReadinessText
     {
@@ -168,6 +176,8 @@ public partial class IngestViewModel :
             LoadRecentSources();
             SourceDirectory = settings.GetLibraryPreference(SourcePreference);
             OnPropertyChanged(nameof(IsConfigurationReady));
+            OnPropertyChanged(nameof(IsPreviewPrimary));
+            OnPropertyChanged(nameof(PreviewActionOpacity));
             OnPropertyChanged(nameof(ConfigurationReadinessText));
             OnPropertyChanged(nameof(ConfigurationReadinessIcon));
             OnPropertyChanged(nameof(ConfigurationDiagnosticDetail));

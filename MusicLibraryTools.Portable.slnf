@@ -6,6 +6,7 @@
       "AndroidSync/AndroidSync.csproj",
       "ArtworkScrubber/ArtworkScrubber.csproj",
       "BackSyncPlaylists/BackSyncPlaylists.csproj",
+      "BuildTools/UiContactSheetGenerator/UiContactSheetGenerator.csproj",
       "CheckRedundancies/CheckRedundancies.csproj",
       "Comingle/Comingle.csproj",
       "CrossSyncMusic/CrossSyncMusic.csproj",

@@ -248,6 +248,7 @@ public sealed class ReviewedChangeBatchServiceTests
                 new[]
                 {
                     manifest,
+                    manifest,
                 }));
 
         ReviewedChangeReconciliationResult reconciled =
@@ -263,6 +264,219 @@ public sealed class ReviewedChangeBatchServiceTests
                 reconciled.BlockedManifests));
         Assert.Contains(
             manifest,
+            JsonSerializer.Deserialize<string[]>(
+                settings.GetPreference(
+                    ReviewedChangeBatchService
+                        .PendingManifestPreference)!)!);
+    }
+
+    [Fact]
+    public async Task StartupReconciliationRetainsMissingCoordinatorManifestPointerAsBlocked()
+    {
+        using var temp = new TempDirectory();
+        var settings = new MemorySettings();
+        var coordinator = new FileMutationCoordinator();
+        var service = new ReviewedChangeBatchService(
+            new FileMutationPlanExecutor(coordinator),
+            new OperationJournalService(coordinator),
+            settings);
+        string manifest = Path.Combine(
+            temp.Path,
+            "offline-volume",
+            "reviewed-change-v2-offline.tsv");
+        settings.SetPreference(
+            ReviewedChangeBatchService
+                .PendingManifestPreference,
+            JsonSerializer.Serialize(
+                new[]
+                {
+                    manifest,
+                }));
+
+        ReviewedChangeReconciliationResult reconciled =
+            await service.ReconcilePendingAsync(
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, reconciled.Examined);
+        Assert.Equal(0, reconciled.RolledBack);
+        Assert.Equal(0, reconciled.Committed);
+        Assert.Equal(
+            manifest,
+            Assert.Single(
+                reconciled.BlockedManifests));
+        Assert.Contains(
+            manifest,
+            JsonSerializer.Deserialize<string[]>(
+                settings.GetPreference(
+                    ReviewedChangeBatchService
+                        .PendingManifestPreference)!)!);
+    }
+
+    [Fact]
+    public async Task ApplyRefusesNewBatchWhilePendingCoordinatorManifestIsUnavailable()
+    {
+        using var temp = new TempDirectory();
+        var settings = new MemorySettings();
+        var coordinator = new FileMutationCoordinator();
+        var service = new ReviewedChangeBatchService(
+            new FileMutationPlanExecutor(coordinator),
+            new OperationJournalService(coordinator),
+            settings);
+        string blockedManifest = Path.Combine(
+            temp.Path,
+            "offline-volume",
+            "reviewed-change-v2-offline.tsv");
+        settings.SetPreference(
+            ReviewedChangeBatchService
+                .PendingManifestPreference,
+            JsonSerializer.Serialize(
+                new[]
+                {
+                    blockedManifest,
+                }));
+        string library = temp.Directory("new-library");
+        FileMutationPlan mutation = Plan(
+            library,
+            temp.Directory(
+                "new-library.MusicLibraryManager-recovery",
+                "new"),
+            temp.File("new.stage", "new output"),
+            Path.Combine(library, "new.flac"));
+        ReviewedChangeBatchPlan plan =
+            service.CreatePlan([mutation]);
+
+        InvalidOperationException error =
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => service.ApplyAsync(
+                    plan,
+                    ct: TestContext.Current
+                        .CancellationToken));
+
+        Assert.Contains(
+            "previous reviewed change",
+            error.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.False(
+            File.Exists(
+                mutation.Actions[0].DestinationPath));
+        Assert.False(
+            File.Exists(
+                plan.CoordinatorManifestPath));
+        Assert.Contains(
+            blockedManifest,
+            JsonSerializer.Deserialize<string[]>(
+                settings.GetPreference(
+                    ReviewedChangeBatchService
+                        .PendingManifestPreference)!)!);
+    }
+
+    [Fact]
+    public async Task ReconciliationDoesNotRestoreTwoOfThreeCommittedParticipants()
+    {
+        using var temp = new TempDirectory();
+        var settings = new MemorySettings();
+        var coordinator = new FileMutationCoordinator();
+        var executor =
+            new FileMutationPlanExecutor(coordinator);
+        var journals =
+            new OperationJournalService(coordinator);
+        var service = new ReviewedChangeBatchService(
+            executor,
+            journals,
+            settings);
+        FileMutationPlan[] participants =
+        [
+            Plan(
+                temp.Directory("a"),
+                temp.Directory(
+                    "a.MusicLibraryManager-recovery",
+                    "one"),
+                temp.File("one.stage", "one"),
+                Path.Combine(temp.Path, "a", "one.flac")),
+            Plan(
+                temp.Directory("b"),
+                temp.Directory(
+                    "b.MusicLibraryManager-recovery",
+                    "two"),
+                temp.File("two.stage", "two"),
+                Path.Combine(temp.Path, "b", "two.flac")),
+            Plan(
+                temp.Directory("c"),
+                temp.Directory(
+                    "c.MusicLibraryManager-recovery",
+                    "three"),
+                temp.File("three.stage", "three"),
+                Path.Combine(temp.Path, "c", "three.flac")),
+        ];
+        var applied = new List<FileMutationSummary>();
+        foreach (FileMutationPlan participant in
+                 participants)
+        {
+            applied.Add(
+                await executor.ApplyAsync(
+                    participant,
+                    ct: TestContext.Current
+                        .CancellationToken));
+        }
+
+        string unavailableJournal =
+            applied[0].JournalPath!;
+        string[] retainedLines =
+        [
+            .. (await File.ReadAllLinesAsync(
+                    unavailableJournal,
+                    TestContext.Current
+                        .CancellationToken))
+                .Where(line =>
+                    !line.StartsWith(
+                        "CREATE_REVERSIBLE\t",
+                        StringComparison.Ordinal)),
+        ];
+        await File.WriteAllLinesAsync(
+            unavailableJournal,
+            retainedLines,
+            TestContext.Current.CancellationToken);
+        ReviewedChangeBatchPlan plan =
+            service.CreatePlan(participants);
+        await File.WriteAllLinesAsync(
+            plan.CoordinatorManifestPath,
+            [
+                $"BEGIN\t2\t{plan.Id:N}\t0",
+                .. applied.Select(
+                    (result, index) =>
+                        $"PARTICIPANT\t{index}\t{result.JournalPath}"),
+                .. applied.Select(
+                    (result, index) =>
+                        $"APPLIED\t{index}\t{result.JournalPath}"),
+            ],
+            TestContext.Current.CancellationToken);
+        settings.SetPreference(
+            ReviewedChangeBatchService
+                .PendingManifestPreference,
+            JsonSerializer.Serialize(
+                new[]
+                {
+                    plan.CoordinatorManifestPath,
+                }));
+
+        ReviewedChangeReconciliationResult reconciled =
+            await service.ReconcilePendingAsync(
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, reconciled.Examined);
+        Assert.Equal(0, reconciled.RolledBack);
+        Assert.Equal(
+            plan.CoordinatorManifestPath,
+            Assert.Single(
+                reconciled.BlockedManifests));
+        Assert.All(
+            participants,
+            participant => Assert.True(
+                File.Exists(
+                    participant.Actions[0]
+                        .DestinationPath)));
+        Assert.Contains(
+            plan.CoordinatorManifestPath,
             JsonSerializer.Deserialize<string[]>(
                 settings.GetPreference(
                     ReviewedChangeBatchService

@@ -73,6 +73,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicLibraryManager.UI.Test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Syncer.Client", "syncer\managed\src\Syncer.Client\Syncer.Client.csproj", "{7C9EA744-B289-47E8-9E6A-BC7406884365}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BuildTools", "BuildTools", "{79546F67-FEAA-3117-1216-FBE46595B2FF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UiContactSheetGenerator", "BuildTools\UiContactSheetGenerator\UiContactSheetGenerator.csproj", "{FB36320F-0637-4A75-8E98-624BADE6F4EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -503,9 +507,24 @@ Global
 		{7C9EA744-B289-47E8-9E6A-BC7406884365}.Release|x64.Build.0 = Release|Any CPU
 		{7C9EA744-B289-47E8-9E6A-BC7406884365}.Release|x86.ActiveCfg = Release|Any CPU
 		{7C9EA744-B289-47E8-9E6A-BC7406884365}.Release|x86.Build.0 = Release|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Debug|x64.Build.0 = Debug|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Debug|x86.Build.0 = Debug|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Release|x64.ActiveCfg = Release|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Release|x64.Build.0 = Release|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Release|x86.ActiveCfg = Release|Any CPU
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FB36320F-0637-4A75-8E98-624BADE6F4EB} = {79546F67-FEAA-3117-1216-FBE46595B2FF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {88C60F2B-1E80-4D1A-884E-24DD8E7BCC38}
