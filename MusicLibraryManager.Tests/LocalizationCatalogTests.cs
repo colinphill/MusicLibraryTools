@@ -512,6 +512,36 @@ public sealed partial class LocalizationCatalogTests
     }
 
     [Fact]
+    public void Unicode_character_names_remain_official_invariant_identifiers()
+    {
+        Dictionary<string, string> neutral = LoadCatalog()
+            .Where(entry =>
+                entry.Key.StartsWith(
+                    "Health.TextDifference.UnicodeName.",
+                    StringComparison.Ordinal))
+            .ToDictionary(
+                entry => entry.Key,
+                entry => entry.Value,
+                StringComparer.Ordinal);
+
+        Assert.NotEmpty(neutral);
+        foreach (string cultureName in ShippingCultures)
+        {
+            Dictionary<string, string> satellite =
+                LoadCatalog(cultureName)
+                    .ToDictionary(
+                        entry => entry.Key,
+                        entry => entry.Value,
+                        StringComparer.Ordinal);
+            Assert.All(
+                neutral,
+                item => Assert.Equal(
+                    item.Value,
+                    satellite[item.Key]));
+        }
+    }
+
+    [Fact]
     public void Cjk_satellites_contain_no_unprotected_latin_prose()
     {
         Dictionary<string, string> neutral = LoadCatalog()
@@ -527,8 +557,7 @@ public sealed partial class LocalizationCatalogTests
                 if (entry.Key.StartsWith(
                         "Culture.",
                         StringComparison.Ordinal) ||
-                    CjkInvariantExampleKeys.Contains(
-                        entry.Key))
+                    IsCjkInvariantResource(entry.Key))
                     continue;
 
                 string value = entry.Value;
@@ -663,6 +692,12 @@ public sealed partial class LocalizationCatalogTests
         "Library.Filter.Placeholder",
         "Library.FilterHelp.Description",
     ];
+
+    private static bool IsCjkInvariantResource(string key) =>
+        CjkInvariantExampleKeys.Contains(key) ||
+        key.StartsWith(
+            "Health.TextDifference.UnicodeName.",
+            StringComparison.Ordinal);
 
     private static readonly string[] CjkAllowedLatinTokens =
     [

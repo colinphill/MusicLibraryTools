@@ -719,7 +719,7 @@
     <value>有効な修復を適用</value>
   </data>
   <data name="Health.Action.ApplyArtworkRepairs" xml:space="preserve">
-    <value>有効な修復を適用</value>
+    <value>有効なアートワーク修復を適用</value>
   </data>
   <data name="Health.Action.ApplyFileRepairs" xml:space="preserve">
     <value>選択したファイル修復を適用</value>
@@ -731,7 +731,7 @@
     <value>選択した修復を適用</value>
   </data>
   <data name="Health.Action.ForceScanDeferred" xml:space="preserve">
-    <value>保留中のスキャンを強制実行</value>
+    <value>保留中のアートワークを今すぐスキャン</value>
   </data>
   <data name="Health.AlbumMatrix.Album" xml:space="preserve">
     <value>アルバム</value>
@@ -758,7 +758,7 @@
     <value>アルバムのメタデータに不一致は見つかりませんでした。</value>
   </data>
   <data name="Health.AlbumMatrix.FlagReason" xml:space="preserve">
-    <value>指摘された理由</value>
+    <value>フラグが付いた理由</value>
   </data>
   <data name="Health.AlbumMatrix.ReadOnly" xml:space="preserve">
     <value>読み取り専用のアルバム整合性監査</value>
@@ -767,7 +767,7 @@
     <value>トラック</value>
   </data>
   <data name="Health.AlbumMatrix.TrackNumber" xml:space="preserve">
-    <value>トラック #</value>
+    <value>トラック番号</value>
   </data>
   <data name="Health.AlbumMatrix.TrackTotal" xml:space="preserve">
     <value>トラック総数</value>
@@ -779,22 +779,22 @@
     <value>アーティストの正規名</value>
   </data>
   <data name="Health.Artist.CanonicalTarget" xml:space="preserve">
-    <value>正規 対象</value>
+    <value>正規化先</value>
   </data>
   <data name="Health.Artist.Description" xml:space="preserve">
     <value>各グループの標準名を選び、名前を変更する表記のみを有効にします。「フィルター」で、その表記のトラックをライブラリに表示できます。</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
-    <value>有効な表記で {0} トラックを選択</value>
+    <value>有効な表記全体で選択したトラック: {0}</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.Other" xml:space="preserve">
-    <value>有効な表記で {0} トラックを選択</value>
+    <value>有効な表記全体で選択したトラック: {0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.One" xml:space="preserve">
-    <value>クラスター内のトラック {0} 件</value>
+    <value>クラスター内のトラック: {0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.Other" xml:space="preserve">
-    <value>クラスター内のトラック {0} 件</value>
+    <value>クラスター内のトラック: {0}</value>
   </data>
   <data name="Health.Artist.FileCount.One" xml:space="preserve">
     <value>{0} ファイル</value>
@@ -818,13 +818,13 @@
     <value>選択したしきい値では、類似するアーティスト名が見つかりませんでした。</value>
   </data>
   <data name="Health.Artist.ReviewTitle" xml:space="preserve">
-    <value>アーティスト表記の揺れを確認</value>
+    <value>アーティスト名の表記違いを確認</value>
   </data>
   <data name="Health.Artist.Threshold" xml:space="preserve">
-    <value>アーティスト しきい値</value>
+    <value>類似度のしきい値</value>
   </data>
   <data name="Health.Artist.ThresholdAutomation" xml:space="preserve">
-    <value>類似アーティストのあいまい一致しきい値</value>
+    <value>類似アーティストの照合しきい値</value>
   </data>
   <data name="Health.Artist.ThresholdTooltip" xml:space="preserve">
     <value>正規化した編集距離の上限です。値が小さいほど厳密になり、0 では正規化後に同一となる表記のみ許可されます。</value>
@@ -845,16 +845,16 @@
     <value>最大のファイルを選択して有効にする</value>
   </data>
   <data name="Health.Artwork.Selection.NoneChanged" xml:space="preserve">
-    <value>対象となる混在アートワークの修復は変更されませんでした。</value>
+    <value>対象となる混在アートワーク修復は変更されませんでした。</value>
   </data>
   <data name="Health.Artwork.Selection.ChangedFormat" xml:space="preserve">
     <value>アートワークを選択し、{0:N0} 件の修復を有効にしました。</value>
   </data>
   <data name="Health.Artwork.SelectedCount.One" xml:space="preserve">
-    <value>修復操作を {0} 件選択</value>
+    <value>選択した修復操作: {0}</value>
   </data>
   <data name="Health.Artwork.SelectedCount.Other" xml:space="preserve">
-    <value>修復操作を {0} 件選択</value>
+    <value>選択した修復操作: {0}</value>
   </data>
   <data name="Health.Artwork.AffectedFiles.One" xml:space="preserve">
     <value>影響を受けるファイル ({0})</value>
@@ -866,10 +866,10 @@
     <value>この監査で利用できる自動アートワーク修復はありません。</value>
   </data>
   <data name="Health.Artwork.Plan" xml:space="preserve">
-    <value>アートワーク修復プラン</value>
+    <value>アートワーク修復計画</value>
   </data>
   <data name="Health.Artwork.ReviewTitle" xml:space="preserve">
-    <value>アートワークの自動修復を確認</value>
+    <value>自動アートワーク修復を確認</value>
   </data>
   <data name="Health.Audit.Description" xml:space="preserve">
     <value>品質、一貫性、ファイルの整合性を確認します。</value>
@@ -878,19 +878,19 @@
     <value>アルバムメタデータマトリックス</value>
   </data>
   <data name="Health.Audit.Menu.CrossSet" xml:space="preserve">
-    <value>クロス-設定 比較</value>
+    <value>セット間比較</value>
   </data>
   <data name="Health.Audit.Menu.Duplicates" xml:space="preserve">
-    <value>重複 トラック</value>
+    <value>重複トラック</value>
   </data>
   <data name="Health.Audit.Menu.FileRepresentations" xml:space="preserve">
-    <value>ファイル 表現</value>
+    <value>ファイル表現</value>
   </data>
   <data name="Health.Audit.Menu.LossyFiles" xml:space="preserve">
-    <value>非可逆 ファイル</value>
+    <value>非可逆圧縮ファイル</value>
   </data>
   <data name="Health.Audit.Menu.Metadata" xml:space="preserve">
-    <value>メタデータ 不整合</value>
+    <value>メタデータの不整合</value>
   </data>
   <data name="Health.Audit.Menu.VerifyAudio" xml:space="preserve">
     <value>デコードした音声を検証</value>
@@ -947,19 +947,19 @@
     <value>アルバムとアルバムアーティストの競合は見つかりませんでした。</value>
   </data>
   <data name="Health.Findings.All" xml:space="preserve">
-    <value>すべて 検出項目</value>
+    <value>すべての検出結果</value>
   </data>
   <data name="Health.Findings.SelectAllAutomation" xml:space="preserve">
-    <value>すべての検出項目を選択</value>
+    <value>すべての検出結果を選択</value>
   </data>
   <data name="Health.History.Empty" xml:space="preserve">
     <value>監査を実行すると、確認可能な結果が作成されます。</value>
   </data>
   <data name="Health.History.Title" xml:space="preserve">
-    <value>分析 履歴</value>
+    <value>分析履歴</value>
   </data>
   <data name="Health.Context.CopyPath" xml:space="preserve">
-    <value>コピー パス</value>
+    <value>パスをコピー</value>
   </data>
   <data name="Health.Context.OpenWorkbench" xml:space="preserve">
     <value>ワークベンチで開く</value>
@@ -977,7 +977,7 @@
     <value>検出項目階層のサイズを変更</value>
   </data>
   <data name="Health.Split.History" xml:space="preserve">
-    <value>分析履歴階層のサイズを変更</value>
+    <value>分析履歴のサイズを変更</value>
   </data>
   <data name="Health.Split.ItunesRepairs" xml:space="preserve">
     <value>iTunes メタデータ修復階層のサイズを変更</value>
@@ -995,34 +995,34 @@
     <value>確認可能なプランを作成します。適用するまで何も変更されません。</value>
   </data>
   <data name="Health.Repair.Menu.AlbumArtistConflicts" xml:space="preserve">
-    <value>アルバムアーティスト 競合</value>
+    <value>アルバムアーティストの競合</value>
   </data>
   <data name="Health.Repair.Menu.Artwork" xml:space="preserve">
-    <value>アートワーク修復</value>
+    <value>アートワークの修復</value>
   </data>
   <data name="Health.Repair.Menu.Conflicts" xml:space="preserve">
-    <value>競合修復</value>
+    <value>競合の修復</value>
   </data>
   <data name="Health.Repair.Menu.FileRepresentations" xml:space="preserve">
     <value>ファイル表現の修復</value>
   </data>
   <data name="Health.Repair.Menu.Itunes" xml:space="preserve">
-    <value>iTunes メタデータ修復</value>
+    <value>iTunes メタデータの修復</value>
   </data>
   <data name="Health.Repair.Menu.MetadataPolicy" xml:space="preserve">
-    <value>有効なポリシーによるメタデータ修復</value>
+    <value>ポリシーに基づくメタデータ修復</value>
   </data>
   <data name="Health.Repair.Menu.SimilarArtists" xml:space="preserve">
     <value>類似するアーティスト名</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
-    <value>準備 修復…</value>
+    <value>修復を準備…</value>
   </data>
   <data name="Health.Repair.PrepareAutomation" xml:space="preserve">
     <value>準備する修復プランを選択</value>
   </data>
   <data name="Health.Repair.Title" xml:space="preserve">
-    <value>準備 修復</value>
+    <value>修復を準備</value>
   </data>
   <data name="Health.Repairs.AllFile" xml:space="preserve">
     <value>すべてのファイル修復</value>
@@ -1034,22 +1034,22 @@
     <value>すべてのメタデータ修復</value>
   </data>
   <data name="Health.Repairs.MetadataCount.One" xml:space="preserve">
-    <value>確認済みのメタデータ修復 {0} 件</value>
+    <value>確認済みのメタデータ修復: {0} 件</value>
   </data>
   <data name="Health.Repairs.MetadataCount.Other" xml:space="preserve">
-    <value>確認済みのメタデータ修復 {0} 件</value>
+    <value>確認済みのメタデータ修復: {0} 件</value>
   </data>
   <data name="Health.Repairs.FileCount.One" xml:space="preserve">
-    <value>確認済みのファイル操作 {0} 件</value>
+    <value>確認済みのファイル操作: {0} 件</value>
   </data>
   <data name="Health.Repairs.FileCount.Other" xml:space="preserve">
-    <value>確認済みのファイル操作 {0} 件</value>
+    <value>確認済みのファイル操作: {0} 件</value>
   </data>
   <data name="Health.Repairs.ItunesCount.One" xml:space="preserve">
-    <value>確認済みの iTunes 修復 {0} 件</value>
+    <value>確認済みの iTunes 修復: {0} 件</value>
   </data>
   <data name="Health.Repairs.ItunesCount.Other" xml:space="preserve">
-    <value>確認済みの iTunes 修復 {0} 件</value>
+    <value>確認済みの iTunes 修復: {0} 件</value>
   </data>
   <data name="Health.Subtitle" xml:space="preserve">
     <value>コレクションを監査し、提案された変更をすべて確認して、安全な修復を適用します。</value>
@@ -1058,28 +1058,28 @@
     <value>アルバムマトリックス</value>
   </data>
   <data name="Health.Tab.ArtworkRepairs" xml:space="preserve">
-    <value>アートワーク 修復</value>
+    <value>アートワークの修復</value>
   </data>
   <data name="Health.Tab.Conflicts" xml:space="preserve">
     <value>競合</value>
   </data>
   <data name="Health.Tab.Duplicates" xml:space="preserve">
-    <value>重複</value>
+    <value>重複項目</value>
   </data>
   <data name="Health.Tab.FileRepairs" xml:space="preserve">
-    <value>ファイル 修復</value>
+    <value>ファイルの修復</value>
   </data>
   <data name="Health.Tab.Findings" xml:space="preserve">
     <value>検出項目</value>
   </data>
   <data name="Health.Tab.ItunesRepairs" xml:space="preserve">
-    <value>iTunes 修復</value>
+    <value>iTunes の修復</value>
   </data>
   <data name="Health.Tab.MetadataRepairs" xml:space="preserve">
-    <value>メタデータ 修復</value>
+    <value>メタデータの修復</value>
   </data>
   <data name="Health.Tab.SimilarArtists" xml:space="preserve">
-    <value>類似 アーティスト</value>
+    <value>類似するアーティスト</value>
   </data>
   <data name="Health.Title" xml:space="preserve">
     <value>健全性</value>
@@ -4486,187 +4486,187 @@
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>ビジュアルフィルターが無効です。</value></data>
   <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>有効なビジュアルフィルターはありません。</value></data>
   <data name="Column.TechnicalDetails" xml:space="preserve"><value>技術的な詳細</value></data>
-  <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>ライブラリ内のフィルター</value></data>
+  <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>ライブラリでフィルター</value></data>
   <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>混在</value></data>
   <data name="Health.Choice.FindingDisposition.None" xml:space="preserve"><value>なし</value></data>
   <data name="Health.Choice.RepairDisposition.Active" xml:space="preserve"><value>有効</value></data>
   <data name="Health.Choice.RepairDisposition.Completed" xml:space="preserve"><value>完了</value></data>
-  <data name="Health.Choice.RepairDisposition.Filter" xml:space="preserve"><value>ライブラリ内のフィルター</value></data>
+  <data name="Health.Choice.RepairDisposition.Filter" xml:space="preserve"><value>ライブラリでフィルター</value></data>
   <data name="Health.Choice.RepairDisposition.Ignored" xml:space="preserve"><value>無視</value></data>
   <data name="Health.Choice.RepairDisposition.Mixed" xml:space="preserve"><value>混在</value></data>
   <data name="Health.Common.Missing" xml:space="preserve"><value>(不足)</value></data>
-  <data name="Health.Common.NoFolder" xml:space="preserve"><value>(いいえ フォルダー)</value></data>
+  <data name="Health.Common.NoFolder" xml:space="preserve"><value>（フォルダーなし）</value></data>
   <data name="Health.Common.Unknown" xml:space="preserve"><value>(不明)</value></data>
-  <data name="Health.Common.UnknownAlbum" xml:space="preserve"><value>不明 アルバム</value></data>
-  <data name="Health.Common.UnknownArtist" xml:space="preserve"><value>不明 アーティスト</value></data>
-  <data name="Health.Common.UnknownError" xml:space="preserve"><value>不明 エラー</value></data>
+  <data name="Health.Common.UnknownAlbum" xml:space="preserve"><value>不明なアルバム</value></data>
+  <data name="Health.Common.UnknownArtist" xml:space="preserve"><value>不明なアーティスト</value></data>
+  <data name="Health.Common.UnknownError" xml:space="preserve"><value>不明なエラー</value></data>
   <data name="Health.Duration.HoursMinutes" xml:space="preserve"><value>{0:N0}h {1:N0}m</value></data>
   <data name="Health.Duration.MinutesSeconds" xml:space="preserve"><value>{0:N0}m {1:N0}s</value></data>
   <data name="Health.Duration.Seconds" xml:space="preserve"><value>{0:N0}</value></data>
-  <data name="Health.Field.Id3TagVersion" xml:space="preserve"><value>ID3タグのバージョン</value></data>
+  <data name="Health.Field.Id3TagVersion" xml:space="preserve"><value>ID3 タグのバージョン</value></data>
   <data name="Health.Field.Path" xml:space="preserve"><value>パス</value></data>
   <data name="Health.Findings.Empty.NoMatches" xml:space="preserve"><value>この分析では一致するトラックが見つかりませんでした。</value></data>
-  <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>結果ブランチを選択します。</value></data>
-  <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>キャッシュ済み メタデータ</value></data>
+  <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>検出結果の分岐を選択してください。</value></data>
+  <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>キャッシュされたメタデータ</value></data>
   <data name="Health.Itl.DifferenceFormat" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>欠落している AAC を導出する</value></data>
-  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>欠落している CD FLAC を導出する</value></data>
-  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>整理 表現</value></data>
+  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>不足している AAC 表現を作成</value></data>
+  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>不足している CD FLAC 表現を作成</value></data>
+  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>表現ファイルを整理</value></data>
   <data name="Health.Run.DisplayLabel" xml:space="preserve"><value>{0} · {1:N0} · {2:HH:mm:ss}</value></data>
-  <data name="Health.Run.Name.AlbumArtistConflicts" xml:space="preserve"><value>アルバムアーティスト 競合</value></data>
+  <data name="Health.Run.Name.AlbumArtistConflicts" xml:space="preserve"><value>アルバムアーティストの競合</value></data>
   <data name="Health.Run.Name.AlbumMetadataMatrix" xml:space="preserve"><value>アルバムメタデータマトリックス</value></data>
-  <data name="Health.Run.Name.AlbumRepresentations" xml:space="preserve"><value>アルバム 表現</value></data>
-  <data name="Health.Run.Name.ArtworkHealth" xml:space="preserve"><value>アートワーク 健全性</value></data>
-  <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>アルバムアーティストの競合の修復</value></data>
+  <data name="Health.Run.Name.AlbumRepresentations" xml:space="preserve"><value>アルバム表現</value></data>
+  <data name="Health.Run.Name.ArtworkHealth" xml:space="preserve"><value>アートワークの状態</value></data>
+  <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>アルバムアーティスト競合の修復</value></data>
   <data name="Health.Run.Name.CrossSetCheck" xml:space="preserve"><value>セット間チェック</value></data>
   <data name="Health.Run.Name.DecodedAudioVerification" xml:space="preserve"><value>デコード済み音声の検証</value></data>
-  <data name="Health.Run.Name.Duplicates" xml:space="preserve"><value>重複</value></data>
+  <data name="Health.Run.Name.Duplicates" xml:space="preserve"><value>重複項目</value></data>
   <data name="Health.Run.Name.Inconsistencies" xml:space="preserve"><value>不整合</value></data>
-  <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>iTunes ライブラリのメタデータの修復</value></data>
-  <data name="Health.Run.Name.LossyFiles" xml:space="preserve"><value>非可逆 ファイル</value></data>
+  <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>iTunes ライブラリのメタデータ修復</value></data>
+  <data name="Health.Run.Name.LossyFiles" xml:space="preserve"><value>非可逆圧縮ファイル</value></data>
   <data name="Health.Run.Name.MetadataRepairs" xml:space="preserve"><value>安全なメタデータ修復</value></data>
   <data name="Health.Run.Name.RepresentationFileRepairs" xml:space="preserve"><value>表現ファイルの修復</value></data>
-  <data name="Health.Run.Name.RepresentationMetadataRepairs" xml:space="preserve"><value>表現メタデータのコピー</value></data>
-  <data name="Health.Run.Name.SimilarArtists" xml:space="preserve"><value>類似 アーティスト</value></data>
+  <data name="Health.Run.Name.RepresentationMetadataRepairs" xml:space="preserve"><value>表現メタデータをコピー</value></data>
+  <data name="Health.Run.Name.SimilarArtists" xml:space="preserve"><value>類似するアーティスト</value></data>
   <data name="Health.Artwork.AlbumTitleFormat" xml:space="preserve"><value>{0} — {1}</value></data>
-  <data name="Health.Artwork.Blocking.NoReadableSource" xml:space="preserve"><value>この修復に使用できる読み取り可能なソース イメージはありません。</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>{0:N0} の影響を受けるファイルでは、アートワークの書き込みはサポートされていません。</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>アートワークの書き込みは、{0:N0} の影響を受けるファイルではサポートされていません。</value></data>
+  <data name="Health.Artwork.Blocking.NoReadableSource" xml:space="preserve"><value>この修復に使用できる読み取り可能なソース画像がありません。</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>アートワークの書き込みに対応していないファイル: {0:N0}。</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>アートワークの書き込みに対応していないファイル: {0:N0}。</value></data>
   <data name="Health.Artwork.CandidateDetailsFormat" xml:space="preserve"><value>{0:N0}×{1:N0} · {2:0.#} KiB · {3}</value></data>
-  <data name="Health.Artwork.Category.File" xml:space="preserve"><value>ファイル アートワーク</value></data>
-  <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>ミックスアルバムアートワーク</value></data>
-  <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>最初の画像を保持し、重複した埋め込み画像を削除します。</value></data>
+  <data name="Health.Artwork.Category.File" xml:space="preserve"><value>ファイルのアートワーク</value></data>
+  <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>混在するアルバムアートワーク</value></data>
+  <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>最初の画像を保持し、重複する埋め込み画像を削除します。</value></data>
   <data name="Health.Artwork.Description.NormalizeAlbum" xml:space="preserve"><value>すべてのトラックの埋め込みアートワークを、選択したアルバム画像に置き換えます。</value></data>
   <data name="Health.Artwork.Description.NormalizeAlbumWithMissing" xml:space="preserve"><value>アートワークがないトラックを含め、スキャンしたすべてのトラックの埋め込みアートワークを選択したアルバム画像に置き換えます。</value></data>
-  <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>設定された制限内で最初の画像を再エンコードし、重複した埋め込み画像を削除します。</value></data>
-  <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>設定されたアートワーク制限内で最初の画像を再エンコードします。</value></data>
-  <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>最初の読み取り可能なイメージを再エンコードし、無効な埋め込みアートワーク セットを置き換えます。</value></data>
-  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>アートワークを選択し、{0:N0} 修復をアクティブにマークしました。</value></data>
-  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>選択したアートワークと {0:N0} 修復マークがアクティブです。</value></data>
+  <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>構成済みの上限内で最初の画像を再エンコードし、重複する埋め込み画像を削除します。</value></data>
+  <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>構成済みのアートワーク上限内で最初の画像を再エンコードします。</value></data>
+  <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>最初の読み取り可能な画像を再エンコードし、無効な埋め込みアートワーク一式を置換します。</value></data>
+  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>アートワークを選択しました。有効にした修復: {0:N0}。</value></data>
+  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>アートワークを選択しました。有効にした修復: {0:N0}。</value></data>
   <data name="Health.Artwork.TargetSummary" xml:space="preserve"><value>目標: 最大 {0:N0}px、{1:0.##} MiB</value></data>
   <data name="Health.Artwork.ThumbnailLoadFailed" xml:space="preserve"><value>アートワークのプレビューを読み込めませんでした。</value></data>
   <data name="Health.Diagnostic.CacheRefreshFailed" xml:space="preserve"><value>キャッシュの更新に失敗しました: {0}</value></data>
   <data name="Health.Diagnostic.FileError" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>適用 修復</value></data>
-  <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>アーティストの結合を適用する</value></data>
-  <data name="Health.Dialog.ArtistMerge.Message" xml:space="preserve"><value>{0:N0} の名前を変更して、{2:N0} クラスター内の {1:N0} トラック全体のスペルのバリエーションを確認しましたか?ファイルは直接書き込まれます。リカバリジャーナルは作成されません。</value></data>
-  <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>類似アーティストの結合を適用する</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>アートワークの修復を適用する</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Message" xml:space="preserve"><value>{1:N0} でレビューされたアクションを使用して、{0:N0} ファイル内の埋め込みアートワーク セット全体を置き換えますか?ファイルは直接書き込まれます。リカバリジャーナルは作成されません。</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>アートワークの修復を適用する</value></data>
-  <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>ファイル修復を適用する</value></data>
-  <data name="Health.Dialog.FileRepair.Message" xml:space="preserve"><value>{0:N0} がレビューしたファイル修復アクションを適用しますか?回復可能なファイルの変更は操作ジャーナルに記録されます。メタデータのみの書き込みにはジャーナルリカバリはありません。</value></data>
-  <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>ファイル修復を適用する</value></data>
-  <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>{0:N0} で選択した修復を iTunes ライブラリに適用しますか?バックアップ コピーが保持されます。</value></data>
-  <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>iTunes メタデータ修復を適用する</value></data>
-  <data name="Health.Dialog.MetadataRepair.Message" xml:space="preserve"><value>{0:N0} がレビューしたメタデータ修復を選択したファイルに書き込みますか?各ソースは、プレビュー以降に加えられた変更がチェックされます。ファイルは直接書き込まれます。リカバリジャーナルは作成されません。</value></data>
-  <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>メタデータ修復を適用する</value></data>
-  <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>アートワークの比較では、一致したすべてのファイルを読み取ることができませんでした。</value></data>
-  <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>アートワークの比較はできません</value></data>
-  <data name="Health.Operation.ApplyArtworkRepairs" xml:space="preserve"><value>アートワークの修復を適用する</value></data>
-  <data name="Health.Operation.ApplyItlMetadataRepairs" xml:space="preserve"><value>iTunes メタデータ修復を適用する</value></data>
-  <data name="Health.Operation.ApplyMetadataRepairs" xml:space="preserve"><value>メタデータ修復を適用する</value></data>
-  <data name="Health.Operation.ApplyRepresentationFileRepairs" xml:space="preserve"><value>リプレゼンテーション ファイルの修復を適用する</value></data>
-  <data name="Health.Operation.ApplySimilarArtists" xml:space="preserve"><value>類似アーティストの結合を適用する</value></data>
-  <data name="Health.Operation.ForceScanDeferredArtwork" xml:space="preserve"><value>遅延アートワークの強制スキャン</value></data>
-  <data name="Health.Operation.PreviewConflictRepairs" xml:space="preserve"><value>競合修復をプレビューする</value></data>
-  <data name="Health.Operation.PreviewItlMetadataRepairs" xml:space="preserve"><value>iTunes メタデータ修復のプレビュー</value></data>
-  <data name="Health.Operation.PreviewMetadataRepairs" xml:space="preserve"><value>メタデータの修復をプレビューする</value></data>
-  <data name="Health.Operation.PreviewRepresentationRepairs" xml:space="preserve"><value>プレビュー表現の修復</value></data>
-  <data name="Health.Progress.ApplyingArtworkRepairs" xml:space="preserve"><value>アートワークの修復を適用しています… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>修復を適用</value></data>
+  <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>アーティストの統合を適用</value></data>
+  <data name="Health.Dialog.ArtistMerge.Message" xml:space="preserve"><value>{2:N0} 個のクラスターに含まれる {1:N0} 件のトラックで、確認済みの表記違い {0:N0} 件を変更しますか？ファイルは直接書き込まれ、復旧ジャーナルは作成されません。</value></data>
+  <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>類似アーティストの統合を適用</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>アートワーク修復を適用</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Message" xml:space="preserve"><value>確認済みの操作 {1:N0} 件を使用して、{0:N0} 件のファイルに埋め込まれたアートワーク一式を置換しますか？ファイルは直接書き込まれ、復旧ジャーナルは作成されません。</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>アートワーク修復を適用</value></data>
+  <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>ファイル修復を適用</value></data>
+  <data name="Health.Dialog.FileRepair.Message" xml:space="preserve"><value>確認済みのファイル修復操作 {0:N0} 件を適用しますか？復元可能なファイル変更は操作ジャーナルに記録されますが、メタデータのみの書き込みはジャーナルから復元できません。</value></data>
+  <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>ファイル修復を適用</value></data>
+  <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>選択した修復 {0:N0} 件を iTunes ライブラリに適用しますか？バックアップコピーが保持されます。</value></data>
+  <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>iTunes メタデータ修復を適用</value></data>
+  <data name="Health.Dialog.MetadataRepair.Message" xml:space="preserve"><value>確認済みのメタデータ修復 {0:N0} 件を選択したファイルに書き込みますか？各ソースについて、プレビュー後に変更されていないか確認します。ファイルは直接書き込まれ、復旧ジャーナルは作成されません。</value></data>
+  <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>メタデータ修復を適用</value></data>
+  <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>アートワークの比較ですべての対応ファイルを読み取れませんでした。</value></data>
+  <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>アートワークの比較を利用できません</value></data>
+  <data name="Health.Operation.ApplyArtworkRepairs" xml:space="preserve"><value>アートワーク修復を適用</value></data>
+  <data name="Health.Operation.ApplyItlMetadataRepairs" xml:space="preserve"><value>iTunes メタデータ修復を適用</value></data>
+  <data name="Health.Operation.ApplyMetadataRepairs" xml:space="preserve"><value>メタデータ修復を適用</value></data>
+  <data name="Health.Operation.ApplyRepresentationFileRepairs" xml:space="preserve"><value>表現ファイルの修復を適用</value></data>
+  <data name="Health.Operation.ApplySimilarArtists" xml:space="preserve"><value>類似アーティストの統合を適用</value></data>
+  <data name="Health.Operation.ForceScanDeferredArtwork" xml:space="preserve"><value>保留中のアートワークを強制スキャン</value></data>
+  <data name="Health.Operation.PreviewConflictRepairs" xml:space="preserve"><value>競合修復をプレビュー</value></data>
+  <data name="Health.Operation.PreviewItlMetadataRepairs" xml:space="preserve"><value>iTunes メタデータ修復をプレビュー</value></data>
+  <data name="Health.Operation.PreviewMetadataRepairs" xml:space="preserve"><value>メタデータ修復をプレビュー</value></data>
+  <data name="Health.Operation.PreviewRepresentationRepairs" xml:space="preserve"><value>表現の修復をプレビュー</value></data>
+  <data name="Health.Progress.ApplyingArtworkRepairs" xml:space="preserve"><value>アートワーク修復を適用しています… {0:N0}/{1:N0}</value></data>
   <data name="Health.Progress.ApplyingItlMetadataRepairs" xml:space="preserve"><value>iTunes メタデータ修復を適用しています… {0:N0}/{1:N0}</value></data>
   <data name="Health.Progress.ApplyingMetadataRepairs" xml:space="preserve"><value>メタデータ修復を適用しています… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingRepresentationRepairs" xml:space="preserve"><value>表現修復を適用中… {0:N0}/{1:N0}: {2}</value></data>
-  <data name="Health.Progress.ApplyingSimilarArtists" xml:space="preserve"><value>類似したアーティストの結合を適用中… {0:N0}/{1:N0} のバリアント</value></data>
-  <data name="Health.Progress.Calculating" xml:space="preserve"><value>計算中…</value></data>
-  <data name="Health.Progress.ComparingEmbeddedArtwork.One" xml:space="preserve"><value>{0:N0} と一致する対応ファイルの埋め込みアートワークを比較しています…</value></data>
-  <data name="Health.Progress.ComparingEmbeddedArtwork.Other" xml:space="preserve"><value>{0:N0} と一致する対応ファイルの埋め込みアートワークを比較しています…</value></data>
+  <data name="Health.Progress.ApplyingRepresentationRepairs" xml:space="preserve"><value>表現の修復を適用しています… {0:N0}/{1:N0}: {2}</value></data>
+  <data name="Health.Progress.ApplyingSimilarArtists" xml:space="preserve"><value>類似アーティストの統合を適用しています… {0:N0}/{1:N0} 表記</value></data>
+  <data name="Health.Progress.Calculating" xml:space="preserve"><value>計算しています…</value></data>
+  <data name="Health.Progress.ComparingEmbeddedArtwork.One" xml:space="preserve"><value>一致した対応ファイル {0:N0} 件の埋め込みアートワークを比較しています…</value></data>
+  <data name="Health.Progress.ComparingEmbeddedArtwork.Other" xml:space="preserve"><value>一致した対応ファイル {0:N0} 件の埋め込みアートワークを比較しています…</value></data>
   <data name="Health.Progress.Determinate" xml:space="preserve"><value>{0}… {1:N0}/{2:N0} {3} ({4:P0}) · {5}</value></data>
-  <data name="Health.Progress.EtaCalculating" xml:space="preserve"><value>ETA 計算中…</value></data>
+  <data name="Health.Progress.EtaCalculating" xml:space="preserve"><value>ETA を計算しています…</value></data>
   <data name="Health.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
-  <data name="Health.Progress.OperationPhase.Applying" xml:space="preserve"><value>レビュー済みの変更を適用しています…</value></data>
-  <data name="Health.Progress.OperationPhase.Completed" xml:space="preserve"><value>操作を終了しています…</value></data>
-  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>ソースルートのインデックスを作成中…</value></data>
-  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>目的地の在庫を調べています…</value></data>
-  <data name="Health.Progress.OperationPhase.LoadingConfiguration" xml:space="preserve"><value>ライブラリ構成をロードしています…</value></data>
-  <data name="Health.Progress.OperationPhase.LoadingLibrary" xml:space="preserve"><value>iTunes ライブラリをロードしています…</value></data>
-  <data name="Health.Progress.OperationPhase.Planning" xml:space="preserve"><value>修理計画を準備しています…</value></data>
+  <data name="Health.Progress.OperationPhase.Applying" xml:space="preserve"><value>確認済みの変更を適用しています…</value></data>
+  <data name="Health.Progress.OperationPhase.Completed" xml:space="preserve"><value>操作を完了しています…</value></data>
+  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>ソースルートをスキャンしています…</value></data>
+  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>保存先をスキャンしています…</value></data>
+  <data name="Health.Progress.OperationPhase.LoadingConfiguration" xml:space="preserve"><value>ライブラリ構成を読み込んでいます…</value></data>
+  <data name="Health.Progress.OperationPhase.LoadingLibrary" xml:space="preserve"><value>iTunes ライブラリを読み込んでいます…</value></data>
+  <data name="Health.Progress.OperationPhase.Planning" xml:space="preserve"><value>修復計画を準備しています…</value></data>
   <data name="Health.Progress.OperationPhase.RollingBack" xml:space="preserve"><value>失敗した操作をロールバックしています…</value></data>
-  <data name="Health.Progress.OperationPhase.Validating" xml:space="preserve"><value>レビューされた計画を検証しています…</value></data>
+  <data name="Health.Progress.OperationPhase.Validating" xml:space="preserve"><value>確認済みの計画を検証しています…</value></data>
   <data name="Health.Progress.PreparingItlMetadataRepairs" xml:space="preserve"><value>iTunes メタデータ修復を準備しています…</value></data>
   <data name="Health.Progress.RateAndEta" xml:space="preserve"><value>{0} {1}/秒 · ETA {2}</value></data>
-  <data name="Health.Progress.ReadingDeferredArtwork.One" xml:space="preserve"><value>保留中の {0:N0} ファイルから埋め込みアートワークを読み取っています…</value></data>
-  <data name="Health.Progress.ReadingDeferredArtwork.Other" xml:space="preserve"><value>保留中の {0:N0} ファイルから埋め込みアートワークを読み取っています…</value></data>
-  <data name="Health.Progress.Running" xml:space="preserve"><value>実行中 {0}…</value></data>
-  <data name="Health.Progress.Stage.AnalyzingDuplicateCandidates" xml:space="preserve"><value>重複候補の分析</value></data>
-  <data name="Health.Progress.Stage.BuildingAlbumMetadataMatrix" xml:space="preserve"><value>アルバムメタデータマトリックスの構築</value></data>
-  <data name="Health.Progress.Stage.CheckingArtworkMetadata" xml:space="preserve"><value>アートワークのメタデータを確認する</value></data>
-  <data name="Health.Progress.Stage.CheckingAudioFormats" xml:space="preserve"><value>音声フォーマットの確認</value></data>
-  <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>メタデータの整合性をチェックする</value></data>
-  <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>アルバムアートワークの比較</value></data>
-  <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>アルバム表現の比較</value></data>
+  <data name="Health.Progress.ReadingDeferredArtwork.One" xml:space="preserve"><value>保留中のファイル {0:N0} 件から埋め込みアートワークを読み込んでいます…</value></data>
+  <data name="Health.Progress.ReadingDeferredArtwork.Other" xml:space="preserve"><value>保留中のファイル {0:N0} 件から埋め込みアートワークを読み込んでいます…</value></data>
+  <data name="Health.Progress.Running" xml:space="preserve"><value>{0}を実行しています…</value></data>
+  <data name="Health.Progress.Stage.AnalyzingDuplicateCandidates" xml:space="preserve"><value>重複候補を分析しています</value></data>
+  <data name="Health.Progress.Stage.BuildingAlbumMetadataMatrix" xml:space="preserve"><value>アルバムメタデータマトリックスを作成しています</value></data>
+  <data name="Health.Progress.Stage.CheckingArtworkMetadata" xml:space="preserve"><value>アートワークのメタデータを確認しています</value></data>
+  <data name="Health.Progress.Stage.CheckingAudioFormats" xml:space="preserve"><value>オーディオ形式を確認しています</value></data>
+  <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>メタデータの整合性を確認しています</value></data>
+  <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>アルバムアートワークを比較しています</value></data>
+  <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>アルバム表現を比較しています</value></data>
   <data name="Health.Progress.Stage.ComparingArtistNames" xml:space="preserve"><value>アーティスト名を比較しています</value></data>
-  <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>デコード中 オーディオ</value></data>
-  <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>アートワークの修理をグループ化する</value></data>
-  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>アートワークのインデックス作成監査</value></data>
-  <data name="Health.Progress.Stage.IndexingTracksForArtworkRepairs" xml:space="preserve"><value>アートワーク修復のためのトラックのインデックス作成</value></data>
-  <data name="Health.Progress.Stage.IndexingTracksForArtworkResults" xml:space="preserve"><value>アートワーク結果のトラックのインデックス作成</value></data>
-  <data name="Health.Progress.Stage.PlanningAlbumArtworkRepairs" xml:space="preserve"><value>アルバムアートワークの修正を計画中</value></data>
-  <data name="Health.Progress.Stage.PlanningFileArtworkRepairs" xml:space="preserve"><value>ファイルアートワークの修復を計画する</value></data>
-  <data name="Health.Progress.Stage.PreparingAnalysisFindings" xml:space="preserve"><value>分析結果の準備</value></data>
-  <data name="Health.Progress.Stage.PreparingArtworkFindings" xml:space="preserve"><value>アートワークの調査結果を準備する</value></data>
-  <data name="Health.Progress.Stage.PreparingArtworkRepairChoices" xml:space="preserve"><value>アートワーク修復の選択肢を準備する</value></data>
-  <data name="Health.Progress.Stage.PreparingRepresentationRepairResults" xml:space="preserve"><value>表現修復結果の準備</value></data>
-  <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>組織の移動のプレビュー</value></data>
-  <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>表現派生のプレビュー</value></data>
-  <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>表現メタデータのコピーのプレビュー</value></data>
+  <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>オーディオをデコードしています</value></data>
+  <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>アートワーク修復をグループ化しています</value></data>
+  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>アートワーク監査結果を索引化しています</value></data>
+  <data name="Health.Progress.Stage.IndexingTracksForArtworkRepairs" xml:space="preserve"><value>アートワーク修復用にトラックを索引化しています</value></data>
+  <data name="Health.Progress.Stage.IndexingTracksForArtworkResults" xml:space="preserve"><value>アートワーク結果用にトラックを索引化しています</value></data>
+  <data name="Health.Progress.Stage.PlanningAlbumArtworkRepairs" xml:space="preserve"><value>アルバムアートワーク修復を計画しています</value></data>
+  <data name="Health.Progress.Stage.PlanningFileArtworkRepairs" xml:space="preserve"><value>ファイルアートワーク修復を計画しています</value></data>
+  <data name="Health.Progress.Stage.PreparingAnalysisFindings" xml:space="preserve"><value>分析結果を準備しています</value></data>
+  <data name="Health.Progress.Stage.PreparingArtworkFindings" xml:space="preserve"><value>アートワークの検出結果を準備しています</value></data>
+  <data name="Health.Progress.Stage.PreparingArtworkRepairChoices" xml:space="preserve"><value>アートワーク修復の選択肢を準備しています</value></data>
+  <data name="Health.Progress.Stage.PreparingRepresentationRepairResults" xml:space="preserve"><value>表現修復の結果を準備しています</value></data>
+  <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>整理による移動をプレビューしています</value></data>
+  <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>表現の派生をプレビューしています</value></data>
+  <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>表現間のメタデータコピーをプレビューしています</value></data>
   <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>アーティスト名を読み取っています</value></data>
-  <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>組織の修復を選択する</value></data>
+  <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>整理修復を選択しています</value></data>
   <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>アーティスト名の比較</value></data>
   <data name="Health.Progress.Unit.Files" xml:space="preserve"><value>ファイル</value></data>
-  <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>検出項目</value></data>
+  <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>検出結果</value></data>
   <data name="Health.Progress.Unit.Moves" xml:space="preserve"><value>移動</value></data>
-  <data name="Health.Progress.Unit.RepairActions" xml:space="preserve"><value>修復 アクション</value></data>
+  <data name="Health.Progress.Unit.RepairActions" xml:space="preserve"><value>修復操作</value></data>
   <data name="Health.Progress.Unit.Results" xml:space="preserve"><value>結果</value></data>
   <data name="Health.Progress.Unit.Tracks" xml:space="preserve"><value>トラック</value></data>
-  <data name="Health.Result.AlreadyCorrect" xml:space="preserve"><value>すでに 正しい</value></data>
+  <data name="Health.Result.AlreadyCorrect" xml:space="preserve"><value>すでに正しい状態です</value></data>
   <data name="Health.Result.Applied" xml:space="preserve"><value>適用済み</value></data>
-  <data name="Health.Result.ArtworkCompleted" xml:space="preserve"><value>{0:N0} ファイルを完了 — {1:N0}×{2:N0} — {3:0.#} KiB</value></data>
-  <data name="Health.Result.ArtworkEncodingFailed" xml:space="preserve"><value>選択した画像は修復対象内でエンコードできませんでした。</value></data>
+  <data name="Health.Result.ArtworkCompleted" xml:space="preserve"><value>{0:N0} ファイルで完了 — {1:N0}×{2:N0} — {3:0.#} KiB</value></data>
+  <data name="Health.Result.ArtworkEncodingFailed" xml:space="preserve"><value>選択した画像を修復目標の範囲内でエンコードできませんでした。</value></data>
   <data name="Health.Result.ArtworkFilesFailed.One" xml:space="preserve"><value>{0:N0} ファイルで失敗しました。</value></data>
-  <data name="Health.Result.ArtworkFilesFailed.Other" xml:space="preserve"><value>{0:N0} ファイルでは失敗しました。</value></data>
+  <data name="Health.Result.ArtworkFilesFailed.Other" xml:space="preserve"><value>{0:N0} ファイルで失敗しました。</value></data>
   <data name="Health.Result.Failed" xml:space="preserve"><value>失敗</value></data>
-  <data name="Health.Result.FilesRenamed.One" xml:space="preserve"><value>{0:N0} ファイルの名前が変更されました</value></data>
-  <data name="Health.Result.FilesRenamed.Other" xml:space="preserve"><value>{0:N0} ファイルの名前が変更されました</value></data>
+  <data name="Health.Result.FilesRenamed.One" xml:space="preserve"><value>{0:N0} ファイルの名前を変更しました</value></data>
+  <data name="Health.Result.FilesRenamed.Other" xml:space="preserve"><value>{0:N0} ファイルの名前を変更しました</value></data>
   <data name="Health.Result.Skipped" xml:space="preserve"><value>スキップ済み</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>アルバム アーティストの競合検索がキャンセルされました。</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>アルバムアーティストの競合検索がキャンセルされました。</value></data>
   <data name="Health.Status.AlbumArtistConflicts.Failed" xml:space="preserve"><value>アルバムアーティストの競合検索に失敗しました。</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.None" xml:space="preserve"><value>競合するアルバム アーティストは見つかりませんでした。</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Results.One" xml:space="preserve"><value>アルバム アーティストが競合する {0:N0} アルバムが見つかりました。続行するには正規値を選択してください。</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Results.Other" xml:space="preserve"><value>アルバム アーティストが競合する {0:N0} アルバムが見つかりました。続行するには正規値を選択してください。</value></data>
-  <data name="Health.Status.AlbumMatrix.None" xml:space="preserve"><value>アルバム メタデータ マトリックス: 矛盾するアルバムは見つかりませんでした。</value></data>
-  <data name="Health.Status.AlbumMatrix.Results.One" xml:space="preserve"><value>アルバム メタデータ マトリックス: {0:N0} アルバム;一貫性のないセル: {1:N0}。</value></data>
-  <data name="Health.Status.AlbumMatrix.Results.Other" xml:space="preserve"><value>アルバム メタデータ マトリックス: {0:N0} アルバム。一貫性のないセル: {1:N0}。</value></data>
-  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>アルバム表現の比較はキャンセルされました。</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.None" xml:space="preserve"><value>競合するアルバムアーティストは見つかりませんでした。</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Results.One" xml:space="preserve"><value>アルバムアーティストが競合するアルバムが {0:N0} 件見つかりました。続行するには正規値を選択してください。</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Results.Other" xml:space="preserve"><value>アルバムアーティストが競合するアルバムが {0:N0} 件見つかりました。続行するには正規値を選択してください。</value></data>
+  <data name="Health.Status.AlbumMatrix.None" xml:space="preserve"><value>アルバムメタデータマトリックス: 不整合なアルバムは見つかりませんでした。</value></data>
+  <data name="Health.Status.AlbumMatrix.Results.One" xml:space="preserve"><value>アルバムメタデータマトリックス: {0:N0} アルバム、不整合なセル: {1:N0}。</value></data>
+  <data name="Health.Status.AlbumMatrix.Results.Other" xml:space="preserve"><value>アルバムメタデータマトリックス: {0:N0} アルバム、不整合なセル: {1:N0}。</value></data>
+  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>アルバム表現の比較がキャンセルされました。</value></data>
   <data name="Health.Status.AlbumRepresentations.Failed" xml:space="preserve"><value>アルバム表現の比較に失敗しました。</value></data>
-  <data name="Health.Status.AlbumRepresentations.Findings.One" xml:space="preserve"><value>アルバム表現: {0:N0} が見つかりました。</value></data>
-  <data name="Health.Status.AlbumRepresentations.Findings.Other" xml:space="preserve"><value>アルバム表現: {0:N0} の調査結果。</value></data>
-  <data name="Health.Status.AlbumRepresentations.None" xml:space="preserve"><value>アルバム表現: 対応するもの、メタデータ、デュレーション、またはアートワークのドリフトが見つかりません。</value></data>
-  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>類似アーティストの結合適用がキャンセルされました。再試行する前に、影響を受けるファイルを確認してください。</value></data>
-  <data name="Health.Status.ArtistMerge.Completed" xml:space="preserve"><value>類似アーティストのマージ: ファイル名が変更されました: {0:N0};完了したバリアント: {1:N0};失敗しました: {2:N0}。</value></data>
-  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>アートワークの健全性監査がキャンセルされました。</value></data>
-  <data name="Health.Status.ArtworkHealth.Failed" xml:space="preserve"><value>アートワークの健全性監査に失敗しました。</value></data>
-  <data name="Health.Status.ArtworkHealth.None" xml:space="preserve"><value>アートワークの健全性: 問題は見つかりませんでした。</value></data>
-  <data name="Health.Status.ArtworkHealth.Results" xml:space="preserve"><value>アートワークの健全性: 問題: {0:N0};修復アクション: {1:N0};遅延ファイル: {2:N0}。</value></data>
-  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>アートワークの修理申請はキャンセルされました。再試行する前に、影響を受けるファイルを確認してください。</value></data>
-  <data name="Health.Status.ArtworkRepair.Completed" xml:space="preserve"><value>アートワークの修復: 完了したアクション: {0:N0};失敗しました: {1:N0}。</value></data>
-  <data name="Health.Status.ChooseAnalysis" xml:space="preserve"><value>実行する分析を選択します。</value></data>
-  <data name="Health.Status.ChooseConfiguration" xml:space="preserve"><value>監査を実行する前に、[設定] でライブラリ構成を選択します。</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>競合修復プレビューがキャンセルされました。</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Failed" xml:space="preserve"><value>競合修復のプレビューが失敗しました。</value></data>
-  <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>選択した正規値はすでにすべてのファイルと一致しています。</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>{0:N0} ユーザー主導の修復をプレビューしました。確認してから適用してください。</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>{0:N0} ユーザー主導の修復をプレビューしました。選択した修復を確認し、適用します。</value></data>
+  <data name="Health.Status.AlbumRepresentations.Findings.One" xml:space="preserve"><value>アルバム表現: 検出項目 {0:N0} 件。</value></data>
+  <data name="Health.Status.AlbumRepresentations.Findings.Other" xml:space="preserve"><value>アルバム表現: 検出項目 {0:N0} 件。</value></data>
+  <data name="Health.Status.AlbumRepresentations.None" xml:space="preserve"><value>アルバム表現: 対応ファイル、メタデータ、再生時間、アートワークのずれは見つかりませんでした。</value></data>
+  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>類似アーティストの統合適用がキャンセルされました。再試行する前に、影響を受けたファイルを確認してください。</value></data>
+  <data name="Health.Status.ArtistMerge.Completed" xml:space="preserve"><value>類似アーティストの統合: 名前変更済みファイル: {0:N0}、完了した表記: {1:N0}、失敗: {2:N0}。</value></data>
+  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>アートワークの状態監査がキャンセルされました。</value></data>
+  <data name="Health.Status.ArtworkHealth.Failed" xml:space="preserve"><value>アートワークの状態監査に失敗しました。</value></data>
+  <data name="Health.Status.ArtworkHealth.None" xml:space="preserve"><value>アートワークの状態: 問題は見つかりませんでした。</value></data>
+  <data name="Health.Status.ArtworkHealth.Results" xml:space="preserve"><value>アートワークの状態: 問題: {0:N0}、修復操作: {1:N0}、保留中のファイル: {2:N0}。</value></data>
+  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>アートワーク修復の適用がキャンセルされました。再試行する前に、影響を受けたファイルを確認してください。</value></data>
+  <data name="Health.Status.ArtworkRepair.Completed" xml:space="preserve"><value>アートワークの修復: 完了した操作: {0:N0}、失敗: {1:N0}。</value></data>
+  <data name="Health.Status.ChooseAnalysis" xml:space="preserve"><value>実行する分析を選択してください。</value></data>
+  <data name="Health.Status.ChooseConfiguration" xml:space="preserve"><value>監査を実行する前に、設定でライブラリ構成を選択してください。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>競合修復のプレビューがキャンセルされました。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Failed" xml:space="preserve"><value>競合修復のプレビューに失敗しました。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>選択した正規値は、すでにすべてのファイルと一致しています。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>ユーザー指定の修復 {0:N0} 件をプレビューしました。確認してから適用してください。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>ユーザー指定の修復 {0:N0} 件をプレビューしました。確認してから、選択した修復を適用してください。</value></data>
   <data name="Health.Status.CrossSetCheck.Cancelled" xml:space="preserve"><value>セット間チェックをキャンセルしました。</value></data>
   <data name="Health.Status.CrossSetCheck.Failed" xml:space="preserve"><value>セット間チェックに失敗しました。</value></data>
   <data name="Health.Status.CrossSetCheck.Findings.One" xml:space="preserve"><value>クロスセット チェック: {0:N0} の結果。</value></data>
@@ -4678,50 +4678,50 @@
   <data name="Health.Status.DecodedAudioVerification.Failed" xml:space="preserve"><value>デコード済み音声の検証に失敗しました。</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.One" xml:space="preserve"><value>デコードされたオーディオの検証: {0:N0} 互換ペアの一致。</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.Other" xml:space="preserve"><value>デコードされたオーディオの検証: {0:N0} 互換ペアが一致します。</value></data>
-  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>延期されたアートワークのスキャンがキャンセルされました。</value></data>
-  <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>遅延アートワークのスキャンに失敗しました。</value></data>
-  <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>{0:N0} グループが重複しています。</value></data>
-  <data name="Health.Status.Duplicates.Groups.Other" xml:space="preserve"><value>{0:N0} グループが重複しています。</value></data>
-  <data name="Health.Status.Duplicates.None" xml:space="preserve"><value>重複は見つかりませんでした。</value></data>
-  <data name="Health.Status.Inconsistencies.Findings.One" xml:space="preserve"><value>矛盾: {0:N0} が見つかりました。</value></data>
-  <data name="Health.Status.Inconsistencies.Findings.Other" xml:space="preserve"><value>矛盾: {0:N0} の結果。</value></data>
-  <data name="Health.Status.Inconsistencies.None" xml:space="preserve"><value>不一致: 何も見つかりませんでした。</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>iTunes メタデータ修復の適用がキャンセルされました。再試行する前に、影響を受けるファイルを確認してください。</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Completed" xml:space="preserve"><value>iTunes メタデータ修復: 適用されました: {0:N0};スキップされました: {1:N0};失敗しました: {2:N0}。</value></data>
+  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>保留中のアートワークスキャンがキャンセルされました。</value></data>
+  <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>保留中のアートワークスキャンに失敗しました。</value></data>
+  <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>重複グループ {0:N0} 件。</value></data>
+  <data name="Health.Status.Duplicates.Groups.Other" xml:space="preserve"><value>重複グループ {0:N0} 件。</value></data>
+  <data name="Health.Status.Duplicates.None" xml:space="preserve"><value>重複項目は見つかりませんでした。</value></data>
+  <data name="Health.Status.Inconsistencies.Findings.One" xml:space="preserve"><value>不整合: 検出項目 {0:N0} 件。</value></data>
+  <data name="Health.Status.Inconsistencies.Findings.Other" xml:space="preserve"><value>不整合: 検出項目 {0:N0} 件。</value></data>
+  <data name="Health.Status.Inconsistencies.None" xml:space="preserve"><value>不整合: 見つかりませんでした。</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>iTunes メタデータ修復の適用がキャンセルされました。再試行する前に、影響を受けたファイルを確認してください。</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Completed" xml:space="preserve"><value>iTunes メタデータの修復: 適用: {0:N0}、スキップ: {1:N0}、失敗: {2:N0}。</value></data>
   <data name="Health.Status.ItlMetadataRepair.Failed" xml:space="preserve"><value>iTunes メタデータ修復の適用に失敗しました。</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>iTunes メタデータ修復プレビューがキャンセルされました。</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Failed" xml:space="preserve"><value>iTunes メタデータ修復プレビューが失敗しました。</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>iTunes メタデータ修復のプレビューがキャンセルされました。</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Failed" xml:space="preserve"><value>iTunes メタデータ修復のプレビューに失敗しました。</value></data>
   <data name="Health.Status.ItlMetadataRepairPreview.None" xml:space="preserve"><value>選択したライブラリには iTunes メタデータの修復は必要ありません。</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Results.One" xml:space="preserve"><value>{0:N0} iTunes メタデータ修復をプレビューしました。それを確認し、選択した修復を適用します。</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Results.Other" xml:space="preserve"><value>{0:N0} iTunes メタデータ修復をプレビューしました。それらを確認し、選択した修復を適用します。</value></data>
-  <data name="Health.Status.LossyFiles.Count.One" xml:space="preserve"><value>{0:N0} 不可逆ファイル。</value></data>
-  <data name="Health.Status.LossyFiles.Count.Other" xml:space="preserve"><value>{0:N0} 損失のあるファイル。</value></data>
-  <data name="Health.Status.LossyFiles.None" xml:space="preserve"><value>損失のあるファイルはありません。</value></data>
-  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>メタデータ修復の適用がキャンセルされました。再試行する前に、影響を受けるファイルを確認してください。</value></data>
-  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>メタデータの修復: 適用されました: {0:N0};スキップされました: {1:N0};失敗しました: {2:N0}。</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Results.One" xml:space="preserve"><value>iTunes メタデータ修復 {0:N0} 件をプレビューしました。確認してから、選択した修復を適用してください。</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Results.Other" xml:space="preserve"><value>iTunes メタデータ修復 {0:N0} 件をプレビューしました。確認してから、選択した修復を適用してください。</value></data>
+  <data name="Health.Status.LossyFiles.Count.One" xml:space="preserve"><value>非可逆圧縮ファイル {0:N0} 件。</value></data>
+  <data name="Health.Status.LossyFiles.Count.Other" xml:space="preserve"><value>非可逆圧縮ファイル {0:N0} 件。</value></data>
+  <data name="Health.Status.LossyFiles.None" xml:space="preserve"><value>非可逆圧縮ファイルはありません。</value></data>
+  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>メタデータ修復の適用がキャンセルされました。再試行する前に、影響を受けたファイルを確認してください。</value></data>
+  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>メタデータの修復: 適用: {0:N0}、スキップ: {1:N0}、失敗: {2:N0}、カタログ更新の失敗: {3:N0}。</value></data>
   <data name="Health.Status.MetadataRepair.Failed" xml:space="preserve"><value>メタデータ修復の適用に失敗しました。</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Blocked.One" xml:space="preserve"><value>{0:N0} 修復はブロックされています。対象となる修理を適用する前に、その理由を確認してください。</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Blocked.Other" xml:space="preserve"><value>{0:N0} の修復はブロックされています。対象となる修理を適用する前に、その理由を確認してください。</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>メタデータ修復プレビューがキャンセルされました。</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Failed" xml:space="preserve"><value>メタデータ修復プレビューに失敗しました。</value></data>
-  <data name="Health.Status.MetadataRepairPreview.None" xml:space="preserve"><value>安全なメタデータの修復は必要ありません。</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>{0:N0} の安全なメタデータ修復をプレビューしました。それを確認し、選択した修復を適用します。</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>{0:N0} の安全なメタデータ修復をプレビューしました。それらを確認し、選択した修復を適用します。</value></data>
-  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>代理修理の申し込みはキャンセルされました。</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>{0:N0} アクションの後に、リプレゼンテーション修復の適用がキャンセルされました。再試行する前に、影響を受けるファイルを確認してください。</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>{0:N0} アクションの後に、表現修復の適用がキャンセルされました。再試行する前に、影響を受けるファイルを確認してください。</value></data>
-  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>表現の修復: 適用されました: {0:N0};スキップされました: {1:N0};失敗しました: {2:N0}。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Blocked.One" xml:space="preserve"><value>{0:N0} 件の修復がブロックされています。適用可能な修復を実行する前に、理由を確認してください。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Blocked.Other" xml:space="preserve"><value>{0:N0} 件の修復がブロックされています。適用可能な修復を実行する前に、理由を確認してください。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>メタデータ修復のプレビューがキャンセルされました。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Failed" xml:space="preserve"><value>メタデータ修復のプレビューに失敗しました。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.None" xml:space="preserve"><value>安全なメタデータ修復は必要ありません。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>安全なメタデータ修復 {0:N0} 件をプレビューしました。適用可能: {1:N0} 件。確認してから、選択した修復を適用してください。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>安全なメタデータ修復 {0:N0} 件をプレビューしました。適用可能: {1:N0} 件。確認してから、選択した修復を適用してください。</value></data>
+  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>表現修復の適用がキャンセルされました。</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>表現修復は {0:N0} 件の操作後にキャンセルされました。再試行する前に、影響を受けたファイルを確認してください。</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>表現修復は {0:N0} 件の操作後にキャンセルされました。再試行する前に、影響を受けたファイルを確認してください。</value></data>
+  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>表現の修復: 適用: {0:N0}、失敗: {1:N0}。</value></data>
   <data name="Health.Status.RepresentationRepair.Failed" xml:space="preserve"><value>表現修復の適用に失敗しました。</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>表現修復プレビューがキャンセルされました。</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.Failed" xml:space="preserve"><value>表現修復プレビューに失敗しました。</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>プレビューされたリプレゼンテーション ファイルのアクション: {0:N0} 組織の移動と {1:N0} の派生。それらを確認し、選択したアクションを適用します。</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.One" xml:space="preserve"><value>{0:N0} 表現メタデータのコピーをプレビューしました。それを確認し、選択した修復を適用します。</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.Other" xml:space="preserve"><value>プレビューされた {0:N0} 表現メタデータのコピー。それらを確認し、選択した修復を適用します。</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.None" xml:space="preserve"><value>代理による修理は必要ありません。</value></data>
-  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0} はキャンセルされました。</value></data>
-  <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} は失敗しました。</value></data>
-  <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} の類似アーティスト クラスターがしきい値 {1:0.00} で見つかりました。バリアントを確認し、アクティブな修復を適用します。</value></data>
-  <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} 個の類似アーティスト クラスターがしきい値 {1:0.00} で見つかりました。バリアントを確認し、アクティブな修復を適用します。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>表現修復のプレビューがキャンセルされました。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.Failed" xml:space="preserve"><value>表現修復のプレビューに失敗しました。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>表現ファイル操作をプレビューしました: {0:N0} 件、警告: {1:N0} 件。確認してから、選択した操作を適用してください。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.One" xml:space="preserve"><value>表現メタデータのコピー {0:N0} 件をプレビューしました。確認してから、選択した修復を適用してください。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.Other" xml:space="preserve"><value>表現メタデータのコピー {0:N0} 件をプレビューしました。確認してから、選択した修復を適用してください。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.None" xml:space="preserve"><value>表現の修復は必要ありません。</value></data>
+  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0} がキャンセルされました。</value></data>
+  <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} に失敗しました。</value></data>
+  <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>しきい値 {1:0.00} で類似アーティストのクラスターが {0:N0} 件見つかりました。表記を確認してから、有効な修復を適用してください。</value></data>
+  <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>しきい値 {1:0.00} で類似アーティストのクラスターが {0:N0} 件見つかりました。表記を確認してから、有効な修復を適用してください。</value></data>
   <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>しきい値 {0:0.00} に類似したアーティスト名は見つかりませんでした。</value></data>
   <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>ファイルを追加</value></data>
   <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>フォルダーを作成</value></data>
@@ -5947,60 +5947,60 @@
   <data name="Health.TextDifference.Empty" xml:space="preserve"><value>(空)</value></data>
   <data name="Health.TextDifference.KnownCodePoint" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Health.TextDifference.Missing" xml:space="preserve"><value>(不足)</value></data>
-  <data name="Health.TextDifference.More.One" xml:space="preserve"><value>· … (残り {0:N0} 件)</value></data>
-  <data name="Health.TextDifference.More.Other" xml:space="preserve"><value>· … (残り {0:N0} 件)</value></data>
+  <data name="Health.TextDifference.More.One" xml:space="preserve"><value> · … (残り {0:N0} 件)</value></data>
+  <data name="Health.TextDifference.More.Other" xml:space="preserve"><value> · … (残り {0:N0} 件)</value></data>
   <data name="Health.TextDifference.NoBreakSpaceMarker" xml:space="preserve"><value>⟦NBSP⟧</value></data>
-  <data name="Health.TextDifference.NoCharacter" xml:space="preserve"><value>∅（文字なし）</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ClosePunctuation" xml:space="preserve"><value>閉じる 句読点</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ConnectorPunctuation" xml:space="preserve"><value>コネクタ 句読点</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.Control" xml:space="preserve"><value>制御</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.CurrencySymbol" xml:space="preserve"><value>通貨 記号</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.DashPunctuation" xml:space="preserve"><value>ダッシュ 句読点</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.DecimalDigitNumber" xml:space="preserve"><value>10 進数</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.EnclosingMark" xml:space="preserve"><value>囲む マーク</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.FinalQuotePunctuation" xml:space="preserve"><value>最後の引用句読点</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.Format" xml:space="preserve"><value>形式</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.InitialQuotePunctuation" xml:space="preserve"><value>最初の引用句読点</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LetterNumber" xml:space="preserve"><value>文字 番号</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LineSeparator" xml:space="preserve"><value>行 区切り文字</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LowercaseLetter" xml:space="preserve"><value>小文字 文字</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.MathSymbol" xml:space="preserve"><value>数学 記号</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ModifierLetter" xml:space="preserve"><value>修飾子 文字</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ModifierSymbol" xml:space="preserve"><value>修飾子 記号</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.NonSpacingMark" xml:space="preserve"><value>非スペース マーク</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OpenPunctuation" xml:space="preserve"><value>開く 句読点</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherLetter" xml:space="preserve"><value>その他 文字</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherNotAssigned" xml:space="preserve"><value>ではない 割り当て済み</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherNumber" xml:space="preserve"><value>その他 番号</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherPunctuation" xml:space="preserve"><value>その他 句読点</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherSymbol" xml:space="preserve"><value>その他 記号</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ParagraphSeparator" xml:space="preserve"><value>段落 区切り文字</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.PrivateUse" xml:space="preserve"><value>非公開 使用</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.SpaceSeparator" xml:space="preserve"><value>領域 区切り文字</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.SpacingCombiningMark" xml:space="preserve"><value>間隔結合マーク</value></data>
+  <data name="Health.TextDifference.NoCharacter" xml:space="preserve"><value>∅ (文字なし)</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ClosePunctuation" xml:space="preserve"><value>閉じ句読点</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ConnectorPunctuation" xml:space="preserve"><value>接続句読点</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.Control" xml:space="preserve"><value>制御文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.CurrencySymbol" xml:space="preserve"><value>通貨記号</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.DashPunctuation" xml:space="preserve"><value>ダッシュ句読点</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.DecimalDigitNumber" xml:space="preserve"><value>10 進数字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.EnclosingMark" xml:space="preserve"><value>囲み結合文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.FinalQuotePunctuation" xml:space="preserve"><value>引用終端句読点</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.Format" xml:space="preserve"><value>書式文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.InitialQuotePunctuation" xml:space="preserve"><value>引用開始句読点</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LetterNumber" xml:space="preserve"><value>文字数字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LineSeparator" xml:space="preserve"><value>行区切り</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LowercaseLetter" xml:space="preserve"><value>小文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.MathSymbol" xml:space="preserve"><value>数学記号</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ModifierLetter" xml:space="preserve"><value>修飾文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ModifierSymbol" xml:space="preserve"><value>修飾記号</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.NonSpacingMark" xml:space="preserve"><value>非スペーシング結合文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OpenPunctuation" xml:space="preserve"><value>開き句読点</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherLetter" xml:space="preserve"><value>その他の文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherNotAssigned" xml:space="preserve"><value>未割り当て</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherNumber" xml:space="preserve"><value>その他の数字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherPunctuation" xml:space="preserve"><value>その他の句読点</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherSymbol" xml:space="preserve"><value>その他の記号</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ParagraphSeparator" xml:space="preserve"><value>段落区切り</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.PrivateUse" xml:space="preserve"><value>私用文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.SpaceSeparator" xml:space="preserve"><value>空白区切り</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.SpacingCombiningMark" xml:space="preserve"><value>前進を伴う結合文字</value></data>
   <data name="Health.TextDifference.UnicodeCategory.Surrogate" xml:space="preserve"><value>サロゲート</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.TitlecaseLetter" xml:space="preserve"><value>タイトルケース 文字</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.UppercaseLetter" xml:space="preserve"><value>大文字 文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.TitlecaseLetter" xml:space="preserve"><value>タイトルケース文字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.UppercaseLetter" xml:space="preserve"><value>大文字</value></data>
   <data name="Health.TextDifference.UnicodeDetails" xml:space="preserve"><value>変更前: {0}、変更後: {1}</value></data>
-  <data name="Health.TextDifference.UnicodeName.CarriageReturn" xml:space="preserve"><value>キャリッジリターン</value></data>
-  <data name="Health.TextDifference.UnicodeName.CharacterTabulation" xml:space="preserve"><value>文字タブ</value></data>
-  <data name="Health.TextDifference.UnicodeName.FigureSpace" xml:space="preserve"><value>数字 領域</value></data>
-  <data name="Health.TextDifference.UnicodeName.Hyphen" xml:space="preserve"><value>ハイフン</value></data>
-  <data name="Health.TextDifference.UnicodeName.HyphenMinus" xml:space="preserve"><value>ハイフンマイナス</value></data>
-  <data name="Health.TextDifference.UnicodeName.LeftDoubleQuotationMark" xml:space="preserve"><value>左二重引用符</value></data>
-  <data name="Health.TextDifference.UnicodeName.LeftSingleQuotationMark" xml:space="preserve"><value>左単一引用符</value></data>
-  <data name="Health.TextDifference.UnicodeName.LineFeed" xml:space="preserve"><value>改行</value></data>
-  <data name="Health.TextDifference.UnicodeName.MinusSign" xml:space="preserve"><value>マイナス記号</value></data>
-  <data name="Health.TextDifference.UnicodeName.NarrowNoBreakSpace" xml:space="preserve"><value>狭い休憩スペース</value></data>
-  <data name="Health.TextDifference.UnicodeName.NoBreakSpace" xml:space="preserve"><value>いいえ-改行 領域</value></data>
-  <data name="Health.TextDifference.UnicodeName.NonBreakingHyphen" xml:space="preserve"><value>改行なし ハイフン</value></data>
-  <data name="Health.TextDifference.UnicodeName.RightDoubleQuotationMark" xml:space="preserve"><value>右二重引用符</value></data>
-  <data name="Health.TextDifference.UnicodeName.RightSingleQuotationMark" xml:space="preserve"><value>右単一引用符</value></data>
-  <data name="Health.TextDifference.UnicodeName.Space" xml:space="preserve"><value>領域</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthJoiner" xml:space="preserve"><value>ゼロ幅ジョイナー</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthNoBreakSpace" xml:space="preserve"><value>幅ゼロの休憩スペースなし</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthNonJoiner" xml:space="preserve"><value>幅ゼロの非ジョイナー</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthSpace" xml:space="preserve"><value>幅ゼロのスペース</value></data>
+  <data name="Health.TextDifference.UnicodeName.CarriageReturn" xml:space="preserve"><value>CARRIAGE RETURN</value></data>
+  <data name="Health.TextDifference.UnicodeName.CharacterTabulation" xml:space="preserve"><value>CHARACTER TABULATION</value></data>
+  <data name="Health.TextDifference.UnicodeName.FigureSpace" xml:space="preserve"><value>FIGURE SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.Hyphen" xml:space="preserve"><value>HYPHEN</value></data>
+  <data name="Health.TextDifference.UnicodeName.HyphenMinus" xml:space="preserve"><value>HYPHEN-MINUS</value></data>
+  <data name="Health.TextDifference.UnicodeName.LeftDoubleQuotationMark" xml:space="preserve"><value>LEFT DOUBLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.LeftSingleQuotationMark" xml:space="preserve"><value>LEFT SINGLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.LineFeed" xml:space="preserve"><value>LINE FEED</value></data>
+  <data name="Health.TextDifference.UnicodeName.MinusSign" xml:space="preserve"><value>MINUS SIGN</value></data>
+  <data name="Health.TextDifference.UnicodeName.NarrowNoBreakSpace" xml:space="preserve"><value>NARROW NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.NoBreakSpace" xml:space="preserve"><value>NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.NonBreakingHyphen" xml:space="preserve"><value>NON-BREAKING HYPHEN</value></data>
+  <data name="Health.TextDifference.UnicodeName.RightDoubleQuotationMark" xml:space="preserve"><value>RIGHT DOUBLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.RightSingleQuotationMark" xml:space="preserve"><value>RIGHT SINGLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.Space" xml:space="preserve"><value>SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthJoiner" xml:space="preserve"><value>ZERO WIDTH JOINER</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthNoBreakSpace" xml:space="preserve"><value>ZERO WIDTH NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthNonJoiner" xml:space="preserve"><value>ZERO WIDTH NON-JOINER</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthSpace" xml:space="preserve"><value>ZERO WIDTH SPACE</value></data>
   <data name="Health.TextDifference.VisibleCodePoint" xml:space="preserve"><value>{0} ‘{1}’ ({2})</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Lower" xml:space="preserve"><value>小文字</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Sentence" xml:space="preserve"><value>文頭のみ大文字</value></data>

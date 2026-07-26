@@ -301,7 +301,7 @@ internal static partial class CatalogGenerator
                     failures.Add($"{locale.Name}:{key}: placeholder mismatch");
                 if (IsCjk(locale.Name) &&
                     !NativeAutonyms.ContainsKey(key) &&
-                    !CjkInvariantExampleKeys.Contains(key))
+                    !IsCjkInvariantResource(key))
                 {
                     string[] residualLatinWords =
                         FindUnprotectedLatinWords(
@@ -1275,7 +1275,7 @@ internal static partial class CatalogGenerator
                             protectedTermMismatches));
                 if (IsCjk(locale.Name) &&
                     !NativeAutonyms.ContainsKey(key) &&
-                    !CjkInvariantExampleKeys.Contains(key))
+                    !IsCjkInvariantResource(key))
                 {
                     string[] residual =
                         FindUnprotectedLatinWords(
@@ -1497,6 +1497,12 @@ internal static partial class CatalogGenerator
         "Library.Filter.Placeholder",
         "Library.FilterHelp.Description",
     ];
+
+    private static bool IsCjkInvariantResource(string key) =>
+        CjkInvariantExampleKeys.Contains(key) ||
+        key.StartsWith(
+            "Health.TextDifference.UnicodeName.",
+            StringComparison.Ordinal);
 
     [GeneratedRegex(
         @"[A-Za-z][A-Za-z'-]*",

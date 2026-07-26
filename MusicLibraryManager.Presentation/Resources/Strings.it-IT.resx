@@ -713,64 +713,64 @@
     <value>La tua musica, organizzata con chiarezza</value>
   </data>
   <data name="Health.Action.ApplyActiveMerges" xml:space="preserve">
-    <value>applica attivo unioni</value>
+    <value>Applica unioni attive</value>
   </data>
   <data name="Health.Action.ApplyActiveRepairs" xml:space="preserve">
-    <value>applica attivo riparazioni</value>
+    <value>Applica riparazioni attive</value>
   </data>
   <data name="Health.Action.ApplyArtworkRepairs" xml:space="preserve">
-    <value>applica attivo riparazioni</value>
+    <value>Applica riparazioni attive delle copertine</value>
   </data>
   <data name="Health.Action.ApplyFileRepairs" xml:space="preserve">
-    <value>applica selezionato file riparazioni</value>
+    <value>Applica riparazioni dei file selezionate</value>
   </data>
   <data name="Health.Action.ApplyItunesRepairs" xml:space="preserve">
-    <value>applica selezionato iTunes riparazioni</value>
+    <value>Applica riparazioni iTunes selezionate</value>
   </data>
   <data name="Health.Action.ApplyMetadataRepairs" xml:space="preserve">
-    <value>applica selezionato riparazioni</value>
+    <value>Applica riparazioni selezionate</value>
   </data>
   <data name="Health.Action.ForceScanDeferred" xml:space="preserve">
-    <value>forza scansiona differito</value>
+    <value>Analizza ora le copertine rinviate</value>
   </data>
   <data name="Health.AlbumMatrix.Album" xml:space="preserve">
-    <value>album</value>
+    <value>Album</value>
   </data>
   <data name="Health.AlbumMatrix.AlbumArtist" xml:space="preserve">
-    <value>artista album</value>
+    <value>Artista album</value>
   </data>
   <data name="Health.AlbumMatrix.Artist" xml:space="preserve">
-    <value>artista</value>
+    <value>Artista</value>
   </data>
   <data name="Health.AlbumMatrix.Date" xml:space="preserve">
-    <value>data</value>
+    <value>Data</value>
   </data>
   <data name="Health.AlbumMatrix.Description" xml:space="preserve">
     <value>Vengono mostrate solo le cartelle degli album con problemi. Le celle color ambra indicano dati mancanti o incoerenti; passa su una cella per vedere il motivo. Gli album con lo stesso nome restano separati se si trovano in cartelle diverse.</value>
   </data>
   <data name="Health.AlbumMatrix.Disc" xml:space="preserve">
-    <value>disco</value>
+    <value>Disco</value>
   </data>
   <data name="Health.AlbumMatrix.DiscTotal" xml:space="preserve">
-    <value>totale dischi</value>
+    <value>Totale dischi</value>
   </data>
   <data name="Health.AlbumMatrix.Empty" xml:space="preserve">
     <value>Non sono state trovate incoerenze nei metadati degli album.</value>
   </data>
   <data name="Health.AlbumMatrix.FlagReason" xml:space="preserve">
-    <value>perché esso era contrassegnato</value>
+    <value>Motivo della segnalazione</value>
   </data>
   <data name="Health.AlbumMatrix.ReadOnly" xml:space="preserve">
     <value>Controllo in sola lettura della coerenza degli album</value>
   </data>
   <data name="Health.AlbumMatrix.Track" xml:space="preserve">
-    <value>traccia</value>
+    <value>Traccia</value>
   </data>
   <data name="Health.AlbumMatrix.TrackNumber" xml:space="preserve">
-    <value>traccia #</value>
+    <value>Numero traccia</value>
   </data>
   <data name="Health.AlbumMatrix.TrackTotal" xml:space="preserve">
-    <value>totale tracce</value>
+    <value>Totale tracce</value>
   </data>
   <data name="Health.Artist.CanonicalName" xml:space="preserve">
     <value>Nome canonico</value>
@@ -779,22 +779,22 @@
     <value>Nome canonico dell’artista</value>
   </data>
   <data name="Health.Artist.CanonicalTarget" xml:space="preserve">
-    <value>canonico destinazione</value>
+    <value>Destinazione canonica</value>
   </data>
   <data name="Health.Artist.Description" xml:space="preserve">
     <value>Scegli il nome canonico di ogni gruppo e attiva solo le varianti da rinominare. Filtra mostra nella libreria i brani di una variante.</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
-    <value>{0} traccia selezionato tra attivo varianti</value>
+    <value>Tracce selezionate tra le varianti attive: {0}</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.Other" xml:space="preserve">
-    <value>{0} tracce selezionato tra attivo varianti</value>
+    <value>Tracce selezionate tra le varianti attive: {0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.One" xml:space="preserve">
-    <value>{0} traccia in gruppo</value>
+    <value>Tracce nel gruppo: {0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.Other" xml:space="preserve">
-    <value>{0} tracce in gruppo</value>
+    <value>Tracce nel gruppo: {0}</value>
   </data>
   <data name="Health.Artist.FileCount.One" xml:space="preserve">
     <value>{0} file</value>
@@ -803,28 +803,28 @@
     <value>{0} file</value>
   </data>
   <data name="Health.Artist.FolderCount.One" xml:space="preserve">
-    <value>cartella ({0})</value>
+    <value>Cartelle ({0})</value>
   </data>
   <data name="Health.Artist.FolderCount.Other" xml:space="preserve">
-    <value>cartelle ({0})</value>
+    <value>Cartelle ({0})</value>
   </data>
   <data name="Health.Artist.FilesCount.One" xml:space="preserve">
-    <value>file ({0})</value>
+    <value>File ({0})</value>
   </data>
   <data name="Health.Artist.FilesCount.Other" xml:space="preserve">
-    <value>file ({0})</value>
+    <value>File ({0})</value>
   </data>
   <data name="Health.Artist.Empty" xml:space="preserve">
     <value>Non sono stati trovati nomi di artista simili con la soglia selezionata.</value>
   </data>
   <data name="Health.Artist.ReviewTitle" xml:space="preserve">
-    <value>rivedi artista ortografia varianti</value>
+    <value>Rivedi le varianti ortografiche degli artisti</value>
   </data>
   <data name="Health.Artist.Threshold" xml:space="preserve">
-    <value>artista soglia</value>
+    <value>Soglia di somiglianza</value>
   </data>
   <data name="Health.Artist.ThresholdAutomation" xml:space="preserve">
-    <value>simile artista sfocato soglia</value>
+    <value>Soglia di corrispondenza degli artisti simili</value>
   </data>
   <data name="Health.Artist.ThresholdTooltip" xml:space="preserve">
     <value>Distanza di modifica normalizzata massima. I valori più bassi sono più restrittivi; 0 consente solo grafie equivalenti dopo la normalizzazione.</value>
@@ -833,7 +833,7 @@
     <value>Per gli album con copertine diverse, scegli una copertina, contrassegna come attive le riparazioni desiderate e applicale. Ogni azione usa i limiti separati di dimensione e risoluzione definiti nelle Impostazioni.</value>
   </data>
   <data name="Health.Artwork.ChooseCanonicalAutomation" xml:space="preserve">
-    <value>scegli canonico album copertina</value>
+    <value>Scegli la copertina canonica dell’album</value>
   </data>
   <data name="Health.Artwork.Action.SelectFirst" xml:space="preserve">
     <value>Seleziona la prima immagine e contrassegnala come attiva</value>
@@ -845,52 +845,52 @@
     <value>Seleziona il file più grande e contrassegnalo come attivo</value>
   </data>
   <data name="Health.Artwork.Selection.NoneChanged" xml:space="preserve">
-    <value>no idoneo misto-copertina riparazioni erano modificato.</value>
+    <value>Nessuna riparazione idonea di copertine diverse è stata modificata.</value>
   </data>
   <data name="Health.Artwork.Selection.ChangedFormat" xml:space="preserve">
     <value>Copertina selezionata e {0:N0} riparazioni contrassegnate come attive.</value>
   </data>
   <data name="Health.Artwork.SelectedCount.One" xml:space="preserve">
-    <value>{0} ripara azione selezionato</value>
+    <value>Azioni di riparazione selezionate: {0}</value>
   </data>
   <data name="Health.Artwork.SelectedCount.Other" xml:space="preserve">
-    <value>{0} ripara azioni selezionato</value>
+    <value>Azioni di riparazione selezionate: {0}</value>
   </data>
   <data name="Health.Artwork.AffectedFiles.One" xml:space="preserve">
-    <value>interessato file ({0})</value>
+    <value>File interessati ({0})</value>
   </data>
   <data name="Health.Artwork.AffectedFiles.Other" xml:space="preserve">
-    <value>interessato file ({0})</value>
+    <value>File interessati ({0})</value>
   </data>
   <data name="Health.Artwork.Empty" xml:space="preserve">
     <value>Non sono disponibili riparazioni automatiche delle copertine per questo controllo.</value>
   </data>
   <data name="Health.Artwork.Plan" xml:space="preserve">
-    <value>copertina ripara piano</value>
+    <value>Piano di riparazione delle copertine</value>
   </data>
   <data name="Health.Artwork.ReviewTitle" xml:space="preserve">
-    <value>rivedi automatico copertina riparazioni</value>
+    <value>Rivedi le riparazioni automatiche delle copertine</value>
   </data>
   <data name="Health.Audit.Description" xml:space="preserve">
     <value>Controlla qualità, coerenza e integrità dei file.</value>
   </data>
   <data name="Health.Audit.Menu.AlbumMatrix" xml:space="preserve">
-    <value>album metadati matrice</value>
+    <value>Matrice dei metadati album</value>
   </data>
   <data name="Health.Audit.Menu.CrossSet" xml:space="preserve">
-    <value>incrociato-imposta confronto</value>
+    <value>Confronto tra set</value>
   </data>
   <data name="Health.Audit.Menu.Duplicates" xml:space="preserve">
-    <value>duplicato tracce</value>
+    <value>Tracce duplicate</value>
   </data>
   <data name="Health.Audit.Menu.FileRepresentations" xml:space="preserve">
-    <value>file rappresentazioni</value>
+    <value>Rappresentazioni dei file</value>
   </data>
   <data name="Health.Audit.Menu.LossyFiles" xml:space="preserve">
-    <value>con perdita file</value>
+    <value>File con perdita</value>
   </data>
   <data name="Health.Audit.Menu.Metadata" xml:space="preserve">
-    <value>metadati incoerenze</value>
+    <value>Incoerenze dei metadati</value>
   </data>
   <data name="Health.Audit.Menu.VerifyAudio" xml:space="preserve">
     <value>Verifica audio decodificato</value>
@@ -947,43 +947,43 @@
     <value>Non sono stati trovati conflitti tra album e artista dell’album.</value>
   </data>
   <data name="Health.Findings.All" xml:space="preserve">
-    <value>tutti riscontri</value>
+    <value>Tutti i risultati</value>
   </data>
   <data name="Health.Findings.SelectAllAutomation" xml:space="preserve">
-    <value>seleziona tutti riscontri</value>
+    <value>Seleziona tutti i risultati</value>
   </data>
   <data name="Health.History.Empty" xml:space="preserve">
     <value>Esegui un controllo per generare risultati verificabili.</value>
   </data>
   <data name="Health.History.Title" xml:space="preserve">
-    <value>analisi cronologia</value>
+    <value>Cronologia delle analisi</value>
   </data>
   <data name="Health.Context.CopyPath" xml:space="preserve">
-    <value>copia percorso</value>
+    <value>Copia percorso</value>
   </data>
   <data name="Health.Context.OpenWorkbench" xml:space="preserve">
-    <value>apri in area di lavoro</value>
+    <value>Apri nell’area di lavoro</value>
   </data>
   <data name="Health.Context.RevealExplorer" xml:space="preserve">
-    <value>mostra in file esplora file</value>
+    <value>Mostra in Esplora file</value>
   </data>
   <data name="Health.Split.ArtworkRepairs" xml:space="preserve">
-    <value>ridimensiona copertina ripara gerarchia</value>
+    <value>Ridimensiona la gerarchia delle riparazioni delle copertine</value>
   </data>
   <data name="Health.Split.FileRepairs" xml:space="preserve">
-    <value>ridimensiona file ripara gerarchia</value>
+    <value>Ridimensiona la gerarchia delle riparazioni dei file</value>
   </data>
   <data name="Health.Split.Findings" xml:space="preserve">
-    <value>ridimensiona riscontri gerarchia</value>
+    <value>Ridimensiona la gerarchia dei risultati</value>
   </data>
   <data name="Health.Split.History" xml:space="preserve">
-    <value>ridimensiona analisi cronologia</value>
+    <value>Ridimensiona la cronologia delle analisi</value>
   </data>
   <data name="Health.Split.ItunesRepairs" xml:space="preserve">
-    <value>ridimensiona iTunes metadati ripara gerarchia</value>
+    <value>Ridimensiona la gerarchia delle riparazioni dei metadati iTunes</value>
   </data>
   <data name="Health.Split.MetadataRepairs" xml:space="preserve">
-    <value>ridimensiona metadati ripara gerarchia</value>
+    <value>Ridimensiona la gerarchia delle riparazioni dei metadati</value>
   </data>
   <data name="Health.NoSelection.Description" xml:space="preserve">
     <value>Esegui un controllo o prepara le riparazioni per esaminarne qui i risultati.</value>
@@ -995,94 +995,94 @@
     <value>Crea un piano verificabile. Nulla cambia finché non lo applichi.</value>
   </data>
   <data name="Health.Repair.Menu.AlbumArtistConflicts" xml:space="preserve">
-    <value>artista album conflitti</value>
+    <value>Conflitti dell’artista dell’album</value>
   </data>
   <data name="Health.Repair.Menu.Artwork" xml:space="preserve">
-    <value>copertina riparazioni</value>
+    <value>Riparazioni delle copertine</value>
   </data>
   <data name="Health.Repair.Menu.Conflicts" xml:space="preserve">
-    <value>conflitto riparazioni</value>
+    <value>Riparazioni dei conflitti</value>
   </data>
   <data name="Health.Repair.Menu.FileRepresentations" xml:space="preserve">
-    <value>file rappresentazione riparazioni</value>
+    <value>Riparazioni delle rappresentazioni dei file</value>
   </data>
   <data name="Health.Repair.Menu.Itunes" xml:space="preserve">
-    <value>iTunes metadati riparazioni</value>
+    <value>Riparazioni dei metadati iTunes</value>
   </data>
   <data name="Health.Repair.Menu.MetadataPolicy" xml:space="preserve">
-    <value>abilitato criterio metadati riparazioni</value>
+    <value>Riparazioni dei metadati basate sui criteri</value>
   </data>
   <data name="Health.Repair.Menu.SimilarArtists" xml:space="preserve">
     <value>Nomi di artisti simili</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
-    <value>prepara riparazioni…</value>
+    <value>Prepara riparazioni…</value>
   </data>
   <data name="Health.Repair.PrepareAutomation" xml:space="preserve">
     <value>Scegli un piano di riparazione da preparare</value>
   </data>
   <data name="Health.Repair.Title" xml:space="preserve">
-    <value>prepara riparazioni</value>
+    <value>Prepara riparazioni</value>
   </data>
   <data name="Health.Repairs.AllFile" xml:space="preserve">
-    <value>tutti file riparazioni</value>
+    <value>Tutte le riparazioni dei file</value>
   </data>
   <data name="Health.Repairs.AllItunes" xml:space="preserve">
-    <value>tutti iTunes riparazioni</value>
+    <value>Tutte le riparazioni iTunes</value>
   </data>
   <data name="Health.Repairs.AllMetadata" xml:space="preserve">
-    <value>tutti metadati riparazioni</value>
+    <value>Tutte le riparazioni dei metadati</value>
   </data>
   <data name="Health.Repairs.MetadataCount.One" xml:space="preserve">
-    <value>{0} rivisto metadati ripara</value>
+    <value>{0} riparazione dei metadati esaminata</value>
   </data>
   <data name="Health.Repairs.MetadataCount.Other" xml:space="preserve">
-    <value>{0} rivisto metadati riparazioni</value>
+    <value>{0} riparazioni dei metadati esaminate</value>
   </data>
   <data name="Health.Repairs.FileCount.One" xml:space="preserve">
-    <value>{0} rivisto file azione</value>
+    <value>{0} azione sui file esaminata</value>
   </data>
   <data name="Health.Repairs.FileCount.Other" xml:space="preserve">
-    <value>{0} rivisto file azioni</value>
+    <value>{0} azioni sui file esaminate</value>
   </data>
   <data name="Health.Repairs.ItunesCount.One" xml:space="preserve">
-    <value>{0} rivisto iTunes ripara</value>
+    <value>{0} riparazione iTunes esaminata</value>
   </data>
   <data name="Health.Repairs.ItunesCount.Other" xml:space="preserve">
-    <value>{0} rivisto iTunes riparazioni</value>
+    <value>{0} riparazioni iTunes esaminate</value>
   </data>
   <data name="Health.Subtitle" xml:space="preserve">
     <value>Controlla la raccolta, esamina ogni modifica proposta e applica riparazioni sicure.</value>
   </data>
   <data name="Health.Tab.AlbumMatrix" xml:space="preserve">
-    <value>matrice album</value>
+    <value>Matrice degli album</value>
   </data>
   <data name="Health.Tab.ArtworkRepairs" xml:space="preserve">
-    <value>copertina riparazioni</value>
+    <value>Riparazioni delle copertine</value>
   </data>
   <data name="Health.Tab.Conflicts" xml:space="preserve">
-    <value>conflitti</value>
+    <value>Conflitti</value>
   </data>
   <data name="Health.Tab.Duplicates" xml:space="preserve">
-    <value>duplicati</value>
+    <value>Duplicati</value>
   </data>
   <data name="Health.Tab.FileRepairs" xml:space="preserve">
-    <value>file riparazioni</value>
+    <value>Riparazioni dei file</value>
   </data>
   <data name="Health.Tab.Findings" xml:space="preserve">
-    <value>riscontri</value>
+    <value>Risultati</value>
   </data>
   <data name="Health.Tab.ItunesRepairs" xml:space="preserve">
-    <value>iTunes riparazioni</value>
+    <value>Riparazioni iTunes</value>
   </data>
   <data name="Health.Tab.MetadataRepairs" xml:space="preserve">
-    <value>metadati riparazioni</value>
+    <value>Riparazioni dei metadati</value>
   </data>
   <data name="Health.Tab.SimilarArtists" xml:space="preserve">
-    <value>simile artisti</value>
+    <value>Artisti simili</value>
   </data>
   <data name="Health.Title" xml:space="preserve">
-    <value>integrità</value>
+    <value>Integrità</value>
   </data>
   <data name="Ingest.Action.ClearSelectedFiles" xml:space="preserve">
     <value>Cancella selezione file</value>
@@ -4486,187 +4486,187 @@
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>Il filtro visivo non è valido.</value></data>
   <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>Nessun filtro visivo è attivo.</value></data>
   <data name="Column.TechnicalDetails" xml:space="preserve"><value>Dettagli tecnici</value></data>
-  <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>filtro in libreria</value></data>
-  <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>misto</value></data>
-  <data name="Health.Choice.FindingDisposition.None" xml:space="preserve"><value>nessuno</value></data>
-  <data name="Health.Choice.RepairDisposition.Active" xml:space="preserve"><value>attivo</value></data>
-  <data name="Health.Choice.RepairDisposition.Completed" xml:space="preserve"><value>completato</value></data>
-  <data name="Health.Choice.RepairDisposition.Filter" xml:space="preserve"><value>filtro in libreria</value></data>
-  <data name="Health.Choice.RepairDisposition.Ignored" xml:space="preserve"><value>ignorato</value></data>
-  <data name="Health.Choice.RepairDisposition.Mixed" xml:space="preserve"><value>misto</value></data>
+  <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>Filtra nella libreria</value></data>
+  <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>Misto</value></data>
+  <data name="Health.Choice.FindingDisposition.None" xml:space="preserve"><value>Nessuna</value></data>
+  <data name="Health.Choice.RepairDisposition.Active" xml:space="preserve"><value>Attiva</value></data>
+  <data name="Health.Choice.RepairDisposition.Completed" xml:space="preserve"><value>Completata</value></data>
+  <data name="Health.Choice.RepairDisposition.Filter" xml:space="preserve"><value>Filtra nella libreria</value></data>
+  <data name="Health.Choice.RepairDisposition.Ignored" xml:space="preserve"><value>Ignorata</value></data>
+  <data name="Health.Choice.RepairDisposition.Mixed" xml:space="preserve"><value>Misto</value></data>
   <data name="Health.Common.Missing" xml:space="preserve"><value>(mancante)</value></data>
-  <data name="Health.Common.NoFolder" xml:space="preserve"><value>(no cartella)</value></data>
+  <data name="Health.Common.NoFolder" xml:space="preserve"><value>(nessuna cartella)</value></data>
   <data name="Health.Common.Unknown" xml:space="preserve"><value>(sconosciuto)</value></data>
-  <data name="Health.Common.UnknownAlbum" xml:space="preserve"><value>sconosciuto album</value></data>
-  <data name="Health.Common.UnknownArtist" xml:space="preserve"><value>sconosciuto artista</value></data>
-  <data name="Health.Common.UnknownError" xml:space="preserve"><value>sconosciuto errore</value></data>
+  <data name="Health.Common.UnknownAlbum" xml:space="preserve"><value>Album sconosciuto</value></data>
+  <data name="Health.Common.UnknownArtist" xml:space="preserve"><value>Artista sconosciuto</value></data>
+  <data name="Health.Common.UnknownError" xml:space="preserve"><value>errore sconosciuto</value></data>
   <data name="Health.Duration.HoursMinutes" xml:space="preserve"><value>{0:N0}h {1:N0}m</value></data>
   <data name="Health.Duration.MinutesSeconds" xml:space="preserve"><value>{0:N0}m {1:N0}s</value></data>
   <data name="Health.Duration.Seconds" xml:space="preserve"><value>{0:N0}s</value></data>
-  <data name="Health.Field.Id3TagVersion" xml:space="preserve"><value>ID3 tag versione</value></data>
-  <data name="Health.Field.Path" xml:space="preserve"><value>percorso</value></data>
+  <data name="Health.Field.Id3TagVersion" xml:space="preserve"><value>Versione tag ID3</value></data>
+  <data name="Health.Field.Path" xml:space="preserve"><value>Percorso</value></data>
   <data name="Health.Findings.Empty.NoMatches" xml:space="preserve"><value>Questa analisi non ha trovato brani corrispondenti.</value></data>
-  <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>seleziona un riscontri ramo.</value></data>
-  <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>memorizzato nella cache metadati</value></data>
+  <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>Seleziona un ramo dei risultati.</value></data>
+  <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>Metadati memorizzati nella cache</value></data>
   <data name="Health.Itl.DifferenceFormat" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>deriva mancante AAC</value></data>
-  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>deriva mancante CD FLAC</value></data>
-  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>organizza rappresentazione</value></data>
+  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>Crea la rappresentazione AAC mancante</value></data>
+  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>Crea la rappresentazione FLAC CD mancante</value></data>
+  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>Organizza i file di rappresentazione</value></data>
   <data name="Health.Run.DisplayLabel" xml:space="preserve"><value>{0} · {1:N0} · {2:HH:mm:ss}</value></data>
-  <data name="Health.Run.Name.AlbumArtistConflicts" xml:space="preserve"><value>artista album conflitti</value></data>
-  <data name="Health.Run.Name.AlbumMetadataMatrix" xml:space="preserve"><value>album metadati matrice</value></data>
-  <data name="Health.Run.Name.AlbumRepresentations" xml:space="preserve"><value>album rappresentazioni</value></data>
-  <data name="Health.Run.Name.ArtworkHealth" xml:space="preserve"><value>copertina integrità</value></data>
-  <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>artista album conflitto riparazioni</value></data>
+  <data name="Health.Run.Name.AlbumArtistConflicts" xml:space="preserve"><value>Conflitti dell’artista dell’album</value></data>
+  <data name="Health.Run.Name.AlbumMetadataMatrix" xml:space="preserve"><value>Matrice dei metadati dell’album</value></data>
+  <data name="Health.Run.Name.AlbumRepresentations" xml:space="preserve"><value>Rappresentazioni dell’album</value></data>
+  <data name="Health.Run.Name.ArtworkHealth" xml:space="preserve"><value>Integrità delle copertine</value></data>
+  <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>Riparazioni dei conflitti dell’artista dell’album</value></data>
   <data name="Health.Run.Name.CrossSetCheck" xml:space="preserve"><value>Controllo tra set</value></data>
   <data name="Health.Run.Name.DecodedAudioVerification" xml:space="preserve"><value>Verifica dell’audio decodificato</value></data>
-  <data name="Health.Run.Name.Duplicates" xml:space="preserve"><value>duplicati</value></data>
-  <data name="Health.Run.Name.Inconsistencies" xml:space="preserve"><value>incoerenze</value></data>
-  <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>iTunes libreria metadati riparazioni</value></data>
-  <data name="Health.Run.Name.LossyFiles" xml:space="preserve"><value>con perdita file</value></data>
-  <data name="Health.Run.Name.MetadataRepairs" xml:space="preserve"><value>sicuro metadati riparazioni</value></data>
-  <data name="Health.Run.Name.RepresentationFileRepairs" xml:space="preserve"><value>rappresentazione file riparazioni</value></data>
-  <data name="Health.Run.Name.RepresentationMetadataRepairs" xml:space="preserve"><value>copia rappresentazione metadati</value></data>
-  <data name="Health.Run.Name.SimilarArtists" xml:space="preserve"><value>simile artisti</value></data>
+  <data name="Health.Run.Name.Duplicates" xml:space="preserve"><value>Duplicati</value></data>
+  <data name="Health.Run.Name.Inconsistencies" xml:space="preserve"><value>Incoerenze</value></data>
+  <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>Riparazioni dei metadati della libreria iTunes</value></data>
+  <data name="Health.Run.Name.LossyFiles" xml:space="preserve"><value>File con perdita</value></data>
+  <data name="Health.Run.Name.MetadataRepairs" xml:space="preserve"><value>Riparazioni sicure dei metadati</value></data>
+  <data name="Health.Run.Name.RepresentationFileRepairs" xml:space="preserve"><value>Riparazioni dei file di rappresentazione</value></data>
+  <data name="Health.Run.Name.RepresentationMetadataRepairs" xml:space="preserve"><value>Copia i metadati di rappresentazione</value></data>
+  <data name="Health.Run.Name.SimilarArtists" xml:space="preserve"><value>Artisti simili</value></data>
   <data name="Health.Artwork.AlbumTitleFormat" xml:space="preserve"><value>{0} — {1}</value></data>
-  <data name="Health.Artwork.Blocking.NoReadableSource" xml:space="preserve"><value>no leggibile origine immagine è disponibile per questo ripara.</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>copertina scrivi è non supportato per {0:N0} interessato file.</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>copertina scrivi è non supportato per {0:N0} interessato file.</value></data>
+  <data name="Health.Artwork.Blocking.NoReadableSource" xml:space="preserve"><value>Nessuna immagine di origine leggibile è disponibile per questa riparazione.</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>File senza supporto per la scrittura delle copertine: {0:N0}.</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>File senza supporto per la scrittura delle copertine: {0:N0}.</value></data>
   <data name="Health.Artwork.CandidateDetailsFormat" xml:space="preserve"><value>{0:N0}×{1:N0} · {2:0.#} KiB · {3}</value></data>
-  <data name="Health.Artwork.Category.File" xml:space="preserve"><value>file copertina</value></data>
-  <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>misto album copertina</value></data>
-  <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>mantieni il primo immagine e rimuovi duplicato incorporato immagini.</value></data>
+  <data name="Health.Artwork.Category.File" xml:space="preserve"><value>Copertina del file</value></data>
+  <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>Copertine album diverse</value></data>
+  <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>Mantieni la prima immagine e rimuovi le immagini incorporate duplicate.</value></data>
   <data name="Health.Artwork.Description.NormalizeAlbum" xml:space="preserve"><value>Sostituisci l’insieme di copertine incorporate di ogni traccia con l’immagine dell’album selezionata.</value></data>
   <data name="Health.Artwork.Description.NormalizeAlbumWithMissing" xml:space="preserve"><value>Sostituisci l’insieme di copertine incorporate di ogni traccia analizzata con l’immagine dell’album selezionata, incluse le tracce senza copertina.</value></data>
-  <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>ricodifica il primo immagine entro il configurato limite e rimuovi duplicato incorporato immagini.</value></data>
-  <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>ricodifica il primo immagine entro il configurato copertina limite.</value></data>
-  <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>ricodifica il primo leggibile immagine e sostituisci il non valido incorporato-copertina imposta.</value></data>
-  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>selezionato copertina e contrassegna {0:N0} ripara attivo.</value></data>
-  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>selezionato copertina e contrassegna {0:N0} riparazioni attivo.</value></data>
-  <data name="Health.Artwork.TargetSummary" xml:space="preserve"><value>destinazione: a maggior parte {0:N0}px e {1:0.##} MiB</value></data>
-  <data name="Health.Artwork.ThumbnailLoadFailed" xml:space="preserve"><value>il copertina anteprima potrebbe non essere caricato.</value></data>
-  <data name="Health.Diagnostic.CacheRefreshFailed" xml:space="preserve"><value>cache aggiorna non riuscito: {0}</value></data>
+  <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>Ricodifica la prima immagine entro i limiti configurati e rimuovi le immagini incorporate duplicate.</value></data>
+  <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>Ricodifica la prima immagine entro i limiti configurati per le copertine.</value></data>
+  <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>Ricodifica la prima immagine leggibile e sostituisci il set di copertine incorporate non valido.</value></data>
+  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>Copertina selezionata; riparazioni contrassegnate come attive: {0:N0}.</value></data>
+  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>Copertina selezionata; riparazioni contrassegnate come attive: {0:N0}.</value></data>
+  <data name="Health.Artwork.TargetSummary" xml:space="preserve"><value>Obiettivo: massimo {0:N0}px e {1:0.##} MiB</value></data>
+  <data name="Health.Artwork.ThumbnailLoadFailed" xml:space="preserve"><value>Impossibile caricare l’anteprima della copertina.</value></data>
+  <data name="Health.Diagnostic.CacheRefreshFailed" xml:space="preserve"><value>Aggiornamento della cache non riuscito: {0}</value></data>
   <data name="Health.Diagnostic.FileError" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>applica riparazioni</value></data>
-  <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>applica artista unioni</value></data>
+  <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>Applica riparazioni</value></data>
+  <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>Applica unioni di artisti</value></data>
   <data name="Health.Dialog.ArtistMerge.Message" xml:space="preserve"><value>Rinominare {0:N0} varianti ortografiche verificate in {1:N0} tracce appartenenti a {2:N0} gruppi? I file vengono scritti direttamente; non viene creato alcun registro di ripristino.</value></data>
-  <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>applica simile artista unioni</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>applica copertina riparazioni</value></data>
+  <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>Applica unioni di artisti simili</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>Applica riparazioni delle copertine</value></data>
   <data name="Health.Dialog.ArtworkRepair.Message" xml:space="preserve"><value>Sostituire l’intero set di copertine incorporate in {0:N0} file usando {1:N0} azioni verificate? I file vengono scritti direttamente; non viene creato alcun registro di ripristino.</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>applica copertina riparazioni</value></data>
-  <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>applica file riparazioni</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>Applica riparazioni delle copertine</value></data>
+  <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>Applica riparazioni dei file</value></data>
   <data name="Health.Dialog.FileRepair.Message" xml:space="preserve"><value>Applicare {0:N0} azioni verificate di riparazione dei file? Le modifiche recuperabili vengono registrate nel registro delle operazioni; le scritture dei soli metadati non possono essere ripristinate dal registro.</value></data>
-  <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>applica file riparazioni</value></data>
-  <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>applica {0:N0} selezionato riparazioni a il iTunes libreria? un backup copia verrà essere conservato.</value></data>
-  <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>applica iTunes metadati riparazioni</value></data>
+  <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>Applica riparazioni dei file</value></data>
+  <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>Applicare {0:N0} riparazioni selezionate alla libreria iTunes? Verrà conservata una copia di backup.</value></data>
+  <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>Applica riparazioni dei metadati iTunes</value></data>
   <data name="Health.Dialog.MetadataRepair.Message" xml:space="preserve"><value>Scrivere {0:N0} riparazioni dei metadati verificate nei file selezionati? Per ogni origine vengono controllate le modifiche apportate dopo l’anteprima. I file vengono scritti direttamente; non viene creato alcun registro di ripristino.</value></data>
-  <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>applica metadati riparazioni</value></data>
-  <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>copertina confronto potrebbe non leggi ogni corrispondente file.</value></data>
-  <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>copertina confronto non disponibile</value></data>
-  <data name="Health.Operation.ApplyArtworkRepairs" xml:space="preserve"><value>applica copertina riparazioni</value></data>
-  <data name="Health.Operation.ApplyItlMetadataRepairs" xml:space="preserve"><value>applica iTunes metadati riparazioni</value></data>
-  <data name="Health.Operation.ApplyMetadataRepairs" xml:space="preserve"><value>applica metadati riparazioni</value></data>
-  <data name="Health.Operation.ApplyRepresentationFileRepairs" xml:space="preserve"><value>applica rappresentazione file riparazioni</value></data>
-  <data name="Health.Operation.ApplySimilarArtists" xml:space="preserve"><value>applica simile artista unioni</value></data>
-  <data name="Health.Operation.ForceScanDeferredArtwork" xml:space="preserve"><value>forza scansiona differito copertina</value></data>
-  <data name="Health.Operation.PreviewConflictRepairs" xml:space="preserve"><value>anteprima conflitto riparazioni</value></data>
-  <data name="Health.Operation.PreviewItlMetadataRepairs" xml:space="preserve"><value>anteprima iTunes metadati riparazioni</value></data>
-  <data name="Health.Operation.PreviewMetadataRepairs" xml:space="preserve"><value>anteprima metadati riparazioni</value></data>
-  <data name="Health.Operation.PreviewRepresentationRepairs" xml:space="preserve"><value>anteprima rappresentazione riparazioni</value></data>
-  <data name="Health.Progress.ApplyingArtworkRepairs" xml:space="preserve"><value>applicazione copertina riparazioni… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingItlMetadataRepairs" xml:space="preserve"><value>applicazione iTunes metadati riparazioni… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingMetadataRepairs" xml:space="preserve"><value>applicazione metadati riparazioni… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingRepresentationRepairs" xml:space="preserve"><value>applicazione rappresentazione riparazioni… {0:N0}/{1:N0}: {2}</value></data>
-  <data name="Health.Progress.ApplyingSimilarArtists" xml:space="preserve"><value>applicazione simile artista unioni… {0:N0}/{1:N0} varianti</value></data>
-  <data name="Health.Progress.Calculating" xml:space="preserve"><value>calcolo…</value></data>
-  <data name="Health.Progress.ComparingEmbeddedArtwork.One" xml:space="preserve"><value>confronto incorporato copertina per {0:N0} corrispondente controparte file…</value></data>
-  <data name="Health.Progress.ComparingEmbeddedArtwork.Other" xml:space="preserve"><value>confronto incorporato copertina per {0:N0} corrispondente controparte file…</value></data>
+  <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>Applica riparazioni dei metadati</value></data>
+  <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>Il confronto delle copertine non ha potuto leggere tutti i file corrispondenti.</value></data>
+  <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>Confronto delle copertine non disponibile</value></data>
+  <data name="Health.Operation.ApplyArtworkRepairs" xml:space="preserve"><value>Applica riparazioni delle copertine</value></data>
+  <data name="Health.Operation.ApplyItlMetadataRepairs" xml:space="preserve"><value>Applica riparazioni dei metadati iTunes</value></data>
+  <data name="Health.Operation.ApplyMetadataRepairs" xml:space="preserve"><value>Applica riparazioni dei metadati</value></data>
+  <data name="Health.Operation.ApplyRepresentationFileRepairs" xml:space="preserve"><value>Applica riparazioni dei file di rappresentazione</value></data>
+  <data name="Health.Operation.ApplySimilarArtists" xml:space="preserve"><value>Applica unioni di artisti simili</value></data>
+  <data name="Health.Operation.ForceScanDeferredArtwork" xml:space="preserve"><value>Forza l’analisi delle copertine rinviate</value></data>
+  <data name="Health.Operation.PreviewConflictRepairs" xml:space="preserve"><value>Anteprima riparazioni dei conflitti</value></data>
+  <data name="Health.Operation.PreviewItlMetadataRepairs" xml:space="preserve"><value>Anteprima riparazioni dei metadati iTunes</value></data>
+  <data name="Health.Operation.PreviewMetadataRepairs" xml:space="preserve"><value>Anteprima riparazioni dei metadati</value></data>
+  <data name="Health.Operation.PreviewRepresentationRepairs" xml:space="preserve"><value>Anteprima riparazioni delle rappresentazioni</value></data>
+  <data name="Health.Progress.ApplyingArtworkRepairs" xml:space="preserve"><value>Applicazione delle riparazioni delle copertine… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Progress.ApplyingItlMetadataRepairs" xml:space="preserve"><value>Applicazione delle riparazioni dei metadati iTunes… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Progress.ApplyingMetadataRepairs" xml:space="preserve"><value>Applicazione delle riparazioni dei metadati… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Progress.ApplyingRepresentationRepairs" xml:space="preserve"><value>Applicazione delle riparazioni delle rappresentazioni… {0:N0}/{1:N0}: {2}</value></data>
+  <data name="Health.Progress.ApplyingSimilarArtists" xml:space="preserve"><value>Applicazione delle unioni di artisti simili… {0:N0}/{1:N0} varianti</value></data>
+  <data name="Health.Progress.Calculating" xml:space="preserve"><value>Calcolo…</value></data>
+  <data name="Health.Progress.ComparingEmbeddedArtwork.One" xml:space="preserve"><value>Confronto delle copertine incorporate per {0:N0} file corrispondente…</value></data>
+  <data name="Health.Progress.ComparingEmbeddedArtwork.Other" xml:space="preserve"><value>Confronto delle copertine incorporate per {0:N0} file corrispondenti…</value></data>
   <data name="Health.Progress.Determinate" xml:space="preserve"><value>{0}… {1:N0}/{2:N0} {3} ({4:P0}) · {5}</value></data>
-  <data name="Health.Progress.EtaCalculating" xml:space="preserve"><value>ETA calcolo…</value></data>
+  <data name="Health.Progress.EtaCalculating" xml:space="preserve"><value>Calcolo dell’ETA…</value></data>
   <data name="Health.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
-  <data name="Health.Progress.OperationPhase.Applying" xml:space="preserve"><value>applicazione rivisto modifiche…</value></data>
-  <data name="Health.Progress.OperationPhase.Completed" xml:space="preserve"><value>completamento il operazione…</value></data>
-  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>indicizzazione origine radici…</value></data>
-  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>inventario il destinazione…</value></data>
-  <data name="Health.Progress.OperationPhase.LoadingConfiguration" xml:space="preserve"><value>caricamento il libreria configurazione…</value></data>
-  <data name="Health.Progress.OperationPhase.LoadingLibrary" xml:space="preserve"><value>caricamento il iTunes libreria…</value></data>
-  <data name="Health.Progress.OperationPhase.Planning" xml:space="preserve"><value>preparazione il ripara piano…</value></data>
-  <data name="Health.Progress.OperationPhase.RollingBack" xml:space="preserve"><value>annullamento retro il non riuscito operazione…</value></data>
-  <data name="Health.Progress.OperationPhase.Validating" xml:space="preserve"><value>convalida il rivisto piano…</value></data>
-  <data name="Health.Progress.PreparingItlMetadataRepairs" xml:space="preserve"><value>preparazione iTunes metadati riparazioni…</value></data>
+  <data name="Health.Progress.OperationPhase.Applying" xml:space="preserve"><value>Applicazione delle modifiche verificate…</value></data>
+  <data name="Health.Progress.OperationPhase.Completed" xml:space="preserve"><value>Completamento dell’operazione…</value></data>
+  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>Analisi delle radici di origine…</value></data>
+  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>Analisi della destinazione…</value></data>
+  <data name="Health.Progress.OperationPhase.LoadingConfiguration" xml:space="preserve"><value>Caricamento della configurazione della libreria…</value></data>
+  <data name="Health.Progress.OperationPhase.LoadingLibrary" xml:space="preserve"><value>Caricamento della libreria iTunes…</value></data>
+  <data name="Health.Progress.OperationPhase.Planning" xml:space="preserve"><value>Preparazione del piano di riparazione…</value></data>
+  <data name="Health.Progress.OperationPhase.RollingBack" xml:space="preserve"><value>Annullamento dell’operazione non riuscita…</value></data>
+  <data name="Health.Progress.OperationPhase.Validating" xml:space="preserve"><value>Convalida del piano verificato…</value></data>
+  <data name="Health.Progress.PreparingItlMetadataRepairs" xml:space="preserve"><value>Preparazione delle riparazioni dei metadati iTunes…</value></data>
   <data name="Health.Progress.RateAndEta" xml:space="preserve"><value>{0} {1}/sec · ETA {2}</value></data>
-  <data name="Health.Progress.ReadingDeferredArtwork.One" xml:space="preserve"><value>lettura incorporato copertina da {0:N0} differito file…</value></data>
-  <data name="Health.Progress.ReadingDeferredArtwork.Other" xml:space="preserve"><value>lettura incorporato copertina da {0:N0} differito file…</value></data>
-  <data name="Health.Progress.Running" xml:space="preserve"><value>esecuzione {0}…</value></data>
-  <data name="Health.Progress.Stage.AnalyzingDuplicateCandidates" xml:space="preserve"><value>analisi duplicato candidati</value></data>
-  <data name="Health.Progress.Stage.BuildingAlbumMetadataMatrix" xml:space="preserve"><value>compila album metadati matrice</value></data>
-  <data name="Health.Progress.Stage.CheckingArtworkMetadata" xml:space="preserve"><value>controllo copertina metadati</value></data>
-  <data name="Health.Progress.Stage.CheckingAudioFormats" xml:space="preserve"><value>controllo audio formati</value></data>
-  <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>controllo metadati coerenza</value></data>
-  <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>confronto album copertina</value></data>
-  <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>confronto album rappresentazioni</value></data>
+  <data name="Health.Progress.ReadingDeferredArtwork.One" xml:space="preserve"><value>Lettura delle copertine incorporate da {0:N0} file rinviato…</value></data>
+  <data name="Health.Progress.ReadingDeferredArtwork.Other" xml:space="preserve"><value>Lettura delle copertine incorporate da {0:N0} file rinviati…</value></data>
+  <data name="Health.Progress.Running" xml:space="preserve"><value>Esecuzione di {0}…</value></data>
+  <data name="Health.Progress.Stage.AnalyzingDuplicateCandidates" xml:space="preserve"><value>Analisi dei possibili duplicati</value></data>
+  <data name="Health.Progress.Stage.BuildingAlbumMetadataMatrix" xml:space="preserve"><value>Creazione della matrice dei metadati album</value></data>
+  <data name="Health.Progress.Stage.CheckingArtworkMetadata" xml:space="preserve"><value>Controllo dei metadati delle copertine</value></data>
+  <data name="Health.Progress.Stage.CheckingAudioFormats" xml:space="preserve"><value>Controllo dei formati audio</value></data>
+  <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>Controllo della coerenza dei metadati</value></data>
+  <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>Confronto delle copertine degli album</value></data>
+  <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>Confronto delle rappresentazioni degli album</value></data>
   <data name="Health.Progress.Stage.ComparingArtistNames" xml:space="preserve"><value>Confronto dei nomi degli artisti</value></data>
-  <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>decodifica audio</value></data>
-  <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>raggruppamento copertina riparazioni</value></data>
-  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>indicizzazione copertina verifica</value></data>
-  <data name="Health.Progress.Stage.IndexingTracksForArtworkRepairs" xml:space="preserve"><value>indicizzazione tracce per copertina riparazioni</value></data>
-  <data name="Health.Progress.Stage.IndexingTracksForArtworkResults" xml:space="preserve"><value>indicizzazione tracce per copertina risultati</value></data>
-  <data name="Health.Progress.Stage.PlanningAlbumArtworkRepairs" xml:space="preserve"><value>pianificazione album copertina riparazioni</value></data>
-  <data name="Health.Progress.Stage.PlanningFileArtworkRepairs" xml:space="preserve"><value>pianificazione file copertina riparazioni</value></data>
-  <data name="Health.Progress.Stage.PreparingAnalysisFindings" xml:space="preserve"><value>preparazione analisi riscontri</value></data>
-  <data name="Health.Progress.Stage.PreparingArtworkFindings" xml:space="preserve"><value>preparazione copertina riscontri</value></data>
-  <data name="Health.Progress.Stage.PreparingArtworkRepairChoices" xml:space="preserve"><value>preparazione copertina ripara scelte</value></data>
-  <data name="Health.Progress.Stage.PreparingRepresentationRepairResults" xml:space="preserve"><value>preparazione rappresentazione ripara risultati</value></data>
-  <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>anteprima in corso organizzazione spostamenti</value></data>
-  <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>anteprima in corso rappresentazione derivazioni</value></data>
-  <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>anteprima in corso rappresentazione metadati copia</value></data>
+  <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>Decodifica dell’audio</value></data>
+  <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>Raggruppamento delle riparazioni delle copertine</value></data>
+  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>Indicizzazione dei risultati del controllo delle copertine</value></data>
+  <data name="Health.Progress.Stage.IndexingTracksForArtworkRepairs" xml:space="preserve"><value>Indicizzazione delle tracce per le riparazioni delle copertine</value></data>
+  <data name="Health.Progress.Stage.IndexingTracksForArtworkResults" xml:space="preserve"><value>Indicizzazione delle tracce per i risultati delle copertine</value></data>
+  <data name="Health.Progress.Stage.PlanningAlbumArtworkRepairs" xml:space="preserve"><value>Pianificazione delle riparazioni delle copertine degli album</value></data>
+  <data name="Health.Progress.Stage.PlanningFileArtworkRepairs" xml:space="preserve"><value>Pianificazione delle riparazioni delle copertine dei file</value></data>
+  <data name="Health.Progress.Stage.PreparingAnalysisFindings" xml:space="preserve"><value>Preparazione dei risultati dell’analisi</value></data>
+  <data name="Health.Progress.Stage.PreparingArtworkFindings" xml:space="preserve"><value>Preparazione dei risultati delle copertine</value></data>
+  <data name="Health.Progress.Stage.PreparingArtworkRepairChoices" xml:space="preserve"><value>Preparazione delle opzioni di riparazione delle copertine</value></data>
+  <data name="Health.Progress.Stage.PreparingRepresentationRepairResults" xml:space="preserve"><value>Preparazione dei risultati di riparazione delle rappresentazioni</value></data>
+  <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>Anteprima degli spostamenti di organizzazione</value></data>
+  <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>Anteprima delle derivazioni delle rappresentazioni</value></data>
+  <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>Anteprima delle copie di metadati tra rappresentazioni</value></data>
   <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>Lettura dei nomi degli artisti</value></data>
-  <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>seleziona organizzazione riparazioni</value></data>
-  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>confronti tra nomi di artisti</value></data>
+  <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>Selezione delle riparazioni di organizzazione</value></data>
+  <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>confronti di nomi di artisti</value></data>
   <data name="Health.Progress.Unit.Files" xml:space="preserve"><value>file</value></data>
-  <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>riscontri</value></data>
+  <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>risultati</value></data>
   <data name="Health.Progress.Unit.Moves" xml:space="preserve"><value>spostamenti</value></data>
-  <data name="Health.Progress.Unit.RepairActions" xml:space="preserve"><value>ripara azioni</value></data>
+  <data name="Health.Progress.Unit.RepairActions" xml:space="preserve"><value>azioni di riparazione</value></data>
   <data name="Health.Progress.Unit.Results" xml:space="preserve"><value>risultati</value></data>
   <data name="Health.Progress.Unit.Tracks" xml:space="preserve"><value>tracce</value></data>
-  <data name="Health.Result.AlreadyCorrect" xml:space="preserve"><value>già corretto</value></data>
-  <data name="Health.Result.Applied" xml:space="preserve"><value>applicato</value></data>
-  <data name="Health.Result.ArtworkCompleted" xml:space="preserve"><value>completato per {0:N0} file — {1:N0}×{2:N0} — {3:0.#} KiB</value></data>
-  <data name="Health.Result.ArtworkEncodingFailed" xml:space="preserve"><value>il selezionato immagine potrebbe non essere codificato entro il ripara destinazione.</value></data>
-  <data name="Health.Result.ArtworkFilesFailed.One" xml:space="preserve"><value>non riuscito per {0:N0} file.</value></data>
-  <data name="Health.Result.ArtworkFilesFailed.Other" xml:space="preserve"><value>non riuscito per {0:N0} file.</value></data>
-  <data name="Health.Result.Failed" xml:space="preserve"><value>non riuscito</value></data>
-  <data name="Health.Result.FilesRenamed.One" xml:space="preserve"><value>rinominato {0:N0} file</value></data>
-  <data name="Health.Result.FilesRenamed.Other" xml:space="preserve"><value>rinominato {0:N0} file</value></data>
-  <data name="Health.Result.Skipped" xml:space="preserve"><value>saltato</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>artista album conflitto cerca annullato.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Failed" xml:space="preserve"><value>artista album conflitto cerca non riuscito.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.None" xml:space="preserve"><value>no conflitto album artisti erano trovato.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Results.One" xml:space="preserve"><value>trovato {0:N0} album con conflitto album artisti. scegli canonico valori a continua.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Results.Other" xml:space="preserve"><value>trovato {0:N0} album con conflitto album artisti. scegli canonico valori a continua.</value></data>
-  <data name="Health.Status.AlbumMatrix.None" xml:space="preserve"><value>album metadati matrice: no incoerente album trovato.</value></data>
-  <data name="Health.Status.AlbumMatrix.Results.One" xml:space="preserve"><value>album metadati matrice: {0:N0} album; incoerente celle: {1:N0}.</value></data>
-  <data name="Health.Status.AlbumMatrix.Results.Other" xml:space="preserve"><value>album metadati matrice: {0:N0} album; incoerente celle: {1:N0}.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>album rappresentazione confronto annullato.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Failed" xml:space="preserve"><value>album rappresentazione confronto non riuscito.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Findings.One" xml:space="preserve"><value>album rappresentazioni: {0:N0} riscontro.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Findings.Other" xml:space="preserve"><value>album rappresentazioni: {0:N0} riscontri.</value></data>
-  <data name="Health.Status.AlbumRepresentations.None" xml:space="preserve"><value>album rappresentazioni: no controparte, metadati, durata, o copertina deriva trovato.</value></data>
-  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>simile artista unisci applica annullato. rivedi il interessato file prima riprova.</value></data>
-  <data name="Health.Status.ArtistMerge.Completed" xml:space="preserve"><value>simile artista unioni: file rinominato: {0:N0}; varianti completato: {1:N0}; non riuscito: {2:N0}.</value></data>
-  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>copertina integrità verifica annullato.</value></data>
-  <data name="Health.Status.ArtworkHealth.Failed" xml:space="preserve"><value>copertina integrità verifica non riuscito.</value></data>
-  <data name="Health.Status.ArtworkHealth.None" xml:space="preserve"><value>copertina integrità: no problemi trovato.</value></data>
-  <data name="Health.Status.ArtworkHealth.Results" xml:space="preserve"><value>copertina integrità: problemi: {0:N0}; ripara azioni: {1:N0}; differito file: {2:N0}.</value></data>
-  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>copertina ripara applica annullato. rivedi il interessato file prima riprova.</value></data>
-  <data name="Health.Status.ArtworkRepair.Completed" xml:space="preserve"><value>copertina riparazioni: completato azioni: {0:N0}; non riuscito: {1:N0}.</value></data>
-  <data name="Health.Status.ChooseAnalysis" xml:space="preserve"><value>scegli un analisi a esegui.</value></data>
-  <data name="Health.Status.ChooseConfiguration" xml:space="preserve"><value>scegli un libreria configurazione in impostazioni prima esecuzione un verifica.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>conflitto ripara anteprima annullato.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Failed" xml:space="preserve"><value>conflitto ripara anteprima non riuscito.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>il selezionato canonico valori già corrispondenza ogni file.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>in anteprima {0:N0} utente-diretto ripara. rivedi, quindi applica esso.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>in anteprima {0:N0} utente-diretto riparazioni. rivedi, quindi applica il selezionato riparazioni.</value></data>
+  <data name="Health.Result.AlreadyCorrect" xml:space="preserve"><value>Già corretto</value></data>
+  <data name="Health.Result.Applied" xml:space="preserve"><value>Applicata</value></data>
+  <data name="Health.Result.ArtworkCompleted" xml:space="preserve"><value>Completato per {0:N0} file — {1:N0}×{2:N0} — {3:0.#} KiB</value></data>
+  <data name="Health.Result.ArtworkEncodingFailed" xml:space="preserve"><value>Non è stato possibile codificare l’immagine selezionata entro i parametri di riparazione.</value></data>
+  <data name="Health.Result.ArtworkFilesFailed.One" xml:space="preserve"><value>Operazione non riuscita per {0:N0} file.</value></data>
+  <data name="Health.Result.ArtworkFilesFailed.Other" xml:space="preserve"><value>Operazione non riuscita per {0:N0} file.</value></data>
+  <data name="Health.Result.Failed" xml:space="preserve"><value>Non riuscita</value></data>
+  <data name="Health.Result.FilesRenamed.One" xml:space="preserve"><value>{0:N0} file rinominato</value></data>
+  <data name="Health.Result.FilesRenamed.Other" xml:space="preserve"><value>{0:N0} file rinominati</value></data>
+  <data name="Health.Result.Skipped" xml:space="preserve"><value>Ignorata</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>La ricerca dei conflitti dell’artista dell’album è stata annullata.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Failed" xml:space="preserve"><value>La ricerca dei conflitti dell’artista dell’album non è riuscita.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.None" xml:space="preserve"><value>Non sono stati trovati artisti dell’album in conflitto.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Results.One" xml:space="preserve"><value>È stato trovato {0:N0} album con artisti dell’album in conflitto. Scegli i valori canonici per continuare.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Results.Other" xml:space="preserve"><value>Sono stati trovati {0:N0} album con artisti dell’album in conflitto. Scegli i valori canonici per continuare.</value></data>
+  <data name="Health.Status.AlbumMatrix.None" xml:space="preserve"><value>Matrice dei metadati dell’album: nessun album incoerente trovato.</value></data>
+  <data name="Health.Status.AlbumMatrix.Results.One" xml:space="preserve"><value>Matrice dei metadati dell’album: {0:N0} album; celle incoerenti: {1:N0}.</value></data>
+  <data name="Health.Status.AlbumMatrix.Results.Other" xml:space="preserve"><value>Matrice dei metadati dell’album: {0:N0} album; celle incoerenti: {1:N0}.</value></data>
+  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>Il confronto delle rappresentazioni dell’album è stato annullato.</value></data>
+  <data name="Health.Status.AlbumRepresentations.Failed" xml:space="preserve"><value>Il confronto delle rappresentazioni dell’album non è riuscito.</value></data>
+  <data name="Health.Status.AlbumRepresentations.Findings.One" xml:space="preserve"><value>Rappresentazioni dell’album: {0:N0} risultato.</value></data>
+  <data name="Health.Status.AlbumRepresentations.Findings.Other" xml:space="preserve"><value>Rappresentazioni dell’album: {0:N0} risultati.</value></data>
+  <data name="Health.Status.AlbumRepresentations.None" xml:space="preserve"><value>Rappresentazioni dell’album: nessuna differenza di corrispondenza, metadati, durata o copertina.</value></data>
+  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>L’applicazione delle unioni di artisti simili è stata annullata. Esamina i file interessati prima di riprovare.</value></data>
+  <data name="Health.Status.ArtistMerge.Completed" xml:space="preserve"><value>Unioni di artisti simili: file rinominati: {0:N0}; varianti completate: {1:N0}; non riuscite: {2:N0}.</value></data>
+  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>Il controllo dell’integrità delle copertine è stato annullato.</value></data>
+  <data name="Health.Status.ArtworkHealth.Failed" xml:space="preserve"><value>Il controllo dell’integrità delle copertine non è riuscito.</value></data>
+  <data name="Health.Status.ArtworkHealth.None" xml:space="preserve"><value>Integrità delle copertine: nessun problema trovato.</value></data>
+  <data name="Health.Status.ArtworkHealth.Results" xml:space="preserve"><value>Integrità delle copertine: problemi: {0:N0}; azioni di riparazione: {1:N0}; file rinviati: {2:N0}.</value></data>
+  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>L’applicazione delle riparazioni delle copertine è stata annullata. Esamina i file interessati prima di riprovare.</value></data>
+  <data name="Health.Status.ArtworkRepair.Completed" xml:space="preserve"><value>Riparazioni delle copertine: azioni completate: {0:N0}; non riuscite: {1:N0}.</value></data>
+  <data name="Health.Status.ChooseAnalysis" xml:space="preserve"><value>Scegli un’analisi da eseguire.</value></data>
+  <data name="Health.Status.ChooseConfiguration" xml:space="preserve"><value>Scegli una configurazione della raccolta in Impostazioni prima di eseguire un controllo.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>L’anteprima delle riparazioni dei conflitti è stata annullata.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Failed" xml:space="preserve"><value>L’anteprima delle riparazioni dei conflitti non è riuscita.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>I valori canonici selezionati corrispondono già a tutti i file.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>È stata visualizzata l’anteprima di {0:N0} riparazione indicata dall’utente. Esaminala, quindi applicala.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>È stata visualizzata l’anteprima di {0:N0} riparazioni indicate dall’utente. Esaminale, quindi applica quelle selezionate.</value></data>
   <data name="Health.Status.CrossSetCheck.Cancelled" xml:space="preserve"><value>Controllo tra set annullato.</value></data>
   <data name="Health.Status.CrossSetCheck.Failed" xml:space="preserve"><value>Controllo tra set non riuscito.</value></data>
   <data name="Health.Status.CrossSetCheck.Findings.One" xml:space="preserve"><value>Controllo tra set: {0:N0} anomalia.</value></data>
@@ -4678,50 +4678,50 @@
   <data name="Health.Status.DecodedAudioVerification.Failed" xml:space="preserve"><value>Verifica dell’audio decodificato non riuscita.</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.One" xml:space="preserve"><value>Verifica dell’audio decodificato: {0:N0} coppia compatibile corrisponde.</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.Other" xml:space="preserve"><value>Verifica dell’audio decodificato: {0:N0} coppie compatibili corrispondono.</value></data>
-  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>differito copertina scansiona annullato.</value></data>
-  <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>differito copertina scansiona non riuscito.</value></data>
-  <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>{0:N0} duplicato gruppo.</value></data>
-  <data name="Health.Status.Duplicates.Groups.Other" xml:space="preserve"><value>{0:N0} duplicato gruppo.</value></data>
-  <data name="Health.Status.Duplicates.None" xml:space="preserve"><value>no duplicati trovato.</value></data>
-  <data name="Health.Status.Inconsistencies.Findings.One" xml:space="preserve"><value>incoerenze: {0:N0} riscontro.</value></data>
-  <data name="Health.Status.Inconsistencies.Findings.Other" xml:space="preserve"><value>incoerenze: {0:N0} riscontri.</value></data>
-  <data name="Health.Status.Inconsistencies.None" xml:space="preserve"><value>incoerenze: nessuno trovato.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>iTunes metadati ripara applica annullato. rivedi il interessato file prima riprova.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Completed" xml:space="preserve"><value>iTunes metadati riparazioni: applicato: {0:N0}; saltato: {1:N0}; non riuscito: {2:N0}.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Failed" xml:space="preserve"><value>iTunes metadati ripara applica non riuscito.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>iTunes metadati ripara anteprima annullato.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Failed" xml:space="preserve"><value>iTunes metadati ripara anteprima non riuscito.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.None" xml:space="preserve"><value>no iTunes metadati riparazioni sono richiedono per il selezionato libreria.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Results.One" xml:space="preserve"><value>in anteprima {0:N0} iTunes metadati ripara. rivedi esso, quindi applica il selezionato ripara.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Results.Other" xml:space="preserve"><value>in anteprima {0:N0} iTunes metadati riparazioni. rivedi li, quindi applica il selezionato riparazioni.</value></data>
-  <data name="Health.Status.LossyFiles.Count.One" xml:space="preserve"><value>{0:N0} con perdita file.</value></data>
-  <data name="Health.Status.LossyFiles.Count.Other" xml:space="preserve"><value>{0:N0} con perdita file.</value></data>
-  <data name="Health.Status.LossyFiles.None" xml:space="preserve"><value>no con perdita file.</value></data>
-  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>metadati ripara applica annullato. rivedi il interessato file prima riprova.</value></data>
-  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>metadati riparazioni: applicato: {0:N0}; saltato: {1:N0}; non riuscito: {2:N0}.</value></data>
-  <data name="Health.Status.MetadataRepair.Failed" xml:space="preserve"><value>metadati ripara applica non riuscito.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Blocked.One" xml:space="preserve"><value>{0:N0} ripara è bloccato. rivedi il suo motivo prima applicazione il idoneo riparazioni.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Blocked.Other" xml:space="preserve"><value>{0:N0} riparazioni sono bloccato. rivedi loro motivo prima applicazione il idoneo riparazioni.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>metadati ripara anteprima annullato.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Failed" xml:space="preserve"><value>metadati ripara anteprima non riuscito.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.None" xml:space="preserve"><value>no sicuro metadati riparazioni sono richiedono.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>in anteprima {0:N0} sicuro metadati ripara. rivedi esso, quindi applica il selezionato ripara.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>in anteprima {0:N0} sicuro metadati riparazioni. rivedi li, quindi applica il selezionato riparazioni.</value></data>
-  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>rappresentazione ripara applica annullato.</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>rappresentazione ripara applica annullato dopo {0:N0} azione. rivedi il interessato file prima riprova.</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>rappresentazione ripara applica annullato dopo {0:N0} azioni. rivedi il interessato file prima riprova.</value></data>
-  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>rappresentazione riparazioni: applicato: {0:N0}; saltato: {1:N0}; non riuscito: {2:N0}.</value></data>
-  <data name="Health.Status.RepresentationRepair.Failed" xml:space="preserve"><value>rappresentazione ripara applica non riuscito.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>rappresentazione ripara anteprima annullato.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.Failed" xml:space="preserve"><value>rappresentazione ripara anteprima non riuscito.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>in anteprima rappresentazione file azioni: {0:N0} organizzazione spostamenti e {1:N0} derivazioni. rivedi li, quindi applica il selezionato azioni.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.One" xml:space="preserve"><value>in anteprima {0:N0} rappresentazione metadati copia. rivedi esso, quindi applica il selezionato ripara.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.Other" xml:space="preserve"><value>in anteprima {0:N0} rappresentazione metadati copia. rivedi li, quindi applica il selezionato riparazioni.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.None" xml:space="preserve"><value>no rappresentazione riparazioni sono richiedono.</value></data>
-  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0} annullato.</value></data>
-  <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} non riuscito.</value></data>
-  <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} simile artista gruppo trovato a soglia {1:0.00}. rivedi il varianti, quindi applica il attivo ripara.</value></data>
-  <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} simile artista gruppi trovato a soglia {1:0.00}. rivedi il varianti, quindi applica il attivo riparazioni.</value></data>
+  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>L’analisi delle copertine rinviate è stata annullata.</value></data>
+  <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>L’analisi delle copertine rinviate non è riuscita.</value></data>
+  <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>{0:N0} gruppo di duplicati.</value></data>
+  <data name="Health.Status.Duplicates.Groups.Other" xml:space="preserve"><value>{0:N0} gruppi di duplicati.</value></data>
+  <data name="Health.Status.Duplicates.None" xml:space="preserve"><value>Nessun duplicato trovato.</value></data>
+  <data name="Health.Status.Inconsistencies.Findings.One" xml:space="preserve"><value>Incoerenze: {0:N0} risultato.</value></data>
+  <data name="Health.Status.Inconsistencies.Findings.Other" xml:space="preserve"><value>Incoerenze: {0:N0} risultati.</value></data>
+  <data name="Health.Status.Inconsistencies.None" xml:space="preserve"><value>Incoerenze: nessuna trovata.</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>L’applicazione delle riparazioni dei metadati iTunes è stata annullata. Esamina i file interessati prima di riprovare.</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Completed" xml:space="preserve"><value>Riparazioni dei metadati iTunes: applicate: {0:N0}; ignorate: {1:N0}; non riuscite: {2:N0}.</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Failed" xml:space="preserve"><value>L’applicazione delle riparazioni dei metadati iTunes non è riuscita.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>L’anteprima delle riparazioni dei metadati iTunes è stata annullata.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Failed" xml:space="preserve"><value>L’anteprima delle riparazioni dei metadati iTunes non è riuscita.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.None" xml:space="preserve"><value>Non sono necessarie riparazioni dei metadati iTunes per la libreria selezionata.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Results.One" xml:space="preserve"><value>È stata visualizzata l’anteprima di {0:N0} riparazione dei metadati iTunes. Esaminala, quindi applica la riparazione selezionata.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Results.Other" xml:space="preserve"><value>È stata visualizzata l’anteprima di {0:N0} riparazioni dei metadati iTunes. Esaminale, quindi applica le riparazioni selezionate.</value></data>
+  <data name="Health.Status.LossyFiles.Count.One" xml:space="preserve"><value>{0:N0} file con perdita.</value></data>
+  <data name="Health.Status.LossyFiles.Count.Other" xml:space="preserve"><value>{0:N0} file con perdita.</value></data>
+  <data name="Health.Status.LossyFiles.None" xml:space="preserve"><value>Nessun file con perdita.</value></data>
+  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>L’applicazione delle riparazioni dei metadati è stata annullata. Esamina i file interessati prima di riprovare.</value></data>
+  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>Riparazioni dei metadati: applicate: {0:N0}; ignorate: {1:N0}; non riuscite: {2:N0}; aggiornamenti del catalogo non riusciti: {3:N0}.</value></data>
+  <data name="Health.Status.MetadataRepair.Failed" xml:space="preserve"><value>L’applicazione delle riparazioni dei metadati non è riuscita.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Blocked.One" xml:space="preserve"><value>{0:N0} riparazione è bloccata. Esamina il motivo prima di applicare le riparazioni idonee.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Blocked.Other" xml:space="preserve"><value>{0:N0} riparazioni sono bloccate. Esamina i motivi prima di applicare le riparazioni idonee.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>L’anteprima delle riparazioni dei metadati è stata annullata.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Failed" xml:space="preserve"><value>L’anteprima delle riparazioni dei metadati non è riuscita.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.None" xml:space="preserve"><value>Non sono necessarie riparazioni sicure dei metadati.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>È stata visualizzata l’anteprima di {0:N0} riparazione sicura dei metadati; idonee: {1:N0}. Esaminala, quindi applica la riparazione selezionata.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>È stata visualizzata l’anteprima di {0:N0} riparazioni sicure dei metadati; idonee: {1:N0}. Esaminale, quindi applica le riparazioni selezionate.</value></data>
+  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>L’applicazione delle riparazioni delle rappresentazioni è stata annullata.</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>L’applicazione delle riparazioni delle rappresentazioni è stata annullata dopo {0:N0} azione. Esamina i file interessati prima di riprovare.</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>L’applicazione delle riparazioni delle rappresentazioni è stata annullata dopo {0:N0} azioni. Esamina i file interessati prima di riprovare.</value></data>
+  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>Riparazioni delle rappresentazioni: applicate: {0:N0}; non riuscite: {1:N0}.</value></data>
+  <data name="Health.Status.RepresentationRepair.Failed" xml:space="preserve"><value>L’applicazione delle riparazioni delle rappresentazioni non è riuscita.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>L’anteprima delle riparazioni delle rappresentazioni è stata annullata.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.Failed" xml:space="preserve"><value>L’anteprima delle riparazioni delle rappresentazioni non è riuscita.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>Azioni sui file di rappresentazione visualizzate in anteprima: {0:N0}; avvisi: {1:N0}. Esaminale, quindi applica le azioni selezionate.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.One" xml:space="preserve"><value>È stata visualizzata l’anteprima di {0:N0} copia dei metadati di rappresentazione. Esaminala, quindi applica la riparazione selezionata.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.Other" xml:space="preserve"><value>È stata visualizzata l’anteprima di {0:N0} copie dei metadati di rappresentazione. Esaminale, quindi applica le riparazioni selezionate.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.None" xml:space="preserve"><value>Non sono necessarie riparazioni delle rappresentazioni.</value></data>
+  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0}: operazione annullata.</value></data>
+  <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0}: operazione non riuscita.</value></data>
+  <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>È stato trovato {0:N0} gruppo di artisti simili alla soglia {1:0.00}. Esamina le varianti, quindi applica la riparazione attiva.</value></data>
+  <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>Sono stati trovati {0:N0} gruppi di artisti simili alla soglia {1:0.00}. Esamina le varianti, quindi applica le riparazioni attive.</value></data>
   <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>Nessun nome di artista simile trovato alla soglia {0:0.00}.</value></data>
   <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>Aggiungi file</value></data>
   <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>Crea cartella</value></data>
@@ -5948,59 +5948,59 @@
   <data name="Health.TextDifference.KnownCodePoint" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Health.TextDifference.Missing" xml:space="preserve"><value>(mancante)</value></data>
   <data name="Health.TextDifference.More.One" xml:space="preserve"><value> · … ({0:N0} altro)</value></data>
-  <data name="Health.TextDifference.More.Other" xml:space="preserve"><value> · … ({0:N0} altro)</value></data>
+  <data name="Health.TextDifference.More.Other" xml:space="preserve"><value> · … ({0:N0} altri)</value></data>
   <data name="Health.TextDifference.NoBreakSpaceMarker" xml:space="preserve"><value>⟦NBSP⟧</value></data>
-  <data name="Health.TextDifference.NoCharacter" xml:space="preserve"><value>∅ (no carattere)</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ClosePunctuation" xml:space="preserve"><value>chiudi punteggiatura</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ConnectorPunctuation" xml:space="preserve"><value>connettore punteggiatura</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.Control" xml:space="preserve"><value>controllo</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.CurrencySymbol" xml:space="preserve"><value>valuta simbolo</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.DashPunctuation" xml:space="preserve"><value>trattino punteggiatura</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.DecimalDigitNumber" xml:space="preserve"><value>decimale cifra numero</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.EnclosingMark" xml:space="preserve"><value>racchiuso contrassegna</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.FinalQuotePunctuation" xml:space="preserve"><value>finale virgolette punteggiatura</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.Format" xml:space="preserve"><value>formato</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.InitialQuotePunctuation" xml:space="preserve"><value>iniziale virgolette punteggiatura</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LetterNumber" xml:space="preserve"><value>lettera numero</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LineSeparator" xml:space="preserve"><value>riga separatore</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LowercaseLetter" xml:space="preserve"><value>minuscole lettera</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.MathSymbol" xml:space="preserve"><value>matematica simbolo</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ModifierLetter" xml:space="preserve"><value>modificatore lettera</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ModifierSymbol" xml:space="preserve"><value>modificatore simbolo</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.NonSpacingMark" xml:space="preserve"><value>senza spaziatura contrassegna</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OpenPunctuation" xml:space="preserve"><value>apri punteggiatura</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherLetter" xml:space="preserve"><value>altro lettera</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherNotAssigned" xml:space="preserve"><value>non assegnato</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherNumber" xml:space="preserve"><value>altro numero</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherPunctuation" xml:space="preserve"><value>altro punteggiatura</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherSymbol" xml:space="preserve"><value>altro simbolo</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ParagraphSeparator" xml:space="preserve"><value>paragrafo separatore</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.PrivateUse" xml:space="preserve"><value>privato usa</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.SpaceSeparator" xml:space="preserve"><value>spazio separatore</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.SpacingCombiningMark" xml:space="preserve"><value>spazio combinazione contrassegna</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.Surrogate" xml:space="preserve"><value>surrogato</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.TitlecaseLetter" xml:space="preserve"><value>iniziali maiuscole lettera</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.UppercaseLetter" xml:space="preserve"><value>maiuscole lettera</value></data>
-  <data name="Health.TextDifference.UnicodeDetails" xml:space="preserve"><value>prima: {0}; dopo: {1}</value></data>
-  <data name="Health.TextDifference.UnicodeName.CarriageReturn" xml:space="preserve"><value>ritorno carrello</value></data>
-  <data name="Health.TextDifference.UnicodeName.CharacterTabulation" xml:space="preserve"><value>tabulazione caratteri</value></data>
-  <data name="Health.TextDifference.UnicodeName.FigureSpace" xml:space="preserve"><value>figura spazio</value></data>
-  <data name="Health.TextDifference.UnicodeName.Hyphen" xml:space="preserve"><value>trattino</value></data>
-  <data name="Health.TextDifference.UnicodeName.HyphenMinus" xml:space="preserve"><value>trattino-meno</value></data>
-  <data name="Health.TextDifference.UnicodeName.LeftDoubleQuotationMark" xml:space="preserve"><value>sinistra doppio virgolette contrassegna</value></data>
-  <data name="Health.TextDifference.UnicodeName.LeftSingleQuotationMark" xml:space="preserve"><value>sinistra singolo virgolette contrassegna</value></data>
-  <data name="Health.TextDifference.UnicodeName.LineFeed" xml:space="preserve"><value>avanzamento riga</value></data>
-  <data name="Health.TextDifference.UnicodeName.MinusSign" xml:space="preserve"><value>segno meno</value></data>
-  <data name="Health.TextDifference.UnicodeName.NarrowNoBreakSpace" xml:space="preserve"><value>stretto no-interruzione spazio</value></data>
-  <data name="Health.TextDifference.UnicodeName.NoBreakSpace" xml:space="preserve"><value>no-interruzione spazio</value></data>
-  <data name="Health.TextDifference.UnicodeName.NonBreakingHyphen" xml:space="preserve"><value>non separabile trattino</value></data>
-  <data name="Health.TextDifference.UnicodeName.RightDoubleQuotationMark" xml:space="preserve"><value>destra doppio virgolette contrassegna</value></data>
-  <data name="Health.TextDifference.UnicodeName.RightSingleQuotationMark" xml:space="preserve"><value>destra singolo virgolette contrassegna</value></data>
-  <data name="Health.TextDifference.UnicodeName.Space" xml:space="preserve"><value>spazio</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthJoiner" xml:space="preserve"><value>zero larghezza congiuntore</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthNoBreakSpace" xml:space="preserve"><value>zero larghezza no-interruzione spazio</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthNonJoiner" xml:space="preserve"><value>zero larghezza non congiuntore</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthSpace" xml:space="preserve"><value>zero larghezza spazio</value></data>
+  <data name="Health.TextDifference.NoCharacter" xml:space="preserve"><value>∅ (nessun carattere)</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ClosePunctuation" xml:space="preserve"><value>Punteggiatura di chiusura</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ConnectorPunctuation" xml:space="preserve"><value>Punteggiatura di connessione</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.Control" xml:space="preserve"><value>Controllo</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.CurrencySymbol" xml:space="preserve"><value>Simbolo di valuta</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.DashPunctuation" xml:space="preserve"><value>Punteggiatura a trattino</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.DecimalDigitNumber" xml:space="preserve"><value>Numero decimale</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.EnclosingMark" xml:space="preserve"><value>Segno racchiudente</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.FinalQuotePunctuation" xml:space="preserve"><value>Punteggiatura di citazione finale</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.Format" xml:space="preserve"><value>Formato</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.InitialQuotePunctuation" xml:space="preserve"><value>Punteggiatura di citazione iniziale</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LetterNumber" xml:space="preserve"><value>Numero letterale</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LineSeparator" xml:space="preserve"><value>Separatore di riga</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LowercaseLetter" xml:space="preserve"><value>Lettera minuscola</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.MathSymbol" xml:space="preserve"><value>Simbolo matematico</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ModifierLetter" xml:space="preserve"><value>Lettera modificatrice</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ModifierSymbol" xml:space="preserve"><value>Simbolo modificatore</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.NonSpacingMark" xml:space="preserve"><value>Segno non spaziatore</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OpenPunctuation" xml:space="preserve"><value>Punteggiatura di apertura</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherLetter" xml:space="preserve"><value>Altra lettera</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherNotAssigned" xml:space="preserve"><value>Non assegnato</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherNumber" xml:space="preserve"><value>Altro numero</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherPunctuation" xml:space="preserve"><value>Altra punteggiatura</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherSymbol" xml:space="preserve"><value>Altro simbolo</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ParagraphSeparator" xml:space="preserve"><value>Separatore di paragrafo</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.PrivateUse" xml:space="preserve"><value>Uso privato</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.SpaceSeparator" xml:space="preserve"><value>Separatore di spazio</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.SpacingCombiningMark" xml:space="preserve"><value>Segno combinante spaziatore</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.Surrogate" xml:space="preserve"><value>Surrogato</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.TitlecaseLetter" xml:space="preserve"><value>Lettera maiuscola iniziale</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.UppercaseLetter" xml:space="preserve"><value>Lettera maiuscola</value></data>
+  <data name="Health.TextDifference.UnicodeDetails" xml:space="preserve"><value>Prima: {0}; dopo: {1}</value></data>
+  <data name="Health.TextDifference.UnicodeName.CarriageReturn" xml:space="preserve"><value>CARRIAGE RETURN</value></data>
+  <data name="Health.TextDifference.UnicodeName.CharacterTabulation" xml:space="preserve"><value>CHARACTER TABULATION</value></data>
+  <data name="Health.TextDifference.UnicodeName.FigureSpace" xml:space="preserve"><value>FIGURE SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.Hyphen" xml:space="preserve"><value>HYPHEN</value></data>
+  <data name="Health.TextDifference.UnicodeName.HyphenMinus" xml:space="preserve"><value>HYPHEN-MINUS</value></data>
+  <data name="Health.TextDifference.UnicodeName.LeftDoubleQuotationMark" xml:space="preserve"><value>LEFT DOUBLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.LeftSingleQuotationMark" xml:space="preserve"><value>LEFT SINGLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.LineFeed" xml:space="preserve"><value>LINE FEED</value></data>
+  <data name="Health.TextDifference.UnicodeName.MinusSign" xml:space="preserve"><value>MINUS SIGN</value></data>
+  <data name="Health.TextDifference.UnicodeName.NarrowNoBreakSpace" xml:space="preserve"><value>NARROW NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.NoBreakSpace" xml:space="preserve"><value>NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.NonBreakingHyphen" xml:space="preserve"><value>NON-BREAKING HYPHEN</value></data>
+  <data name="Health.TextDifference.UnicodeName.RightDoubleQuotationMark" xml:space="preserve"><value>RIGHT DOUBLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.RightSingleQuotationMark" xml:space="preserve"><value>RIGHT SINGLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.Space" xml:space="preserve"><value>SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthJoiner" xml:space="preserve"><value>ZERO WIDTH JOINER</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthNoBreakSpace" xml:space="preserve"><value>ZERO WIDTH NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthNonJoiner" xml:space="preserve"><value>ZERO WIDTH NON-JOINER</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthSpace" xml:space="preserve"><value>ZERO WIDTH SPACE</value></data>
   <data name="Health.TextDifference.VisibleCodePoint" xml:space="preserve"><value>{0} ‘{1}’ ({2})</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Lower" xml:space="preserve"><value>Minuscole</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Sentence" xml:space="preserve"><value>Maiuscola iniziale</value></data>

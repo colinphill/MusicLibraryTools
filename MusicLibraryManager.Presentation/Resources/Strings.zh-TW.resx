@@ -713,25 +713,25 @@
     <value>清楚管理您的音樂</value>
   </data>
   <data name="Health.Action.ApplyActiveMerges" xml:space="preserve">
-    <value>套用 作用中 合併</value>
+    <value>套用作用中的合併</value>
   </data>
   <data name="Health.Action.ApplyActiveRepairs" xml:space="preserve">
-    <value>套用 作用中 修復</value>
+    <value>套用作用中的修復</value>
   </data>
   <data name="Health.Action.ApplyArtworkRepairs" xml:space="preserve">
-    <value>套用 作用中 修復</value>
+    <value>套用作用中的封面修復</value>
   </data>
   <data name="Health.Action.ApplyFileRepairs" xml:space="preserve">
-    <value>套用 已選取 檔案 修復</value>
+    <value>套用所選檔案修復</value>
   </data>
   <data name="Health.Action.ApplyItunesRepairs" xml:space="preserve">
-    <value>套用 已選取 iTunes 修復</value>
+    <value>套用所選 iTunes 修復</value>
   </data>
   <data name="Health.Action.ApplyMetadataRepairs" xml:space="preserve">
-    <value>套用 已選取 修復</value>
+    <value>套用所選修復</value>
   </data>
   <data name="Health.Action.ForceScanDeferred" xml:space="preserve">
-    <value>強制 掃描 已延後</value>
+    <value>立即掃描延後的封面</value>
   </data>
   <data name="Health.AlbumMatrix.Album" xml:space="preserve">
     <value>專輯</value>
@@ -758,7 +758,7 @@
     <value>未發現專輯中繼資料不一致。</value>
   </data>
   <data name="Health.AlbumMatrix.FlagReason" xml:space="preserve">
-    <value>原因 它 曾是 已標記</value>
+    <value>標記原因</value>
   </data>
   <data name="Health.AlbumMatrix.ReadOnly" xml:space="preserve">
     <value>唯讀專輯一致性稽核</value>
@@ -767,7 +767,7 @@
     <value>曲目</value>
   </data>
   <data name="Health.AlbumMatrix.TrackNumber" xml:space="preserve">
-    <value>曲目 #</value>
+    <value>曲目編號</value>
   </data>
   <data name="Health.AlbumMatrix.TrackTotal" xml:space="preserve">
     <value>曲目總數</value>
@@ -779,22 +779,22 @@
     <value>演出者的標準名稱</value>
   </data>
   <data name="Health.Artist.CanonicalTarget" xml:space="preserve">
-    <value>標準 目標</value>
+    <value>標準目標</value>
   </data>
   <data name="Health.Artist.Description" xml:space="preserve">
     <value>為每組選擇標準名稱，並僅啟用要重新命名的變體。使用「篩選」可在媒體庫中顯示該變體的曲目。</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
-    <value>{0} 曲目 已選取 跨 作用中 變體</value>
+    <value>作用中變體中選取的曲目：{0}</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.Other" xml:space="preserve">
-    <value>{0} 曲目 已選取 跨 作用中 變體</value>
+    <value>作用中變體中選取的曲目：{0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.One" xml:space="preserve">
-    <value>{0} 曲目 在 叢集</value>
+    <value>叢集中的曲目：{0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.Other" xml:space="preserve">
-    <value>{0} 曲目 在 叢集</value>
+    <value>叢集中的曲目：{0}</value>
   </data>
   <data name="Health.Artist.FileCount.One" xml:space="preserve">
     <value>{0} 檔案</value>
@@ -818,13 +818,13 @@
     <value>在所選臨界值下找不到相似的演出者名稱。</value>
   </data>
   <data name="Health.Artist.ReviewTitle" xml:space="preserve">
-    <value>檢閱 演出者 拼字 變體</value>
+    <value>檢閱演出者名稱拼字變體</value>
   </data>
   <data name="Health.Artist.Threshold" xml:space="preserve">
-    <value>演出者 臨界值</value>
+    <value>相似度臨界值</value>
   </data>
   <data name="Health.Artist.ThresholdAutomation" xml:space="preserve">
-    <value>相似 演出者 模糊 臨界值</value>
+    <value>相似演出者比對臨界值</value>
   </data>
   <data name="Health.Artist.ThresholdTooltip" xml:space="preserve">
     <value>標準化編輯距離的上限。值越小越嚴格；0 僅允許標準化後相同的拼法。</value>
@@ -833,7 +833,7 @@
     <value>對於包含多個影像的專輯，請選擇一個封面，將所需的修復標記為作用中，然後套用。每項操作都會使用設定中個別的修復大小和尺寸限制。</value>
   </data>
   <data name="Health.Artwork.ChooseCanonicalAutomation" xml:space="preserve">
-    <value>選擇 標準 專輯 封面</value>
+    <value>選擇標準專輯封面</value>
   </data>
   <data name="Health.Artwork.Action.SelectFirst" xml:space="preserve">
     <value>選取第一張影像並標示為啟用</value>
@@ -845,52 +845,52 @@
     <value>選取最大的檔案並標示為啟用</value>
   </data>
   <data name="Health.Artwork.Selection.NoneChanged" xml:space="preserve">
-    <value>否 符合資格 混合-封面 修復 曾是 已變更.</value>
+    <value>未變更任何符合條件的混合封面修復。</value>
   </data>
   <data name="Health.Artwork.Selection.ChangedFormat" xml:space="preserve">
     <value>已選取封面，並將 {0:N0} 個修復標示為啟用。</value>
   </data>
   <data name="Health.Artwork.SelectedCount.One" xml:space="preserve">
-    <value>{0} 修復 動作 已選取</value>
+    <value>所選修復動作：{0}</value>
   </data>
   <data name="Health.Artwork.SelectedCount.Other" xml:space="preserve">
-    <value>{0} 修復 動作 已選取</value>
+    <value>所選修復動作：{0}</value>
   </data>
   <data name="Health.Artwork.AffectedFiles.One" xml:space="preserve">
-    <value>受影響 檔案 ({0})</value>
+    <value>受影響的檔案 ({0})</value>
   </data>
   <data name="Health.Artwork.AffectedFiles.Other" xml:space="preserve">
-    <value>受影響 檔案 ({0})</value>
+    <value>受影響的檔案 ({0})</value>
   </data>
   <data name="Health.Artwork.Empty" xml:space="preserve">
     <value>此稽核沒有可用的自動封面修復。</value>
   </data>
   <data name="Health.Artwork.Plan" xml:space="preserve">
-    <value>封面 修復 計畫</value>
+    <value>封面修復計畫</value>
   </data>
   <data name="Health.Artwork.ReviewTitle" xml:space="preserve">
-    <value>檢閱 自動 封面 修復</value>
+    <value>檢閱自動封面修復</value>
   </data>
   <data name="Health.Audit.Description" xml:space="preserve">
     <value>檢查品質、一致性和檔案完整性。</value>
   </data>
   <data name="Health.Audit.Menu.AlbumMatrix" xml:space="preserve">
-    <value>專輯 中繼資料 矩陣</value>
+    <value>專輯中繼資料矩陣</value>
   </data>
   <data name="Health.Audit.Menu.CrossSet" xml:space="preserve">
-    <value>交叉-設定 比較</value>
+    <value>跨集合比較</value>
   </data>
   <data name="Health.Audit.Menu.Duplicates" xml:space="preserve">
-    <value>重複 曲目</value>
+    <value>重複曲目</value>
   </data>
   <data name="Health.Audit.Menu.FileRepresentations" xml:space="preserve">
-    <value>檔案 表示</value>
+    <value>檔案表示形式</value>
   </data>
   <data name="Health.Audit.Menu.LossyFiles" xml:space="preserve">
-    <value>有損 檔案</value>
+    <value>失真檔案</value>
   </data>
   <data name="Health.Audit.Menu.Metadata" xml:space="preserve">
-    <value>中繼資料 不一致</value>
+    <value>中繼資料不一致</value>
   </data>
   <data name="Health.Audit.Menu.VerifyAudio" xml:space="preserve">
     <value>驗證解碼後的音訊</value>
@@ -947,43 +947,43 @@
     <value>找不到專輯與專輯演出者的衝突。</value>
   </data>
   <data name="Health.Findings.All" xml:space="preserve">
-    <value>全部 發現項目</value>
+    <value>所有發現項目</value>
   </data>
   <data name="Health.Findings.SelectAllAutomation" xml:space="preserve">
-    <value>選取 全部 發現項目</value>
+    <value>選取所有發現項目</value>
   </data>
   <data name="Health.History.Empty" xml:space="preserve">
     <value>執行稽核以產生可檢閱的結果。</value>
   </data>
   <data name="Health.History.Title" xml:space="preserve">
-    <value>分析 歷程記錄</value>
+    <value>分析歷程記錄</value>
   </data>
   <data name="Health.Context.CopyPath" xml:space="preserve">
-    <value>複製 路徑</value>
+    <value>複製路徑</value>
   </data>
   <data name="Health.Context.OpenWorkbench" xml:space="preserve">
-    <value>開啟 在 工作台</value>
+    <value>在工作台中開啟</value>
   </data>
   <data name="Health.Context.RevealExplorer" xml:space="preserve">
-    <value>顯示 在 檔案 檔案總管</value>
+    <value>在檔案總管中顯示</value>
   </data>
   <data name="Health.Split.ArtworkRepairs" xml:space="preserve">
-    <value>調整大小 封面 修復 階層</value>
+    <value>調整封面修復階層的大小</value>
   </data>
   <data name="Health.Split.FileRepairs" xml:space="preserve">
-    <value>調整大小 檔案 修復 階層</value>
+    <value>調整檔案修復階層的大小</value>
   </data>
   <data name="Health.Split.Findings" xml:space="preserve">
-    <value>調整大小 發現項目 階層</value>
+    <value>調整發現項目階層的大小</value>
   </data>
   <data name="Health.Split.History" xml:space="preserve">
-    <value>調整大小 分析 歷程記錄</value>
+    <value>調整分析歷程記錄的大小</value>
   </data>
   <data name="Health.Split.ItunesRepairs" xml:space="preserve">
-    <value>調整大小 iTunes 中繼資料 修復 階層</value>
+    <value>調整 iTunes 中繼資料修復階層的大小</value>
   </data>
   <data name="Health.Split.MetadataRepairs" xml:space="preserve">
-    <value>調整大小 中繼資料 修復 階層</value>
+    <value>調整中繼資料修復階層的大小</value>
   </data>
   <data name="Health.NoSelection.Description" xml:space="preserve">
     <value>執行稽核或準備修復後，可在此檢閱結果。</value>
@@ -995,61 +995,61 @@
     <value>制定可檢閱的計畫。套用前不會變更任何內容。</value>
   </data>
   <data name="Health.Repair.Menu.AlbumArtistConflicts" xml:space="preserve">
-    <value>專輯演出者 衝突</value>
+    <value>專輯演出者衝突</value>
   </data>
   <data name="Health.Repair.Menu.Artwork" xml:space="preserve">
-    <value>封面 修復</value>
+    <value>封面修復</value>
   </data>
   <data name="Health.Repair.Menu.Conflicts" xml:space="preserve">
-    <value>衝突 修復</value>
+    <value>衝突修復</value>
   </data>
   <data name="Health.Repair.Menu.FileRepresentations" xml:space="preserve">
-    <value>檔案 表示 修復</value>
+    <value>檔案表示形式修復</value>
   </data>
   <data name="Health.Repair.Menu.Itunes" xml:space="preserve">
-    <value>iTunes 中繼資料 修復</value>
+    <value>iTunes 中繼資料修復</value>
   </data>
   <data name="Health.Repair.Menu.MetadataPolicy" xml:space="preserve">
-    <value>已啟用 原則 中繼資料 修復</value>
+    <value>依原則進行的中繼資料修復</value>
   </data>
   <data name="Health.Repair.Menu.SimilarArtists" xml:space="preserve">
     <value>相似的演出者名稱</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
-    <value>準備 修復…</value>
+    <value>準備修復…</value>
   </data>
   <data name="Health.Repair.PrepareAutomation" xml:space="preserve">
     <value>選擇要準備的修復計畫</value>
   </data>
   <data name="Health.Repair.Title" xml:space="preserve">
-    <value>準備 修復</value>
+    <value>準備修復</value>
   </data>
   <data name="Health.Repairs.AllFile" xml:space="preserve">
-    <value>全部 檔案 修復</value>
+    <value>所有檔案修復</value>
   </data>
   <data name="Health.Repairs.AllItunes" xml:space="preserve">
-    <value>全部 iTunes 修復</value>
+    <value>所有 iTunes 修復</value>
   </data>
   <data name="Health.Repairs.AllMetadata" xml:space="preserve">
-    <value>全部 中繼資料 修復</value>
+    <value>所有中繼資料修復</value>
   </data>
   <data name="Health.Repairs.MetadataCount.One" xml:space="preserve">
-    <value>{0} 已檢閱 中繼資料 修復</value>
+    <value>{0} 項已檢閱的中繼資料修復</value>
   </data>
   <data name="Health.Repairs.MetadataCount.Other" xml:space="preserve">
-    <value>{0} 已檢閱 中繼資料 修復</value>
+    <value>{0} 項已檢閱的中繼資料修復</value>
   </data>
   <data name="Health.Repairs.FileCount.One" xml:space="preserve">
-    <value>{0} 已檢閱 檔案 動作</value>
+    <value>{0} 個已檢閱的檔案動作</value>
   </data>
   <data name="Health.Repairs.FileCount.Other" xml:space="preserve">
-    <value>{0} 已檢閱 檔案 動作</value>
+    <value>{0} 個已檢閱的檔案動作</value>
   </data>
   <data name="Health.Repairs.ItunesCount.One" xml:space="preserve">
-    <value>{0} 已檢閱 iTunes 修復</value>
+    <value>{0} 項已檢閱的 iTunes 修復</value>
   </data>
   <data name="Health.Repairs.ItunesCount.Other" xml:space="preserve">
-    <value>{0} 已檢閱 iTunes 修復</value>
+    <value>{0} 項已檢閱的 iTunes 修復</value>
   </data>
   <data name="Health.Subtitle" xml:space="preserve">
     <value>稽核收藏，檢查每項建議的變更，並套用安全修復。</value>
@@ -1058,7 +1058,7 @@
     <value>專輯矩陣</value>
   </data>
   <data name="Health.Tab.ArtworkRepairs" xml:space="preserve">
-    <value>封面 修復</value>
+    <value>封面修復</value>
   </data>
   <data name="Health.Tab.Conflicts" xml:space="preserve">
     <value>衝突</value>
@@ -1067,7 +1067,7 @@
     <value>重複項目</value>
   </data>
   <data name="Health.Tab.FileRepairs" xml:space="preserve">
-    <value>檔案 修復</value>
+    <value>檔案修復</value>
   </data>
   <data name="Health.Tab.Findings" xml:space="preserve">
     <value>發現項目</value>
@@ -1076,10 +1076,10 @@
     <value>iTunes 修復</value>
   </data>
   <data name="Health.Tab.MetadataRepairs" xml:space="preserve">
-    <value>中繼資料 修復</value>
+    <value>中繼資料修復</value>
   </data>
   <data name="Health.Tab.SimilarArtists" xml:space="preserve">
-    <value>相似 演出者</value>
+    <value>相似演出者</value>
   </data>
   <data name="Health.Title" xml:space="preserve">
     <value>健康狀況</value>
@@ -4486,187 +4486,187 @@
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>視覺化篩選器無效。</value></data>
   <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>目前沒有作用中的視覺化篩選器。</value></data>
   <data name="Column.TechnicalDetails" xml:space="preserve"><value>技術詳細資料</value></data>
-  <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>篩選器 在 資料庫</value></data>
+  <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>在資料庫中篩選</value></data>
   <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>混合</value></data>
   <data name="Health.Choice.FindingDisposition.None" xml:space="preserve"><value>無</value></data>
   <data name="Health.Choice.RepairDisposition.Active" xml:space="preserve"><value>作用中</value></data>
   <data name="Health.Choice.RepairDisposition.Completed" xml:space="preserve"><value>已完成</value></data>
-  <data name="Health.Choice.RepairDisposition.Filter" xml:space="preserve"><value>篩選器 在 資料庫</value></data>
+  <data name="Health.Choice.RepairDisposition.Filter" xml:space="preserve"><value>在資料庫中篩選</value></data>
   <data name="Health.Choice.RepairDisposition.Ignored" xml:space="preserve"><value>已忽略</value></data>
   <data name="Health.Choice.RepairDisposition.Mixed" xml:space="preserve"><value>混合</value></data>
   <data name="Health.Common.Missing" xml:space="preserve"><value>(遺失)</value></data>
-  <data name="Health.Common.NoFolder" xml:space="preserve"><value>(否 資料夾)</value></data>
+  <data name="Health.Common.NoFolder" xml:space="preserve"><value>（無資料夾）</value></data>
   <data name="Health.Common.Unknown" xml:space="preserve"><value>(未知)</value></data>
-  <data name="Health.Common.UnknownAlbum" xml:space="preserve"><value>未知 專輯</value></data>
-  <data name="Health.Common.UnknownArtist" xml:space="preserve"><value>未知 演出者</value></data>
-  <data name="Health.Common.UnknownError" xml:space="preserve"><value>未知 錯誤</value></data>
+  <data name="Health.Common.UnknownAlbum" xml:space="preserve"><value>未知專輯</value></data>
+  <data name="Health.Common.UnknownArtist" xml:space="preserve"><value>未知演出者</value></data>
+  <data name="Health.Common.UnknownError" xml:space="preserve"><value>未知錯誤</value></data>
   <data name="Health.Duration.HoursMinutes" xml:space="preserve"><value>{0:N0}h {1:N0}m</value></data>
   <data name="Health.Duration.MinutesSeconds" xml:space="preserve"><value>{0:N0}m {1:N0}s</value></data>
   <data name="Health.Duration.Seconds" xml:space="preserve"><value>{0:N0}s</value></data>
-  <data name="Health.Field.Id3TagVersion" xml:space="preserve"><value>ID3 標籤 版本</value></data>
+  <data name="Health.Field.Id3TagVersion" xml:space="preserve"><value>ID3 標籤版本</value></data>
   <data name="Health.Field.Path" xml:space="preserve"><value>路徑</value></data>
   <data name="Health.Findings.Empty.NoMatches" xml:space="preserve"><value>此分析找不到符合的曲目。</value></data>
-  <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>選取 一個 發現項目 分支.</value></data>
-  <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>已快取 中繼資料</value></data>
+  <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>請選取發現項目分支。</value></data>
+  <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>快取的中繼資料</value></data>
   <data name="Health.Itl.DifferenceFormat" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>衍生 遺失 AAC</value></data>
-  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>衍生 遺失 CD FLAC</value></data>
-  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>整理 表示</value></data>
+  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>建立缺少的 AAC 表示形式</value></data>
+  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>建立缺少的 CD FLAC 表示形式</value></data>
+  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>整理表示形式檔案</value></data>
   <data name="Health.Run.DisplayLabel" xml:space="preserve"><value>{0} · {1:N0} · {2:HH:mm:ss}</value></data>
-  <data name="Health.Run.Name.AlbumArtistConflicts" xml:space="preserve"><value>專輯演出者 衝突</value></data>
-  <data name="Health.Run.Name.AlbumMetadataMatrix" xml:space="preserve"><value>專輯 中繼資料 矩陣</value></data>
-  <data name="Health.Run.Name.AlbumRepresentations" xml:space="preserve"><value>專輯 表示</value></data>
-  <data name="Health.Run.Name.ArtworkHealth" xml:space="preserve"><value>封面 健康狀況</value></data>
-  <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>專輯演出者 衝突 修復</value></data>
+  <data name="Health.Run.Name.AlbumArtistConflicts" xml:space="preserve"><value>專輯演出者衝突</value></data>
+  <data name="Health.Run.Name.AlbumMetadataMatrix" xml:space="preserve"><value>專輯中繼資料矩陣</value></data>
+  <data name="Health.Run.Name.AlbumRepresentations" xml:space="preserve"><value>專輯表示形式</value></data>
+  <data name="Health.Run.Name.ArtworkHealth" xml:space="preserve"><value>封面健康狀況</value></data>
+  <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>專輯演出者衝突修復</value></data>
   <data name="Health.Run.Name.CrossSetCheck" xml:space="preserve"><value>跨設定檢查</value></data>
   <data name="Health.Run.Name.DecodedAudioVerification" xml:space="preserve"><value>解碼音訊驗證</value></data>
   <data name="Health.Run.Name.Duplicates" xml:space="preserve"><value>重複項目</value></data>
-  <data name="Health.Run.Name.Inconsistencies" xml:space="preserve"><value>不一致</value></data>
-  <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>iTunes 資料庫 中繼資料 修復</value></data>
-  <data name="Health.Run.Name.LossyFiles" xml:space="preserve"><value>有損 檔案</value></data>
-  <data name="Health.Run.Name.MetadataRepairs" xml:space="preserve"><value>安全 中繼資料 修復</value></data>
-  <data name="Health.Run.Name.RepresentationFileRepairs" xml:space="preserve"><value>表示 檔案 修復</value></data>
-  <data name="Health.Run.Name.RepresentationMetadataRepairs" xml:space="preserve"><value>複製 表示 中繼資料</value></data>
-  <data name="Health.Run.Name.SimilarArtists" xml:space="preserve"><value>相似 演出者</value></data>
+  <data name="Health.Run.Name.Inconsistencies" xml:space="preserve"><value>不一致項目</value></data>
+  <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>iTunes 資料庫中繼資料修復</value></data>
+  <data name="Health.Run.Name.LossyFiles" xml:space="preserve"><value>有損檔案</value></data>
+  <data name="Health.Run.Name.MetadataRepairs" xml:space="preserve"><value>安全中繼資料修復</value></data>
+  <data name="Health.Run.Name.RepresentationFileRepairs" xml:space="preserve"><value>表示形式檔案修復</value></data>
+  <data name="Health.Run.Name.RepresentationMetadataRepairs" xml:space="preserve"><value>複製表示形式中繼資料</value></data>
+  <data name="Health.Run.Name.SimilarArtists" xml:space="preserve"><value>相似演出者</value></data>
   <data name="Health.Artwork.AlbumTitleFormat" xml:space="preserve"><value>{0} — {1}</value></data>
-  <data name="Health.Artwork.Blocking.NoReadableSource" xml:space="preserve"><value>否 可讀 來源 影像 是 可用 用於 此 修復.</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>封面 寫入 是 不 支援 用於 {0:N0} 受影響 檔案.</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>封面 寫入 是 不 支援 用於 {0:N0} 受影響 檔案.</value></data>
+  <data name="Health.Artwork.Blocking.NoReadableSource" xml:space="preserve"><value>沒有可用於此修復的可讀來源影像。</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>不支援寫入封面的檔案：{0:N0}。</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>不支援寫入封面的檔案：{0:N0}。</value></data>
   <data name="Health.Artwork.CandidateDetailsFormat" xml:space="preserve"><value>{0:N0}×{1:N0} · {2:0.#} KiB · {3}</value></data>
-  <data name="Health.Artwork.Category.File" xml:space="preserve"><value>檔案 封面</value></data>
-  <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>混合 專輯 封面</value></data>
-  <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>保留 該 第一個 影像 與 移除 重複 內嵌 影像.</value></data>
+  <data name="Health.Artwork.Category.File" xml:space="preserve"><value>檔案封面</value></data>
+  <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>混合專輯封面</value></data>
+  <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>保留第一張影像並移除重複的內嵌影像。</value></data>
   <data name="Health.Artwork.Description.NormalizeAlbum" xml:space="preserve"><value>將每個曲目的內嵌封面集取代為所選專輯影像。</value></data>
   <data name="Health.Artwork.Description.NormalizeAlbumWithMissing" xml:space="preserve"><value>將每個已掃描曲目的內嵌封面集取代為所選專輯影像，包括缺少封面的曲目。</value></data>
-  <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>重新編碼 該 第一個 影像 範圍內 該 已設定 限制 與 移除 重複 內嵌 影像.</value></data>
-  <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>重新編碼 該 第一個 影像 範圍內 該 已設定 封面 限制.</value></data>
-  <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>重新編碼 該 第一個 可讀 影像 與 取代 該 無效 內嵌-封面 設定.</value></data>
-  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>已選取 封面 與 標記 {0:N0} 修復 作用中.</value></data>
-  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>已選取 封面 與 標記 {0:N0} 修復 作用中.</value></data>
-  <data name="Health.Artwork.TargetSummary" xml:space="preserve"><value>目標: 於 大多數 {0:N0}px 與 {1:0.##} MiB</value></data>
-  <data name="Health.Artwork.ThumbnailLoadFailed" xml:space="preserve"><value>該 封面 預覽 可以 不 為 已載入.</value></data>
-  <data name="Health.Diagnostic.CacheRefreshFailed" xml:space="preserve"><value>快取 重新整理 失敗: {0}</value></data>
+  <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>在已設定的限制內重新編碼第一張影像，並移除重複的內嵌影像。</value></data>
+  <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>在已設定的封面限制內重新編碼第一張影像。</value></data>
+  <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>重新編碼第一張可讀影像，並取代無效的內嵌封面集。</value></data>
+  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>已選取封面；標示為作用中的修復：{0:N0}。</value></data>
+  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>已選取封面；標示為作用中的修復：{0:N0}。</value></data>
+  <data name="Health.Artwork.TargetSummary" xml:space="preserve"><value>目標：最大 {0:N0}px 和 {1:0.##} MiB</value></data>
+  <data name="Health.Artwork.ThumbnailLoadFailed" xml:space="preserve"><value>無法載入封面預覽。</value></data>
+  <data name="Health.Diagnostic.CacheRefreshFailed" xml:space="preserve"><value>快取重新整理失敗：{0}</value></data>
   <data name="Health.Diagnostic.FileError" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>套用 修復</value></data>
-  <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>套用 演出者 合併</value></data>
+  <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>套用修復</value></data>
+  <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>套用演出者合併</value></data>
   <data name="Health.Dialog.ArtistMerge.Message" xml:space="preserve"><value>是否變更 {2:N0} 個叢集的 {1:N0} 個曲目中 {0:N0} 項已檢閱的拼字變體？檔案將直接寫入，且不會建立復原日誌。</value></data>
-  <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>套用 相似 演出者 合併</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>套用 封面 修復</value></data>
+  <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>套用相似演出者合併</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>套用封面修復</value></data>
   <data name="Health.Dialog.ArtworkRepair.Message" xml:space="preserve"><value>是否使用 {1:N0} 項已檢閱動作取代 {0:N0} 個檔案中的整套內嵌封面？檔案將直接寫入，且不會建立復原日誌。</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>套用 封面 修復</value></data>
-  <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>套用 檔案 修復</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>套用封面修復</value></data>
+  <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>套用檔案修復</value></data>
   <data name="Health.Dialog.FileRepair.Message" xml:space="preserve"><value>是否套用 {0:N0} 項已檢閱的檔案修復動作？可復原的檔案變更會記錄在操作日誌中；僅寫入中繼資料的操作無法透過日誌復原。</value></data>
-  <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>套用 檔案 修復</value></data>
-  <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>套用 {0:N0} 已選取 修復 至 該 iTunes 資料庫? 一個 備份 複製 將 為 已保留.</value></data>
-  <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>套用 iTunes 中繼資料 修復</value></data>
+  <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>套用檔案修復</value></data>
+  <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>是否將 {0:N0} 項所選修復套用至 iTunes 資料庫？將保留備份複本。</value></data>
+  <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>套用 iTunes 中繼資料修復</value></data>
   <data name="Health.Dialog.MetadataRepair.Message" xml:space="preserve"><value>是否將 {0:N0} 項已檢閱的中繼資料修復寫入所選檔案？系統會檢查每個來源檔案在預覽後是否發生變更。檔案將直接寫入，且不會建立復原日誌。</value></data>
-  <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>套用 中繼資料 修復</value></data>
-  <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>封面 比較 可以 不 讀取 每個 已符合 檔案.</value></data>
-  <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>封面 比較 無法使用</value></data>
-  <data name="Health.Operation.ApplyArtworkRepairs" xml:space="preserve"><value>套用 封面 修復</value></data>
-  <data name="Health.Operation.ApplyItlMetadataRepairs" xml:space="preserve"><value>套用 iTunes 中繼資料 修復</value></data>
-  <data name="Health.Operation.ApplyMetadataRepairs" xml:space="preserve"><value>套用 中繼資料 修復</value></data>
-  <data name="Health.Operation.ApplyRepresentationFileRepairs" xml:space="preserve"><value>套用 表示 檔案 修復</value></data>
-  <data name="Health.Operation.ApplySimilarArtists" xml:space="preserve"><value>套用 相似 演出者 合併</value></data>
-  <data name="Health.Operation.ForceScanDeferredArtwork" xml:space="preserve"><value>強制 掃描 已延後 封面</value></data>
-  <data name="Health.Operation.PreviewConflictRepairs" xml:space="preserve"><value>預覽 衝突 修復</value></data>
-  <data name="Health.Operation.PreviewItlMetadataRepairs" xml:space="preserve"><value>預覽 iTunes 中繼資料 修復</value></data>
-  <data name="Health.Operation.PreviewMetadataRepairs" xml:space="preserve"><value>預覽 中繼資料 修復</value></data>
-  <data name="Health.Operation.PreviewRepresentationRepairs" xml:space="preserve"><value>預覽 表示 修復</value></data>
-  <data name="Health.Progress.ApplyingArtworkRepairs" xml:space="preserve"><value>正在套用 封面 修復… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingItlMetadataRepairs" xml:space="preserve"><value>正在套用 iTunes 中繼資料 修復… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingMetadataRepairs" xml:space="preserve"><value>正在套用 中繼資料 修復… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingRepresentationRepairs" xml:space="preserve"><value>正在套用 表示 修復… {0:N0}/{1:N0}: {2}</value></data>
-  <data name="Health.Progress.ApplyingSimilarArtists" xml:space="preserve"><value>正在套用 相似 演出者 合併… {0:N0}/{1:N0} 變體</value></data>
+  <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>套用中繼資料修復</value></data>
+  <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>封面比較無法讀取所有相符的檔案。</value></data>
+  <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>無法使用封面比較</value></data>
+  <data name="Health.Operation.ApplyArtworkRepairs" xml:space="preserve"><value>套用封面修復</value></data>
+  <data name="Health.Operation.ApplyItlMetadataRepairs" xml:space="preserve"><value>套用 iTunes 中繼資料修復</value></data>
+  <data name="Health.Operation.ApplyMetadataRepairs" xml:space="preserve"><value>套用中繼資料修復</value></data>
+  <data name="Health.Operation.ApplyRepresentationFileRepairs" xml:space="preserve"><value>套用表示檔案修復</value></data>
+  <data name="Health.Operation.ApplySimilarArtists" xml:space="preserve"><value>套用相似演出者合併</value></data>
+  <data name="Health.Operation.ForceScanDeferredArtwork" xml:space="preserve"><value>強制掃描延後的封面</value></data>
+  <data name="Health.Operation.PreviewConflictRepairs" xml:space="preserve"><value>預覽衝突修復</value></data>
+  <data name="Health.Operation.PreviewItlMetadataRepairs" xml:space="preserve"><value>預覽 iTunes 中繼資料修復</value></data>
+  <data name="Health.Operation.PreviewMetadataRepairs" xml:space="preserve"><value>預覽中繼資料修復</value></data>
+  <data name="Health.Operation.PreviewRepresentationRepairs" xml:space="preserve"><value>預覽表示形式修復</value></data>
+  <data name="Health.Progress.ApplyingArtworkRepairs" xml:space="preserve"><value>正在套用封面修復… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Progress.ApplyingItlMetadataRepairs" xml:space="preserve"><value>正在套用 iTunes 中繼資料修復… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Progress.ApplyingMetadataRepairs" xml:space="preserve"><value>正在套用中繼資料修復… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Progress.ApplyingRepresentationRepairs" xml:space="preserve"><value>正在套用表示形式修復… {0:N0}/{1:N0}：{2}</value></data>
+  <data name="Health.Progress.ApplyingSimilarArtists" xml:space="preserve"><value>正在套用相似演出者合併… {0:N0}/{1:N0} 個變體</value></data>
   <data name="Health.Progress.Calculating" xml:space="preserve"><value>正在計算…</value></data>
-  <data name="Health.Progress.ComparingEmbeddedArtwork.One" xml:space="preserve"><value>正在比較 內嵌 封面 用於 {0:N0} 已符合 對應項目 檔案…</value></data>
-  <data name="Health.Progress.ComparingEmbeddedArtwork.Other" xml:space="preserve"><value>正在比較 內嵌 封面 用於 {0:N0} 已符合 對應項目 檔案…</value></data>
+  <data name="Health.Progress.ComparingEmbeddedArtwork.One" xml:space="preserve"><value>正在比較 {0:N0} 個相符對應檔案的內嵌封面…</value></data>
+  <data name="Health.Progress.ComparingEmbeddedArtwork.Other" xml:space="preserve"><value>正在比較 {0:N0} 個相符對應檔案的內嵌封面…</value></data>
   <data name="Health.Progress.Determinate" xml:space="preserve"><value>{0}… {1:N0}/{2:N0} {3} ({4:P0}) · {5}</value></data>
-  <data name="Health.Progress.EtaCalculating" xml:space="preserve"><value>ETA 正在計算…</value></data>
+  <data name="Health.Progress.EtaCalculating" xml:space="preserve"><value>正在計算 ETA…</value></data>
   <data name="Health.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
-  <data name="Health.Progress.OperationPhase.Applying" xml:space="preserve"><value>正在套用 已檢閱 變更…</value></data>
-  <data name="Health.Progress.OperationPhase.Completed" xml:space="preserve"><value>正在完成 該 操作…</value></data>
-  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>正在建立索引 來源 根目錄…</value></data>
-  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>正在盤點 該 目的地…</value></data>
-  <data name="Health.Progress.OperationPhase.LoadingConfiguration" xml:space="preserve"><value>正在載入 該 資料庫 設定…</value></data>
-  <data name="Health.Progress.OperationPhase.LoadingLibrary" xml:space="preserve"><value>正在載入 該 iTunes 資料庫…</value></data>
-  <data name="Health.Progress.OperationPhase.Planning" xml:space="preserve"><value>正在準備 該 修復 計畫…</value></data>
-  <data name="Health.Progress.OperationPhase.RollingBack" xml:space="preserve"><value>正在回復 背面 該 失敗 操作…</value></data>
-  <data name="Health.Progress.OperationPhase.Validating" xml:space="preserve"><value>驗證 該 已檢閱 計畫…</value></data>
-  <data name="Health.Progress.PreparingItlMetadataRepairs" xml:space="preserve"><value>正在準備 iTunes 中繼資料 修復…</value></data>
+  <data name="Health.Progress.OperationPhase.Applying" xml:space="preserve"><value>正在套用已檢閱的變更…</value></data>
+  <data name="Health.Progress.OperationPhase.Completed" xml:space="preserve"><value>正在完成作業…</value></data>
+  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>正在掃描來源根目錄…</value></data>
+  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>正在掃描目的地…</value></data>
+  <data name="Health.Progress.OperationPhase.LoadingConfiguration" xml:space="preserve"><value>正在載入資料庫設定…</value></data>
+  <data name="Health.Progress.OperationPhase.LoadingLibrary" xml:space="preserve"><value>正在載入 iTunes 資料庫…</value></data>
+  <data name="Health.Progress.OperationPhase.Planning" xml:space="preserve"><value>正在準備修復計畫…</value></data>
+  <data name="Health.Progress.OperationPhase.RollingBack" xml:space="preserve"><value>正在回復失敗的作業…</value></data>
+  <data name="Health.Progress.OperationPhase.Validating" xml:space="preserve"><value>正在驗證已檢閱的計畫…</value></data>
+  <data name="Health.Progress.PreparingItlMetadataRepairs" xml:space="preserve"><value>正在準備 iTunes 中繼資料修復…</value></data>
   <data name="Health.Progress.RateAndEta" xml:space="preserve"><value>{0} {1}/秒 · ETA {2}</value></data>
-  <data name="Health.Progress.ReadingDeferredArtwork.One" xml:space="preserve"><value>正在讀取 內嵌 封面 從 {0:N0} 已延後 檔案…</value></data>
-  <data name="Health.Progress.ReadingDeferredArtwork.Other" xml:space="preserve"><value>正在讀取 內嵌 封面 從 {0:N0} 已延後 檔案…</value></data>
-  <data name="Health.Progress.Running" xml:space="preserve"><value>正在執行 {0}…</value></data>
-  <data name="Health.Progress.Stage.AnalyzingDuplicateCandidates" xml:space="preserve"><value>正在分析 重複 候選項目</value></data>
-  <data name="Health.Progress.Stage.BuildingAlbumMetadataMatrix" xml:space="preserve"><value>建置 專輯 中繼資料 矩陣</value></data>
-  <data name="Health.Progress.Stage.CheckingArtworkMetadata" xml:space="preserve"><value>正在檢查 封面 中繼資料</value></data>
-  <data name="Health.Progress.Stage.CheckingAudioFormats" xml:space="preserve"><value>正在檢查 音訊 格式</value></data>
-  <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>正在檢查 中繼資料 一致性</value></data>
-  <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>正在比較 專輯 封面</value></data>
-  <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>正在比較 專輯 表示</value></data>
+  <data name="Health.Progress.ReadingDeferredArtwork.One" xml:space="preserve"><value>正在從 {0:N0} 個延後檔案讀取內嵌封面…</value></data>
+  <data name="Health.Progress.ReadingDeferredArtwork.Other" xml:space="preserve"><value>正在從 {0:N0} 個延後檔案讀取內嵌封面…</value></data>
+  <data name="Health.Progress.Running" xml:space="preserve"><value>正在執行{0}…</value></data>
+  <data name="Health.Progress.Stage.AnalyzingDuplicateCandidates" xml:space="preserve"><value>正在分析重複候選項目</value></data>
+  <data name="Health.Progress.Stage.BuildingAlbumMetadataMatrix" xml:space="preserve"><value>正在建立專輯中繼資料矩陣</value></data>
+  <data name="Health.Progress.Stage.CheckingArtworkMetadata" xml:space="preserve"><value>正在檢查封面中繼資料</value></data>
+  <data name="Health.Progress.Stage.CheckingAudioFormats" xml:space="preserve"><value>正在檢查音訊格式</value></data>
+  <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>正在檢查中繼資料一致性</value></data>
+  <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>正在比較專輯封面</value></data>
+  <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>正在比較專輯表示形式</value></data>
   <data name="Health.Progress.Stage.ComparingArtistNames" xml:space="preserve"><value>正在比較演出者名稱</value></data>
-  <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>正在解碼 音訊</value></data>
-  <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>分組 封面 修復</value></data>
-  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>正在建立索引 封面 稽核</value></data>
-  <data name="Health.Progress.Stage.IndexingTracksForArtworkRepairs" xml:space="preserve"><value>正在建立索引 曲目 用於 封面 修復</value></data>
-  <data name="Health.Progress.Stage.IndexingTracksForArtworkResults" xml:space="preserve"><value>正在建立索引 曲目 用於 封面 結果</value></data>
-  <data name="Health.Progress.Stage.PlanningAlbumArtworkRepairs" xml:space="preserve"><value>正在規劃 專輯 封面 修復</value></data>
-  <data name="Health.Progress.Stage.PlanningFileArtworkRepairs" xml:space="preserve"><value>正在規劃 檔案 封面 修復</value></data>
-  <data name="Health.Progress.Stage.PreparingAnalysisFindings" xml:space="preserve"><value>正在準備 分析 發現項目</value></data>
-  <data name="Health.Progress.Stage.PreparingArtworkFindings" xml:space="preserve"><value>正在準備 封面 發現項目</value></data>
-  <data name="Health.Progress.Stage.PreparingArtworkRepairChoices" xml:space="preserve"><value>正在準備 封面 修復 選項</value></data>
-  <data name="Health.Progress.Stage.PreparingRepresentationRepairResults" xml:space="preserve"><value>正在準備 表示 修復 結果</value></data>
-  <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>正在預覽 組織 移動</value></data>
-  <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>正在預覽 表示 衍生</value></data>
-  <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>正在預覽 表示 中繼資料 複製</value></data>
+  <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>正在解碼音訊</value></data>
+  <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>正在將封面修復分組</value></data>
+  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>正在建立封面稽核結果的索引</value></data>
+  <data name="Health.Progress.Stage.IndexingTracksForArtworkRepairs" xml:space="preserve"><value>正在為封面修復建立曲目索引</value></data>
+  <data name="Health.Progress.Stage.IndexingTracksForArtworkResults" xml:space="preserve"><value>正在為封面結果建立曲目索引</value></data>
+  <data name="Health.Progress.Stage.PlanningAlbumArtworkRepairs" xml:space="preserve"><value>正在規劃專輯封面修復</value></data>
+  <data name="Health.Progress.Stage.PlanningFileArtworkRepairs" xml:space="preserve"><value>正在規劃檔案封面修復</value></data>
+  <data name="Health.Progress.Stage.PreparingAnalysisFindings" xml:space="preserve"><value>正在準備分析發現項目</value></data>
+  <data name="Health.Progress.Stage.PreparingArtworkFindings" xml:space="preserve"><value>正在準備封面發現項目</value></data>
+  <data name="Health.Progress.Stage.PreparingArtworkRepairChoices" xml:space="preserve"><value>正在準備封面修復選項</value></data>
+  <data name="Health.Progress.Stage.PreparingRepresentationRepairResults" xml:space="preserve"><value>正在準備表示形式修復結果</value></data>
+  <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>正在預覽整理移動</value></data>
+  <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>正在預覽表示形式衍生</value></data>
+  <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>正在預覽表示形式中繼資料複製</value></data>
   <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>正在讀取演出者名稱</value></data>
-  <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>選取 組織 修復</value></data>
+  <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>正在選取整理修復</value></data>
   <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>演出者名稱比較</value></data>
   <data name="Health.Progress.Unit.Files" xml:space="preserve"><value>檔案</value></data>
   <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>發現項目</value></data>
   <data name="Health.Progress.Unit.Moves" xml:space="preserve"><value>移動</value></data>
-  <data name="Health.Progress.Unit.RepairActions" xml:space="preserve"><value>修復 動作</value></data>
+  <data name="Health.Progress.Unit.RepairActions" xml:space="preserve"><value>修復動作</value></data>
   <data name="Health.Progress.Unit.Results" xml:space="preserve"><value>結果</value></data>
   <data name="Health.Progress.Unit.Tracks" xml:space="preserve"><value>曲目</value></data>
-  <data name="Health.Result.AlreadyCorrect" xml:space="preserve"><value>已經 正確</value></data>
+  <data name="Health.Result.AlreadyCorrect" xml:space="preserve"><value>已正確</value></data>
   <data name="Health.Result.Applied" xml:space="preserve"><value>已套用</value></data>
-  <data name="Health.Result.ArtworkCompleted" xml:space="preserve"><value>已完成 用於 {0:N0} 檔案 — {1:N0}×{2:N0} — {3:0.#} KiB</value></data>
-  <data name="Health.Result.ArtworkEncodingFailed" xml:space="preserve"><value>該 已選取 影像 可以 不 為 已編碼 範圍內 該 修復 目標.</value></data>
-  <data name="Health.Result.ArtworkFilesFailed.One" xml:space="preserve"><value>失敗 用於 {0:N0} 檔案.</value></data>
-  <data name="Health.Result.ArtworkFilesFailed.Other" xml:space="preserve"><value>失敗 用於 {0:N0} 檔案.</value></data>
+  <data name="Health.Result.ArtworkCompleted" xml:space="preserve"><value>已完成 {0:N0} 個檔案 — {1:N0}×{2:N0} — {3:0.#} KiB</value></data>
+  <data name="Health.Result.ArtworkEncodingFailed" xml:space="preserve"><value>無法在修復目標範圍內編碼所選影像。</value></data>
+  <data name="Health.Result.ArtworkFilesFailed.One" xml:space="preserve"><value>{0:N0} 個檔案失敗。</value></data>
+  <data name="Health.Result.ArtworkFilesFailed.Other" xml:space="preserve"><value>{0:N0} 個檔案失敗。</value></data>
   <data name="Health.Result.Failed" xml:space="preserve"><value>失敗</value></data>
-  <data name="Health.Result.FilesRenamed.One" xml:space="preserve"><value>已重新命名 {0:N0} 檔案</value></data>
-  <data name="Health.Result.FilesRenamed.Other" xml:space="preserve"><value>已重新命名 {0:N0} 檔案</value></data>
+  <data name="Health.Result.FilesRenamed.One" xml:space="preserve"><value>已重新命名 {0:N0} 個檔案</value></data>
+  <data name="Health.Result.FilesRenamed.Other" xml:space="preserve"><value>已重新命名 {0:N0} 個檔案</value></data>
   <data name="Health.Result.Skipped" xml:space="preserve"><value>已略過</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>專輯演出者 衝突 搜尋 已取消.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Failed" xml:space="preserve"><value>專輯演出者 衝突 搜尋 失敗.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.None" xml:space="preserve"><value>否 衝突 專輯 演出者 曾是 已找到.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Results.One" xml:space="preserve"><value>已找到 {0:N0} 專輯 含 衝突 專輯 演出者. 選擇 標準 值 至 繼續.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Results.Other" xml:space="preserve"><value>已找到 {0:N0} 專輯 含 衝突 專輯 演出者. 選擇 標準 值 至 繼續.</value></data>
-  <data name="Health.Status.AlbumMatrix.None" xml:space="preserve"><value>專輯 中繼資料 矩陣: 否 不一致 專輯 已找到.</value></data>
-  <data name="Health.Status.AlbumMatrix.Results.One" xml:space="preserve"><value>專輯 中繼資料 矩陣: {0:N0} 專輯; 不一致 儲存格: {1:N0}.</value></data>
-  <data name="Health.Status.AlbumMatrix.Results.Other" xml:space="preserve"><value>專輯 中繼資料 矩陣: {0:N0} 專輯; 不一致 儲存格: {1:N0}.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>專輯 表示 比較 已取消.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Failed" xml:space="preserve"><value>專輯 表示 比較 失敗.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Findings.One" xml:space="preserve"><value>專輯 表示: {0:N0} 發現項目.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Findings.Other" xml:space="preserve"><value>專輯 表示: {0:N0} 發現項目.</value></data>
-  <data name="Health.Status.AlbumRepresentations.None" xml:space="preserve"><value>專輯 表示: 否 對應項目, 中繼資料, 長度, 或 封面 偏移 已找到.</value></data>
-  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>相似 演出者 合併 套用 已取消. 檢閱 該 受影響 檔案 之前 重試.</value></data>
-  <data name="Health.Status.ArtistMerge.Completed" xml:space="preserve"><value>相似 演出者 合併: 檔案 已重新命名: {0:N0}; 變體 已完成: {1:N0}; 失敗: {2:N0}.</value></data>
-  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>封面 健康狀況 稽核 已取消.</value></data>
-  <data name="Health.Status.ArtworkHealth.Failed" xml:space="preserve"><value>封面 健康狀況 稽核 失敗.</value></data>
-  <data name="Health.Status.ArtworkHealth.None" xml:space="preserve"><value>封面 健康狀況: 否 問題 已找到.</value></data>
-  <data name="Health.Status.ArtworkHealth.Results" xml:space="preserve"><value>封面 健康狀況: 問題: {0:N0}; 修復 動作: {1:N0}; 已延後 檔案: {2:N0}.</value></data>
-  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>封面 修復 套用 已取消. 檢閱 該 受影響 檔案 之前 重試.</value></data>
-  <data name="Health.Status.ArtworkRepair.Completed" xml:space="preserve"><value>封面 修復: 已完成 動作: {0:N0}; 失敗: {1:N0}.</value></data>
-  <data name="Health.Status.ChooseAnalysis" xml:space="preserve"><value>選擇 一個 分析 至 執行.</value></data>
-  <data name="Health.Status.ChooseConfiguration" xml:space="preserve"><value>選擇 一個 資料庫 設定 在 設定 之前 正在執行 一個 稽核.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>衝突 修復 預覽 已取消.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Failed" xml:space="preserve"><value>衝突 修復 預覽 失敗.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>該 已選取 標準 值 已經 符合 每個 檔案.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>已預覽 {0:N0} 使用者-指定 修復. 檢閱, 然後 套用 它.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>已預覽 {0:N0} 使用者-指定 修復. 檢閱, 然後 套用 該 已選取 修復.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>專輯演出者衝突搜尋已取消。</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Failed" xml:space="preserve"><value>專輯演出者衝突搜尋失敗。</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.None" xml:space="preserve"><value>找不到有衝突的專輯演出者。</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Results.One" xml:space="preserve"><value>發現 {0:N0} 張專輯有專輯演出者衝突。請選擇標準值以繼續。</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Results.Other" xml:space="preserve"><value>發現 {0:N0} 張專輯有專輯演出者衝突。請選擇標準值以繼續。</value></data>
+  <data name="Health.Status.AlbumMatrix.None" xml:space="preserve"><value>專輯中繼資料矩陣：找不到不一致的專輯。</value></data>
+  <data name="Health.Status.AlbumMatrix.Results.One" xml:space="preserve"><value>專輯中繼資料矩陣：{0:N0} 張專輯；不一致的儲存格：{1:N0}。</value></data>
+  <data name="Health.Status.AlbumMatrix.Results.Other" xml:space="preserve"><value>專輯中繼資料矩陣：{0:N0} 張專輯；不一致的儲存格：{1:N0}。</value></data>
+  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>專輯表示形式比較已取消。</value></data>
+  <data name="Health.Status.AlbumRepresentations.Failed" xml:space="preserve"><value>專輯表示形式比較失敗。</value></data>
+  <data name="Health.Status.AlbumRepresentations.Findings.One" xml:space="preserve"><value>專輯表示形式：{0:N0} 個發現項目。</value></data>
+  <data name="Health.Status.AlbumRepresentations.Findings.Other" xml:space="preserve"><value>專輯表示形式：{0:N0} 個發現項目。</value></data>
+  <data name="Health.Status.AlbumRepresentations.None" xml:space="preserve"><value>專輯表示形式：找不到對應項目、中繼資料、時間長度或封面差異。</value></data>
+  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>套用相似演出者合併已取消。請先檢閱受影響的檔案，再重試。</value></data>
+  <data name="Health.Status.ArtistMerge.Completed" xml:space="preserve"><value>相似演出者合併：已重新命名檔案：{0:N0}；已完成變體：{1:N0}；失敗：{2:N0}。</value></data>
+  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>封面健康狀況稽核已取消。</value></data>
+  <data name="Health.Status.ArtworkHealth.Failed" xml:space="preserve"><value>封面健康狀況稽核失敗。</value></data>
+  <data name="Health.Status.ArtworkHealth.None" xml:space="preserve"><value>封面健康狀況：找不到問題。</value></data>
+  <data name="Health.Status.ArtworkHealth.Results" xml:space="preserve"><value>封面健康狀況：問題：{0:N0}；修復動作：{1:N0}；延後檔案：{2:N0}。</value></data>
+  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>套用封面修復已取消。請先檢閱受影響的檔案，再重試。</value></data>
+  <data name="Health.Status.ArtworkRepair.Completed" xml:space="preserve"><value>封面修復：已完成動作：{0:N0}；失敗：{1:N0}。</value></data>
+  <data name="Health.Status.ChooseAnalysis" xml:space="preserve"><value>請選擇要執行的分析。</value></data>
+  <data name="Health.Status.ChooseConfiguration" xml:space="preserve"><value>執行稽核前，請在「設定」中選擇媒體庫設定。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>衝突修復預覽已取消。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Failed" xml:space="preserve"><value>衝突修復預覽失敗。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>所選標準值已與所有檔案相符。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>已預覽 {0:N0} 項使用者指定的修復。請檢閱後套用。</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>已預覽 {0:N0} 項使用者指定的修復。請檢閱後套用所選修復。</value></data>
   <data name="Health.Status.CrossSetCheck.Cancelled" xml:space="preserve"><value>跨設定檢查已取消。</value></data>
   <data name="Health.Status.CrossSetCheck.Failed" xml:space="preserve"><value>跨設定檢查失敗。</value></data>
   <data name="Health.Status.CrossSetCheck.Findings.One" xml:space="preserve"><value>跨設定檢查：{0:N0} 個發現項目。</value></data>
@@ -4678,50 +4678,50 @@
   <data name="Health.Status.DecodedAudioVerification.Failed" xml:space="preserve"><value>解碼音訊驗證失敗。</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.One" xml:space="preserve"><value>解碼音訊驗證：{0:N0} 組相容配對相符。</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.Other" xml:space="preserve"><value>解碼音訊驗證：{0:N0} 組相容配對相符。</value></data>
-  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>已延後 封面 掃描 已取消.</value></data>
-  <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>已延後 封面 掃描 失敗.</value></data>
-  <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>{0:N0} 重複 群組.</value></data>
-  <data name="Health.Status.Duplicates.Groups.Other" xml:space="preserve"><value>{0:N0} 重複 群組.</value></data>
-  <data name="Health.Status.Duplicates.None" xml:space="preserve"><value>否 重複項目 已找到.</value></data>
-  <data name="Health.Status.Inconsistencies.Findings.One" xml:space="preserve"><value>不一致: {0:N0} 發現項目.</value></data>
-  <data name="Health.Status.Inconsistencies.Findings.Other" xml:space="preserve"><value>不一致: {0:N0} 發現項目.</value></data>
-  <data name="Health.Status.Inconsistencies.None" xml:space="preserve"><value>不一致: 無 已找到.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>iTunes 中繼資料 修復 套用 已取消. 檢閱 該 受影響 檔案 之前 重試.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Completed" xml:space="preserve"><value>iTunes 中繼資料 修復: 已套用: {0:N0}; 已略過: {1:N0}; 失敗: {2:N0}.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Failed" xml:space="preserve"><value>iTunes 中繼資料 修復 套用 失敗.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>iTunes 中繼資料 修復 預覽 已取消.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Failed" xml:space="preserve"><value>iTunes 中繼資料 修復 預覽 失敗.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.None" xml:space="preserve"><value>否 iTunes 中繼資料 修復 是 需要 用於 該 已選取 資料庫.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Results.One" xml:space="preserve"><value>已預覽 {0:N0} iTunes 中繼資料 修復. 檢閱 它, 然後 套用 該 已選取 修復.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Results.Other" xml:space="preserve"><value>已預覽 {0:N0} iTunes 中繼資料 修復. 檢閱 它們, 然後 套用 該 已選取 修復.</value></data>
-  <data name="Health.Status.LossyFiles.Count.One" xml:space="preserve"><value>{0:N0} 有損 檔案.</value></data>
-  <data name="Health.Status.LossyFiles.Count.Other" xml:space="preserve"><value>{0:N0} 有損 檔案.</value></data>
-  <data name="Health.Status.LossyFiles.None" xml:space="preserve"><value>否 有損 檔案.</value></data>
-  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>中繼資料 修復 套用 已取消. 檢閱 該 受影響 檔案 之前 重試.</value></data>
-  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>中繼資料 修復: 已套用: {0:N0}; 已略過: {1:N0}; 失敗: {2:N0}.</value></data>
-  <data name="Health.Status.MetadataRepair.Failed" xml:space="preserve"><value>中繼資料 修復 套用 失敗.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Blocked.One" xml:space="preserve"><value>{0:N0} 修復 是 已封鎖. 檢閱 其 原因 之前 正在套用 該 符合資格 修復.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Blocked.Other" xml:space="preserve"><value>{0:N0} 修復 是 已封鎖. 檢閱 其 原因 之前 正在套用 該 符合資格 修復.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>中繼資料 修復 預覽 已取消.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Failed" xml:space="preserve"><value>中繼資料 修復 預覽 失敗.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.None" xml:space="preserve"><value>否 安全 中繼資料 修復 是 需要.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>已預覽 {0:N0} 安全 中繼資料 修復. 檢閱 它, 然後 套用 該 已選取 修復.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>已預覽 {0:N0} 安全 中繼資料 修復. 檢閱 它們, 然後 套用 該 已選取 修復.</value></data>
-  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>表示 修復 套用 已取消.</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>表示 修復 套用 已取消 之後 {0:N0} 動作. 檢閱 該 受影響 檔案 之前 重試.</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>表示 修復 套用 已取消 之後 {0:N0} 動作. 檢閱 該 受影響 檔案 之前 重試.</value></data>
-  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>表示 修復: 已套用: {0:N0}; 已略過: {1:N0}; 失敗: {2:N0}.</value></data>
-  <data name="Health.Status.RepresentationRepair.Failed" xml:space="preserve"><value>表示 修復 套用 失敗.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>表示 修復 預覽 已取消.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.Failed" xml:space="preserve"><value>表示 修復 預覽 失敗.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>已預覽 表示 檔案 動作: {0:N0} 組織 移動 與 {1:N0} 衍生. 檢閱 它們, 然後 套用 該 已選取 動作.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.One" xml:space="preserve"><value>已預覽 {0:N0} 表示 中繼資料 複製. 檢閱 它, 然後 套用 該 已選取 修復.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.Other" xml:space="preserve"><value>已預覽 {0:N0} 表示 中繼資料 複製. 檢閱 它們, 然後 套用 該 已選取 修復.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.None" xml:space="preserve"><value>否 表示 修復 是 需要.</value></data>
-  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0} 已取消.</value></data>
-  <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} 失敗.</value></data>
-  <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} 相似 演出者 叢集 已找到 於 臨界值 {1:0.00}. 檢閱 該 變體, 然後 套用 該 作用中 修復.</value></data>
-  <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} 相似 演出者 叢集 已找到 於 臨界值 {1:0.00}. 檢閱 該 變體, 然後 套用 該 作用中 修復.</value></data>
+  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>延後封面掃描已取消。</value></data>
+  <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>延後封面掃描失敗。</value></data>
+  <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>{0:N0} 個重複群組。</value></data>
+  <data name="Health.Status.Duplicates.Groups.Other" xml:space="preserve"><value>{0:N0} 個重複群組。</value></data>
+  <data name="Health.Status.Duplicates.None" xml:space="preserve"><value>找不到重複項目。</value></data>
+  <data name="Health.Status.Inconsistencies.Findings.One" xml:space="preserve"><value>不一致項目：{0:N0} 個發現項目。</value></data>
+  <data name="Health.Status.Inconsistencies.Findings.Other" xml:space="preserve"><value>不一致項目：{0:N0} 個發現項目。</value></data>
+  <data name="Health.Status.Inconsistencies.None" xml:space="preserve"><value>不一致項目：找不到。</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>套用 iTunes 中繼資料修復已取消。請先檢閱受影響的檔案，再重試。</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Completed" xml:space="preserve"><value>iTunes 中繼資料修復：已套用：{0:N0}；已略過：{1:N0}；失敗：{2:N0}。</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Failed" xml:space="preserve"><value>套用 iTunes 中繼資料修復失敗。</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>iTunes 中繼資料修復預覽已取消。</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Failed" xml:space="preserve"><value>iTunes 中繼資料修復預覽失敗。</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.None" xml:space="preserve"><value>所選媒體庫不需要 iTunes 中繼資料修復。</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Results.One" xml:space="preserve"><value>已預覽 {0:N0} 項 iTunes 中繼資料修復。請檢閱後套用所選修復。</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Results.Other" xml:space="preserve"><value>已預覽 {0:N0} 項 iTunes 中繼資料修復。請檢閱後套用所選修復。</value></data>
+  <data name="Health.Status.LossyFiles.Count.One" xml:space="preserve"><value>{0:N0} 個有損檔案。</value></data>
+  <data name="Health.Status.LossyFiles.Count.Other" xml:space="preserve"><value>{0:N0} 個有損檔案。</value></data>
+  <data name="Health.Status.LossyFiles.None" xml:space="preserve"><value>沒有有損檔案。</value></data>
+  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>套用中繼資料修復已取消。請先檢閱受影響的檔案，再重試。</value></data>
+  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>中繼資料修復：已套用：{0:N0}；已略過：{1:N0}；失敗：{2:N0}；目錄重新整理失敗：{3:N0}。</value></data>
+  <data name="Health.Status.MetadataRepair.Failed" xml:space="preserve"><value>套用中繼資料修復失敗。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Blocked.One" xml:space="preserve"><value>{0:N0} 項修復遭到封鎖。請先檢閱原因，再套用符合條件的修復。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Blocked.Other" xml:space="preserve"><value>{0:N0} 項修復遭到封鎖。請先檢閱原因，再套用符合條件的修復。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>中繼資料修復預覽已取消。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Failed" xml:space="preserve"><value>中繼資料修復預覽失敗。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.None" xml:space="preserve"><value>不需要安全中繼資料修復。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>已預覽 {0:N0} 項安全中繼資料修復；符合條件：{1:N0}。請檢閱後套用所選修復。</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>已預覽 {0:N0} 項安全中繼資料修復；符合條件：{1:N0}。請檢閱後套用所選修復。</value></data>
+  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>套用表示形式修復已取消。</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>套用表示形式修復在 {0:N0} 項動作後取消。請先檢閱受影響的檔案，再重試。</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>套用表示形式修復在 {0:N0} 項動作後取消。請先檢閱受影響的檔案，再重試。</value></data>
+  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>表示形式修復：已套用：{0:N0}；失敗：{1:N0}。</value></data>
+  <data name="Health.Status.RepresentationRepair.Failed" xml:space="preserve"><value>套用表示形式修復失敗。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>表示形式修復預覽已取消。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.Failed" xml:space="preserve"><value>表示形式修復預覽失敗。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>已預覽表示形式檔案動作：{0:N0}；警告：{1:N0}。請檢閱後套用所選動作。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.One" xml:space="preserve"><value>已預覽 {0:N0} 項表示形式中繼資料複製。請檢閱後套用所選修復。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.Other" xml:space="preserve"><value>已預覽 {0:N0} 項表示形式中繼資料複製。請檢閱後套用所選修復。</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.None" xml:space="preserve"><value>不需要表示形式修復。</value></data>
+  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0} 已取消。</value></data>
+  <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} 失敗。</value></data>
+  <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>在臨界值 {1:0.00} 下發現 {0:N0} 個相似演出者叢集。請檢閱變體後套用作用中的修復。</value></data>
+  <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>在臨界值 {1:0.00} 下發現 {0:N0} 個相似演出者叢集。請檢閱變體後套用作用中的修復。</value></data>
   <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>在臨界值 {0:0.00} 下找不到相似的演出者名稱。</value></data>
   <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>新增檔案</value></data>
   <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>建立資料夾</value></data>
@@ -5947,60 +5947,60 @@
   <data name="Health.TextDifference.Empty" xml:space="preserve"><value>(空白)</value></data>
   <data name="Health.TextDifference.KnownCodePoint" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Health.TextDifference.Missing" xml:space="preserve"><value>(遺失)</value></data>
-  <data name="Health.TextDifference.More.One" xml:space="preserve"><value> · … ({0:N0} 更多)</value></data>
-  <data name="Health.TextDifference.More.Other" xml:space="preserve"><value> · … ({0:N0} 更多)</value></data>
+  <data name="Health.TextDifference.More.One" xml:space="preserve"><value> · …（另有 {0:N0} 個）</value></data>
+  <data name="Health.TextDifference.More.Other" xml:space="preserve"><value> · …（另有 {0:N0} 個）</value></data>
   <data name="Health.TextDifference.NoBreakSpaceMarker" xml:space="preserve"><value>⟦NBSP⟧</value></data>
-  <data name="Health.TextDifference.NoCharacter" xml:space="preserve"><value>∅ (否 字元)</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ClosePunctuation" xml:space="preserve"><value>關閉 標點</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ConnectorPunctuation" xml:space="preserve"><value>連接器 標點</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.Control" xml:space="preserve"><value>控制</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.CurrencySymbol" xml:space="preserve"><value>貨幣 符號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.DashPunctuation" xml:space="preserve"><value>破折號 標點</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.DecimalDigitNumber" xml:space="preserve"><value>十進位 數字 編號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.EnclosingMark" xml:space="preserve"><value>包含 標記</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.FinalQuotePunctuation" xml:space="preserve"><value>最終 引號 標點</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.Format" xml:space="preserve"><value>格式</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.InitialQuotePunctuation" xml:space="preserve"><value>初始 引號 標點</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LetterNumber" xml:space="preserve"><value>字母 編號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LineSeparator" xml:space="preserve"><value>行 分隔符號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LowercaseLetter" xml:space="preserve"><value>小寫 字母</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.MathSymbol" xml:space="preserve"><value>數學 符號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ModifierLetter" xml:space="preserve"><value>修飾鍵 字母</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ModifierSymbol" xml:space="preserve"><value>修飾鍵 符號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.NonSpacingMark" xml:space="preserve"><value>非間距 標記</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OpenPunctuation" xml:space="preserve"><value>開啟 標點</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherLetter" xml:space="preserve"><value>其他 字母</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherNotAssigned" xml:space="preserve"><value>不 已指派</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherNumber" xml:space="preserve"><value>其他 編號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherPunctuation" xml:space="preserve"><value>其他 標點</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherSymbol" xml:space="preserve"><value>其他 符號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ParagraphSeparator" xml:space="preserve"><value>段落 分隔符號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.PrivateUse" xml:space="preserve"><value>私人 使用</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.SpaceSeparator" xml:space="preserve"><value>空間 分隔符號</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.SpacingCombiningMark" xml:space="preserve"><value>空間 正在合併 標記</value></data>
+  <data name="Health.TextDifference.NoCharacter" xml:space="preserve"><value>∅（無字元）</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ClosePunctuation" xml:space="preserve"><value>結束標點</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ConnectorPunctuation" xml:space="preserve"><value>連接標點</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.Control" xml:space="preserve"><value>控制字元</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.CurrencySymbol" xml:space="preserve"><value>貨幣符號</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.DashPunctuation" xml:space="preserve"><value>破折號標點</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.DecimalDigitNumber" xml:space="preserve"><value>十進位數字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.EnclosingMark" xml:space="preserve"><value>包圍標記</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.FinalQuotePunctuation" xml:space="preserve"><value>結束引號標點</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.Format" xml:space="preserve"><value>格式字元</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.InitialQuotePunctuation" xml:space="preserve"><value>起始引號標點</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LetterNumber" xml:space="preserve"><value>字母數字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LineSeparator" xml:space="preserve"><value>行分隔符號</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LowercaseLetter" xml:space="preserve"><value>小寫字母</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.MathSymbol" xml:space="preserve"><value>數學符號</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ModifierLetter" xml:space="preserve"><value>修飾字母</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ModifierSymbol" xml:space="preserve"><value>修飾符號</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.NonSpacingMark" xml:space="preserve"><value>非間距標記</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OpenPunctuation" xml:space="preserve"><value>起始標點</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherLetter" xml:space="preserve"><value>其他字母</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherNotAssigned" xml:space="preserve"><value>未指派</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherNumber" xml:space="preserve"><value>其他數字</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherPunctuation" xml:space="preserve"><value>其他標點</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherSymbol" xml:space="preserve"><value>其他符號</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ParagraphSeparator" xml:space="preserve"><value>段落分隔符號</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.PrivateUse" xml:space="preserve"><value>私用字元</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.SpaceSeparator" xml:space="preserve"><value>空格分隔符號</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.SpacingCombiningMark" xml:space="preserve"><value>間距組合標記</value></data>
   <data name="Health.TextDifference.UnicodeCategory.Surrogate" xml:space="preserve"><value>代理項</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.TitlecaseLetter" xml:space="preserve"><value>標題大小寫 字母</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.UppercaseLetter" xml:space="preserve"><value>大寫 字母</value></data>
-  <data name="Health.TextDifference.UnicodeDetails" xml:space="preserve"><value>之前: {0}; 之後: {1}</value></data>
-  <data name="Health.TextDifference.UnicodeName.CarriageReturn" xml:space="preserve"><value>歸位</value></data>
-  <data name="Health.TextDifference.UnicodeName.CharacterTabulation" xml:space="preserve"><value>字元定位</value></data>
-  <data name="Health.TextDifference.UnicodeName.FigureSpace" xml:space="preserve"><value>數字 空間</value></data>
-  <data name="Health.TextDifference.UnicodeName.Hyphen" xml:space="preserve"><value>連字號</value></data>
-  <data name="Health.TextDifference.UnicodeName.HyphenMinus" xml:space="preserve"><value>連字號減號</value></data>
-  <data name="Health.TextDifference.UnicodeName.LeftDoubleQuotationMark" xml:space="preserve"><value>左 雙 引號 標記</value></data>
-  <data name="Health.TextDifference.UnicodeName.LeftSingleQuotationMark" xml:space="preserve"><value>左 單一 引號 標記</value></data>
-  <data name="Health.TextDifference.UnicodeName.LineFeed" xml:space="preserve"><value>換行</value></data>
-  <data name="Health.TextDifference.UnicodeName.MinusSign" xml:space="preserve"><value>減號</value></data>
-  <data name="Health.TextDifference.UnicodeName.NarrowNoBreakSpace" xml:space="preserve"><value>窄 否-換行 空間</value></data>
-  <data name="Health.TextDifference.UnicodeName.NoBreakSpace" xml:space="preserve"><value>否-換行 空間</value></data>
-  <data name="Health.TextDifference.UnicodeName.NonBreakingHyphen" xml:space="preserve"><value>不換行 連字號</value></data>
-  <data name="Health.TextDifference.UnicodeName.RightDoubleQuotationMark" xml:space="preserve"><value>右 雙 引號 標記</value></data>
-  <data name="Health.TextDifference.UnicodeName.RightSingleQuotationMark" xml:space="preserve"><value>右 單一 引號 標記</value></data>
-  <data name="Health.TextDifference.UnicodeName.Space" xml:space="preserve"><value>空間</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthJoiner" xml:space="preserve"><value>零 寬度 連接符</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthNoBreakSpace" xml:space="preserve"><value>零 寬度 否-換行 空間</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthNonJoiner" xml:space="preserve"><value>零 寬度 非連接符</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthSpace" xml:space="preserve"><value>零 寬度 空間</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.TitlecaseLetter" xml:space="preserve"><value>標題大寫字母</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.UppercaseLetter" xml:space="preserve"><value>大寫字母</value></data>
+  <data name="Health.TextDifference.UnicodeDetails" xml:space="preserve"><value>變更前：{0}；變更後：{1}</value></data>
+  <data name="Health.TextDifference.UnicodeName.CarriageReturn" xml:space="preserve"><value>CARRIAGE RETURN</value></data>
+  <data name="Health.TextDifference.UnicodeName.CharacterTabulation" xml:space="preserve"><value>CHARACTER TABULATION</value></data>
+  <data name="Health.TextDifference.UnicodeName.FigureSpace" xml:space="preserve"><value>FIGURE SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.Hyphen" xml:space="preserve"><value>HYPHEN</value></data>
+  <data name="Health.TextDifference.UnicodeName.HyphenMinus" xml:space="preserve"><value>HYPHEN-MINUS</value></data>
+  <data name="Health.TextDifference.UnicodeName.LeftDoubleQuotationMark" xml:space="preserve"><value>LEFT DOUBLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.LeftSingleQuotationMark" xml:space="preserve"><value>LEFT SINGLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.LineFeed" xml:space="preserve"><value>LINE FEED</value></data>
+  <data name="Health.TextDifference.UnicodeName.MinusSign" xml:space="preserve"><value>MINUS SIGN</value></data>
+  <data name="Health.TextDifference.UnicodeName.NarrowNoBreakSpace" xml:space="preserve"><value>NARROW NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.NoBreakSpace" xml:space="preserve"><value>NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.NonBreakingHyphen" xml:space="preserve"><value>NON-BREAKING HYPHEN</value></data>
+  <data name="Health.TextDifference.UnicodeName.RightDoubleQuotationMark" xml:space="preserve"><value>RIGHT DOUBLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.RightSingleQuotationMark" xml:space="preserve"><value>RIGHT SINGLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.Space" xml:space="preserve"><value>SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthJoiner" xml:space="preserve"><value>ZERO WIDTH JOINER</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthNoBreakSpace" xml:space="preserve"><value>ZERO WIDTH NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthNonJoiner" xml:space="preserve"><value>ZERO WIDTH NON-JOINER</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthSpace" xml:space="preserve"><value>ZERO WIDTH SPACE</value></data>
   <data name="Health.TextDifference.VisibleCodePoint" xml:space="preserve"><value>{0} ‘{1}’ ({2})</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Lower" xml:space="preserve"><value>小寫</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Sentence" xml:space="preserve"><value>句首大寫</value></data>

@@ -719,7 +719,7 @@
     <value>Apply active repairs</value>
   </data>
   <data name="Health.Action.ApplyArtworkRepairs" xml:space="preserve">
-    <value>Apply active repairs</value>
+    <value>Apply active artwork repairs</value>
   </data>
   <data name="Health.Action.ApplyFileRepairs" xml:space="preserve">
     <value>Apply selected file repairs</value>
@@ -731,7 +731,7 @@
     <value>Apply selected repairs</value>
   </data>
   <data name="Health.Action.ForceScanDeferred" xml:space="preserve">
-    <value>Force scan deferred</value>
+    <value>Scan deferred artwork now</value>
   </data>
   <data name="Health.AlbumMatrix.Album" xml:space="preserve">
     <value>Album</value>
@@ -767,7 +767,7 @@
     <value>Track</value>
   </data>
   <data name="Health.AlbumMatrix.TrackNumber" xml:space="preserve">
-    <value>Track #</value>
+    <value>Track number</value>
   </data>
   <data name="Health.AlbumMatrix.TrackTotal" xml:space="preserve">
     <value>Track total</value>
@@ -785,16 +785,16 @@
     <value>Choose the canonical name for each cluster, then mark only the variants you want renamed Active. Filter sends a variant's tracks to Library.</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
-    <value>{0} track selected across active variants</value>
+    <value>Selected tracks across active variants: {0}</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.Other" xml:space="preserve">
-    <value>{0} tracks selected across active variants</value>
+    <value>Selected tracks across active variants: {0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.One" xml:space="preserve">
-    <value>{0} track in cluster</value>
+    <value>Tracks in cluster: {0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.Other" xml:space="preserve">
-    <value>{0} tracks in cluster</value>
+    <value>Tracks in cluster: {0}</value>
   </data>
   <data name="Health.Artist.FileCount.One" xml:space="preserve">
     <value>{0} file</value>
@@ -803,13 +803,13 @@
     <value>{0} files</value>
   </data>
   <data name="Health.Artist.FolderCount.One" xml:space="preserve">
-    <value>Folder ({0})</value>
+    <value>Folders ({0})</value>
   </data>
   <data name="Health.Artist.FolderCount.Other" xml:space="preserve">
     <value>Folders ({0})</value>
   </data>
   <data name="Health.Artist.FilesCount.One" xml:space="preserve">
-    <value>File ({0})</value>
+    <value>Files ({0})</value>
   </data>
   <data name="Health.Artist.FilesCount.Other" xml:space="preserve">
     <value>Files ({0})</value>
@@ -821,10 +821,10 @@
     <value>Review artist spelling variants</value>
   </data>
   <data name="Health.Artist.Threshold" xml:space="preserve">
-    <value>Artist threshold</value>
+    <value>Similarity threshold</value>
   </data>
   <data name="Health.Artist.ThresholdAutomation" xml:space="preserve">
-    <value>Similar artist fuzzy threshold</value>
+    <value>Similar-artist matching threshold</value>
   </data>
   <data name="Health.Artist.ThresholdTooltip" xml:space="preserve">
     <value>Maximum normalized edit distance. Lower values are stricter; 0 allows only normalized-equivalent spellings.</value>
@@ -851,13 +851,13 @@
     <value>Selected artwork and marked {0:N0} repair(s) Active.</value>
   </data>
   <data name="Health.Artwork.SelectedCount.One" xml:space="preserve">
-    <value>{0} repair action selected</value>
+    <value>Selected repair actions: {0}</value>
   </data>
   <data name="Health.Artwork.SelectedCount.Other" xml:space="preserve">
-    <value>{0} repair actions selected</value>
+    <value>Selected repair actions: {0}</value>
   </data>
   <data name="Health.Artwork.AffectedFiles.One" xml:space="preserve">
-    <value>Affected file ({0})</value>
+    <value>Affected files ({0})</value>
   </data>
   <data name="Health.Artwork.AffectedFiles.Other" xml:space="preserve">
     <value>Affected files ({0})</value>
@@ -1010,7 +1010,7 @@
     <value>iTunes metadata repairs</value>
   </data>
   <data name="Health.Repair.Menu.MetadataPolicy" xml:space="preserve">
-    <value>Enabled policy metadata repairs</value>
+    <value>Policy-based metadata repairs</value>
   </data>
   <data name="Health.Repair.Menu.SimilarArtists" xml:space="preserve">
     <value>Similar artist names</value>
@@ -4509,9 +4509,9 @@
   <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>Select a findings branch.</value></data>
   <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>Cached metadata</value></data>
   <data name="Health.Itl.DifferenceFormat" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>Derive missing AAC</value></data>
-  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>Derive missing CD FLAC</value></data>
-  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>Organize representation</value></data>
+  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>Create missing AAC representation</value></data>
+  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>Create missing CD FLAC representation</value></data>
+  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>Organize representation files</value></data>
   <data name="Health.Run.DisplayLabel" xml:space="preserve"><value>{0} · {1:N0} · {2:HH:mm:ss}</value></data>
   <data name="Health.Run.Name.AlbumArtistConflicts" xml:space="preserve"><value>Album artist conflicts</value></data>
   <data name="Health.Run.Name.AlbumMetadataMatrix" xml:space="preserve"><value>Album metadata matrix</value></data>
@@ -4530,8 +4530,8 @@
   <data name="Health.Run.Name.SimilarArtists" xml:space="preserve"><value>Similar artists</value></data>
   <data name="Health.Artwork.AlbumTitleFormat" xml:space="preserve"><value>{0} — {1}</value></data>
   <data name="Health.Artwork.Blocking.NoReadableSource" xml:space="preserve"><value>No readable source image is available for this repair.</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>Artwork writing is not supported for {0:N0} affected file.</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>Artwork writing is not supported for {0:N0} affected files.</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>Files without artwork-writing support: {0:N0}.</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>Files without artwork-writing support: {0:N0}.</value></data>
   <data name="Health.Artwork.CandidateDetailsFormat" xml:space="preserve"><value>{0:N0}×{1:N0} · {2:0.#} KiB · {3}</value></data>
   <data name="Health.Artwork.Category.File" xml:space="preserve"><value>File artwork</value></data>
   <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>Mixed album artwork</value></data>
@@ -4541,8 +4541,8 @@
   <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>Re-encode the first image within the configured limits and remove duplicate embedded images.</value></data>
   <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>Re-encode the first image within the configured artwork limits.</value></data>
   <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>Re-encode the first readable image and replace the invalid embedded-artwork set.</value></data>
-  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>Selected artwork and marked {0:N0} repair Active.</value></data>
-  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>Selected artwork and marked {0:N0} repairs Active.</value></data>
+  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>Artwork selected; repairs marked Active: {0:N0}.</value></data>
+  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>Artwork selected; repairs marked Active: {0:N0}.</value></data>
   <data name="Health.Artwork.TargetSummary" xml:space="preserve"><value>Target: at most {0:N0}px and {1:0.##} MiB</value></data>
   <data name="Health.Artwork.ThumbnailLoadFailed" xml:space="preserve"><value>The artwork preview could not be loaded.</value></data>
   <data name="Health.Diagnostic.CacheRefreshFailed" xml:space="preserve"><value>Cache refresh failed: {0}</value></data>
@@ -4578,16 +4578,16 @@
   <data name="Health.Progress.ApplyingMetadataRepairs" xml:space="preserve"><value>Applying metadata repairs… {0:N0}/{1:N0}</value></data>
   <data name="Health.Progress.ApplyingRepresentationRepairs" xml:space="preserve"><value>Applying representation repairs… {0:N0}/{1:N0}: {2}</value></data>
   <data name="Health.Progress.ApplyingSimilarArtists" xml:space="preserve"><value>Applying similar artist merges… {0:N0}/{1:N0} variants</value></data>
-  <data name="Health.Progress.Calculating" xml:space="preserve"><value>calculating…</value></data>
+  <data name="Health.Progress.Calculating" xml:space="preserve"><value>Calculating…</value></data>
   <data name="Health.Progress.ComparingEmbeddedArtwork.One" xml:space="preserve"><value>Comparing embedded artwork for {0:N0} matched counterpart file…</value></data>
   <data name="Health.Progress.ComparingEmbeddedArtwork.Other" xml:space="preserve"><value>Comparing embedded artwork for {0:N0} matched counterpart files…</value></data>
   <data name="Health.Progress.Determinate" xml:space="preserve"><value>{0}… {1:N0}/{2:N0} {3} ({4:P0}) · {5}</value></data>
-  <data name="Health.Progress.EtaCalculating" xml:space="preserve"><value>ETA calculating…</value></data>
+  <data name="Health.Progress.EtaCalculating" xml:space="preserve"><value>Calculating ETA…</value></data>
   <data name="Health.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
   <data name="Health.Progress.OperationPhase.Applying" xml:space="preserve"><value>Applying reviewed changes…</value></data>
   <data name="Health.Progress.OperationPhase.Completed" xml:space="preserve"><value>Finishing the operation…</value></data>
-  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>Indexing source roots…</value></data>
-  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>Inventorying the destination…</value></data>
+  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>Scanning source roots…</value></data>
+  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>Scanning the destination…</value></data>
   <data name="Health.Progress.OperationPhase.LoadingConfiguration" xml:space="preserve"><value>Loading the library configuration…</value></data>
   <data name="Health.Progress.OperationPhase.LoadingLibrary" xml:space="preserve"><value>Loading the iTunes library…</value></data>
   <data name="Health.Progress.OperationPhase.Planning" xml:space="preserve"><value>Preparing the repair plan…</value></data>
@@ -4608,7 +4608,7 @@
   <data name="Health.Progress.Stage.ComparingArtistNames" xml:space="preserve"><value>Comparing artist names</value></data>
   <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>Decoding audio</value></data>
   <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>Grouping artwork repairs</value></data>
-  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>Indexing artwork audit</value></data>
+  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>Indexing artwork audit results</value></data>
   <data name="Health.Progress.Stage.IndexingTracksForArtworkRepairs" xml:space="preserve"><value>Indexing tracks for artwork repairs</value></data>
   <data name="Health.Progress.Stage.IndexingTracksForArtworkResults" xml:space="preserve"><value>Indexing tracks for artwork results</value></data>
   <data name="Health.Progress.Stage.PlanningAlbumArtworkRepairs" xml:space="preserve"><value>Planning album artwork repairs</value></data>
@@ -4639,7 +4639,7 @@
   <data name="Health.Result.FilesRenamed.One" xml:space="preserve"><value>Renamed {0:N0} file</value></data>
   <data name="Health.Result.FilesRenamed.Other" xml:space="preserve"><value>Renamed {0:N0} files</value></data>
   <data name="Health.Result.Skipped" xml:space="preserve"><value>Skipped</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>Album artist conflict search cancelled.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>Album artist conflict search canceled.</value></data>
   <data name="Health.Status.AlbumArtistConflicts.Failed" xml:space="preserve"><value>Album artist conflict search failed.</value></data>
   <data name="Health.Status.AlbumArtistConflicts.None" xml:space="preserve"><value>No conflicting album artists were found.</value></data>
   <data name="Health.Status.AlbumArtistConflicts.Results.One" xml:space="preserve"><value>Found {0:N0} album with conflicting album artists. Choose canonical values to continue.</value></data>
@@ -4647,22 +4647,22 @@
   <data name="Health.Status.AlbumMatrix.None" xml:space="preserve"><value>Album metadata matrix: no inconsistent albums found.</value></data>
   <data name="Health.Status.AlbumMatrix.Results.One" xml:space="preserve"><value>Album metadata matrix: {0:N0} album; inconsistent cells: {1:N0}.</value></data>
   <data name="Health.Status.AlbumMatrix.Results.Other" xml:space="preserve"><value>Album metadata matrix: {0:N0} albums; inconsistent cells: {1:N0}.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>Album representation comparison cancelled.</value></data>
+  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>Album representation comparison canceled.</value></data>
   <data name="Health.Status.AlbumRepresentations.Failed" xml:space="preserve"><value>Album representation comparison failed.</value></data>
   <data name="Health.Status.AlbumRepresentations.Findings.One" xml:space="preserve"><value>Album representations: {0:N0} finding.</value></data>
   <data name="Health.Status.AlbumRepresentations.Findings.Other" xml:space="preserve"><value>Album representations: {0:N0} findings.</value></data>
   <data name="Health.Status.AlbumRepresentations.None" xml:space="preserve"><value>Album representations: no counterpart, metadata, duration, or artwork drift found.</value></data>
-  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>Similar artist merge apply cancelled. Review the affected files before retrying.</value></data>
+  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>Applying similar-artist merges was canceled. Review the affected files before retrying.</value></data>
   <data name="Health.Status.ArtistMerge.Completed" xml:space="preserve"><value>Similar artist merges: files renamed: {0:N0}; variants completed: {1:N0}; failed: {2:N0}.</value></data>
-  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>Artwork health audit cancelled.</value></data>
+  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>Artwork health audit canceled.</value></data>
   <data name="Health.Status.ArtworkHealth.Failed" xml:space="preserve"><value>Artwork health audit failed.</value></data>
   <data name="Health.Status.ArtworkHealth.None" xml:space="preserve"><value>Artwork health: no issues found.</value></data>
   <data name="Health.Status.ArtworkHealth.Results" xml:space="preserve"><value>Artwork health: issues: {0:N0}; repair actions: {1:N0}; deferred files: {2:N0}.</value></data>
-  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>Artwork repair apply cancelled. Review the affected files before retrying.</value></data>
+  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>Applying artwork repairs was canceled. Review the affected files before retrying.</value></data>
   <data name="Health.Status.ArtworkRepair.Completed" xml:space="preserve"><value>Artwork repairs: completed actions: {0:N0}; failed: {1:N0}.</value></data>
   <data name="Health.Status.ChooseAnalysis" xml:space="preserve"><value>Choose an analysis to run.</value></data>
   <data name="Health.Status.ChooseConfiguration" xml:space="preserve"><value>Choose a library configuration in Settings before running an audit.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>Conflict repair preview cancelled.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>Conflict repair preview canceled.</value></data>
   <data name="Health.Status.ConflictRepairPreview.Failed" xml:space="preserve"><value>Conflict repair preview failed.</value></data>
   <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>The selected canonical values already match every file.</value></data>
   <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>Previewed {0:N0} user-directed repair. Review, then apply it.</value></data>
@@ -4678,7 +4678,7 @@
   <data name="Health.Status.DecodedAudioVerification.Failed" xml:space="preserve"><value>Decoded-audio verification failed.</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.One" xml:space="preserve"><value>Decoded-audio verification: {0:N0} compatible pair matches.</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.Other" xml:space="preserve"><value>Decoded-audio verification: {0:N0} compatible pairs match.</value></data>
-  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>Deferred artwork scan cancelled.</value></data>
+  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>Deferred artwork scan canceled.</value></data>
   <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>Deferred artwork scan failed.</value></data>
   <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>{0:N0} duplicate group.</value></data>
   <data name="Health.Status.Duplicates.Groups.Other" xml:space="preserve"><value>{0:N0} duplicate groups.</value></data>
@@ -4686,10 +4686,10 @@
   <data name="Health.Status.Inconsistencies.Findings.One" xml:space="preserve"><value>Inconsistencies: {0:N0} finding.</value></data>
   <data name="Health.Status.Inconsistencies.Findings.Other" xml:space="preserve"><value>Inconsistencies: {0:N0} findings.</value></data>
   <data name="Health.Status.Inconsistencies.None" xml:space="preserve"><value>Inconsistencies: none found.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>iTunes metadata repair apply cancelled. Review the affected files before retrying.</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>Applying iTunes metadata repairs was canceled. Review the affected files before retrying.</value></data>
   <data name="Health.Status.ItlMetadataRepair.Completed" xml:space="preserve"><value>iTunes metadata repairs: applied: {0:N0}; skipped: {1:N0}; failed: {2:N0}.</value></data>
   <data name="Health.Status.ItlMetadataRepair.Failed" xml:space="preserve"><value>iTunes metadata repair apply failed.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>iTunes metadata repair preview cancelled.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>iTunes metadata repair preview canceled.</value></data>
   <data name="Health.Status.ItlMetadataRepairPreview.Failed" xml:space="preserve"><value>iTunes metadata repair preview failed.</value></data>
   <data name="Health.Status.ItlMetadataRepairPreview.None" xml:space="preserve"><value>No iTunes metadata repairs are needed for the selected library.</value></data>
   <data name="Health.Status.ItlMetadataRepairPreview.Results.One" xml:space="preserve"><value>Previewed {0:N0} iTunes metadata repair. Review it, then apply the selected repair.</value></data>
@@ -4697,28 +4697,28 @@
   <data name="Health.Status.LossyFiles.Count.One" xml:space="preserve"><value>{0:N0} lossy file.</value></data>
   <data name="Health.Status.LossyFiles.Count.Other" xml:space="preserve"><value>{0:N0} lossy files.</value></data>
   <data name="Health.Status.LossyFiles.None" xml:space="preserve"><value>No lossy files.</value></data>
-  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>Metadata repair apply cancelled. Review the affected files before retrying.</value></data>
-  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>Metadata repairs: applied: {0:N0}; skipped: {1:N0}; failed: {2:N0}.</value></data>
+  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>Applying metadata repairs was canceled. Review the affected files before retrying.</value></data>
+  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>Metadata repairs: applied: {0:N0}; skipped: {1:N0}; failed: {2:N0}; catalog refresh failures: {3:N0}.</value></data>
   <data name="Health.Status.MetadataRepair.Failed" xml:space="preserve"><value>Metadata repair apply failed.</value></data>
   <data name="Health.Status.MetadataRepairPreview.Blocked.One" xml:space="preserve"><value>{0:N0} repair is blocked. Review its reason before applying the eligible repairs.</value></data>
   <data name="Health.Status.MetadataRepairPreview.Blocked.Other" xml:space="preserve"><value>{0:N0} repairs are blocked. Review their reasons before applying the eligible repairs.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>Metadata repair preview cancelled.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>Metadata repair preview canceled.</value></data>
   <data name="Health.Status.MetadataRepairPreview.Failed" xml:space="preserve"><value>Metadata repair preview failed.</value></data>
   <data name="Health.Status.MetadataRepairPreview.None" xml:space="preserve"><value>No safe metadata repairs are needed.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>Previewed {0:N0} safe metadata repair. Review it, then apply the selected repair.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>Previewed {0:N0} safe metadata repairs. Review them, then apply the selected repairs.</value></data>
-  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>Representation repair apply cancelled.</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>Representation repair apply cancelled after {0:N0} action. Review the affected files before retrying.</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>Representation repair apply cancelled after {0:N0} actions. Review the affected files before retrying.</value></data>
-  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>Representation repairs: applied: {0:N0}; skipped: {1:N0}; failed: {2:N0}.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>Previewed {0:N0} safe metadata repair; eligible: {1:N0}. Review it, then apply the selected repair.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>Previewed {0:N0} safe metadata repairs; eligible: {1:N0}. Review them, then apply the selected repairs.</value></data>
+  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>Applying representation repairs was canceled.</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>Applying representation repairs was canceled after {0:N0} action. Review the affected files before retrying.</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>Applying representation repairs was canceled after {0:N0} actions. Review the affected files before retrying.</value></data>
+  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>Representation repairs: applied: {0:N0}; failed: {1:N0}.</value></data>
   <data name="Health.Status.RepresentationRepair.Failed" xml:space="preserve"><value>Representation repair apply failed.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>Representation repair preview cancelled.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>Representation repair preview canceled.</value></data>
   <data name="Health.Status.RepresentationRepairPreview.Failed" xml:space="preserve"><value>Representation repair preview failed.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>Previewed representation file actions: {0:N0} organization moves and {1:N0} derivations. Review them, then apply the selected actions.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>Previewed representation file actions: {0:N0}; warnings: {1:N0}. Review them, then apply the selected actions.</value></data>
   <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.One" xml:space="preserve"><value>Previewed {0:N0} representation metadata copy. Review it, then apply the selected repair.</value></data>
   <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.Other" xml:space="preserve"><value>Previewed {0:N0} representation metadata copies. Review them, then apply the selected repairs.</value></data>
   <data name="Health.Status.RepresentationRepairPreview.None" xml:space="preserve"><value>No representation repairs are needed.</value></data>
-  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0} cancelled.</value></data>
+  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0} canceled.</value></data>
   <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} failed.</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} similar artist cluster found at threshold {1:0.00}. Review the variants, then apply the active repair.</value></data>
   <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} similar artist clusters found at threshold {1:0.00}. Review the variants, then apply the active repairs.</value></data>

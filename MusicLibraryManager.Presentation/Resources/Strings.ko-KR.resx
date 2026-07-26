@@ -713,25 +713,25 @@
     <value>음악을 한눈에 관리하세요</value>
   </data>
   <data name="Health.Action.ApplyActiveMerges" xml:space="preserve">
-    <value>적용 활성 병합</value>
+    <value>활성 병합 적용</value>
   </data>
   <data name="Health.Action.ApplyActiveRepairs" xml:space="preserve">
-    <value>적용 활성 복구 작업</value>
+    <value>활성 복구 작업 적용</value>
   </data>
   <data name="Health.Action.ApplyArtworkRepairs" xml:space="preserve">
-    <value>적용 활성 복구 작업</value>
+    <value>활성 아트워크 복구 작업 적용</value>
   </data>
   <data name="Health.Action.ApplyFileRepairs" xml:space="preserve">
-    <value>적용 선택됨 파일 복구 작업</value>
+    <value>선택한 파일 복구 작업 적용</value>
   </data>
   <data name="Health.Action.ApplyItunesRepairs" xml:space="preserve">
-    <value>적용 선택됨 iTunes 복구 작업</value>
+    <value>선택한 iTunes 복구 작업 적용</value>
   </data>
   <data name="Health.Action.ApplyMetadataRepairs" xml:space="preserve">
-    <value>적용 선택됨 복구 작업</value>
+    <value>선택한 복구 작업 적용</value>
   </data>
   <data name="Health.Action.ForceScanDeferred" xml:space="preserve">
-    <value>강제 스캔 지연됨</value>
+    <value>보류된 아트워크 지금 검사</value>
   </data>
   <data name="Health.AlbumMatrix.Album" xml:space="preserve">
     <value>앨범</value>
@@ -752,13 +752,13 @@
     <value>디스크</value>
   </data>
   <data name="Health.AlbumMatrix.DiscTotal" xml:space="preserve">
-    <value>디스크 합계</value>
+    <value>전체 디스크 수</value>
   </data>
   <data name="Health.AlbumMatrix.Empty" xml:space="preserve">
     <value>앨범 메타데이터에서 불일치가 발견되지 않았습니다.</value>
   </data>
   <data name="Health.AlbumMatrix.FlagReason" xml:space="preserve">
-    <value>이유 해당 항목 이었음 표시됨</value>
+    <value>표시된 이유</value>
   </data>
   <data name="Health.AlbumMatrix.ReadOnly" xml:space="preserve">
     <value>읽기 전용 앨범 일관성 감사</value>
@@ -767,10 +767,10 @@
     <value>트랙</value>
   </data>
   <data name="Health.AlbumMatrix.TrackNumber" xml:space="preserve">
-    <value>트랙 #</value>
+    <value>트랙 번호</value>
   </data>
   <data name="Health.AlbumMatrix.TrackTotal" xml:space="preserve">
-    <value>트랙 합계</value>
+    <value>전체 트랙 수</value>
   </data>
   <data name="Health.Artist.CanonicalName" xml:space="preserve">
     <value>표준 이름</value>
@@ -779,22 +779,22 @@
     <value>아티스트 표준 이름</value>
   </data>
   <data name="Health.Artist.CanonicalTarget" xml:space="preserve">
-    <value>정규 대상</value>
+    <value>표준 대상</value>
   </data>
   <data name="Health.Artist.Description" xml:space="preserve">
     <value>각 그룹의 표준 이름을 선택하고 이름을 바꿀 변형만 활성화하세요. 필터를 사용하면 해당 변형의 트랙이 라이브러리에 표시됩니다.</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.One" xml:space="preserve">
-    <value>{0} 트랙 선택됨 전체 활성 변형</value>
+    <value>활성 표기 전체에서 선택한 트랙: {0}</value>
   </data>
   <data name="Health.Artist.ActiveTrackCount.Other" xml:space="preserve">
-    <value>{0} 트랙 선택됨 전체 활성 변형</value>
+    <value>활성 표기 전체에서 선택한 트랙: {0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.One" xml:space="preserve">
-    <value>{0} 트랙 에서 클러스터</value>
+    <value>클러스터의 트랙: {0}</value>
   </data>
   <data name="Health.Artist.ClusterTrackCount.Other" xml:space="preserve">
-    <value>{0} 트랙 에서 클러스터</value>
+    <value>클러스터의 트랙: {0}</value>
   </data>
   <data name="Health.Artist.FileCount.One" xml:space="preserve">
     <value>{0} 파일</value>
@@ -818,13 +818,13 @@
     <value>선택한 임계값에서 비슷한 아티스트 이름을 찾지 못했습니다.</value>
   </data>
   <data name="Health.Artist.ReviewTitle" xml:space="preserve">
-    <value>검토 아티스트 철자 변형</value>
+    <value>아티스트 이름 표기 변형 검토</value>
   </data>
   <data name="Health.Artist.Threshold" xml:space="preserve">
-    <value>아티스트 임계값</value>
+    <value>유사도 임계값</value>
   </data>
   <data name="Health.Artist.ThresholdAutomation" xml:space="preserve">
-    <value>유사 아티스트 유사 임계값</value>
+    <value>유사 아티스트 일치 임계값</value>
   </data>
   <data name="Health.Artist.ThresholdTooltip" xml:space="preserve">
     <value>정규화된 최대 편집 거리입니다. 값이 낮을수록 더 엄격하며, 0은 정규화 후 같은 표기만 허용합니다.</value>
@@ -833,7 +833,7 @@
     <value>여러 이미지가 있는 앨범에서 사용할 표지를 선택하고 원하는 복구 작업을 활성화한 다음 적용하세요. 각 작업에는 설정의 별도 복구 크기 및 치수 제한이 사용됩니다.</value>
   </data>
   <data name="Health.Artwork.ChooseCanonicalAutomation" xml:space="preserve">
-    <value>선택 정규 앨범 아트워크</value>
+    <value>표준 앨범 아트워크 선택</value>
   </data>
   <data name="Health.Artwork.Action.SelectFirst" xml:space="preserve">
     <value>첫 번째 이미지를 선택하고 활성으로 표시</value>
@@ -845,22 +845,22 @@
     <value>가장 큰 파일을 선택하고 활성으로 표시</value>
   </data>
   <data name="Health.Artwork.Selection.NoneChanged" xml:space="preserve">
-    <value>아니요 대상 혼합-아트워크 복구 작업 이었음 변경됨.</value>
+    <value>대상 혼합 아트워크 복구 작업은 변경되지 않았습니다.</value>
   </data>
   <data name="Health.Artwork.Selection.ChangedFormat" xml:space="preserve">
     <value>아트워크를 선택하고 복구 {0:N0}개를 활성으로 표시했습니다.</value>
   </data>
   <data name="Health.Artwork.SelectedCount.One" xml:space="preserve">
-    <value>{0} 복구 작업 선택됨</value>
+    <value>선택한 복구 작업: {0}</value>
   </data>
   <data name="Health.Artwork.SelectedCount.Other" xml:space="preserve">
-    <value>{0} 복구 작업 선택됨</value>
+    <value>선택한 복구 작업: {0}</value>
   </data>
   <data name="Health.Artwork.AffectedFiles.One" xml:space="preserve">
-    <value>영향받음 파일 ({0})</value>
+    <value>영향받는 파일 ({0})</value>
   </data>
   <data name="Health.Artwork.AffectedFiles.Other" xml:space="preserve">
-    <value>영향받음 파일 ({0})</value>
+    <value>영향받는 파일 ({0})</value>
   </data>
   <data name="Health.Artwork.Empty" xml:space="preserve">
     <value>이 감사에 사용할 수 있는 자동 아트워크 복구가 없습니다.</value>
@@ -869,16 +869,16 @@
     <value>아트워크 복구 계획</value>
   </data>
   <data name="Health.Artwork.ReviewTitle" xml:space="preserve">
-    <value>검토 자동 아트워크 복구 작업</value>
+    <value>자동 아트워크 복구 작업 검토</value>
   </data>
   <data name="Health.Audit.Description" xml:space="preserve">
     <value>품질, 일관성 및 파일 무결성을 검사합니다.</value>
   </data>
   <data name="Health.Audit.Menu.AlbumMatrix" xml:space="preserve">
-    <value>앨범 메타데이터 행렬</value>
+    <value>앨범 메타데이터 매트릭스</value>
   </data>
   <data name="Health.Audit.Menu.CrossSet" xml:space="preserve">
-    <value>교차-설정 비교</value>
+    <value>세트 간 비교</value>
   </data>
   <data name="Health.Audit.Menu.Duplicates" xml:space="preserve">
     <value>중복 트랙</value>
@@ -947,10 +947,10 @@
     <value>앨범과 앨범 아티스트 간 충돌을 찾지 못했습니다.</value>
   </data>
   <data name="Health.Findings.All" xml:space="preserve">
-    <value>모두 발견 사항</value>
+    <value>모든 발견 항목</value>
   </data>
   <data name="Health.Findings.SelectAllAutomation" xml:space="preserve">
-    <value>선택 모두 발견 사항</value>
+    <value>모든 발견 항목 선택</value>
   </data>
   <data name="Health.History.Empty" xml:space="preserve">
     <value>감사를 실행하여 검토 가능한 결과를 만드세요.</value>
@@ -959,31 +959,31 @@
     <value>분석 기록</value>
   </data>
   <data name="Health.Context.CopyPath" xml:space="preserve">
-    <value>복사 경로</value>
+    <value>경로 복사</value>
   </data>
   <data name="Health.Context.OpenWorkbench" xml:space="preserve">
-    <value>열기 에서 작업대</value>
+    <value>워크벤치에서 열기</value>
   </data>
   <data name="Health.Context.RevealExplorer" xml:space="preserve">
-    <value>표시 에서 파일 탐색기</value>
+    <value>파일 탐색기에서 표시</value>
   </data>
   <data name="Health.Split.ArtworkRepairs" xml:space="preserve">
-    <value>크기 조정 아트워크 복구 계층</value>
+    <value>아트워크 복구 계층 크기 조정</value>
   </data>
   <data name="Health.Split.FileRepairs" xml:space="preserve">
-    <value>크기 조정 파일 복구 계층</value>
+    <value>파일 복구 계층 크기 조정</value>
   </data>
   <data name="Health.Split.Findings" xml:space="preserve">
-    <value>크기 조정 발견 사항 계층</value>
+    <value>발견 항목 계층 크기 조정</value>
   </data>
   <data name="Health.Split.History" xml:space="preserve">
-    <value>크기 조정 분석 기록</value>
+    <value>분석 기록 크기 조정</value>
   </data>
   <data name="Health.Split.ItunesRepairs" xml:space="preserve">
-    <value>크기 조정 iTunes 메타데이터 복구 계층</value>
+    <value>iTunes 메타데이터 복구 계층 크기 조정</value>
   </data>
   <data name="Health.Split.MetadataRepairs" xml:space="preserve">
-    <value>크기 조정 메타데이터 복구 계층</value>
+    <value>메타데이터 복구 계층 크기 조정</value>
   </data>
   <data name="Health.NoSelection.Description" xml:space="preserve">
     <value>감사를 실행하거나 복구를 준비하면 여기에서 결과를 검토할 수 있습니다.</value>
@@ -998,67 +998,67 @@
     <value>앨범 아티스트 충돌</value>
   </data>
   <data name="Health.Repair.Menu.Artwork" xml:space="preserve">
-    <value>아트워크 복구 작업</value>
+    <value>아트워크 복구</value>
   </data>
   <data name="Health.Repair.Menu.Conflicts" xml:space="preserve">
-    <value>충돌 복구 작업</value>
+    <value>충돌 복구</value>
   </data>
   <data name="Health.Repair.Menu.FileRepresentations" xml:space="preserve">
-    <value>파일 표현 복구 작업</value>
+    <value>파일 표현 복구</value>
   </data>
   <data name="Health.Repair.Menu.Itunes" xml:space="preserve">
-    <value>iTunes 메타데이터 복구 작업</value>
+    <value>iTunes 메타데이터 복구</value>
   </data>
   <data name="Health.Repair.Menu.MetadataPolicy" xml:space="preserve">
-    <value>사용 정책 메타데이터 복구 작업</value>
+    <value>정책 기반 메타데이터 복구</value>
   </data>
   <data name="Health.Repair.Menu.SimilarArtists" xml:space="preserve">
     <value>비슷한 아티스트 이름</value>
   </data>
   <data name="Health.Repair.Prepare" xml:space="preserve">
-    <value>준비 복구 작업…</value>
+    <value>복구 준비…</value>
   </data>
   <data name="Health.Repair.PrepareAutomation" xml:space="preserve">
     <value>준비할 복구 계획 선택</value>
   </data>
   <data name="Health.Repair.Title" xml:space="preserve">
-    <value>준비 복구 작업</value>
+    <value>복구 준비</value>
   </data>
   <data name="Health.Repairs.AllFile" xml:space="preserve">
-    <value>모두 파일 복구 작업</value>
+    <value>모든 파일 복구</value>
   </data>
   <data name="Health.Repairs.AllItunes" xml:space="preserve">
-    <value>모두 iTunes 복구 작업</value>
+    <value>모든 iTunes 복구</value>
   </data>
   <data name="Health.Repairs.AllMetadata" xml:space="preserve">
-    <value>모두 메타데이터 복구 작업</value>
+    <value>모든 메타데이터 복구</value>
   </data>
   <data name="Health.Repairs.MetadataCount.One" xml:space="preserve">
-    <value>{0} 검토됨 메타데이터 복구</value>
+    <value>검토된 메타데이터 복구 {0}건</value>
   </data>
   <data name="Health.Repairs.MetadataCount.Other" xml:space="preserve">
-    <value>{0} 검토됨 메타데이터 복구 작업</value>
+    <value>검토된 메타데이터 복구 {0}건</value>
   </data>
   <data name="Health.Repairs.FileCount.One" xml:space="preserve">
-    <value>{0} 검토됨 파일 작업</value>
+    <value>검토된 파일 작업 {0}개</value>
   </data>
   <data name="Health.Repairs.FileCount.Other" xml:space="preserve">
-    <value>{0} 검토됨 파일 작업</value>
+    <value>검토된 파일 작업 {0}개</value>
   </data>
   <data name="Health.Repairs.ItunesCount.One" xml:space="preserve">
-    <value>{0} 검토됨 iTunes 복구</value>
+    <value>검토된 iTunes 복구 {0}건</value>
   </data>
   <data name="Health.Repairs.ItunesCount.Other" xml:space="preserve">
-    <value>{0} 검토됨 iTunes 복구 작업</value>
+    <value>검토된 iTunes 복구 {0}건</value>
   </data>
   <data name="Health.Subtitle" xml:space="preserve">
     <value>컬렉션을 감사하고 제안된 모든 변경 내용을 검토한 후 안전하게 복구합니다.</value>
   </data>
   <data name="Health.Tab.AlbumMatrix" xml:space="preserve">
-    <value>앨범 행렬</value>
+    <value>앨범 매트릭스</value>
   </data>
   <data name="Health.Tab.ArtworkRepairs" xml:space="preserve">
-    <value>아트워크 복구 작업</value>
+    <value>아트워크 복구</value>
   </data>
   <data name="Health.Tab.Conflicts" xml:space="preserve">
     <value>충돌</value>
@@ -1067,19 +1067,19 @@
     <value>중복 항목</value>
   </data>
   <data name="Health.Tab.FileRepairs" xml:space="preserve">
-    <value>파일 복구 작업</value>
+    <value>파일 복구</value>
   </data>
   <data name="Health.Tab.Findings" xml:space="preserve">
-    <value>발견 사항</value>
+    <value>발견 항목</value>
   </data>
   <data name="Health.Tab.ItunesRepairs" xml:space="preserve">
-    <value>iTunes 복구 작업</value>
+    <value>iTunes 복구</value>
   </data>
   <data name="Health.Tab.MetadataRepairs" xml:space="preserve">
-    <value>메타데이터 복구 작업</value>
+    <value>메타데이터 복구</value>
   </data>
   <data name="Health.Tab.SimilarArtists" xml:space="preserve">
-    <value>유사 아티스트</value>
+    <value>유사한 아티스트</value>
   </data>
   <data name="Health.Title" xml:space="preserve">
     <value>상태</value>
@@ -4486,187 +4486,187 @@
   <data name="Library.VisualFilter.Status.Invalid" xml:space="preserve"><value>시각적 필터가 올바르지 않습니다.</value></data>
   <data name="Library.VisualFilter.Status.None" xml:space="preserve"><value>활성화된 시각적 필터가 없습니다.</value></data>
   <data name="Column.TechnicalDetails" xml:space="preserve"><value>기술 세부 정보</value></data>
-  <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>필터 에서 라이브러리</value></data>
+  <data name="Health.Choice.FindingDisposition.Filter" xml:space="preserve"><value>라이브러리에서 필터링</value></data>
   <data name="Health.Choice.FindingDisposition.Mixed" xml:space="preserve"><value>혼합</value></data>
   <data name="Health.Choice.FindingDisposition.None" xml:space="preserve"><value>없음</value></data>
   <data name="Health.Choice.RepairDisposition.Active" xml:space="preserve"><value>활성</value></data>
-  <data name="Health.Choice.RepairDisposition.Completed" xml:space="preserve"><value>완료됨</value></data>
-  <data name="Health.Choice.RepairDisposition.Filter" xml:space="preserve"><value>필터 에서 라이브러리</value></data>
+  <data name="Health.Choice.RepairDisposition.Completed" xml:space="preserve"><value>완료</value></data>
+  <data name="Health.Choice.RepairDisposition.Filter" xml:space="preserve"><value>라이브러리에서 필터링</value></data>
   <data name="Health.Choice.RepairDisposition.Ignored" xml:space="preserve"><value>무시됨</value></data>
   <data name="Health.Choice.RepairDisposition.Mixed" xml:space="preserve"><value>혼합</value></data>
   <data name="Health.Common.Missing" xml:space="preserve"><value>(누락)</value></data>
-  <data name="Health.Common.NoFolder" xml:space="preserve"><value>(아니요 폴더)</value></data>
+  <data name="Health.Common.NoFolder" xml:space="preserve"><value>(폴더 없음)</value></data>
   <data name="Health.Common.Unknown" xml:space="preserve"><value>(알 수 없음)</value></data>
-  <data name="Health.Common.UnknownAlbum" xml:space="preserve"><value>알 수 없음 앨범</value></data>
-  <data name="Health.Common.UnknownArtist" xml:space="preserve"><value>알 수 없음 아티스트</value></data>
-  <data name="Health.Common.UnknownError" xml:space="preserve"><value>알 수 없음 오류</value></data>
+  <data name="Health.Common.UnknownAlbum" xml:space="preserve"><value>알 수 없는 앨범</value></data>
+  <data name="Health.Common.UnknownArtist" xml:space="preserve"><value>알 수 없는 아티스트</value></data>
+  <data name="Health.Common.UnknownError" xml:space="preserve"><value>알 수 없는 오류</value></data>
   <data name="Health.Duration.HoursMinutes" xml:space="preserve"><value>{0:N0}h {1:N0}m</value></data>
   <data name="Health.Duration.MinutesSeconds" xml:space="preserve"><value>{0:N0}m {1:N0}s</value></data>
   <data name="Health.Duration.Seconds" xml:space="preserve"><value>{0:N0}s</value></data>
   <data name="Health.Field.Id3TagVersion" xml:space="preserve"><value>ID3 태그 버전</value></data>
   <data name="Health.Field.Path" xml:space="preserve"><value>경로</value></data>
   <data name="Health.Findings.Empty.NoMatches" xml:space="preserve"><value>이 분석에서 일치하는 트랙을 찾지 못했습니다.</value></data>
-  <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>선택 하나의 발견 사항 분기.</value></data>
-  <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>캐시됨 메타데이터</value></data>
+  <data name="Health.Findings.Empty.SelectBranch" xml:space="preserve"><value>발견 항목 분기를 선택하세요.</value></data>
+  <data name="Health.Itl.Category.CachedMetadata" xml:space="preserve"><value>캐시된 메타데이터</value></data>
   <data name="Health.Itl.DifferenceFormat" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>파생 누락 AAC</value></data>
-  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>파생 누락 CD FLAC</value></data>
-  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>정리 표현</value></data>
+  <data name="Health.Representation.Category.DeriveAac" xml:space="preserve"><value>누락된 AAC 표현 만들기</value></data>
+  <data name="Health.Representation.Category.DeriveCdFlac" xml:space="preserve"><value>누락된 CD FLAC 표현 만들기</value></data>
+  <data name="Health.Representation.Category.Organize" xml:space="preserve"><value>표현 파일 정리</value></data>
   <data name="Health.Run.DisplayLabel" xml:space="preserve"><value>{0} · {1:N0} · {2:HH:mm:ss}</value></data>
   <data name="Health.Run.Name.AlbumArtistConflicts" xml:space="preserve"><value>앨범 아티스트 충돌</value></data>
-  <data name="Health.Run.Name.AlbumMetadataMatrix" xml:space="preserve"><value>앨범 메타데이터 행렬</value></data>
+  <data name="Health.Run.Name.AlbumMetadataMatrix" xml:space="preserve"><value>앨범 메타데이터 매트릭스</value></data>
   <data name="Health.Run.Name.AlbumRepresentations" xml:space="preserve"><value>앨범 표현</value></data>
   <data name="Health.Run.Name.ArtworkHealth" xml:space="preserve"><value>아트워크 상태</value></data>
-  <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>앨범 아티스트 충돌 복구 작업</value></data>
+  <data name="Health.Run.Name.ConflictRepairs" xml:space="preserve"><value>앨범 아티스트 충돌 복구</value></data>
   <data name="Health.Run.Name.CrossSetCheck" xml:space="preserve"><value>세트 간 검사</value></data>
   <data name="Health.Run.Name.DecodedAudioVerification" xml:space="preserve"><value>디코딩된 오디오 확인</value></data>
   <data name="Health.Run.Name.Duplicates" xml:space="preserve"><value>중복 항목</value></data>
   <data name="Health.Run.Name.Inconsistencies" xml:space="preserve"><value>불일치</value></data>
-  <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>iTunes 라이브러리 메타데이터 복구 작업</value></data>
-  <data name="Health.Run.Name.LossyFiles" xml:space="preserve"><value>손실 파일</value></data>
-  <data name="Health.Run.Name.MetadataRepairs" xml:space="preserve"><value>안전 메타데이터 복구 작업</value></data>
-  <data name="Health.Run.Name.RepresentationFileRepairs" xml:space="preserve"><value>표현 파일 복구 작업</value></data>
-  <data name="Health.Run.Name.RepresentationMetadataRepairs" xml:space="preserve"><value>복사 표현 메타데이터</value></data>
-  <data name="Health.Run.Name.SimilarArtists" xml:space="preserve"><value>유사 아티스트</value></data>
+  <data name="Health.Run.Name.ItlMetadataRepairs" xml:space="preserve"><value>iTunes 보관함 메타데이터 복구</value></data>
+  <data name="Health.Run.Name.LossyFiles" xml:space="preserve"><value>손실 압축 파일</value></data>
+  <data name="Health.Run.Name.MetadataRepairs" xml:space="preserve"><value>안전한 메타데이터 복구</value></data>
+  <data name="Health.Run.Name.RepresentationFileRepairs" xml:space="preserve"><value>표현 파일 복구</value></data>
+  <data name="Health.Run.Name.RepresentationMetadataRepairs" xml:space="preserve"><value>표현 메타데이터 복사</value></data>
+  <data name="Health.Run.Name.SimilarArtists" xml:space="preserve"><value>유사한 아티스트</value></data>
   <data name="Health.Artwork.AlbumTitleFormat" xml:space="preserve"><value>{0} — {1}</value></data>
-  <data name="Health.Artwork.Blocking.NoReadableSource" xml:space="preserve"><value>아니요 읽기 가능 원본 이미지 입니다 사용 가능 용 이 복구.</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>아트워크 쓰기 입니다 아님 지원됨 용 {0:N0} 영향받음 파일.</value></data>
-  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>아트워크 쓰기 입니다 아님 지원됨 용 {0:N0} 영향받음 파일.</value></data>
+  <data name="Health.Artwork.Blocking.NoReadableSource" xml:space="preserve"><value>이 복구 작업에 사용할 수 있는 읽기 가능한 원본 이미지가 없습니다.</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.One" xml:space="preserve"><value>아트워크 쓰기를 지원하지 않는 파일: {0:N0}.</value></data>
+  <data name="Health.Artwork.Blocking.UnsupportedWrite.Other" xml:space="preserve"><value>아트워크 쓰기를 지원하지 않는 파일: {0:N0}.</value></data>
   <data name="Health.Artwork.CandidateDetailsFormat" xml:space="preserve"><value>{0:N0}×{1:N0} · {2:0.#} KiB · {3}</value></data>
   <data name="Health.Artwork.Category.File" xml:space="preserve"><value>파일 아트워크</value></data>
   <data name="Health.Artwork.Category.MixedAlbum" xml:space="preserve"><value>혼합 앨범 아트워크</value></data>
-  <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>유지 해당 첫 번째 이미지 및 제거 중복 포함됨 이미지.</value></data>
+  <data name="Health.Artwork.Description.Deduplicate" xml:space="preserve"><value>첫 번째 이미지를 유지하고 중복된 내장 이미지를 제거합니다.</value></data>
   <data name="Health.Artwork.Description.NormalizeAlbum" xml:space="preserve"><value>모든 트랙의 포함된 아트워크를 선택한 앨범 이미지로 바꿉니다.</value></data>
   <data name="Health.Artwork.Description.NormalizeAlbumWithMissing" xml:space="preserve"><value>아트워크가 없는 트랙을 포함하여 검사한 모든 트랙의 포함된 아트워크를 선택한 앨범 이미지로 바꿉니다.</value></data>
-  <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>다시 인코딩 해당 첫 번째 이미지 이내 해당 구성됨 제한 및 제거 중복 포함됨 이미지.</value></data>
-  <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>다시 인코딩 해당 첫 번째 이미지 이내 해당 구성됨 아트워크 제한.</value></data>
-  <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>다시 인코딩 해당 첫 번째 읽기 가능 이미지 및 바꾸기 해당 잘못됨 포함됨-아트워크 설정.</value></data>
-  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>선택됨 아트워크 및 표시 {0:N0} 복구 활성.</value></data>
-  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>선택됨 아트워크 및 표시 {0:N0} 복구 작업 활성.</value></data>
-  <data name="Health.Artwork.TargetSummary" xml:space="preserve"><value>대상: 에서 대부분 {0:N0}px 및 {1:0.##} MiB</value></data>
-  <data name="Health.Artwork.ThumbnailLoadFailed" xml:space="preserve"><value>해당 아트워크 미리 보기 가능 아님 됨 불러옴.</value></data>
+  <data name="Health.Artwork.Description.ReencodeAndDeduplicate" xml:space="preserve"><value>구성된 제한 내에서 첫 번째 이미지를 다시 인코딩하고 중복된 내장 이미지를 제거합니다.</value></data>
+  <data name="Health.Artwork.Description.ReencodeOversized" xml:space="preserve"><value>구성된 아트워크 제한 내에서 첫 번째 이미지를 다시 인코딩합니다.</value></data>
+  <data name="Health.Artwork.Description.ReencodeUnreadable" xml:space="preserve"><value>읽을 수 있는 첫 번째 이미지를 다시 인코딩하고 잘못된 내장 아트워크 세트를 교체합니다.</value></data>
+  <data name="Health.Artwork.Selection.Changed.One" xml:space="preserve"><value>아트워크 선택됨. 활성으로 표시된 복구 작업: {0:N0}.</value></data>
+  <data name="Health.Artwork.Selection.Changed.Other" xml:space="preserve"><value>아트워크 선택됨. 활성으로 표시된 복구 작업: {0:N0}.</value></data>
+  <data name="Health.Artwork.TargetSummary" xml:space="preserve"><value>대상: 최대 {0:N0}px 및 {1:0.##} MiB</value></data>
+  <data name="Health.Artwork.ThumbnailLoadFailed" xml:space="preserve"><value>아트워크 미리 보기를 불러올 수 없습니다.</value></data>
   <data name="Health.Diagnostic.CacheRefreshFailed" xml:space="preserve"><value>캐시 새로 고침 실패: {0}</value></data>
   <data name="Health.Diagnostic.FileError" xml:space="preserve"><value>{0}: {1}</value></data>
-  <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>적용 복구 작업</value></data>
-  <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>적용 아티스트 병합</value></data>
+  <data name="Health.Dialog.ApplyRepairs" xml:space="preserve"><value>복구 작업 적용</value></data>
+  <data name="Health.Dialog.ArtistMerge.Confirm" xml:space="preserve"><value>아티스트 병합 적용</value></data>
   <data name="Health.Dialog.ArtistMerge.Message" xml:space="preserve"><value>{2:N0}개 클러스터의 {1:N0}개 트랙에서 검토된 표기 변형 {0:N0}개를 바꾸시겠습니까? 파일은 직접 기록되며 복구 저널은 생성되지 않습니다.</value></data>
-  <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>적용 유사 아티스트 병합</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>적용 아트워크 복구 작업</value></data>
+  <data name="Health.Dialog.ArtistMerge.Title" xml:space="preserve"><value>유사 아티스트 병합 적용</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Confirm" xml:space="preserve"><value>아트워크 복구 작업 적용</value></data>
   <data name="Health.Dialog.ArtworkRepair.Message" xml:space="preserve"><value>검토된 작업 {1:N0}개를 사용하여 {0:N0}개 파일의 전체 내장 아트워크 세트를 바꾸시겠습니까? 파일은 직접 기록되며 복구 저널은 생성되지 않습니다.</value></data>
-  <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>적용 아트워크 복구 작업</value></data>
-  <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>적용 파일 복구 작업</value></data>
+  <data name="Health.Dialog.ArtworkRepair.Title" xml:space="preserve"><value>아트워크 복구 작업 적용</value></data>
+  <data name="Health.Dialog.FileRepair.Confirm" xml:space="preserve"><value>파일 복구 작업 적용</value></data>
   <data name="Health.Dialog.FileRepair.Message" xml:space="preserve"><value>검토된 파일 복구 작업 {0:N0}개를 적용하시겠습니까? 복구 가능한 파일 변경 내용은 작업 저널에 기록되지만 메타데이터 전용 쓰기는 저널에서 복구할 수 없습니다.</value></data>
-  <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>적용 파일 복구 작업</value></data>
-  <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>적용 {0:N0} 선택됨 복구 작업 로 해당 iTunes 라이브러리? 하나의 백업 복사 예정 됨 유지됨.</value></data>
-  <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>적용 iTunes 메타데이터 복구 작업</value></data>
+  <data name="Health.Dialog.FileRepair.Title" xml:space="preserve"><value>파일 복구 작업 적용</value></data>
+  <data name="Health.Dialog.ItlRepair.Message" xml:space="preserve"><value>선택한 복구 작업 {0:N0}개를 iTunes 라이브러리에 적용하시겠습니까? 백업 복사본이 보관됩니다.</value></data>
+  <data name="Health.Dialog.ItlRepair.Title" xml:space="preserve"><value>iTunes 메타데이터 복구 작업 적용</value></data>
   <data name="Health.Dialog.MetadataRepair.Message" xml:space="preserve"><value>검토된 메타데이터 복구 {0:N0}건을 선택한 파일에 기록하시겠습니까? 각 원본은 미리 보기 이후 변경되었는지 확인됩니다. 파일은 직접 기록되며 복구 저널은 생성되지 않습니다.</value></data>
-  <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>적용 메타데이터 복구 작업</value></data>
-  <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>아트워크 비교 가능 아님 읽기 모든 일치함 파일.</value></data>
-  <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>아트워크 비교 사용 불가</value></data>
-  <data name="Health.Operation.ApplyArtworkRepairs" xml:space="preserve"><value>적용 아트워크 복구 작업</value></data>
-  <data name="Health.Operation.ApplyItlMetadataRepairs" xml:space="preserve"><value>적용 iTunes 메타데이터 복구 작업</value></data>
-  <data name="Health.Operation.ApplyMetadataRepairs" xml:space="preserve"><value>적용 메타데이터 복구 작업</value></data>
-  <data name="Health.Operation.ApplyRepresentationFileRepairs" xml:space="preserve"><value>적용 표현 파일 복구 작업</value></data>
-  <data name="Health.Operation.ApplySimilarArtists" xml:space="preserve"><value>적용 유사 아티스트 병합</value></data>
-  <data name="Health.Operation.ForceScanDeferredArtwork" xml:space="preserve"><value>강제 스캔 지연됨 아트워크</value></data>
-  <data name="Health.Operation.PreviewConflictRepairs" xml:space="preserve"><value>미리 보기 충돌 복구 작업</value></data>
-  <data name="Health.Operation.PreviewItlMetadataRepairs" xml:space="preserve"><value>미리 보기 iTunes 메타데이터 복구 작업</value></data>
-  <data name="Health.Operation.PreviewMetadataRepairs" xml:space="preserve"><value>미리 보기 메타데이터 복구 작업</value></data>
-  <data name="Health.Operation.PreviewRepresentationRepairs" xml:space="preserve"><value>미리 보기 표현 복구 작업</value></data>
-  <data name="Health.Progress.ApplyingArtworkRepairs" xml:space="preserve"><value>적용 중 아트워크 복구 작업… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingItlMetadataRepairs" xml:space="preserve"><value>적용 중 iTunes 메타데이터 복구 작업… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingMetadataRepairs" xml:space="preserve"><value>적용 중 메타데이터 복구 작업… {0:N0}/{1:N0}</value></data>
-  <data name="Health.Progress.ApplyingRepresentationRepairs" xml:space="preserve"><value>적용 중 표현 복구 작업… {0:N0}/{1:N0}: {2}</value></data>
-  <data name="Health.Progress.ApplyingSimilarArtists" xml:space="preserve"><value>적용 중 유사 아티스트 병합… {0:N0}/{1:N0} 변형</value></data>
+  <data name="Health.Dialog.MetadataRepair.Title" xml:space="preserve"><value>메타데이터 복구 작업 적용</value></data>
+  <data name="Health.Finding.ArtworkComparisonUnavailable.Description" xml:space="preserve"><value>아트워크 비교에서 일치하는 모든 파일을 읽지 못했습니다.</value></data>
+  <data name="Health.Finding.ArtworkComparisonUnavailable.Problem" xml:space="preserve"><value>아트워크 비교를 사용할 수 없음</value></data>
+  <data name="Health.Operation.ApplyArtworkRepairs" xml:space="preserve"><value>아트워크 복구 작업 적용</value></data>
+  <data name="Health.Operation.ApplyItlMetadataRepairs" xml:space="preserve"><value>iTunes 메타데이터 복구 작업 적용</value></data>
+  <data name="Health.Operation.ApplyMetadataRepairs" xml:space="preserve"><value>메타데이터 복구 작업 적용</value></data>
+  <data name="Health.Operation.ApplyRepresentationFileRepairs" xml:space="preserve"><value>표현 파일 복구 작업 적용</value></data>
+  <data name="Health.Operation.ApplySimilarArtists" xml:space="preserve"><value>유사 아티스트 병합 적용</value></data>
+  <data name="Health.Operation.ForceScanDeferredArtwork" xml:space="preserve"><value>보류된 아트워크 강제 검사</value></data>
+  <data name="Health.Operation.PreviewConflictRepairs" xml:space="preserve"><value>충돌 복구 작업 미리 보기</value></data>
+  <data name="Health.Operation.PreviewItlMetadataRepairs" xml:space="preserve"><value>iTunes 메타데이터 복구 작업 미리 보기</value></data>
+  <data name="Health.Operation.PreviewMetadataRepairs" xml:space="preserve"><value>메타데이터 복구 작업 미리 보기</value></data>
+  <data name="Health.Operation.PreviewRepresentationRepairs" xml:space="preserve"><value>표현 복구 작업 미리 보기</value></data>
+  <data name="Health.Progress.ApplyingArtworkRepairs" xml:space="preserve"><value>아트워크 복구 작업 적용 중… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Progress.ApplyingItlMetadataRepairs" xml:space="preserve"><value>iTunes 메타데이터 복구 작업 적용 중… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Progress.ApplyingMetadataRepairs" xml:space="preserve"><value>메타데이터 복구 작업 적용 중… {0:N0}/{1:N0}</value></data>
+  <data name="Health.Progress.ApplyingRepresentationRepairs" xml:space="preserve"><value>표현 복구 작업 적용 중… {0:N0}/{1:N0}: {2}</value></data>
+  <data name="Health.Progress.ApplyingSimilarArtists" xml:space="preserve"><value>유사 아티스트 병합 적용 중… {0:N0}/{1:N0}개 표기</value></data>
   <data name="Health.Progress.Calculating" xml:space="preserve"><value>계산 중…</value></data>
-  <data name="Health.Progress.ComparingEmbeddedArtwork.One" xml:space="preserve"><value>비교 중 포함됨 아트워크 용 {0:N0} 일치함 대응 항목 파일…</value></data>
-  <data name="Health.Progress.ComparingEmbeddedArtwork.Other" xml:space="preserve"><value>비교 중 포함됨 아트워크 용 {0:N0} 일치함 대응 항목 파일…</value></data>
+  <data name="Health.Progress.ComparingEmbeddedArtwork.One" xml:space="preserve"><value>일치하는 대응 파일 {0:N0}개의 내장 아트워크 비교 중…</value></data>
+  <data name="Health.Progress.ComparingEmbeddedArtwork.Other" xml:space="preserve"><value>일치하는 대응 파일 {0:N0}개의 내장 아트워크 비교 중…</value></data>
   <data name="Health.Progress.Determinate" xml:space="preserve"><value>{0}… {1:N0}/{2:N0} {3} ({4:P0}) · {5}</value></data>
   <data name="Health.Progress.EtaCalculating" xml:space="preserve"><value>ETA 계산 중…</value></data>
   <data name="Health.Progress.Indeterminate" xml:space="preserve"><value>{0}…</value></data>
-  <data name="Health.Progress.OperationPhase.Applying" xml:space="preserve"><value>적용 중 검토됨 변경 사항…</value></data>
-  <data name="Health.Progress.OperationPhase.Completed" xml:space="preserve"><value>마무리 해당 작업…</value></data>
-  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>인덱싱 중 원본 루트…</value></data>
-  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>인벤토리 작성 중 해당 대상…</value></data>
-  <data name="Health.Progress.OperationPhase.LoadingConfiguration" xml:space="preserve"><value>불러오는 중 해당 라이브러리 구성…</value></data>
-  <data name="Health.Progress.OperationPhase.LoadingLibrary" xml:space="preserve"><value>불러오는 중 해당 iTunes 라이브러리…</value></data>
-  <data name="Health.Progress.OperationPhase.Planning" xml:space="preserve"><value>준비 중 해당 복구 계획…</value></data>
-  <data name="Health.Progress.OperationPhase.RollingBack" xml:space="preserve"><value>롤백 중 뒷면 해당 실패 작업…</value></data>
-  <data name="Health.Progress.OperationPhase.Validating" xml:space="preserve"><value>검증 해당 검토됨 계획…</value></data>
-  <data name="Health.Progress.PreparingItlMetadataRepairs" xml:space="preserve"><value>준비 중 iTunes 메타데이터 복구 작업…</value></data>
+  <data name="Health.Progress.OperationPhase.Applying" xml:space="preserve"><value>검토된 변경 사항 적용 중…</value></data>
+  <data name="Health.Progress.OperationPhase.Completed" xml:space="preserve"><value>작업 마무리 중…</value></data>
+  <data name="Health.Progress.OperationPhase.IndexingSources" xml:space="preserve"><value>원본 루트 검사 중…</value></data>
+  <data name="Health.Progress.OperationPhase.InventoryingDestination" xml:space="preserve"><value>대상 검사 중…</value></data>
+  <data name="Health.Progress.OperationPhase.LoadingConfiguration" xml:space="preserve"><value>라이브러리 구성 불러오는 중…</value></data>
+  <data name="Health.Progress.OperationPhase.LoadingLibrary" xml:space="preserve"><value>iTunes 라이브러리 불러오는 중…</value></data>
+  <data name="Health.Progress.OperationPhase.Planning" xml:space="preserve"><value>복구 계획 준비 중…</value></data>
+  <data name="Health.Progress.OperationPhase.RollingBack" xml:space="preserve"><value>실패한 작업 롤백 중…</value></data>
+  <data name="Health.Progress.OperationPhase.Validating" xml:space="preserve"><value>검토된 계획 검증 중…</value></data>
+  <data name="Health.Progress.PreparingItlMetadataRepairs" xml:space="preserve"><value>iTunes 메타데이터 복구 작업 준비 중…</value></data>
   <data name="Health.Progress.RateAndEta" xml:space="preserve"><value>{0} {1}/초 · ETA {2}</value></data>
-  <data name="Health.Progress.ReadingDeferredArtwork.One" xml:space="preserve"><value>읽는 중 포함됨 아트워크 에서 {0:N0} 지연됨 파일…</value></data>
-  <data name="Health.Progress.ReadingDeferredArtwork.Other" xml:space="preserve"><value>읽는 중 포함됨 아트워크 에서 {0:N0} 지연됨 파일…</value></data>
-  <data name="Health.Progress.Running" xml:space="preserve"><value>실행 중 {0}…</value></data>
-  <data name="Health.Progress.Stage.AnalyzingDuplicateCandidates" xml:space="preserve"><value>분석 중 중복 후보</value></data>
-  <data name="Health.Progress.Stage.BuildingAlbumMetadataMatrix" xml:space="preserve"><value>빌드 앨범 메타데이터 행렬</value></data>
-  <data name="Health.Progress.Stage.CheckingArtworkMetadata" xml:space="preserve"><value>확인 중 아트워크 메타데이터</value></data>
-  <data name="Health.Progress.Stage.CheckingAudioFormats" xml:space="preserve"><value>확인 중 오디오 형식</value></data>
-  <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>확인 중 메타데이터 일관성</value></data>
-  <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>비교 중 앨범 아트워크</value></data>
-  <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>비교 중 앨범 표현</value></data>
+  <data name="Health.Progress.ReadingDeferredArtwork.One" xml:space="preserve"><value>보류된 파일 {0:N0}개에서 내장 아트워크 읽는 중…</value></data>
+  <data name="Health.Progress.ReadingDeferredArtwork.Other" xml:space="preserve"><value>보류된 파일 {0:N0}개에서 내장 아트워크 읽는 중…</value></data>
+  <data name="Health.Progress.Running" xml:space="preserve"><value>{0} 실행 중…</value></data>
+  <data name="Health.Progress.Stage.AnalyzingDuplicateCandidates" xml:space="preserve"><value>중복 후보 분석 중</value></data>
+  <data name="Health.Progress.Stage.BuildingAlbumMetadataMatrix" xml:space="preserve"><value>앨범 메타데이터 매트릭스 만드는 중</value></data>
+  <data name="Health.Progress.Stage.CheckingArtworkMetadata" xml:space="preserve"><value>아트워크 메타데이터 확인 중</value></data>
+  <data name="Health.Progress.Stage.CheckingAudioFormats" xml:space="preserve"><value>오디오 형식 확인 중</value></data>
+  <data name="Health.Progress.Stage.CheckingMetadataConsistency" xml:space="preserve"><value>메타데이터 일관성 확인 중</value></data>
+  <data name="Health.Progress.Stage.ComparingAlbumArtwork" xml:space="preserve"><value>앨범 아트워크 비교 중</value></data>
+  <data name="Health.Progress.Stage.ComparingAlbumRepresentations" xml:space="preserve"><value>앨범 표현 비교 중</value></data>
   <data name="Health.Progress.Stage.ComparingArtistNames" xml:space="preserve"><value>아티스트 이름 비교 중</value></data>
-  <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>디코딩 중 오디오</value></data>
-  <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>그룹화 아트워크 복구 작업</value></data>
-  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>인덱싱 중 아트워크 감사</value></data>
-  <data name="Health.Progress.Stage.IndexingTracksForArtworkRepairs" xml:space="preserve"><value>인덱싱 중 트랙 용 아트워크 복구 작업</value></data>
-  <data name="Health.Progress.Stage.IndexingTracksForArtworkResults" xml:space="preserve"><value>인덱싱 중 트랙 용 아트워크 결과</value></data>
-  <data name="Health.Progress.Stage.PlanningAlbumArtworkRepairs" xml:space="preserve"><value>계획 중 앨범 아트워크 복구 작업</value></data>
-  <data name="Health.Progress.Stage.PlanningFileArtworkRepairs" xml:space="preserve"><value>계획 중 파일 아트워크 복구 작업</value></data>
-  <data name="Health.Progress.Stage.PreparingAnalysisFindings" xml:space="preserve"><value>준비 중 분석 발견 사항</value></data>
-  <data name="Health.Progress.Stage.PreparingArtworkFindings" xml:space="preserve"><value>준비 중 아트워크 발견 사항</value></data>
-  <data name="Health.Progress.Stage.PreparingArtworkRepairChoices" xml:space="preserve"><value>준비 중 아트워크 복구 선택 항목</value></data>
-  <data name="Health.Progress.Stage.PreparingRepresentationRepairResults" xml:space="preserve"><value>준비 중 표현 복구 결과</value></data>
-  <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>미리 보는 중 구성 이동</value></data>
-  <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>미리 보는 중 표현 파생</value></data>
-  <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>미리 보는 중 표현 메타데이터 복사</value></data>
+  <data name="Health.Progress.Stage.DecodingAudio" xml:space="preserve"><value>오디오 디코딩 중</value></data>
+  <data name="Health.Progress.Stage.GroupingArtworkRepairs" xml:space="preserve"><value>아트워크 복구 작업 그룹화 중</value></data>
+  <data name="Health.Progress.Stage.IndexingArtworkAudit" xml:space="preserve"><value>아트워크 감사 결과 인덱싱 중</value></data>
+  <data name="Health.Progress.Stage.IndexingTracksForArtworkRepairs" xml:space="preserve"><value>아트워크 복구용 트랙 인덱싱 중</value></data>
+  <data name="Health.Progress.Stage.IndexingTracksForArtworkResults" xml:space="preserve"><value>아트워크 결과용 트랙 인덱싱 중</value></data>
+  <data name="Health.Progress.Stage.PlanningAlbumArtworkRepairs" xml:space="preserve"><value>앨범 아트워크 복구 계획 중</value></data>
+  <data name="Health.Progress.Stage.PlanningFileArtworkRepairs" xml:space="preserve"><value>파일 아트워크 복구 계획 중</value></data>
+  <data name="Health.Progress.Stage.PreparingAnalysisFindings" xml:space="preserve"><value>분석 발견 항목 준비 중</value></data>
+  <data name="Health.Progress.Stage.PreparingArtworkFindings" xml:space="preserve"><value>아트워크 발견 항목 준비 중</value></data>
+  <data name="Health.Progress.Stage.PreparingArtworkRepairChoices" xml:space="preserve"><value>아트워크 복구 선택 항목 준비 중</value></data>
+  <data name="Health.Progress.Stage.PreparingRepresentationRepairResults" xml:space="preserve"><value>표현 복구 결과 준비 중</value></data>
+  <data name="Health.Progress.Stage.PreviewingOrganizationMoves" xml:space="preserve"><value>정리 이동 미리 보는 중</value></data>
+  <data name="Health.Progress.Stage.PreviewingRepresentationDerivations" xml:space="preserve"><value>표현 파생 미리 보는 중</value></data>
+  <data name="Health.Progress.Stage.PreviewingRepresentationMetadataCopies" xml:space="preserve"><value>표현 간 메타데이터 복사 미리 보는 중</value></data>
   <data name="Health.Progress.Stage.ReadingArtistNames" xml:space="preserve"><value>아티스트 이름 읽는 중</value></data>
-  <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>선택 구성 복구 작업</value></data>
+  <data name="Health.Progress.Stage.SelectingOrganizationRepairs" xml:space="preserve"><value>정리 복구 작업 선택 중</value></data>
   <data name="Health.Progress.Unit.ArtistNameComparisons" xml:space="preserve"><value>아티스트 이름 비교</value></data>
   <data name="Health.Progress.Unit.Files" xml:space="preserve"><value>파일</value></data>
-  <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>발견 사항</value></data>
+  <data name="Health.Progress.Unit.Findings" xml:space="preserve"><value>발견 항목</value></data>
   <data name="Health.Progress.Unit.Moves" xml:space="preserve"><value>이동</value></data>
   <data name="Health.Progress.Unit.RepairActions" xml:space="preserve"><value>복구 작업</value></data>
   <data name="Health.Progress.Unit.Results" xml:space="preserve"><value>결과</value></data>
   <data name="Health.Progress.Unit.Tracks" xml:space="preserve"><value>트랙</value></data>
   <data name="Health.Result.AlreadyCorrect" xml:space="preserve"><value>이미 올바름</value></data>
   <data name="Health.Result.Applied" xml:space="preserve"><value>적용됨</value></data>
-  <data name="Health.Result.ArtworkCompleted" xml:space="preserve"><value>완료됨 용 {0:N0} 파일 — {1:N0}×{2:N0} — {3:0.#} KiB</value></data>
-  <data name="Health.Result.ArtworkEncodingFailed" xml:space="preserve"><value>해당 선택됨 이미지 가능 아님 됨 인코딩됨 이내 해당 복구 대상.</value></data>
-  <data name="Health.Result.ArtworkFilesFailed.One" xml:space="preserve"><value>실패 용 {0:N0} 파일.</value></data>
-  <data name="Health.Result.ArtworkFilesFailed.Other" xml:space="preserve"><value>실패 용 {0:N0} 파일.</value></data>
+  <data name="Health.Result.ArtworkCompleted" xml:space="preserve"><value>{0:N0}개 파일 완료 — {1:N0}×{2:N0} — {3:0.#} KiB</value></data>
+  <data name="Health.Result.ArtworkEncodingFailed" xml:space="preserve"><value>선택한 이미지를 복구 목표 범위 내에서 인코딩할 수 없습니다.</value></data>
+  <data name="Health.Result.ArtworkFilesFailed.One" xml:space="preserve"><value>{0:N0}개 파일에서 실패했습니다.</value></data>
+  <data name="Health.Result.ArtworkFilesFailed.Other" xml:space="preserve"><value>{0:N0}개 파일에서 실패했습니다.</value></data>
   <data name="Health.Result.Failed" xml:space="preserve"><value>실패</value></data>
-  <data name="Health.Result.FilesRenamed.One" xml:space="preserve"><value>이름 변경됨 {0:N0} 파일</value></data>
-  <data name="Health.Result.FilesRenamed.Other" xml:space="preserve"><value>이름 변경됨 {0:N0} 파일</value></data>
+  <data name="Health.Result.FilesRenamed.One" xml:space="preserve"><value>{0:N0}개 파일 이름 변경됨</value></data>
+  <data name="Health.Result.FilesRenamed.Other" xml:space="preserve"><value>{0:N0}개 파일 이름 변경됨</value></data>
   <data name="Health.Result.Skipped" xml:space="preserve"><value>건너뜀</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>앨범 아티스트 충돌 검색 취소됨.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Failed" xml:space="preserve"><value>앨범 아티스트 충돌 검색 실패.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.None" xml:space="preserve"><value>아니요 충돌 앨범 아티스트 이었음 찾음.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Results.One" xml:space="preserve"><value>찾음 {0:N0} 앨범 포함 충돌 앨범 아티스트. 선택 정규 값 로 계속.</value></data>
-  <data name="Health.Status.AlbumArtistConflicts.Results.Other" xml:space="preserve"><value>찾음 {0:N0} 앨범 포함 충돌 앨범 아티스트. 선택 정규 값 로 계속.</value></data>
-  <data name="Health.Status.AlbumMatrix.None" xml:space="preserve"><value>앨범 메타데이터 행렬: 아니요 불일치 앨범 찾음.</value></data>
-  <data name="Health.Status.AlbumMatrix.Results.One" xml:space="preserve"><value>앨범 메타데이터 행렬: {0:N0} 앨범; 불일치 셀: {1:N0}.</value></data>
-  <data name="Health.Status.AlbumMatrix.Results.Other" xml:space="preserve"><value>앨범 메타데이터 행렬: {0:N0} 앨범; 불일치 셀: {1:N0}.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>앨범 표현 비교 취소됨.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Failed" xml:space="preserve"><value>앨범 표현 비교 실패.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Findings.One" xml:space="preserve"><value>앨범 표현: {0:N0} 발견 사항.</value></data>
-  <data name="Health.Status.AlbumRepresentations.Findings.Other" xml:space="preserve"><value>앨범 표현: {0:N0} 발견 사항.</value></data>
-  <data name="Health.Status.AlbumRepresentations.None" xml:space="preserve"><value>앨범 표현: 아니요 대응 항목, 메타데이터, 재생 시간, 또는 아트워크 편차 찾음.</value></data>
-  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>유사 아티스트 병합 적용 취소됨. 검토 해당 영향받음 파일 이전 다시 시도.</value></data>
-  <data name="Health.Status.ArtistMerge.Completed" xml:space="preserve"><value>유사 아티스트 병합: 파일 이름 변경됨: {0:N0}; 변형 완료됨: {1:N0}; 실패: {2:N0}.</value></data>
-  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>아트워크 상태 감사 취소됨.</value></data>
-  <data name="Health.Status.ArtworkHealth.Failed" xml:space="preserve"><value>아트워크 상태 감사 실패.</value></data>
-  <data name="Health.Status.ArtworkHealth.None" xml:space="preserve"><value>아트워크 상태: 아니요 문제 찾음.</value></data>
-  <data name="Health.Status.ArtworkHealth.Results" xml:space="preserve"><value>아트워크 상태: 문제: {0:N0}; 복구 작업: {1:N0}; 지연됨 파일: {2:N0}.</value></data>
-  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>아트워크 복구 적용 취소됨. 검토 해당 영향받음 파일 이전 다시 시도.</value></data>
-  <data name="Health.Status.ArtworkRepair.Completed" xml:space="preserve"><value>아트워크 복구 작업: 완료됨 작업: {0:N0}; 실패: {1:N0}.</value></data>
-  <data name="Health.Status.ChooseAnalysis" xml:space="preserve"><value>선택 하나의 분석 로 실행.</value></data>
-  <data name="Health.Status.ChooseConfiguration" xml:space="preserve"><value>선택 하나의 라이브러리 구성 에서 설정 이전 실행 중 하나의 감사.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>충돌 복구 미리 보기 취소됨.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Failed" xml:space="preserve"><value>충돌 복구 미리 보기 실패.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>해당 선택됨 정규 값 이미 일치 모든 파일.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>미리 봄 {0:N0} 사용자-지정됨 복구. 검토, 그런 다음 적용 해당 항목.</value></data>
-  <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>미리 봄 {0:N0} 사용자-지정됨 복구 작업. 검토, 그런 다음 적용 해당 선택됨 복구 작업.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Cancelled" xml:space="preserve"><value>앨범 아티스트 충돌 검색이 취소되었습니다.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Failed" xml:space="preserve"><value>앨범 아티스트 충돌 검색에 실패했습니다.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.None" xml:space="preserve"><value>충돌하는 앨범 아티스트를 찾지 못했습니다.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Results.One" xml:space="preserve"><value>앨범 아티스트가 충돌하는 앨범 {0:N0}개를 찾았습니다. 계속하려면 표준 값을 선택하세요.</value></data>
+  <data name="Health.Status.AlbumArtistConflicts.Results.Other" xml:space="preserve"><value>앨범 아티스트가 충돌하는 앨범 {0:N0}개를 찾았습니다. 계속하려면 표준 값을 선택하세요.</value></data>
+  <data name="Health.Status.AlbumMatrix.None" xml:space="preserve"><value>앨범 메타데이터 매트릭스: 불일치하는 앨범이 없습니다.</value></data>
+  <data name="Health.Status.AlbumMatrix.Results.One" xml:space="preserve"><value>앨범 메타데이터 매트릭스: 앨범 {0:N0}개, 불일치 셀 {1:N0}개.</value></data>
+  <data name="Health.Status.AlbumMatrix.Results.Other" xml:space="preserve"><value>앨범 메타데이터 매트릭스: 앨범 {0:N0}개, 불일치 셀 {1:N0}개.</value></data>
+  <data name="Health.Status.AlbumRepresentations.Cancelled" xml:space="preserve"><value>앨범 표현 비교가 취소되었습니다.</value></data>
+  <data name="Health.Status.AlbumRepresentations.Failed" xml:space="preserve"><value>앨범 표현 비교에 실패했습니다.</value></data>
+  <data name="Health.Status.AlbumRepresentations.Findings.One" xml:space="preserve"><value>앨범 표현: 발견 항목 {0:N0}개.</value></data>
+  <data name="Health.Status.AlbumRepresentations.Findings.Other" xml:space="preserve"><value>앨범 표현: 발견 항목 {0:N0}개.</value></data>
+  <data name="Health.Status.AlbumRepresentations.None" xml:space="preserve"><value>앨범 표현: 대응 항목, 메타데이터, 재생 시간 또는 아트워크 차이가 없습니다.</value></data>
+  <data name="Health.Status.ArtistMerge.Cancelled" xml:space="preserve"><value>유사 아티스트 병합 적용이 취소되었습니다. 다시 시도하기 전에 영향을 받은 파일을 검토하세요.</value></data>
+  <data name="Health.Status.ArtistMerge.Completed" xml:space="preserve"><value>유사 아티스트 병합: 이름 변경된 파일 {0:N0}개, 완료된 표기 {1:N0}개, 실패 {2:N0}개.</value></data>
+  <data name="Health.Status.ArtworkHealth.Cancelled" xml:space="preserve"><value>아트워크 상태 감사가 취소되었습니다.</value></data>
+  <data name="Health.Status.ArtworkHealth.Failed" xml:space="preserve"><value>아트워크 상태 감사에 실패했습니다.</value></data>
+  <data name="Health.Status.ArtworkHealth.None" xml:space="preserve"><value>아트워크 상태: 문제가 없습니다.</value></data>
+  <data name="Health.Status.ArtworkHealth.Results" xml:space="preserve"><value>아트워크 상태: 문제 {0:N0}개, 복구 작업 {1:N0}개, 보류된 파일 {2:N0}개.</value></data>
+  <data name="Health.Status.ArtworkRepair.Cancelled" xml:space="preserve"><value>아트워크 복구 적용이 취소되었습니다. 다시 시도하기 전에 영향을 받은 파일을 검토하세요.</value></data>
+  <data name="Health.Status.ArtworkRepair.Completed" xml:space="preserve"><value>아트워크 복구: 완료된 작업 {0:N0}개, 실패 {1:N0}개.</value></data>
+  <data name="Health.Status.ChooseAnalysis" xml:space="preserve"><value>실행할 분석을 선택하세요.</value></data>
+  <data name="Health.Status.ChooseConfiguration" xml:space="preserve"><value>감사를 실행하기 전에 설정에서 라이브러리 구성을 선택하세요.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Cancelled" xml:space="preserve"><value>충돌 복구 미리 보기가 취소되었습니다.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Failed" xml:space="preserve"><value>충돌 복구 미리 보기에 실패했습니다.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.None" xml:space="preserve"><value>선택한 표준 값이 이미 모든 파일과 일치합니다.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Results.One" xml:space="preserve"><value>사용자 지정 복구 {0:N0}건을 미리 보았습니다. 검토한 후 적용하세요.</value></data>
+  <data name="Health.Status.ConflictRepairPreview.Results.Other" xml:space="preserve"><value>사용자 지정 복구 {0:N0}건을 미리 보았습니다. 검토한 후 선택한 복구를 적용하세요.</value></data>
   <data name="Health.Status.CrossSetCheck.Cancelled" xml:space="preserve"><value>세트 간 검사가 취소되었습니다.</value></data>
   <data name="Health.Status.CrossSetCheck.Failed" xml:space="preserve"><value>세트 간 검사에 실패했습니다.</value></data>
   <data name="Health.Status.CrossSetCheck.Findings.One" xml:space="preserve"><value>세트 간 검사: 발견 항목 {0:N0}개.</value></data>
@@ -4678,50 +4678,50 @@
   <data name="Health.Status.DecodedAudioVerification.Failed" xml:space="preserve"><value>디코딩된 오디오 확인에 실패했습니다.</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.One" xml:space="preserve"><value>디코딩된 오디오 확인: 호환되는 {0:N0}개 쌍이 일치합니다.</value></data>
   <data name="Health.Status.DecodedAudioVerification.Match.Other" xml:space="preserve"><value>디코딩된 오디오 확인: 호환되는 {0:N0}개 쌍이 일치합니다.</value></data>
-  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>지연됨 아트워크 스캔 취소됨.</value></data>
-  <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>지연됨 아트워크 스캔 실패.</value></data>
-  <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>{0:N0} 중복 그룹.</value></data>
-  <data name="Health.Status.Duplicates.Groups.Other" xml:space="preserve"><value>{0:N0} 중복 그룹.</value></data>
-  <data name="Health.Status.Duplicates.None" xml:space="preserve"><value>아니요 중복 항목 찾음.</value></data>
-  <data name="Health.Status.Inconsistencies.Findings.One" xml:space="preserve"><value>불일치: {0:N0} 발견 사항.</value></data>
-  <data name="Health.Status.Inconsistencies.Findings.Other" xml:space="preserve"><value>불일치: {0:N0} 발견 사항.</value></data>
-  <data name="Health.Status.Inconsistencies.None" xml:space="preserve"><value>불일치: 없음 찾음.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>iTunes 메타데이터 복구 적용 취소됨. 검토 해당 영향받음 파일 이전 다시 시도.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Completed" xml:space="preserve"><value>iTunes 메타데이터 복구 작업: 적용됨: {0:N0}; 건너뜀: {1:N0}; 실패: {2:N0}.</value></data>
-  <data name="Health.Status.ItlMetadataRepair.Failed" xml:space="preserve"><value>iTunes 메타데이터 복구 적용 실패.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>iTunes 메타데이터 복구 미리 보기 취소됨.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Failed" xml:space="preserve"><value>iTunes 메타데이터 복구 미리 보기 실패.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.None" xml:space="preserve"><value>아니요 iTunes 메타데이터 복구 작업 입니다 필요 용 해당 선택됨 라이브러리.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Results.One" xml:space="preserve"><value>미리 봄 {0:N0} iTunes 메타데이터 복구. 검토 해당 항목, 그런 다음 적용 해당 선택됨 복구.</value></data>
-  <data name="Health.Status.ItlMetadataRepairPreview.Results.Other" xml:space="preserve"><value>미리 봄 {0:N0} iTunes 메타데이터 복구 작업. 검토 해당 항목, 그런 다음 적용 해당 선택됨 복구 작업.</value></data>
-  <data name="Health.Status.LossyFiles.Count.One" xml:space="preserve"><value>{0:N0} 손실 파일.</value></data>
-  <data name="Health.Status.LossyFiles.Count.Other" xml:space="preserve"><value>{0:N0} 손실 파일.</value></data>
-  <data name="Health.Status.LossyFiles.None" xml:space="preserve"><value>아니요 손실 파일.</value></data>
-  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>메타데이터 복구 적용 취소됨. 검토 해당 영향받음 파일 이전 다시 시도.</value></data>
-  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>메타데이터 복구 작업: 적용됨: {0:N0}; 건너뜀: {1:N0}; 실패: {2:N0}.</value></data>
-  <data name="Health.Status.MetadataRepair.Failed" xml:space="preserve"><value>메타데이터 복구 적용 실패.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Blocked.One" xml:space="preserve"><value>{0:N0} 복구 입니다 차단됨. 검토 해당 이유 이전 적용 중 해당 대상 복구 작업.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Blocked.Other" xml:space="preserve"><value>{0:N0} 복구 작업 입니다 차단됨. 검토 해당 이유 이전 적용 중 해당 대상 복구 작업.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>메타데이터 복구 미리 보기 취소됨.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Failed" xml:space="preserve"><value>메타데이터 복구 미리 보기 실패.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.None" xml:space="preserve"><value>아니요 안전 메타데이터 복구 작업 입니다 필요.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>미리 봄 {0:N0} 안전 메타데이터 복구. 검토 해당 항목, 그런 다음 적용 해당 선택됨 복구.</value></data>
-  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>미리 봄 {0:N0} 안전 메타데이터 복구 작업. 검토 해당 항목, 그런 다음 적용 해당 선택됨 복구 작업.</value></data>
-  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>표현 복구 적용 취소됨.</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>표현 복구 적용 취소됨 이후 {0:N0} 작업. 검토 해당 영향받음 파일 이전 다시 시도.</value></data>
-  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>표현 복구 적용 취소됨 이후 {0:N0} 작업. 검토 해당 영향받음 파일 이전 다시 시도.</value></data>
-  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>표현 복구 작업: 적용됨: {0:N0}; 건너뜀: {1:N0}; 실패: {2:N0}.</value></data>
-  <data name="Health.Status.RepresentationRepair.Failed" xml:space="preserve"><value>표현 복구 적용 실패.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>표현 복구 미리 보기 취소됨.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.Failed" xml:space="preserve"><value>표현 복구 미리 보기 실패.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>미리 봄 표현 파일 작업: {0:N0} 구성 이동 및 {1:N0} 파생. 검토 해당 항목, 그런 다음 적용 해당 선택됨 작업.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.One" xml:space="preserve"><value>미리 봄 {0:N0} 표현 메타데이터 복사. 검토 해당 항목, 그런 다음 적용 해당 선택됨 복구.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.Other" xml:space="preserve"><value>미리 봄 {0:N0} 표현 메타데이터 복사. 검토 해당 항목, 그런 다음 적용 해당 선택됨 복구 작업.</value></data>
-  <data name="Health.Status.RepresentationRepairPreview.None" xml:space="preserve"><value>아니요 표현 복구 작업 입니다 필요.</value></data>
-  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0} 취소됨.</value></data>
-  <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} 실패.</value></data>
-  <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>{0:N0} 유사 아티스트 클러스터 찾음 에서 임계값 {1:0.00}. 검토 해당 변형, 그런 다음 적용 해당 활성 복구.</value></data>
-  <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>{0:N0} 유사 아티스트 클러스터 찾음 에서 임계값 {1:0.00}. 검토 해당 변형, 그런 다음 적용 해당 활성 복구 작업.</value></data>
+  <data name="Health.Status.DeferredArtwork.Cancelled" xml:space="preserve"><value>보류된 아트워크 검사가 취소되었습니다.</value></data>
+  <data name="Health.Status.DeferredArtwork.Failed" xml:space="preserve"><value>보류된 아트워크 검사에 실패했습니다.</value></data>
+  <data name="Health.Status.Duplicates.Groups.One" xml:space="preserve"><value>중복 그룹 {0:N0}개.</value></data>
+  <data name="Health.Status.Duplicates.Groups.Other" xml:space="preserve"><value>중복 그룹 {0:N0}개.</value></data>
+  <data name="Health.Status.Duplicates.None" xml:space="preserve"><value>중복 항목이 없습니다.</value></data>
+  <data name="Health.Status.Inconsistencies.Findings.One" xml:space="preserve"><value>불일치: 발견 항목 {0:N0}개.</value></data>
+  <data name="Health.Status.Inconsistencies.Findings.Other" xml:space="preserve"><value>불일치: 발견 항목 {0:N0}개.</value></data>
+  <data name="Health.Status.Inconsistencies.None" xml:space="preserve"><value>불일치: 없음.</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Cancelled" xml:space="preserve"><value>iTunes 메타데이터 복구 적용이 취소되었습니다. 다시 시도하기 전에 영향을 받은 파일을 검토하세요.</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Completed" xml:space="preserve"><value>iTunes 메타데이터 복구: 적용 {0:N0}건, 건너뜀 {1:N0}건, 실패 {2:N0}건.</value></data>
+  <data name="Health.Status.ItlMetadataRepair.Failed" xml:space="preserve"><value>iTunes 메타데이터 복구 적용에 실패했습니다.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Cancelled" xml:space="preserve"><value>iTunes 메타데이터 복구 미리 보기가 취소되었습니다.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Failed" xml:space="preserve"><value>iTunes 메타데이터 복구 미리 보기에 실패했습니다.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.None" xml:space="preserve"><value>선택한 라이브러리에 필요한 iTunes 메타데이터 복구가 없습니다.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Results.One" xml:space="preserve"><value>iTunes 메타데이터 복구 {0:N0}건을 미리 보았습니다. 검토한 후 선택한 복구를 적용하세요.</value></data>
+  <data name="Health.Status.ItlMetadataRepairPreview.Results.Other" xml:space="preserve"><value>iTunes 메타데이터 복구 {0:N0}건을 미리 보았습니다. 검토한 후 선택한 복구를 적용하세요.</value></data>
+  <data name="Health.Status.LossyFiles.Count.One" xml:space="preserve"><value>손실 압축 파일 {0:N0}개.</value></data>
+  <data name="Health.Status.LossyFiles.Count.Other" xml:space="preserve"><value>손실 압축 파일 {0:N0}개.</value></data>
+  <data name="Health.Status.LossyFiles.None" xml:space="preserve"><value>손실 압축 파일이 없습니다.</value></data>
+  <data name="Health.Status.MetadataRepair.Cancelled" xml:space="preserve"><value>메타데이터 복구 적용이 취소되었습니다. 다시 시도하기 전에 영향을 받은 파일을 검토하세요.</value></data>
+  <data name="Health.Status.MetadataRepair.Completed" xml:space="preserve"><value>메타데이터 복구: 적용 {0:N0}건, 건너뜀 {1:N0}건, 실패 {2:N0}건, 카탈로그 새로 고침 실패 {3:N0}건.</value></data>
+  <data name="Health.Status.MetadataRepair.Failed" xml:space="preserve"><value>메타데이터 복구 적용에 실패했습니다.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Blocked.One" xml:space="preserve"><value>복구 {0:N0}건이 차단되었습니다. 적용 가능한 복구를 실행하기 전에 이유를 검토하세요.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Blocked.Other" xml:space="preserve"><value>복구 {0:N0}건이 차단되었습니다. 적용 가능한 복구를 실행하기 전에 이유를 검토하세요.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Cancelled" xml:space="preserve"><value>메타데이터 복구 미리 보기가 취소되었습니다.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Failed" xml:space="preserve"><value>메타데이터 복구 미리 보기에 실패했습니다.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.None" xml:space="preserve"><value>필요한 안전한 메타데이터 복구가 없습니다.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.One" xml:space="preserve"><value>안전한 메타데이터 복구 {0:N0}건을 미리 보았습니다. 적용 가능: {1:N0}건. 검토한 후 선택한 복구를 적용하세요.</value></data>
+  <data name="Health.Status.MetadataRepairPreview.Results.Other" xml:space="preserve"><value>안전한 메타데이터 복구 {0:N0}건을 미리 보았습니다. 적용 가능: {1:N0}건. 검토한 후 선택한 복구를 적용하세요.</value></data>
+  <data name="Health.Status.RepresentationRepair.Cancelled" xml:space="preserve"><value>표현 복구 적용이 취소되었습니다.</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.One" xml:space="preserve"><value>표현 복구 적용이 작업 {0:N0}건 후 취소되었습니다. 다시 시도하기 전에 영향을 받은 파일을 검토하세요.</value></data>
+  <data name="Health.Status.RepresentationRepair.CancelledAfter.Other" xml:space="preserve"><value>표현 복구 적용이 작업 {0:N0}건 후 취소되었습니다. 다시 시도하기 전에 영향을 받은 파일을 검토하세요.</value></data>
+  <data name="Health.Status.RepresentationRepair.Completed" xml:space="preserve"><value>표현 복구: 적용 {0:N0}건, 실패 {1:N0}건.</value></data>
+  <data name="Health.Status.RepresentationRepair.Failed" xml:space="preserve"><value>표현 복구 적용에 실패했습니다.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.Cancelled" xml:space="preserve"><value>표현 복구 미리 보기가 취소되었습니다.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.Failed" xml:space="preserve"><value>표현 복구 미리 보기에 실패했습니다.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.FileActions" xml:space="preserve"><value>표현 파일 작업 미리 보기: {0:N0}건, 경고: {1:N0}건. 검토한 후 선택한 작업을 적용하세요.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.One" xml:space="preserve"><value>표현 메타데이터 복사 {0:N0}건을 미리 보았습니다. 검토한 후 선택한 복구를 적용하세요.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.MetadataCopies.Other" xml:space="preserve"><value>표현 메타데이터 복사 {0:N0}건을 미리 보았습니다. 검토한 후 선택한 복구를 적용하세요.</value></data>
+  <data name="Health.Status.RepresentationRepairPreview.None" xml:space="preserve"><value>필요한 표현 복구가 없습니다.</value></data>
+  <data name="Health.Status.Run.Cancelled" xml:space="preserve"><value>{0} 작업이 취소되었습니다.</value></data>
+  <data name="Health.Status.Run.Failed" xml:space="preserve"><value>{0} 작업에 실패했습니다.</value></data>
+  <data name="Health.Status.SimilarArtists.Clusters.One" xml:space="preserve"><value>임계값 {1:0.00}에서 유사 아티스트 클러스터 {0:N0}개를 찾았습니다. 표기를 검토한 후 활성 복구를 적용하세요.</value></data>
+  <data name="Health.Status.SimilarArtists.Clusters.Other" xml:space="preserve"><value>임계값 {1:0.00}에서 유사 아티스트 클러스터 {0:N0}개를 찾았습니다. 표기를 검토한 후 활성 복구를 적용하세요.</value></data>
   <data name="Health.Status.SimilarArtists.None" xml:space="preserve"><value>임계값 {0:0.00}에서 비슷한 아티스트 이름을 찾지 못했습니다.</value></data>
   <data name="Devices.ActionKind.AddFile" xml:space="preserve"><value>파일 추가</value></data>
   <data name="Devices.ActionKind.CreateDirectory" xml:space="preserve"><value>폴더 만들기</value></data>
@@ -5947,60 +5947,60 @@
   <data name="Health.TextDifference.Empty" xml:space="preserve"><value>(비어 있음)</value></data>
   <data name="Health.TextDifference.KnownCodePoint" xml:space="preserve"><value>{0} {1}</value></data>
   <data name="Health.TextDifference.Missing" xml:space="preserve"><value>(누락)</value></data>
-  <data name="Health.TextDifference.More.One" xml:space="preserve"><value> · … ({0:N0} 더 보기)</value></data>
-  <data name="Health.TextDifference.More.Other" xml:space="preserve"><value> · … ({0:N0} 더 보기)</value></data>
+  <data name="Health.TextDifference.More.One" xml:space="preserve"><value> · … ({0:N0}개 더 있음)</value></data>
+  <data name="Health.TextDifference.More.Other" xml:space="preserve"><value> · … ({0:N0}개 더 있음)</value></data>
   <data name="Health.TextDifference.NoBreakSpaceMarker" xml:space="preserve"><value>⟦NBSP⟧</value></data>
-  <data name="Health.TextDifference.NoCharacter" xml:space="preserve"><value>∅ (아니요 문자)</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ClosePunctuation" xml:space="preserve"><value>닫기 문장 부호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ConnectorPunctuation" xml:space="preserve"><value>커넥터 문장 부호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.Control" xml:space="preserve"><value>제어</value></data>
+  <data name="Health.TextDifference.NoCharacter" xml:space="preserve"><value>∅ (문자 없음)</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ClosePunctuation" xml:space="preserve"><value>닫는 문장 부호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ConnectorPunctuation" xml:space="preserve"><value>연결 문장 부호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.Control" xml:space="preserve"><value>제어 문자</value></data>
   <data name="Health.TextDifference.UnicodeCategory.CurrencySymbol" xml:space="preserve"><value>통화 기호</value></data>
   <data name="Health.TextDifference.UnicodeCategory.DashPunctuation" xml:space="preserve"><value>대시 문장 부호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.DecimalDigitNumber" xml:space="preserve"><value>10진수 숫자 번호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.EnclosingMark" xml:space="preserve"><value>둘러싼 표시</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.FinalQuotePunctuation" xml:space="preserve"><value>최종 따옴표 문장 부호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.Format" xml:space="preserve"><value>형식</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.InitialQuotePunctuation" xml:space="preserve"><value>초기 따옴표 문장 부호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LetterNumber" xml:space="preserve"><value>문자 번호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.DecimalDigitNumber" xml:space="preserve"><value>10진수 숫자</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.EnclosingMark" xml:space="preserve"><value>둘러싸는 결합 기호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.FinalQuotePunctuation" xml:space="preserve"><value>닫는 따옴표 문장 부호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.Format" xml:space="preserve"><value>서식 문자</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.InitialQuotePunctuation" xml:space="preserve"><value>여는 따옴표 문장 부호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LetterNumber" xml:space="preserve"><value>문자 숫자</value></data>
   <data name="Health.TextDifference.UnicodeCategory.LineSeparator" xml:space="preserve"><value>줄 구분 기호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.LowercaseLetter" xml:space="preserve"><value>소문자 문자</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.LowercaseLetter" xml:space="preserve"><value>소문자</value></data>
   <data name="Health.TextDifference.UnicodeCategory.MathSymbol" xml:space="preserve"><value>수학 기호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ModifierLetter" xml:space="preserve"><value>수정자 문자</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.ModifierSymbol" xml:space="preserve"><value>수정자 기호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.NonSpacingMark" xml:space="preserve"><value>비간격 표시</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OpenPunctuation" xml:space="preserve"><value>열기 문장 부호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ModifierLetter" xml:space="preserve"><value>수식 문자</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.ModifierSymbol" xml:space="preserve"><value>수식 기호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.NonSpacingMark" xml:space="preserve"><value>비간격 결합 기호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OpenPunctuation" xml:space="preserve"><value>여는 문장 부호</value></data>
   <data name="Health.TextDifference.UnicodeCategory.OtherLetter" xml:space="preserve"><value>기타 문자</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherNotAssigned" xml:space="preserve"><value>아님 할당됨</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.OtherNumber" xml:space="preserve"><value>기타 번호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherNotAssigned" xml:space="preserve"><value>할당되지 않음</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.OtherNumber" xml:space="preserve"><value>기타 숫자</value></data>
   <data name="Health.TextDifference.UnicodeCategory.OtherPunctuation" xml:space="preserve"><value>기타 문장 부호</value></data>
   <data name="Health.TextDifference.UnicodeCategory.OtherSymbol" xml:space="preserve"><value>기타 기호</value></data>
   <data name="Health.TextDifference.UnicodeCategory.ParagraphSeparator" xml:space="preserve"><value>단락 구분 기호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.PrivateUse" xml:space="preserve"><value>비공개 사용</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.SpaceSeparator" xml:space="preserve"><value>공간 구분 기호</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.SpacingCombiningMark" xml:space="preserve"><value>공간 결합 중 표시</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.PrivateUse" xml:space="preserve"><value>개인 사용 문자</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.SpaceSeparator" xml:space="preserve"><value>공백 구분 기호</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.SpacingCombiningMark" xml:space="preserve"><value>간격 결합 기호</value></data>
   <data name="Health.TextDifference.UnicodeCategory.Surrogate" xml:space="preserve"><value>서로게이트</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.TitlecaseLetter" xml:space="preserve"><value>제목 대/소문자 문자</value></data>
-  <data name="Health.TextDifference.UnicodeCategory.UppercaseLetter" xml:space="preserve"><value>대문자 문자</value></data>
-  <data name="Health.TextDifference.UnicodeDetails" xml:space="preserve"><value>이전: {0}; 이후: {1}</value></data>
-  <data name="Health.TextDifference.UnicodeName.CarriageReturn" xml:space="preserve"><value>캐리지 리턴</value></data>
-  <data name="Health.TextDifference.UnicodeName.CharacterTabulation" xml:space="preserve"><value>문자 탭</value></data>
-  <data name="Health.TextDifference.UnicodeName.FigureSpace" xml:space="preserve"><value>숫자 공간</value></data>
-  <data name="Health.TextDifference.UnicodeName.Hyphen" xml:space="preserve"><value>하이픈</value></data>
-  <data name="Health.TextDifference.UnicodeName.HyphenMinus" xml:space="preserve"><value>하이픈-빼기</value></data>
-  <data name="Health.TextDifference.UnicodeName.LeftDoubleQuotationMark" xml:space="preserve"><value>왼쪽 이중 따옴표 표시</value></data>
-  <data name="Health.TextDifference.UnicodeName.LeftSingleQuotationMark" xml:space="preserve"><value>왼쪽 단일 따옴표 표시</value></data>
-  <data name="Health.TextDifference.UnicodeName.LineFeed" xml:space="preserve"><value>줄 바꿈</value></data>
-  <data name="Health.TextDifference.UnicodeName.MinusSign" xml:space="preserve"><value>빼기 기호</value></data>
-  <data name="Health.TextDifference.UnicodeName.NarrowNoBreakSpace" xml:space="preserve"><value>좁음 아니요-줄 바꿈 공간</value></data>
-  <data name="Health.TextDifference.UnicodeName.NoBreakSpace" xml:space="preserve"><value>아니요-줄 바꿈 공간</value></data>
-  <data name="Health.TextDifference.UnicodeName.NonBreakingHyphen" xml:space="preserve"><value>줄 바꿈 없음 하이픈</value></data>
-  <data name="Health.TextDifference.UnicodeName.RightDoubleQuotationMark" xml:space="preserve"><value>오른쪽 이중 따옴표 표시</value></data>
-  <data name="Health.TextDifference.UnicodeName.RightSingleQuotationMark" xml:space="preserve"><value>오른쪽 단일 따옴표 표시</value></data>
-  <data name="Health.TextDifference.UnicodeName.Space" xml:space="preserve"><value>공간</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthJoiner" xml:space="preserve"><value>0 너비 연결자</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthNoBreakSpace" xml:space="preserve"><value>0 너비 아니요-줄 바꿈 공간</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthNonJoiner" xml:space="preserve"><value>0 너비 비연결자</value></data>
-  <data name="Health.TextDifference.UnicodeName.ZeroWidthSpace" xml:space="preserve"><value>0 너비 공간</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.TitlecaseLetter" xml:space="preserve"><value>제목 문자</value></data>
+  <data name="Health.TextDifference.UnicodeCategory.UppercaseLetter" xml:space="preserve"><value>대문자</value></data>
+  <data name="Health.TextDifference.UnicodeDetails" xml:space="preserve"><value>변경 전: {0}; 변경 후: {1}</value></data>
+  <data name="Health.TextDifference.UnicodeName.CarriageReturn" xml:space="preserve"><value>CARRIAGE RETURN</value></data>
+  <data name="Health.TextDifference.UnicodeName.CharacterTabulation" xml:space="preserve"><value>CHARACTER TABULATION</value></data>
+  <data name="Health.TextDifference.UnicodeName.FigureSpace" xml:space="preserve"><value>FIGURE SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.Hyphen" xml:space="preserve"><value>HYPHEN</value></data>
+  <data name="Health.TextDifference.UnicodeName.HyphenMinus" xml:space="preserve"><value>HYPHEN-MINUS</value></data>
+  <data name="Health.TextDifference.UnicodeName.LeftDoubleQuotationMark" xml:space="preserve"><value>LEFT DOUBLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.LeftSingleQuotationMark" xml:space="preserve"><value>LEFT SINGLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.LineFeed" xml:space="preserve"><value>LINE FEED</value></data>
+  <data name="Health.TextDifference.UnicodeName.MinusSign" xml:space="preserve"><value>MINUS SIGN</value></data>
+  <data name="Health.TextDifference.UnicodeName.NarrowNoBreakSpace" xml:space="preserve"><value>NARROW NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.NoBreakSpace" xml:space="preserve"><value>NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.NonBreakingHyphen" xml:space="preserve"><value>NON-BREAKING HYPHEN</value></data>
+  <data name="Health.TextDifference.UnicodeName.RightDoubleQuotationMark" xml:space="preserve"><value>RIGHT DOUBLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.RightSingleQuotationMark" xml:space="preserve"><value>RIGHT SINGLE QUOTATION MARK</value></data>
+  <data name="Health.TextDifference.UnicodeName.Space" xml:space="preserve"><value>SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthJoiner" xml:space="preserve"><value>ZERO WIDTH JOINER</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthNoBreakSpace" xml:space="preserve"><value>ZERO WIDTH NO-BREAK SPACE</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthNonJoiner" xml:space="preserve"><value>ZERO WIDTH NON-JOINER</value></data>
+  <data name="Health.TextDifference.UnicodeName.ZeroWidthSpace" xml:space="preserve"><value>ZERO WIDTH SPACE</value></data>
   <data name="Health.TextDifference.VisibleCodePoint" xml:space="preserve"><value>{0} ‘{1}’ ({2})</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Lower" xml:space="preserve"><value>소문자</value></data>
   <data name="MetadataEditor.Choice.CaseMode.Sentence" xml:space="preserve"><value>문장 대소문자</value></data>

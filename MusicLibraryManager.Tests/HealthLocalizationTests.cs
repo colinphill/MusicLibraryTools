@@ -141,6 +141,66 @@ public sealed class HealthLocalizationTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Health_repair_summaries_match_the_values_supplied_by_the_workflow()
+    {
+        string root = FindRepositoryRoot();
+        Dictionary<string, string> resources = XDocument.Load(Path.Combine(
+                root,
+                "MusicLibraryManager.Presentation",
+                "Resources",
+                "Strings.resx"))
+            .Root!
+            .Elements("data")
+            .ToDictionary(
+                element =>
+                    (string?)element.Attribute("name") ?? "",
+                element =>
+                    element.Element("value")?.Value ?? "",
+                StringComparer.Ordinal);
+        string source = File.ReadAllText(Path.Combine(
+            root,
+            "MusicLibraryManager.Presentation",
+            "Workflows",
+            "AnalyzerViewModel.cs"));
+
+        Assert.Equal(
+            "Metadata repairs: applied: {0:N0}; skipped: {1:N0}; " +
+            "failed: {2:N0}; catalog refresh failures: {3:N0}.",
+            resources["Health.Status.MetadataRepair.Completed"]);
+        Assert.Equal(
+            "Previewed {0:N0} safe metadata repairs; eligible: {1:N0}. " +
+            "Review them, then apply the selected repairs.",
+            resources["Health.Status.MetadataRepairPreview.Results.Other"]);
+        Assert.Equal(
+            "Representation repairs: applied: {0:N0}; failed: {1:N0}.",
+            resources["Health.Status.RepresentationRepair.Completed"]);
+        Assert.Equal(
+            "Previewed representation file actions: {0:N0}; warnings: " +
+            "{1:N0}. Review them, then apply the selected actions.",
+            resources["Health.Status.RepresentationRepairPreview.FileActions"]);
+
+        Match completed = Regex.Match(
+            source,
+            @"(?s)SetStatusText\(\s*""Health\.Status\.MetadataRepair\.Completed"",(?<arguments>.*?)\);");
+        Assert.True(completed.Success);
+        Assert.Contains("result.SavedCount", completed.Groups["arguments"].Value);
+        Assert.Contains("result.SkippedCount", completed.Groups["arguments"].Value);
+        Assert.Contains("result.FailedCount", completed.Groups["arguments"].Value);
+        Assert.Contains("result.CacheFailedCount", completed.Groups["arguments"].Value);
+
+        Match representationPreview = Regex.Match(
+            source,
+            @"(?s)""Health\.Status\.RepresentationRepairPreview\.FileActions"",(?<arguments>.*?)\);");
+        Assert.True(representationPreview.Success);
+        Assert.Contains(
+            "preview.FileActions.Count",
+            representationPreview.Groups["arguments"].Value);
+        Assert.Contains(
+            "preview.Warnings.Count",
+            representationPreview.Groups["arguments"].Value);
+    }
+
     private static void RequireResource(
         HashSet<string> resources,
         string key,
