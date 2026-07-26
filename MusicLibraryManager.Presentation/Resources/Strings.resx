@@ -77,10 +77,10 @@
     <value>Artwork</value>
   </data>
   <data name="ArtworkPreview.WindowTitleFormat" xml:space="preserve">
-    <value>{0} artwork preview</value>
+    <value>Artwork preview: {0}</value>
   </data>
   <data name="ArtworkPreview.AutomationFormat" xml:space="preserve">
-    <value>Full-resolution {0} artwork</value>
+    <value>Full-resolution artwork: {0}</value>
   </data>
   <data name="ArtworkPreview.DetailsFormat" xml:space="preserve">
     <value>{0:N0} x {1:N0} pixels · {2} · {3}</value>
@@ -167,7 +167,7 @@
     <value>Back</value>
   </data>
   <data name="Common.Browse" xml:space="preserve">
-    <value>Browse</value>
+    <value>Browse…</value>
   </data>
   <data name="Common.Cancel" xml:space="preserve">
     <value>Cancel</value>
@@ -605,19 +605,19 @@
     <value>Warning</value>
   </data>
   <data name="FieldsEditor.AddField" xml:space="preserve">
-    <value>Add field</value>
+    <value>Add standard field</value>
   </data>
   <data name="FieldsEditor.AddUserString" xml:space="preserve">
-    <value>Add user string</value>
+    <value>Add custom text field</value>
   </data>
   <data name="FieldsEditor.FieldToAddAutomation" xml:space="preserve">
-    <value>Metadata field to add</value>
+    <value>Standard metadata field</value>
   </data>
   <data name="FieldsEditor.MixedValuesPlaceholder" xml:space="preserve">
     <value>Mixed values; one value per line</value>
   </data>
   <data name="FieldsEditor.UserStringName" xml:space="preserve">
-    <value>User-string name</value>
+    <value>Custom field name</value>
   </data>
   <data name="Home.Action.OpenHealth" xml:space="preserve">
     <value>Open Health</value>
@@ -638,7 +638,7 @@
     <value>Choose or create configuration</value>
   </data>
   <data name="Home.Empty.Description" xml:space="preserve">
-    <value>Connect a configuration before browsing, auditing, or organizing music. Your existing files are not changed during setup.</value>
+    <value>Choose or create a configuration before browsing, auditing, or organizing music. Setup does not change your existing files.</value>
   </data>
   <data name="Home.Empty.Title" xml:space="preserve">
     <value>Set up your music library</value>
@@ -662,7 +662,7 @@
     <value>Albums</value>
   </data>
   <data name="Home.Metric.ArtworkCached" xml:space="preserve">
-    <value>Artwork cached</value>
+    <value>Cached artwork items</value>
   </data>
   <data name="Home.Metric.LastSuccessfulIndex" xml:space="preserve">
     <value>Last successful index</value>
@@ -1786,10 +1786,10 @@
     <value>Preview before applying</value>
   </data>
   <data name="Organize.PlannedCount.One" xml:space="preserve">
-    <value>{0} move planned</value>
+    <value>{0:N0} move planned</value>
   </data>
   <data name="Organize.PlannedCount.Other" xml:space="preserve">
-    <value>{0} moves planned</value>
+    <value>{0:N0} moves planned</value>
   </data>
   <data name="Organize.Subtitle" xml:space="preserve">
     <value>Move eligible files into the canonical library layout with rollback protection.</value>
@@ -2002,7 +2002,7 @@
     <value>Changes application text immediately. Library metadata, file names, regional formatting, parsing, and sorting are not changed. English (United States) is currently available.</value>
   </data>
   <data name="Activity.Cancelling" xml:space="preserve">
-    <value>Cancelling…</value>
+    <value>Canceling…</value>
   </data>
   <data name="Count.Files.One" xml:space="preserve">
     <value>{0:N0} file</value>
@@ -2071,10 +2071,10 @@
     <value>Cached library ready. Index when convenient.</value>
   </data>
   <data name="Index.Status.Cancelled" xml:space="preserve">
-    <value>Indexing cancelled; safely committed partial progress was retained.</value>
+    <value>Indexing canceled; safely committed partial progress was retained.</value>
   </data>
   <data name="Index.Status.CompleteFormat" xml:space="preserve">
-    <value>Index complete: +{0:N0}, ~{1:N0}, -{2:N0}, {3:N0} unchanged.</value>
+    <value>Index complete: {0:N0} added, {1:N0} updated, {2:N0} removed, {3:N0} unchanged.</value>
   </data>
   <data name="Index.Status.Failed" xml:space="preserve">
     <value>Indexing failed.</value>
@@ -2122,10 +2122,10 @@
     <value>Generate</value>
   </data>
   <data name="Dialog.CdDerivation.MessageFormat" xml:space="preserve">
-    <value>{0} — Generate the missing tracks below: {1}</value>
+    <value>{0} — Generate the following missing CD-quality tracks from available source tracks: {1}</value>
   </data>
   <data name="Dialog.CdDerivation.Title" xml:space="preserve">
-    <value>Approve CD derivation</value>
+    <value>Generate missing CD-quality tracks</value>
   </data>
   <data name="Dialog.Fields.LoadActivity" xml:space="preserve">
     <value>Load metadata fields</value>
@@ -2146,13 +2146,13 @@
     <value>Reading metadata from {0:N0} selected files</value>
   </data>
   <data name="Dialog.Purge.Action" xml:space="preserve">
-    <value>Purge</value>
+    <value>Delete permanently</value>
   </data>
   <data name="Dialog.Purge.MessageFormat" xml:space="preserve">
     <value>Permanently delete {0:N0} operation runs, {1:N0} files, and {2:N0} bytes? This cannot be undone.</value>
   </data>
   <data name="Dialog.Purge.Title" xml:space="preserve">
-    <value>Permanently purge operation history</value>
+    <value>Permanently delete operation history</value>
   </data>
   <data name="Dialog.Restore.Action" xml:space="preserve">
     <value>Restore</value>
@@ -2161,7 +2161,7 @@
     <value>Restore {0:N0} selected items? {1:N0} existing destinations will be preserved as collision backups.</value>
   </data>
   <data name="Dialog.Restore.Title" xml:space="preserve">
-    <value>Restore operation items</value>
+    <value>Restore selected items</value>
   </data>
   <data name="Settings.Title" xml:space="preserve">
     <value>Settings</value>
@@ -4938,20 +4938,20 @@
   <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>Source folder selected from drop. Run Preflight or Preview.</value></data>
   <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>Apply organization plan</value></data>
   <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>Computing canonical paths</value></data>
-  <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>Preview organization</value></data>
+  <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>Preview organization plan</value></data>
   <data name="Organize.Dialog.Apply.Message.One" xml:space="preserve"><value>Apply {0:N0} planned move? Recovery is available: a journal will be written, and the completed move will be rolled back if the operation does not finish.</value></data>
   <data name="Organize.Dialog.Apply.Message.Other" xml:space="preserve"><value>Apply {0:N0} planned moves? Recovery is available: a journal will be written, and completed moves will be rolled back if the operation does not finish.</value></data>
   <data name="Organize.Dialog.Apply.Primary" xml:space="preserve"><value>Apply moves</value></data>
   <data name="Organize.Dialog.Apply.Title" xml:space="preserve"><value>Apply organization plan</value></data>
   <data name="Organize.Status.AlreadyCanonical" xml:space="preserve"><value>The library is already organized according to the current policy.</value></data>
-  <data name="Organize.Status.ApplyCancelled" xml:space="preserve"><value>Organization was cancelled. Completed moves remain reflected in the library.</value></data>
+  <data name="Organize.Status.ApplyCancelled" xml:space="preserve"><value>Organization was canceled. Completed moves remain reflected in the library.</value></data>
   <data name="Organize.Status.ApplyComplete" xml:space="preserve"><value>Moves applied: {0:N0}.</value></data>
   <data name="Organize.Status.ApplyFailed" xml:space="preserve"><value>The organization plan could not be applied.</value></data>
   <data name="Organize.Status.ApplyPartial" xml:space="preserve"><value>Moved: {0:N0}; failed: {1:N0}.</value></data>
   <data name="Organize.Status.Computing" xml:space="preserve"><value>Computing canonical paths…</value></data>
   <data name="Organize.Status.Moving" xml:space="preserve"><value>Moving files: {0:N0}/{1:N0}.</value></data>
   <data name="Organize.Status.NoEligibleRoots" xml:space="preserve"><value>No eligible library roots are configured for automatic organization.</value></data>
-  <data name="Organize.Status.PreviewCancelled" xml:space="preserve"><value>Organization preview cancelled.</value></data>
+  <data name="Organize.Status.PreviewCancelled" xml:space="preserve"><value>Organization preview canceled.</value></data>
   <data name="Organize.Status.PreviewFailed" xml:space="preserve"><value>The organization preview could not be completed.</value></data>
   <data name="Organize.Status.PreviewMoves.One" xml:space="preserve"><value>{0:N0} move is ready for review.</value></data>
   <data name="Organize.Status.PreviewMoves.Other" xml:space="preserve"><value>{0:N0} moves are ready for review.</value></data>
@@ -6086,8 +6086,8 @@
   <data name="OnlineMetadata.Discogs.MappingStatus.Unmatched" xml:space="preserve"><value>No reliable Discogs release-track match was found.</value></data>
   <data name="OnlineMetadata.Discogs.Validation.InvalidReleaseId" xml:space="preserve"><value>The Discogs release ID must be a positive number.</value></data>
   <data name="OnlineMetadata.Mapping.Confidence.Ambiguous" xml:space="preserve"><value>Ambiguous</value></data>
-  <data name="OnlineMetadata.Mapping.Confidence.Metadata" xml:space="preserve"><value>Metadata</value></data>
-  <data name="OnlineMetadata.Mapping.Confidence.RecordingId" xml:space="preserve"><value>Recording ID</value></data>
+  <data name="OnlineMetadata.Mapping.Confidence.Metadata" xml:space="preserve"><value>Metadata match</value></data>
+  <data name="OnlineMetadata.Mapping.Confidence.RecordingId" xml:space="preserve"><value>Recording ID match</value></data>
   <data name="OnlineMetadata.Mapping.Confidence.Unmatched" xml:space="preserve"><value>Unmatched</value></data>
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.Ambiguous" xml:space="preserve"><value>Multiple release tracks share the best score.</value></data>
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.Metadata" xml:space="preserve"><value>Metadata suggestion</value></data>

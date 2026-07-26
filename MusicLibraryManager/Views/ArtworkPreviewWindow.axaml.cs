@@ -40,9 +40,7 @@ public partial class ArtworkPreviewWindow : Window
             PreviewImage,
             LocalizedText.Format(
                 "ArtworkPreview.AutomationFormat",
-                label.ToLower(
-                    System.Globalization.CultureInfo
-                        .CurrentUICulture)));
+                label));
         PreviewImage.Source = bitmap;
         PreviewDetails.Text = LocalizedText.Format(
             "ArtworkPreview.DetailsFormat",

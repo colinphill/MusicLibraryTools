@@ -77,10 +77,10 @@
     <value>アートワーク</value>
   </data>
   <data name="ArtworkPreview.WindowTitleFormat" xml:space="preserve">
-    <value>{0} のアートワークプレビュー</value>
+    <value>アートワークのプレビュー：{0}</value>
   </data>
   <data name="ArtworkPreview.AutomationFormat" xml:space="preserve">
-    <value>フル解像度の {0} アートワーク</value>
+    <value>フル解像度のアートワーク：{0}</value>
   </data>
   <data name="ArtworkPreview.DetailsFormat" xml:space="preserve">
     <value>{0:N0} × {1:N0} ピクセル · {2} · {3}</value>
@@ -125,7 +125,7 @@
     <value>UTF-8</value>
   </data>
   <data name="Technical.Encoding.Utf8WithBom" xml:space="preserve">
-    <value>UTF-8 付き BOM</value>
+    <value>BOM 付き UTF-8</value>
   </data>
   <data name="Technical.Encoding.Utf16" xml:space="preserve">
     <value>UTF-16</value>
@@ -167,7 +167,7 @@
     <value>戻る</value>
   </data>
   <data name="Common.Browse" xml:space="preserve">
-    <value>参照</value>
+    <value>参照…</value>
   </data>
   <data name="Common.Cancel" xml:space="preserve">
     <value>キャンセル</value>
@@ -605,31 +605,31 @@
     <value>警告</value>
   </data>
   <data name="FieldsEditor.AddField" xml:space="preserve">
-    <value>追加 フィールド</value>
+    <value>標準フィールドを追加</value>
   </data>
   <data name="FieldsEditor.AddUserString" xml:space="preserve">
-    <value>ユーザー文字列を追加</value>
+    <value>カスタムテキストフィールドを追加</value>
   </data>
   <data name="FieldsEditor.FieldToAddAutomation" xml:space="preserve">
-    <value>追加するメタデータフィールド</value>
+    <value>標準メタデータフィールド</value>
   </data>
   <data name="FieldsEditor.MixedValuesPlaceholder" xml:space="preserve">
-    <value>値が混在しています。1 行に 1 つの値を入力</value>
+    <value>複数の値があります。1 行に 1 つ入力してください</value>
   </data>
   <data name="FieldsEditor.UserStringName" xml:space="preserve">
-    <value>ユーザー文字列名</value>
+    <value>カスタムフィールド名</value>
   </data>
   <data name="Home.Action.OpenHealth" xml:space="preserve">
-    <value>開く 健全性</value>
+    <value>健全性を開く</value>
   </data>
   <data name="Home.Action.OpenLibrary" xml:space="preserve">
-    <value>開く ライブラリ</value>
+    <value>ライブラリを開く</value>
   </data>
   <data name="Home.Action.Refresh" xml:space="preserve">
     <value>更新</value>
   </data>
   <data name="Home.Action.ReviewConfiguration" xml:space="preserve">
-    <value>確認 構成</value>
+    <value>構成を確認</value>
   </data>
   <data name="Home.Action.SetUpLibrary" xml:space="preserve">
     <value>ライブラリを設定</value>
@@ -638,7 +638,7 @@
     <value>構成を選択または作成</value>
   </data>
   <data name="Home.Empty.Description" xml:space="preserve">
-    <value>音楽を参照、監査、整理する前に構成を接続してください。セットアップ中に既存のファイルが変更されることはありません。</value>
+    <value>音楽を参照、監査、整理する前に構成を選択または作成してください。設定しても既存のファイルは変更されません。</value>
   </data>
   <data name="Home.Empty.Title" xml:space="preserve">
     <value>音楽ライブラリを設定</value>
@@ -647,40 +647,40 @@
     <value>キャンセル</value>
   </data>
   <data name="Home.Indexing.IndexLibrary" xml:space="preserve">
-    <value>インデックス ライブラリ</value>
+    <value>ライブラリをインデックス化</value>
   </data>
   <data name="Home.Indexing.Scanning" xml:space="preserve">
-    <value>スキャン中 ライブラリ</value>
+    <value>ライブラリをスキャンしています</value>
   </data>
   <data name="Home.Indexing.Title" xml:space="preserve">
-    <value>インデックス作成中</value>
+    <value>インデックス作成</value>
   </data>
   <data name="Home.Metric.AlbumArtists" xml:space="preserve">
-    <value>アルバム アーティスト</value>
+    <value>アルバムアーティスト</value>
   </data>
   <data name="Home.Metric.Albums" xml:space="preserve">
     <value>アルバム</value>
   </data>
   <data name="Home.Metric.ArtworkCached" xml:space="preserve">
-    <value>アートワーク キャッシュ済み</value>
+    <value>キャッシュ済みアートワーク</value>
   </data>
   <data name="Home.Metric.LastSuccessfulIndex" xml:space="preserve">
-    <value>前回成功したインデックス作成</value>
+    <value>前回成功したインデックス</value>
   </data>
   <data name="Home.Metric.RootsNeedingAttention" xml:space="preserve">
-    <value>要確認のルート</value>
+    <value>確認が必要なルート</value>
   </data>
   <data name="Home.Metric.Tracks" xml:space="preserve">
     <value>トラック</value>
   </data>
   <data name="Home.RecentActivity.Title" xml:space="preserve">
-    <value>最近 アクティビティ</value>
+    <value>最近のアクティビティ</value>
   </data>
   <data name="Home.Roots.Description" xml:space="preserve">
     <value>オフラインのルートでも、キャッシュ済みトラックは削除されません。利用可能になったら再接続してインデックスを作成してください。</value>
   </data>
   <data name="Home.Roots.Title" xml:space="preserve">
-    <value>ライブラリ ルート</value>
+    <value>ライブラリルート</value>
   </data>
   <data name="Home.Step.AddRoots.Description" xml:space="preserve">
     <value>音楽が保存されている場所を指定します。</value>
@@ -692,7 +692,7 @@
     <value>インデックス済みのコレクションを参照し、状態チェックを実行します。</value>
   </data>
   <data name="Home.Step.Browse.Title" xml:space="preserve">
-    <value>参照と確認</value>
+    <value>参照して確認</value>
   </data>
   <data name="Home.Step.ChooseConfiguration.Description" xml:space="preserve">
     <value>既存の XML ファイルを開くか、新しく作成します。</value>
@@ -1771,25 +1771,25 @@
     <value>メタデータワークベンチ</value>
   </data>
   <data name="Organize.Action.Apply" xml:space="preserve">
-    <value>適用 移動</value>
+    <value>移動を適用</value>
   </data>
   <data name="Organize.Action.Preview" xml:space="preserve">
     <value>プレビュー</value>
   </data>
   <data name="Organize.Empty.Description" xml:space="preserve">
-    <value>アクティブなライブラリをプレビューし、正規の場所へ移動する必要があるファイルを確認します。</value>
+    <value>アクティブなライブラリをプレビューして、標準の場所へ移動する必要があるファイルを確認します。</value>
   </data>
   <data name="Organize.Empty.Title" xml:space="preserve">
-    <value>予定されている移動はありません</value>
+    <value>予定された移動はありません</value>
   </data>
   <data name="Organize.PreviewReminder" xml:space="preserve">
     <value>適用する前にプレビューしてください</value>
   </data>
   <data name="Organize.PlannedCount.One" xml:space="preserve">
-    <value>移動予定 {0} 件</value>
+    <value>{0:N0} 件の移動を予定</value>
   </data>
   <data name="Organize.PlannedCount.Other" xml:space="preserve">
-    <value>移動予定 {0} 件</value>
+    <value>{0:N0} 件の移動を予定</value>
   </data>
   <data name="Organize.Subtitle" xml:space="preserve">
     <value>ロールバック保護を使用して、対象ファイルを標準のライブラリ構成へ移動します。</value>
@@ -2002,7 +2002,7 @@
     <value>アプリケーションの表示テキストをすぐに変更します。ライブラリのメタデータ、ファイル名、地域別の書式、解析、並べ替えには影響しません。現在は英語（米国）を利用できます。</value>
   </data>
   <data name="Activity.Cancelling" xml:space="preserve">
-    <value>キャンセル中…</value>
+    <value>キャンセルしています…</value>
   </data>
   <data name="Count.Files.One" xml:space="preserve">
     <value>{0:N0} ファイル</value>
@@ -2017,7 +2017,7 @@
     <value>スキャン履歴はまだありません。キャッシュ済みのライブラリはオフラインでも利用できます。</value>
   </data>
   <data name="Home.NotIndexedYet" xml:space="preserve">
-    <value>まだインデックスが作成されていません</value>
+    <value>まだインデックス化されていません</value>
   </data>
   <data name="Home.RefreshFailed" xml:space="preserve">
     <value>ライブラリの概要を更新できませんでした。</value>
@@ -2026,55 +2026,55 @@
     <value>正常 {0:N0} · 要確認 {1:N0} · オフライン {2:N0}</value>
   </data>
   <data name="Index.Activity.Preparing" xml:space="preserve">
-    <value>ライブラリのインデックスを準備中</value>
+    <value>ライブラリのインデックスを準備しています</value>
   </data>
   <data name="Index.Activity.Title" xml:space="preserve">
-    <value>インデックス ライブラリ</value>
+    <value>ライブラリをインデックス化</value>
   </data>
   <data name="Index.Phase.Artwork" xml:space="preserve">
-    <value>インデックス作成中 アートワーク</value>
+    <value>アートワークをインデックス化しています</value>
   </data>
   <data name="Index.Phase.Completed" xml:space="preserve">
     <value>完了</value>
   </data>
   <data name="Index.Phase.Database" xml:space="preserve">
-    <value>更新 キャッシュ</value>
+    <value>キャッシュを更新しています</value>
   </data>
   <data name="Index.Phase.Default" xml:space="preserve">
     <value>インデックス作成中</value>
   </data>
   <data name="Index.Phase.Enumeration" xml:space="preserve">
-    <value>検出項目 音楽</value>
+    <value>音楽を検索しています</value>
   </data>
   <data name="Index.Phase.Finalizing" xml:space="preserve">
     <value>最終処理中</value>
   </data>
   <data name="Index.Phase.Metadata" xml:space="preserve">
-    <value>読み取り中 メタデータ</value>
+    <value>メタデータを読み取っています</value>
   </data>
   <data name="Index.Phase.Preparing" xml:space="preserve">
     <value>準備中</value>
   </data>
   <data name="Index.Progress.FoundFormat" xml:space="preserve">
-    <value>{0:N0} 検出</value>
+    <value>{0:N0} 件検出</value>
   </data>
   <data name="Index.Progress.ReadFormat" xml:space="preserve">
-    <value>{0:N0} 読み取る</value>
+    <value>{0:N0} 件読み取り済み</value>
   </data>
   <data name="Index.Progress.SavedFormat" xml:space="preserve">
-    <value>{0:N0} 保存済み</value>
+    <value>{0:N0} 件保存済み</value>
   </data>
   <data name="Index.Progress.Scanning" xml:space="preserve">
     <value>スキャン中…</value>
   </data>
   <data name="Index.Status.CachedLibraryReady" xml:space="preserve">
-    <value>キャッシュ済みライブラリを利用できます。都合のよいときにインデックスを作成してください。</value>
+    <value>キャッシュされたライブラリを使用できます。都合のよいときにインデックスを作成してください。</value>
   </data>
   <data name="Index.Status.Cancelled" xml:space="preserve">
     <value>インデックス作成をキャンセルしました。安全に確定された途中経過は保持されています。</value>
   </data>
   <data name="Index.Status.CompleteFormat" xml:space="preserve">
-    <value>インデックス完了: 追加 {0:N0}、更新 {1:N0}、削除 {2:N0}、変更なし {3:N0}</value>
+    <value>インデックス作成完了: 追加 {0:N0} 件、更新 {1:N0} 件、削除 {2:N0} 件、変更なし {3:N0} 件。</value>
   </data>
   <data name="Index.Status.Failed" xml:space="preserve">
     <value>インデックス作成に失敗しました。</value>
@@ -2110,58 +2110,58 @@
     <value>完了しました。</value>
   </data>
   <data name="Activity.HealthAnalysis" xml:space="preserve">
-    <value>健全性 分析</value>
+    <value>健全性分析</value>
   </data>
   <data name="Activity.Starting" xml:space="preserve">
-    <value>開始中…</value>
+    <value>開始しています…</value>
   </data>
   <data name="Activity.Working" xml:space="preserve">
-    <value>処理中…</value>
+    <value>処理しています…</value>
   </data>
   <data name="Dialog.CdDerivation.Action" xml:space="preserve">
     <value>生成</value>
   </data>
   <data name="Dialog.CdDerivation.MessageFormat" xml:space="preserve">
-    <value>{0} — 次の不足トラックを生成します: {1}</value>
+    <value>{0} — 利用可能なソーストラックから次の不足している CD 品質のトラックを生成します: {1}</value>
   </data>
   <data name="Dialog.CdDerivation.Title" xml:space="preserve">
-    <value>CD 派生を承認</value>
+    <value>不足している CD 品質のトラックを生成</value>
   </data>
   <data name="Dialog.Fields.LoadActivity" xml:space="preserve">
-    <value>メタデータフィールドを読み込み中</value>
+    <value>メタデータフィールドを読み込む</value>
   </data>
   <data name="Dialog.Fields.LoadedSelectedFiles.One" xml:space="preserve">
-    <value>選択した {0:N0} ファイルからフィールドを読み込みました</value>
+    <value>選択した {0:N0} 個のファイルからフィールドを読み込みました</value>
   </data>
   <data name="Dialog.Fields.LoadedSelectedFiles.Other" xml:space="preserve">
-    <value>選択した {0:N0} ファイルからフィールドを読み込みました</value>
+    <value>選択した {0:N0} 個のファイルからフィールドを読み込みました</value>
   </data>
   <data name="Dialog.Fields.LoadFailed" xml:space="preserve">
     <value>メタデータフィールドを読み込めませんでした。</value>
   </data>
   <data name="Dialog.Fields.ReadingSelectedFiles.One" xml:space="preserve">
-    <value>選択した {0:N0} ファイルからメタデータを読み取り中</value>
+    <value>選択した {0:N0} 個のファイルからメタデータを読み取っています</value>
   </data>
   <data name="Dialog.Fields.ReadingSelectedFiles.Other" xml:space="preserve">
-    <value>選択した {0:N0} ファイルからメタデータを読み取り中</value>
+    <value>選択した {0:N0} 個のファイルからメタデータを読み取っています</value>
   </data>
   <data name="Dialog.Purge.Action" xml:space="preserve">
-    <value>完全削除</value>
+    <value>完全に削除</value>
   </data>
   <data name="Dialog.Purge.MessageFormat" xml:space="preserve">
     <value>操作実行 {0:N0} 件、ファイル {1:N0} 件、{2:N0} バイトを完全に削除しますか？この操作は元に戻せません。</value>
   </data>
   <data name="Dialog.Purge.Title" xml:space="preserve">
-    <value>操作履歴を完全に消去</value>
+    <value>操作履歴を完全に削除</value>
   </data>
   <data name="Dialog.Restore.Action" xml:space="preserve">
     <value>復元</value>
   </data>
   <data name="Dialog.Restore.MessageFormat" xml:space="preserve">
-    <value>選択した {0:N0} 項目を復元しますか？既存の出力先 {1:N0} 件は競合バックアップとして保持されます。</value>
+    <value>選択した {0:N0} 個の項目を復元しますか？既存の復元先 {1:N0} 個は競合時のバックアップとして保持されます。</value>
   </data>
   <data name="Dialog.Restore.Title" xml:space="preserve">
-    <value>操作項目を復元</value>
+    <value>選択した項目を復元</value>
   </data>
   <data name="Settings.Title" xml:space="preserve">
     <value>設定</value>
@@ -4099,7 +4099,7 @@
     <value>作家</value>
   </data>
   <data name="Common.All" xml:space="preserve"><value>すべて</value></data>
-  <data name="Common.DiagnosticDetailFormat" xml:space="preserve"><value>技術的な詳細: {0}</value></data>
+  <data name="Common.DiagnosticDetailFormat" xml:space="preserve"><value>技術的な詳細：{0}</value></data>
   <data name="Common.Reload" xml:space="preserve"><value>再読み込み</value></data>
   <data name="Common.Restore" xml:space="preserve"><value>復元</value></data>
   <data name="Common.Run" xml:space="preserve"><value>実行</value></data>
@@ -4936,26 +4936,26 @@
   <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>取り込みがコミットされました。ライブラリのインデックスを再作成しています…</value></data>
   <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>ワークベンチ ファイルの選択がクリアされました。受信フォルダーを選択します。</value></data>
   <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>ドロップから選択されたソース フォルダー。プリフライトまたはプレビューを実行します。</value></data>
-  <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>組織計画を適用する</value></data>
-  <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>正規パスの計算</value></data>
-  <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>プレビュー 整理</value></data>
-  <data name="Organize.Dialog.Apply.Message.One" xml:space="preserve"><value>{0:N0} 計画された移動を適用しますか?リカバリが可能です。ジャーナルが書き込まれ、操作が終了しない場合は、完了した移動がロールバックされます。</value></data>
-  <data name="Organize.Dialog.Apply.Message.Other" xml:space="preserve"><value>{0:N0} の計画された動きを適用しますか?リカバリが可能です。ジャーナルが書き込まれ、操作が終了しない場合は完了した移動がロールバックされます。</value></data>
-  <data name="Organize.Dialog.Apply.Primary" xml:space="preserve"><value>適用 移動</value></data>
-  <data name="Organize.Dialog.Apply.Title" xml:space="preserve"><value>組織計画を適用する</value></data>
-  <data name="Organize.Status.AlreadyCanonical" xml:space="preserve"><value>図書館は現在の方針に従ってすでに組織されています。</value></data>
-  <data name="Organize.Status.ApplyCancelled" xml:space="preserve"><value>組織はキャンセルされました。完了した移動はライブラリに反映されたままになります。</value></data>
-  <data name="Organize.Status.ApplyComplete" xml:space="preserve"><value>適用された移動: {0:N0}。</value></data>
-  <data name="Organize.Status.ApplyFailed" xml:space="preserve"><value>組織計画を適用できませんでした。</value></data>
-  <data name="Organize.Status.ApplyPartial" xml:space="preserve"><value>移動: {0:N0};失敗しました: {1:N0}。</value></data>
-  <data name="Organize.Status.Computing" xml:space="preserve"><value>正規パスを計算しています…</value></data>
-  <data name="Organize.Status.Moving" xml:space="preserve"><value>ファイルの移動: {0:N0}/{1:N0}。</value></data>
-  <data name="Organize.Status.NoEligibleRoots" xml:space="preserve"><value>自動編成に適格なライブラリ ルートが構成されていません。</value></data>
-  <data name="Organize.Status.PreviewCancelled" xml:space="preserve"><value>組織のプレビューがキャンセルされました。</value></data>
-  <data name="Organize.Status.PreviewFailed" xml:space="preserve"><value>組織のプレビューを完了できませんでした。</value></data>
-  <data name="Organize.Status.PreviewMoves.One" xml:space="preserve"><value>{0:N0} の移動はレビューの準備ができています。</value></data>
-  <data name="Organize.Status.PreviewMoves.Other" xml:space="preserve"><value>{0:N0} の移動はレビューの準備ができています。</value></data>
-  <data name="Organize.Status.Ready" xml:space="preserve"><value>ライブラリを整理するために必要な動きをプレビューします。</value></data>
+  <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>整理プランを適用</value></data>
+  <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>標準パスを計算しています</value></data>
+  <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>整理プランをプレビュー</value></data>
+  <data name="Organize.Dialog.Apply.Message.One" xml:space="preserve"><value>{0:N0} 件の予定された移動を適用しますか？復元できるようにジャーナルが記録され、操作が完了しなかった場合は完了済みの移動が元に戻されます。</value></data>
+  <data name="Organize.Dialog.Apply.Message.Other" xml:space="preserve"><value>{0:N0} 件の予定された移動を適用しますか？復元できるようにジャーナルが記録され、操作が完了しなかった場合は完了済みの移動が元に戻されます。</value></data>
+  <data name="Organize.Dialog.Apply.Primary" xml:space="preserve"><value>移動を適用</value></data>
+  <data name="Organize.Dialog.Apply.Title" xml:space="preserve"><value>整理プランを適用</value></data>
+  <data name="Organize.Status.AlreadyCanonical" xml:space="preserve"><value>ライブラリは現在のポリシーに従って整理されています。</value></data>
+  <data name="Organize.Status.ApplyCancelled" xml:space="preserve"><value>整理をキャンセルしました。完了した移動は引き続きライブラリに反映されます。</value></data>
+  <data name="Organize.Status.ApplyComplete" xml:space="preserve"><value>適用した移動: {0:N0} 件。</value></data>
+  <data name="Organize.Status.ApplyFailed" xml:space="preserve"><value>整理プランを適用できませんでした。</value></data>
+  <data name="Organize.Status.ApplyPartial" xml:space="preserve"><value>移動済み: {0:N0} 件、失敗: {1:N0} 件。</value></data>
+  <data name="Organize.Status.Computing" xml:space="preserve"><value>標準パスを計算しています…</value></data>
+  <data name="Organize.Status.Moving" xml:space="preserve"><value>ファイルを移動しています: {0:N0}/{1:N0}。</value></data>
+  <data name="Organize.Status.NoEligibleRoots" xml:space="preserve"><value>自動整理に使用できるライブラリルートが構成されていません。</value></data>
+  <data name="Organize.Status.PreviewCancelled" xml:space="preserve"><value>整理のプレビューをキャンセルしました。</value></data>
+  <data name="Organize.Status.PreviewFailed" xml:space="preserve"><value>整理のプレビューを完了できませんでした。</value></data>
+  <data name="Organize.Status.PreviewMoves.One" xml:space="preserve"><value>{0:N0} 件の移動を確認できます。</value></data>
+  <data name="Organize.Status.PreviewMoves.Other" xml:space="preserve"><value>{0:N0} 件の移動を確認できます。</value></data>
+  <data name="Organize.Status.Ready" xml:space="preserve"><value>ライブラリの整理に必要な移動をプレビューします。</value></data>
   <data name="Inspector.View.AddArtwork" xml:space="preserve"><value>アートワークを追加…</value></data>
   <data name="Inspector.View.AddArtworkAutomation" xml:space="preserve"><value>アートワークを追加</value></data>
   <data name="Inspector.View.Artwork" xml:space="preserve"><value>アートワーク</value></data>
@@ -6078,25 +6078,25 @@
   <data name="MetadataEditor.Validation.ChooseOperationAndField" xml:space="preserve"><value>操作とフィールドを選択してください。</value></data>
   <data name="MetadataEditor.Validation.PlanRequired" xml:space="preserve"><value>少なくとも 1 つのメタデータプランが必要です。</value></data>
   <data name="OnlineMetadata.AudioDiscovery.RecipeName" xml:space="preserve"><value>オーディオ識別子: {0}</value></data>
-  <data name="OnlineMetadata.AudioDiscovery.Status.CachedCandidate" xml:space="preserve"><value>キャッシュ済み 候補</value></data>
+  <data name="OnlineMetadata.AudioDiscovery.Status.CachedCandidate" xml:space="preserve"><value>キャッシュ済み候補</value></data>
   <data name="OnlineMetadata.AudioDiscovery.Status.Candidate" xml:space="preserve"><value>候補</value></data>
   <data name="OnlineMetadata.AudioDiscovery.Status.CandidateWithoutRecordingId" xml:space="preserve"><value>候補に MusicBrainz 録音 ID がありません</value></data>
-  <data name="OnlineMetadata.AudioDiscovery.Status.NoMatch" xml:space="preserve"><value>AcoustID は一致しません</value></data>
-  <data name="OnlineMetadata.AudioDiscovery.Status.OfflineCachedCandidate" xml:space="preserve"><value>オフラインでキャッシュされた候補</value></data>
-  <data name="OnlineMetadata.AudioDiscovery.Validation.SelectMatchedCandidate" xml:space="preserve"><value>一致する AcoustID 候補を選択します。</value></data>
+  <data name="OnlineMetadata.AudioDiscovery.Status.NoMatch" xml:space="preserve"><value>AcoustID の一致なし</value></data>
+  <data name="OnlineMetadata.AudioDiscovery.Status.OfflineCachedCandidate" xml:space="preserve"><value>オフラインのキャッシュ済み候補</value></data>
+  <data name="OnlineMetadata.AudioDiscovery.Validation.SelectMatchedCandidate" xml:space="preserve"><value>一致した AcoustID 候補を選択してください。</value></data>
   <data name="OnlineMetadata.CoverArt.Role.OtherRole" xml:space="preserve"><value>その他</value></data>
-  <data name="OnlineMetadata.Discogs.MappingStatus.Ambiguous" xml:space="preserve"><value>複数の Discogs トラックが最高のスコアを共有します。</value></data>
-  <data name="OnlineMetadata.Discogs.MappingStatus.Metadata" xml:space="preserve"><value>メタデータ 提案</value></data>
-  <data name="OnlineMetadata.Discogs.MappingStatus.Unmatched" xml:space="preserve"><value>信頼できる Discogs リリース トラックの一致が見つかりませんでした。</value></data>
+  <data name="OnlineMetadata.Discogs.MappingStatus.Ambiguous" xml:space="preserve"><value>複数の Discogs トラックが同じ最高スコアです。</value></data>
+  <data name="OnlineMetadata.Discogs.MappingStatus.Metadata" xml:space="preserve"><value>メタデータ候補</value></data>
+  <data name="OnlineMetadata.Discogs.MappingStatus.Unmatched" xml:space="preserve"><value>信頼できる Discogs リリーストラックの一致が見つかりませんでした。</value></data>
   <data name="OnlineMetadata.Discogs.Validation.InvalidReleaseId" xml:space="preserve"><value>Discogs リリース ID は正の数である必要があります。</value></data>
   <data name="OnlineMetadata.Mapping.Confidence.Ambiguous" xml:space="preserve"><value>あいまい</value></data>
-  <data name="OnlineMetadata.Mapping.Confidence.Metadata" xml:space="preserve"><value>メタデータ</value></data>
-  <data name="OnlineMetadata.Mapping.Confidence.RecordingId" xml:space="preserve"><value>録音 ID</value></data>
-  <data name="OnlineMetadata.Mapping.Confidence.Unmatched" xml:space="preserve"><value>未一致</value></data>
-  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Ambiguous" xml:space="preserve"><value>複数のリリース トラックがベスト スコアを共有します。</value></data>
-  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Metadata" xml:space="preserve"><value>メタデータ 提案</value></data>
-  <data name="OnlineMetadata.MusicBrainz.MappingStatus.RecordingId" xml:space="preserve"><value>MusicBrainz 録音 ID が完全一致</value></data>
-  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Unmatched" xml:space="preserve"><value>信頼できるリリース トラックの一致は見つかりませんでした。</value></data>
+  <data name="OnlineMetadata.Mapping.Confidence.Metadata" xml:space="preserve"><value>メタデータ一致</value></data>
+  <data name="OnlineMetadata.Mapping.Confidence.RecordingId" xml:space="preserve"><value>録音 ID 一致</value></data>
+  <data name="OnlineMetadata.Mapping.Confidence.Unmatched" xml:space="preserve"><value>一致なし</value></data>
+  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Ambiguous" xml:space="preserve"><value>複数のリリーストラックが同じ最高スコアです。</value></data>
+  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Metadata" xml:space="preserve"><value>メタデータ候補</value></data>
+  <data name="OnlineMetadata.MusicBrainz.MappingStatus.RecordingId" xml:space="preserve"><value>完全一致する MusicBrainz 録音 ID</value></data>
+  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Unmatched" xml:space="preserve"><value>信頼できるリリーストラックの一致が見つかりませんでした。</value></data>
   <data name="OnlineMetadata.MusicBrainz.Validation.InvalidReleaseId" xml:space="preserve"><value>MusicBrainz リリース ID は有効な GUID ではありません。</value></data>
   <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>設定されたメディアカタログ</value></data>
   <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>いいえ 宛先</value></data>
@@ -6114,18 +6114,18 @@
   <data name="About.Mission.Title" xml:space="preserve"><value>長く使える音楽ライブラリのために</value></data>
   <data name="About.Mission.Description" xml:space="preserve"><value>透明で確認可能な変更により、コレクションを調査、強化、保護します。</value></data>
   <data name="About.OpenSource.Title" xml:space="preserve"><value>オープンソースの基盤</value></data>
-  <data name="About.OpenSource.Description" xml:space="preserve"><value>Music Library Manager は、これらの参照パッケージによって部分的に可能になります。</value></data>
+  <data name="About.OpenSource.Description" xml:space="preserve"><value>Music Library Manager は、これらの参照パッケージによって支えられています。</value></data>
   <data name="About.Package.VersionFormat" xml:space="preserve"><value>バージョン {0}</value></data>
   <data name="About.Package.Avalonia.Name" xml:space="preserve"><value>Avalonia UI</value></data>
   <data name="About.Package.Avalonia.Identity" xml:space="preserve"><value>パッケージファミリー：Avalonia</value></data>
   <data name="About.Package.Avalonia.Description" xml:space="preserve"><value>応答性の高いネイティブデスクトップ体験を実現する、クロスプラットフォームのユーザーインターフェイスフレームワーク。</value></data>
   <data name="About.Package.Avalonia.LicenseName" xml:space="preserve"><value>MIT License</value></data>
-  <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Avalonia UI ライセンス契約</value></data>
-  <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>Avalonia UI ライセンス契約をコピーします</value></data>
-  <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>完全な Avalonia UI ライセンス テキスト</value></data>
+  <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Avalonia UI のライセンス契約</value></data>
+  <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>Avalonia UI のライセンス契約をコピー</value></data>
+  <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>Avalonia UI の完全なライセンステキスト</value></data>
   <data name="About.Package.SkiaSharp.Name" xml:space="preserve"><value>SkiaSharp</value></data>
   <data name="About.Package.SkiaSharp.Identity" xml:space="preserve"><value>パッケージ：SkiaSharp</value></data>
-  <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>アートワークの検査と最適化のためのクロスプラットフォームの 2D グラフィックスおよび画像処理ライブラリ。</value></data>
+  <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>アートワークの確認と最適化に使用する、クロスプラットフォーム対応の2Dグラフィックスおよび画像処理ライブラリです。</value></data>
   <data name="About.Package.SkiaSharp.LicenseName" xml:space="preserve"><value>MIT License</value></data>
   <data name="About.Package.SkiaSharp.LicenseAutomation" xml:space="preserve"><value>SkiaSharp の使用許諾契約</value></data>
   <data name="About.Package.SkiaSharp.CopyAutomation" xml:space="preserve"><value>SkiaSharp の使用許諾契約をコピー</value></data>

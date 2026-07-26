@@ -84,17 +84,19 @@ Twelve of those resources have stronger focused-editorial evidence, so status
 precedence leaves 115 manifest entries as `InvariantApproved`:
 
 ```text
-Pending=2,582
+Pending=2,412
 InvariantApproved=115
-GlossaryReviewed=0
-EditorialReviewed=847
+GlossaryReviewed=8
+EditorialReviewed=1,009
 ```
 
 `FocusedEditorialReviewEvidence.v1.xml` independently records the exact 847
 ordered keys and catalog digests, the two source commits, review metadata, and
-an aggregate identity. Ordinary manifest refresh and CI validation load this
-checked-in evidence, so they do not require historical Git objects and work in
-shallow clones:
+an aggregate identity. A later digest-bound packet batch records another 162
+editorial overrides and eight reviewed built-in format labels directly in the
+manifest. Ordinary manifest refresh preserves those current packet approvals
+while loading the checked-in evidence, so CI does not require historical Git
+objects and works in shallow clones:
 
 ```powershell
 dotnet run --project BuildTools\LocalizationCatalogGenerator `

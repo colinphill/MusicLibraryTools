@@ -80,7 +80,7 @@
     <value>Aperçu de l’illustration : {0}</value>
   </data>
   <data name="ArtworkPreview.AutomationFormat" xml:space="preserve">
-    <value>Illustration {0} en pleine résolution</value>
+    <value>Illustration en pleine résolution : {0}</value>
   </data>
   <data name="ArtworkPreview.DetailsFormat" xml:space="preserve">
     <value>{0:N0} × {1:N0} pixels · {2} · {3}</value>
@@ -152,7 +152,7 @@
     <value>ID3v2.4</value>
   </data>
   <data name="Technical.MusicBrainzIds" xml:space="preserve">
-    <value>MusicBrainz ID</value>
+    <value>Identifiants MusicBrainz</value>
   </data>
   <data name="Common.ApplyReviewedPlan" xml:space="preserve">
     <value>Appliquer le plan vérifié</value>
@@ -167,7 +167,7 @@
     <value>Retour</value>
   </data>
   <data name="Common.Browse" xml:space="preserve">
-    <value>Parcourir</value>
+    <value>Parcourir…</value>
   </data>
   <data name="Common.Cancel" xml:space="preserve">
     <value>Annuler</value>
@@ -596,7 +596,7 @@
     <value>Erreur</value>
   </data>
   <data name="Dialog.Tone.Information" xml:space="preserve">
-    <value>Information</value>
+    <value>Informations</value>
   </data>
   <data name="Dialog.Tone.Success" xml:space="preserve">
     <value>Réussite</value>
@@ -605,22 +605,22 @@
     <value>Avertissement</value>
   </data>
   <data name="FieldsEditor.AddField" xml:space="preserve">
-    <value>Ajouter un champ</value>
+    <value>Ajouter un champ standard</value>
   </data>
   <data name="FieldsEditor.AddUserString" xml:space="preserve">
-    <value>Ajouter une chaîne utilisateur</value>
+    <value>Ajouter un champ de texte personnalisé</value>
   </data>
   <data name="FieldsEditor.FieldToAddAutomation" xml:space="preserve">
-    <value>Champ de métadonnées à ajouter</value>
+    <value>Champ de métadonnées standard</value>
   </data>
   <data name="FieldsEditor.MixedValuesPlaceholder" xml:space="preserve">
-    <value>Valeurs mixtes ; une valeur par ligne</value>
+    <value>Valeurs différentes ; une valeur par ligne</value>
   </data>
   <data name="FieldsEditor.UserStringName" xml:space="preserve">
-    <value>Nom de la chaîne utilisateur</value>
+    <value>Nom du champ personnalisé</value>
   </data>
   <data name="Home.Action.OpenHealth" xml:space="preserve">
-    <value>Ouvrir l’intégrité</value>
+    <value>Ouvrir Santé</value>
   </data>
   <data name="Home.Action.OpenLibrary" xml:space="preserve">
     <value>Ouvrir la bibliothèque</value>
@@ -638,7 +638,7 @@
     <value>Choisir ou créer une configuration</value>
   </data>
   <data name="Home.Empty.Description" xml:space="preserve">
-    <value>Connectez une configuration avant de parcourir, d’auditer ou d’organiser votre musique. Vos fichiers existants ne sont pas modifiés pendant la configuration.</value>
+    <value>Choisissez ou créez une configuration avant de parcourir, d’auditer ou d’organiser la musique. La configuration ne modifie pas vos fichiers existants.</value>
   </data>
   <data name="Home.Empty.Title" xml:space="preserve">
     <value>Configurez votre bibliothèque musicale</value>
@@ -686,7 +686,7 @@
     <value>Indiquez où votre musique est stockée.</value>
   </data>
   <data name="Home.Step.AddRoots.Title" xml:space="preserve">
-    <value>Ajouter des racines de bibliothèque</value>
+    <value>Ajouter les racines de la bibliothèque</value>
   </data>
   <data name="Home.Step.Browse.Description" xml:space="preserve">
     <value>Parcourez la collection indexée et lancez un audit d’état.</value>
@@ -1777,19 +1777,19 @@
     <value>Aperçu</value>
   </data>
   <data name="Organize.Empty.Description" xml:space="preserve">
-    <value>Prévisualisez la bibliothèque active pour afficher les fichiers qui doivent être placés à des emplacements canoniques.</value>
+    <value>Affichez un aperçu de la bibliothèque active pour voir les fichiers qui doivent être placés à leur emplacement canonique.</value>
   </data>
   <data name="Organize.Empty.Title" xml:space="preserve">
     <value>Aucun déplacement planifié</value>
   </data>
   <data name="Organize.PreviewReminder" xml:space="preserve">
-    <value>Prévisualiser avant d’appliquer</value>
+    <value>Affichez un aperçu avant d’appliquer</value>
   </data>
   <data name="Organize.PlannedCount.One" xml:space="preserve">
-    <value>{0} déplacement planifié</value>
+    <value>{0:N0} déplacement planifié</value>
   </data>
   <data name="Organize.PlannedCount.Other" xml:space="preserve">
-    <value>{0} déplacements planifiés</value>
+    <value>{0:N0} déplacements planifiés</value>
   </data>
   <data name="Organize.Subtitle" xml:space="preserve">
     <value>Déplacer les fichiers admissibles vers l’organisation canonique de la bibliothèque avec possibilité de revenir en arrière.</value>
@@ -2056,28 +2056,28 @@
     <value>Préparation</value>
   </data>
   <data name="Index.Progress.FoundFormat" xml:space="preserve">
-    <value>{0:N0} trouvé</value>
+    <value>{0:N0} trouvés</value>
   </data>
   <data name="Index.Progress.ReadFormat" xml:space="preserve">
     <value>{0:N0} lus</value>
   </data>
   <data name="Index.Progress.SavedFormat" xml:space="preserve">
-    <value>{0:N0} enregistré</value>
+    <value>{0:N0} enregistrés</value>
   </data>
   <data name="Index.Progress.Scanning" xml:space="preserve">
-    <value>Analyse…</value>
+    <value>Analyse en cours…</value>
   </data>
   <data name="Index.Status.CachedLibraryReady" xml:space="preserve">
-    <value>La bibliothèque en cache est prête. Indexez-la lorsque cela vous convient.</value>
+    <value>La bibliothèque mise en cache est prête. Indexez-la quand vous le souhaitez.</value>
   </data>
   <data name="Index.Status.Cancelled" xml:space="preserve">
-    <value>L’indexation a été annulée ; la progression partielle validée de manière sûre a été conservée.</value>
+    <value>L’indexation a été annulée ; la progression partielle validée en toute sécurité a été conservée.</value>
   </data>
   <data name="Index.Status.CompleteFormat" xml:space="preserve">
-    <value>Indexation terminée : +{0:N0}, ~{1:N0}, -{2:N0}, {3:N0} inchangés.</value>
+    <value>Indexation terminée : {0:N0} ajoutés, {1:N0} mis à jour, {2:N0} supprimés et {3:N0} inchangés.</value>
   </data>
   <data name="Index.Status.Failed" xml:space="preserve">
-    <value>Échec de l’indexation.</value>
+    <value>L’indexation a échoué.</value>
   </data>
   <data name="Index.Status.LoadConfiguration" xml:space="preserve">
     <value>Chargez une configuration pour commencer.</value>
@@ -2110,22 +2110,22 @@
     <value>Terminé.</value>
   </data>
   <data name="Activity.HealthAnalysis" xml:space="preserve">
-    <value>Analyse de l’intégrité</value>
+    <value>Analyse de l’état</value>
   </data>
   <data name="Activity.Starting" xml:space="preserve">
     <value>Démarrage…</value>
   </data>
   <data name="Activity.Working" xml:space="preserve">
-    <value>Traitement en cours…</value>
+    <value>Traitement…</value>
   </data>
   <data name="Dialog.CdDerivation.Action" xml:space="preserve">
     <value>Générer</value>
   </data>
   <data name="Dialog.CdDerivation.MessageFormat" xml:space="preserve">
-    <value>{0} — Générer les pistes manquantes ci-dessous : {1}</value>
+    <value>{0} — Générer les pistes de qualité CD manquantes suivantes à partir des pistes sources disponibles : {1}</value>
   </data>
   <data name="Dialog.CdDerivation.Title" xml:space="preserve">
-    <value>Confirmer la dérivation du CD</value>
+    <value>Générer les pistes de qualité CD manquantes</value>
   </data>
   <data name="Dialog.Fields.LoadActivity" xml:space="preserve">
     <value>Charger les champs de métadonnées</value>
@@ -2137,7 +2137,7 @@
     <value>Champs chargés depuis {0:N0} fichiers sélectionnés</value>
   </data>
   <data name="Dialog.Fields.LoadFailed" xml:space="preserve">
-    <value>Impossible de charger les champs de métadonnées.</value>
+    <value>Les champs de métadonnées n’ont pas pu être chargés.</value>
   </data>
   <data name="Dialog.Fields.ReadingSelectedFiles.One" xml:space="preserve">
     <value>Lecture des métadonnées de {0:N0} fichier sélectionné</value>
@@ -2158,10 +2158,10 @@
     <value>Restaurer</value>
   </data>
   <data name="Dialog.Restore.MessageFormat" xml:space="preserve">
-    <value>Restaurer {0:N0} éléments sélectionnés ? {1:N0} destinations existantes seront conservées comme sauvegardes en cas de conflit.</value>
+    <value>Restaurer {0:N0} éléments sélectionnés ? {1:N0} destinations existantes seront conservées comme sauvegardes en cas de collision.</value>
   </data>
   <data name="Dialog.Restore.Title" xml:space="preserve">
-    <value>Restaurer des éléments d’opération</value>
+    <value>Restaurer les éléments sélectionnés</value>
   </data>
   <data name="Settings.Title" xml:space="preserve">
     <value>paramètres</value>
@@ -4938,24 +4938,24 @@
   <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>source dossier sélectionné depuis déposer. exécuter contrôle préalable ou aperçu.</value></data>
   <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>Appliquer le plan d’organisation</value></data>
   <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>Calcul des chemins canoniques</value></data>
-  <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>Aperçu de l’organisation</value></data>
-  <data name="Organize.Dialog.Apply.Message.One" xml:space="preserve"><value>Appliquer {0:N0} déplacement planifié ? La récupération est disponible : un journal sera écrit et le déplacement terminé sera annulé si l’opération n’aboutit pas.</value></data>
-  <data name="Organize.Dialog.Apply.Message.Other" xml:space="preserve"><value>Appliquer {0:N0} déplacements planifiés ? La récupération est disponible : un journal sera écrit et les déplacements terminés seront annulés si l’opération n’aboutit pas.</value></data>
+  <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>Aperçu du plan d’organisation</value></data>
+  <data name="Organize.Dialog.Apply.Message.One" xml:space="preserve"><value>Appliquer {0:N0} déplacement planifié ? Une restauration est possible : un journal sera écrit et le déplacement terminé sera annulé si l’opération n’aboutit pas.</value></data>
+  <data name="Organize.Dialog.Apply.Message.Other" xml:space="preserve"><value>Appliquer {0:N0} déplacements planifiés ? Une restauration est possible : un journal sera écrit et les déplacements terminés seront annulés si l’opération n’aboutit pas.</value></data>
   <data name="Organize.Dialog.Apply.Primary" xml:space="preserve"><value>Appliquer les déplacements</value></data>
   <data name="Organize.Dialog.Apply.Title" xml:space="preserve"><value>Appliquer le plan d’organisation</value></data>
   <data name="Organize.Status.AlreadyCanonical" xml:space="preserve"><value>La bibliothèque est déjà organisée conformément à la stratégie actuelle.</value></data>
   <data name="Organize.Status.ApplyCancelled" xml:space="preserve"><value>L’organisation a été annulée. Les déplacements terminés restent reflétés dans la bibliothèque.</value></data>
   <data name="Organize.Status.ApplyComplete" xml:space="preserve"><value>Déplacements appliqués : {0:N0}.</value></data>
-  <data name="Organize.Status.ApplyFailed" xml:space="preserve"><value>Impossible d’appliquer le plan d’organisation.</value></data>
+  <data name="Organize.Status.ApplyFailed" xml:space="preserve"><value>Le plan d’organisation n’a pas pu être appliqué.</value></data>
   <data name="Organize.Status.ApplyPartial" xml:space="preserve"><value>Déplacés : {0:N0} ; échecs : {1:N0}.</value></data>
   <data name="Organize.Status.Computing" xml:space="preserve"><value>Calcul des chemins canoniques…</value></data>
   <data name="Organize.Status.Moving" xml:space="preserve"><value>Déplacement des fichiers : {0:N0}/{1:N0}.</value></data>
   <data name="Organize.Status.NoEligibleRoots" xml:space="preserve"><value>Aucune racine de bibliothèque admissible n’est configurée pour l’organisation automatique.</value></data>
   <data name="Organize.Status.PreviewCancelled" xml:space="preserve"><value>L’aperçu de l’organisation a été annulé.</value></data>
-  <data name="Organize.Status.PreviewFailed" xml:space="preserve"><value>Impossible de terminer l’aperçu de l’organisation.</value></data>
+  <data name="Organize.Status.PreviewFailed" xml:space="preserve"><value>L’aperçu de l’organisation n’a pas pu être terminé.</value></data>
   <data name="Organize.Status.PreviewMoves.One" xml:space="preserve"><value>{0:N0} déplacement est prêt à être vérifié.</value></data>
   <data name="Organize.Status.PreviewMoves.Other" xml:space="preserve"><value>{0:N0} déplacements sont prêts à être vérifiés.</value></data>
-  <data name="Organize.Status.Ready" xml:space="preserve"><value>Prévisualisez les déplacements nécessaires pour organiser la bibliothèque.</value></data>
+  <data name="Organize.Status.Ready" xml:space="preserve"><value>Affichez un aperçu des déplacements nécessaires pour organiser la bibliothèque.</value></data>
   <data name="Inspector.View.AddArtwork" xml:space="preserve"><value>ajouter illustration...</value></data>
   <data name="Inspector.View.AddArtworkAutomation" xml:space="preserve"><value>Ajouter une illustration</value></data>
   <data name="Inspector.View.Artwork" xml:space="preserve"><value>Illustration</value></data>
@@ -6078,31 +6078,31 @@
   <data name="MetadataEditor.Validation.ChooseOperationAndField" xml:space="preserve"><value>Choisissez une opération et un champ.</value></data>
   <data name="MetadataEditor.Validation.PlanRequired" xml:space="preserve"><value>Au moins un plan de métadonnées est requis.</value></data>
   <data name="OnlineMetadata.AudioDiscovery.RecipeName" xml:space="preserve"><value>Identifiants audio : {0}</value></data>
-  <data name="OnlineMetadata.AudioDiscovery.Status.CachedCandidate" xml:space="preserve"><value>Candidat en cache</value></data>
-  <data name="OnlineMetadata.AudioDiscovery.Status.Candidate" xml:space="preserve"><value>candidat</value></data>
-  <data name="OnlineMetadata.AudioDiscovery.Status.CandidateWithoutRecordingId" xml:space="preserve"><value>Le candidat ne possède aucun ID d’enregistrement MusicBrainz</value></data>
+  <data name="OnlineMetadata.AudioDiscovery.Status.CachedCandidate" xml:space="preserve"><value>Correspondance candidate en cache</value></data>
+  <data name="OnlineMetadata.AudioDiscovery.Status.Candidate" xml:space="preserve"><value>Correspondance candidate</value></data>
+  <data name="OnlineMetadata.AudioDiscovery.Status.CandidateWithoutRecordingId" xml:space="preserve"><value>La correspondance candidate n’a pas d’ID d’enregistrement MusicBrainz</value></data>
   <data name="OnlineMetadata.AudioDiscovery.Status.NoMatch" xml:space="preserve"><value>Aucune correspondance AcoustID</value></data>
-  <data name="OnlineMetadata.AudioDiscovery.Status.OfflineCachedCandidate" xml:space="preserve"><value>Candidat hors ligne en cache</value></data>
-  <data name="OnlineMetadata.AudioDiscovery.Validation.SelectMatchedCandidate" xml:space="preserve"><value>Sélectionnez un candidat AcoustID correspondant.</value></data>
+  <data name="OnlineMetadata.AudioDiscovery.Status.OfflineCachedCandidate" xml:space="preserve"><value>Correspondance candidate hors connexion en cache</value></data>
+  <data name="OnlineMetadata.AudioDiscovery.Validation.SelectMatchedCandidate" xml:space="preserve"><value>Sélectionnez une correspondance candidate AcoustID.</value></data>
   <data name="OnlineMetadata.CoverArt.Role.OtherRole" xml:space="preserve"><value>Autre</value></data>
-  <data name="OnlineMetadata.Discogs.MappingStatus.Ambiguous" xml:space="preserve"><value>Plusieurs pistes Discogs partagent le meilleur score.</value></data>
+  <data name="OnlineMetadata.Discogs.MappingStatus.Ambiguous" xml:space="preserve"><value>Plusieurs pistes Discogs ont le même meilleur score.</value></data>
   <data name="OnlineMetadata.Discogs.MappingStatus.Metadata" xml:space="preserve"><value>Suggestion de métadonnées</value></data>
-  <data name="OnlineMetadata.Discogs.MappingStatus.Unmatched" xml:space="preserve"><value>Aucune correspondance fiable entre la parution Discogs et une piste n’a été trouvée.</value></data>
+  <data name="OnlineMetadata.Discogs.MappingStatus.Unmatched" xml:space="preserve"><value>Aucune correspondance fiable avec une piste de parution Discogs n’a été trouvée.</value></data>
   <data name="OnlineMetadata.Discogs.Validation.InvalidReleaseId" xml:space="preserve"><value>L’ID de parution Discogs doit être un nombre positif.</value></data>
   <data name="OnlineMetadata.Mapping.Confidence.Ambiguous" xml:space="preserve"><value>Ambiguë</value></data>
-  <data name="OnlineMetadata.Mapping.Confidence.Metadata" xml:space="preserve"><value>Métadonnées</value></data>
-  <data name="OnlineMetadata.Mapping.Confidence.RecordingId" xml:space="preserve"><value>ID d’enregistrement</value></data>
+  <data name="OnlineMetadata.Mapping.Confidence.Metadata" xml:space="preserve"><value>Correspondance des métadonnées</value></data>
+  <data name="OnlineMetadata.Mapping.Confidence.RecordingId" xml:space="preserve"><value>Correspondance de l’ID d’enregistrement</value></data>
   <data name="OnlineMetadata.Mapping.Confidence.Unmatched" xml:space="preserve"><value>Sans correspondance</value></data>
-  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Ambiguous" xml:space="preserve"><value>Plusieurs pistes de la parution partagent le meilleur score.</value></data>
+  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Ambiguous" xml:space="preserve"><value>Plusieurs pistes de la parution ont le même meilleur score.</value></data>
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.Metadata" xml:space="preserve"><value>Suggestion de métadonnées</value></data>
   <data name="OnlineMetadata.MusicBrainz.MappingStatus.RecordingId" xml:space="preserve"><value>ID d’enregistrement MusicBrainz exact</value></data>
-  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Unmatched" xml:space="preserve"><value>Aucune correspondance fiable entre la parution et une piste n’a été trouvée.</value></data>
+  <data name="OnlineMetadata.MusicBrainz.MappingStatus.Unmatched" xml:space="preserve"><value>Aucune correspondance fiable avec une piste de la parution n’a été trouvée.</value></data>
   <data name="OnlineMetadata.MusicBrainz.Validation.InvalidReleaseId" xml:space="preserve"><value>L’ID de parution MusicBrainz n’est pas un GUID valide.</value></data>
   <data name="Settings.IngestRecipe.Destination.ConfiguredMediaCatalog" xml:space="preserve"><value>configuré média catalogue</value></data>
   <data name="Settings.IngestRecipe.Destination.None" xml:space="preserve"><value>non destination</value></data>
   <data name="Settings.IngestRecipe.Summary" xml:space="preserve"><value>{0}; {1} vers {2}</value></data>
   <data name="Workbench.Online.Thumbnail.Failed" xml:space="preserve"><value>Miniature indisponible</value></data>
-  <data name="Dialog.DefaultExportFileName" xml:space="preserve"><value>export</value></data>
+  <data name="Dialog.DefaultExportFileName" xml:space="preserve"><value>exportation</value></data>
   <data name="Dialog.FileType.Format" xml:space="preserve"><value>Fichier {0}</value></data>
   <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>nouveau exporter</value></data>
   <data name="Navigation.About" xml:space="preserve"><value>À propos</value></data>
@@ -6114,7 +6114,7 @@
   <data name="About.Mission.Title" xml:space="preserve"><value>Conçu pour des bibliothèques musicales durables</value></data>
   <data name="About.Mission.Description" xml:space="preserve"><value>Inspectez, enrichissez et préservez votre collection grâce à des modifications transparentes et vérifiables.</value></data>
   <data name="About.OpenSource.Title" xml:space="preserve"><value>Fondations open source</value></data>
-  <data name="About.OpenSource.Description" xml:space="preserve"><value>Music Library Manager est rendu possible en partie par ces paquets utilisés.</value></data>
+  <data name="About.OpenSource.Description" xml:space="preserve"><value>Music Library Manager est rendu possible en partie grâce à ces packages référencés.</value></data>
   <data name="About.Package.VersionFormat" xml:space="preserve"><value>Version {0}</value></data>
   <data name="About.Package.Avalonia.Name" xml:space="preserve"><value>Avalonia UI</value></data>
   <data name="About.Package.Avalonia.Identity" xml:space="preserve"><value>Famille de paquets : Avalonia</value></data>
@@ -6125,7 +6125,7 @@
   <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>Texte complet de la licence Avalonia UI</value></data>
   <data name="About.Package.SkiaSharp.Name" xml:space="preserve"><value>SkiaSharp</value></data>
   <data name="About.Package.SkiaSharp.Identity" xml:space="preserve"><value>Paquet : SkiaSharp</value></data>
-  <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>Bibliothèque multiplateforme de graphisme 2D et de traitement d’images pour inspecter et optimiser les illustrations.</value></data>
+  <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>Bibliothèque multiplateforme de graphismes 2D et de traitement d’images pour examiner et optimiser les illustrations.</value></data>
   <data name="About.Package.SkiaSharp.LicenseName" xml:space="preserve"><value>MIT License</value></data>
   <data name="About.Package.SkiaSharp.LicenseAutomation" xml:space="preserve"><value>Contrat de licence de SkiaSharp</value></data>
   <data name="About.Package.SkiaSharp.CopyAutomation" xml:space="preserve"><value>Copier le contrat de licence de SkiaSharp</value></data>

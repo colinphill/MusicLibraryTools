@@ -21,7 +21,7 @@ public sealed class EditorialReviewManifestTests
 
         Assert.Equal(3_544, manifest.Records.Count);
         Assert.Equal(
-            2_582,
+            2_412,
             Count(
                 manifest,
                 EditorialReviewStatus.Pending));
@@ -31,12 +31,12 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.InvariantApproved));
         Assert.Equal(
-            0,
+            8,
             Count(
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            847,
+            1_009,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -443,7 +443,7 @@ public sealed class EditorialReviewManifestTests
                     requireComplete: true));
 
         Assert.Equal(
-            "Strict editorial review failed: 2,582 resources remain Pending.",
+            "Strict editorial review failed: 2,412 resources remain Pending.",
             exception.Message);
         EditorialReviewManifest unchanged =
             EditorialReviewInfrastructure.LoadAndValidate(
@@ -452,7 +452,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
         Assert.Equal(
-            2_582,
+            2_412,
             Count(
                 unchanged,
                 EditorialReviewStatus.Pending));
@@ -480,16 +480,6 @@ public sealed class EditorialReviewManifestTests
             "Codex focused editorial batches",
             seed.Reviewer);
         Assert.Equal("2026-07-25", seed.Date);
-        Assert.Equal(
-            current.Records.Values
-                .Where(record =>
-                    record.Status ==
-                        EditorialReviewStatus.EditorialReviewed)
-                .Select(record => record.Key)
-                .OrderBy(key => key, StringComparer.Ordinal),
-            seed.Catalogs.Keys.OrderBy(
-                key => key,
-                StringComparer.Ordinal));
         Assert.All(
             seed.Catalogs,
             item =>
@@ -501,11 +491,17 @@ public sealed class EditorialReviewManifestTests
                 Assert.Equal(
                     CatalogTranslationRoute.EditorialOverride,
                     current.Records[item.Key].Route);
+                Assert.Equal(
+                    EditorialReviewStatus.EditorialReviewed,
+                    current.Records[item.Key].Status);
             });
 
         WithTemporaryDirectory(directory =>
         {
             string path = Path.Combine(directory, "manifest.xml");
+            File.Copy(
+                fixture.ManifestPath,
+                path);
             EditorialReviewManifest refreshed =
                 EditorialReviewInfrastructure.Refresh(
                     path,
@@ -517,7 +513,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                847,
+                1_009,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));
@@ -527,15 +523,108 @@ public sealed class EditorialReviewManifestTests
                     refreshed,
                     EditorialReviewStatus.InvariantApproved));
             Assert.Equal(
-                2_582,
+                2_412,
                 Count(
                     refreshed,
                     EditorialReviewStatus.Pending));
+            Assert.Equal(
+                8,
+                Count(
+                    refreshed,
+                    EditorialReviewStatus.GlossaryReviewed));
             Assert.Equal(
                 File.ReadAllText(fixture.ManifestPath),
                 EditorialReviewInfrastructure.SerializeManifest(
                     refreshed));
         });
+    }
+
+    [Fact]
+    public void Small_workflow_review_batch_contains_exactly_the_approved_domains()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: false);
+        const string batch =
+            "gui-usability-small-workflow-editorial-2026-07-25";
+        EditorialReviewRecord[] records =
+            manifest.Records.Values
+                .Where(record =>
+                    string.Equals(
+                        record.Batch,
+                        batch,
+                        StringComparison.Ordinal))
+                .OrderBy(
+                    record => record.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        Assert.Equal(170, records.Length);
+        Assert.Equal(
+            162,
+            records.Count(record =>
+                record.Status ==
+                EditorialReviewStatus.EditorialReviewed));
+        Assert.Equal(
+            8,
+            records.Count(record =>
+                record.Status ==
+                EditorialReviewStatus.GlossaryReviewed));
+        Assert.All(
+            records,
+            record =>
+            {
+                Assert.Equal(
+                    "Codex focused editorial review",
+                    record.Reviewer);
+                Assert.Equal(
+                    "2026-07-25",
+                    record.Date);
+                Assert.StartsWith(
+                    "packet:v1:",
+                    record.Disposition,
+                    StringComparison.Ordinal);
+            });
+
+        Dictionary<string, int> expectedDomainCounts =
+            new(StringComparer.Ordinal)
+            {
+                ["About"] = 5,
+                ["Activity"] = 5,
+                ["ArtworkPreview"] = 5,
+                ["Common"] = 22,
+                ["Count"] = 2,
+                ["Dialog"] = 23,
+                ["FieldsEditor"] = 5,
+                ["Home"] = 24,
+                ["Index"] = 19,
+                ["OnlineMetadata"] = 21,
+                ["Organize"] = 29,
+                ["Technical"] = 2,
+                ["Transcode"] = 8,
+            };
+        Dictionary<string, int> actualDomainCounts =
+            records
+                .GroupBy(
+                    record =>
+                        record.Key.Split('.')[0],
+                    StringComparer.Ordinal)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Count(),
+                    StringComparer.Ordinal);
+
+        Assert.Equal(
+            expectedDomainCounts.OrderBy(
+                item => item.Key,
+                StringComparer.Ordinal),
+            actualDomainCounts.OrderBy(
+                item => item.Key,
+                StringComparer.Ordinal));
     }
 
     [Fact]
@@ -991,7 +1080,10 @@ public sealed class EditorialReviewManifestTests
                 EditorialReviewStatus.GlossaryReviewed,
                 reloaded.Records[glossaryPending.Key].Status);
             Assert.Equal(
-                2_581,
+                Count(
+                    original,
+                    EditorialReviewStatus.Pending) -
+                1,
                 Count(
                     reloaded,
                     EditorialReviewStatus.Pending));
@@ -1045,7 +1137,10 @@ public sealed class EditorialReviewManifestTests
                 EditorialReviewStatus.EditorialReviewed,
                 editorialApproved.Records[editorialPending.Key].Status);
             Assert.Equal(
-                2_580,
+                Count(
+                    original,
+                    EditorialReviewStatus.Pending) -
+                2,
                 Count(
                     editorialApproved,
                     EditorialReviewStatus.Pending));

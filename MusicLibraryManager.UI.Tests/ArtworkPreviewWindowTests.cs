@@ -38,8 +38,11 @@ public sealed class ArtworkPreviewWindowTests
                 Bitmap bitmap = Assert.IsType<Bitmap>(image.Source);
                 Assert.Equal(new PixelSize(width, height), bitmap.PixelSize);
                 Assert.Equal(Stretch.None, image.Stretch);
-                Assert.Equal("Front cover artwork preview", preview.Title);
+                Assert.Equal("Artwork preview: Front cover", preview.Title);
                 Assert.Equal(preview.Title, AutomationProperties.GetName(preview));
+                Assert.Equal(
+                    "Full-resolution artwork: Front cover",
+                    AutomationProperties.GetName(image));
             }
             finally
             {
@@ -48,6 +51,45 @@ public sealed class ArtworkPreviewWindowTests
                 preview.Close();
                 Dispatcher.UIThread.RunJobs();
             }
+        }
+    }
+
+    [AvaloniaFact]
+    public void Preview_uses_the_localized_fallback_without_forcing_label_casing()
+    {
+        var item = new ArtworkPreviewItem(
+            source: null,
+            ID3v2Util.APICType.FrontCover,
+            "image/png",
+            CreatePng(32, 32),
+            "image/png · 32 x 32",
+            description: null);
+        item.RefreshLocalizedText(_ => " ");
+
+        Assert.True(
+            ArtworkPreviewWindow.TryCreate(
+                item,
+                owner: null,
+                out ArtworkPreviewWindow? preview));
+        Assert.NotNull(preview);
+        try
+        {
+            Avalonia.Controls.Image image =
+                preview.FindControl<Avalonia.Controls.Image>(
+                    "PreviewImage")!;
+            Assert.Equal(
+                "Artwork preview: Artwork",
+                preview.Title);
+            Assert.Equal(
+                "Full-resolution artwork: Artwork",
+                AutomationProperties.GetName(image));
+        }
+        finally
+        {
+            preview.Show();
+            Dispatcher.UIThread.RunJobs();
+            preview.Close();
+            Dispatcher.UIThread.RunJobs();
         }
     }
 

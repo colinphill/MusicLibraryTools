@@ -139,6 +139,122 @@ public sealed partial class UiModernizationSourceQualityTests
     }
 
     [Fact]
+    public void Common_browse_uses_an_ellipsis_only_for_picker_commands()
+    {
+        string repositoryRoot =
+            FindRepositoryRoot();
+        XDocument neutral =
+            XDocument.Load(
+                Path.Combine(
+                    repositoryRoot,
+                    "MusicLibraryManager.Presentation",
+                    "Resources",
+                    "Strings.resx"));
+        string browse =
+            neutral.Root!
+                .Elements("data")
+                .Single(entry =>
+                    (string?)entry.Attribute("name") ==
+                    "Common.Browse")
+                .Element("value")!
+                .Value;
+        Assert.Equal("Browse…", browse);
+
+        XElement[] uses =
+            Directory.EnumerateFiles(
+                    Path.Combine(
+                        repositoryRoot,
+                        "MusicLibraryManager"),
+                    "*.axaml",
+                    SearchOption.AllDirectories)
+                .SelectMany(path =>
+                    XDocument.Load(
+                            path,
+                            LoadOptions.SetLineInfo)
+                        .Descendants())
+                .Where(element =>
+                    element.Attributes().Any(attribute =>
+                        attribute.Value.Contains(
+                            "Loc.Common.Browse",
+                            StringComparison.Ordinal)))
+                .ToArray();
+
+        Assert.NotEmpty(uses);
+        Assert.All(
+            uses,
+            use =>
+            {
+                Assert.Equal(
+                    "Button",
+                    use.Name.LocalName);
+                string command =
+                    use.Attributes()
+                        .Single(attribute =>
+                            attribute.Name.LocalName ==
+                            "Command")
+                        .Value;
+                Assert.Contains(
+                    "Browse",
+                    command,
+                    StringComparison.Ordinal);
+            });
+    }
+
+    [Fact]
+    public void Reviewed_neutral_copy_uses_en_us_spelling_and_clear_workflow_labels()
+    {
+        XDocument neutral =
+            XDocument.Load(
+                Path.Combine(
+                    FindRepositoryRoot(),
+                    "MusicLibraryManager.Presentation",
+                    "Resources",
+                    "Strings.resx"));
+        Dictionary<string, string> values =
+            neutral.Root!
+                .Elements("data")
+                .ToDictionary(
+                    entry =>
+                        (string)entry.Attribute("name")!,
+                    entry =>
+                        entry.Element("value")!.Value,
+                    StringComparer.Ordinal);
+
+        Assert.Equal(
+            "Canceling…",
+            values["Activity.Cancelling"]);
+        Assert.Equal(
+            "Indexing canceled; safely committed partial progress was retained.",
+            values["Index.Status.Cancelled"]);
+        Assert.Equal(
+            "Organization was canceled. Completed moves remain reflected in the library.",
+            values["Organize.Status.ApplyCancelled"]);
+        Assert.Equal(
+            "Organization preview canceled.",
+            values["Organize.Status.PreviewCancelled"]);
+        Assert.Equal(
+            "Add standard field",
+            values["FieldsEditor.AddField"]);
+        Assert.Equal(
+            "Add custom text field",
+            values["FieldsEditor.AddUserString"]);
+        Assert.Equal(
+            "Delete permanently",
+            values["Dialog.Purge.Action"]);
+        Assert.Equal(
+            "Generate missing CD-quality tracks",
+            values["Dialog.CdDerivation.Title"]);
+        Assert.Equal(
+            "Metadata match",
+            values[
+                "OnlineMetadata.Mapping.Confidence.Metadata"]);
+        Assert.Equal(
+            "Recording ID match",
+            values[
+                "OnlineMetadata.Mapping.Confidence.RecordingId"]);
+    }
+
+    [Fact]
     public void Shipping_form_inputs_use_shared_styles_and_durable_accessible_labels()
     {
         string applicationRoot =
