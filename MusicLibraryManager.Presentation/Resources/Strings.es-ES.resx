@@ -1085,7 +1085,7 @@
     <value>estado</value>
   </data>
   <data name="Ingest.Action.ClearSelectedFiles" xml:space="preserve">
-    <value>borrar archivos seleccionados</value>
+    <value>Borrar selección de archivos</value>
   </data>
   <data name="Ingest.Action.More" xml:space="preserve">
     <value>Más</value>
@@ -1094,13 +1094,13 @@
     <value>Más acciones de importación</value>
   </data>
   <data name="Ingest.Action.OpenRecovery" xml:space="preserve">
-    <value>abrir en recuperación</value>
+    <value>Abrir en Recuperación</value>
   </data>
   <data name="Ingest.Action.Preview" xml:space="preserve">
-    <value>vista previa ingesta</value>
+    <value>Previsualizar plan de importación</value>
   </data>
   <data name="Ingest.Action.RefreshHistory" xml:space="preserve">
-    <value>actualizar historial</value>
+    <value>Actualizar historial</value>
   </data>
   <data name="Ingest.Action.RunPreflight" xml:space="preserve">
     <value>Ejecutar solo la comprobación previa</value>
@@ -1130,43 +1130,43 @@
     <value>{0} conflictos</value>
   </data>
   <data name="Ingest.Summary.CleanupCount.One" xml:space="preserve">
-    <value>{0} limpieza acción</value>
+    <value>{0} acción de limpieza</value>
   </data>
   <data name="Ingest.Summary.CleanupCount.Other" xml:space="preserve">
-    <value>{0} limpieza acciones</value>
+    <value>{0} acciones de limpieza</value>
   </data>
   <data name="Ingest.History.EmptyDescription" xml:space="preserve">
-    <value>elegir un origen carpeta, entonces actualizar a detectar diario y interrumpido ingesta ejecuciones.</value>
+    <value>Elige una carpeta de origen y actualiza el historial para encontrar importaciones registradas e interrumpidas.</value>
   </data>
   <data name="Ingest.History.EmptyTitle" xml:space="preserve">
-    <value>no ingesta ejecuciones encontrado</value>
+    <value>No se encontraron importaciones</value>
   </data>
   <data name="Ingest.IncomingFolder" xml:space="preserve">
-    <value>entrante carpeta</value>
+    <value>Carpeta de música entrante</value>
   </data>
   <data name="Ingest.IncomingFolderPlaceholder" xml:space="preserve">
-    <value>soltar un carpeta aquí o examinar</value>
+    <value>Suelta aquí una carpeta o examina</value>
   </data>
   <data name="Ingest.PreviewFilterAutomation" xml:space="preserve">
-    <value>vista previa filtro</value>
+    <value>Filtro de vista previa</value>
   </data>
   <data name="Ingest.RecentFolders" xml:space="preserve">
-    <value>reciente carpetas</value>
+    <value>Carpetas recientes</value>
   </data>
   <data name="Ingest.RecentFoldersAutomation" xml:space="preserve">
-    <value>reciente ingesta carpetas</value>
+    <value>Carpetas de importación recientes</value>
   </data>
   <data name="Ingest.Subtitle" xml:space="preserve">
     <value>Comprueba, previsualiza e importa música de forma segura en la biblioteca activa.</value>
   </data>
   <data name="Ingest.Tab.History" xml:space="preserve">
-    <value>historial</value>
+    <value>Historial</value>
   </data>
   <data name="Ingest.Tab.Preview" xml:space="preserve">
-    <value>vista previa</value>
+    <value>Vista previa</value>
   </data>
   <data name="Ingest.Title" xml:space="preserve">
-    <value>ingesta</value>
+    <value>Importar</value>
   </data>
   <data name="Navigation.Devices" xml:space="preserve">
     <value>Dispositivos</value>
@@ -4820,82 +4820,82 @@
   <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>Revise la vista previa de sincronización. Acciones planificadas: {0:N0}; eliminaciones: {1:N0}; bytes que se transferirán: {2:N0}.</value></data>
   <data name="Devices.Status.Ready" xml:space="preserve"><value>Elija un origen local e inicialice un destino Android administrado antes de previsualizar.</value></data>
   <data name="Devices.Status.Restored" xml:space="preserve"><value>Se restauró la ejecución de recuperación {0} en {1}.</value></data>
-  <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>iniciando ingesta</value></data>
-  <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>ingesta música</value></data>
-  <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>buscando para ingesta diario</value></data>
-  <data name="Ingest.Activity.History.Title" xml:space="preserve"><value>actualizar ingesta historial</value></data>
-  <data name="Ingest.Activity.Preflight.Starting" xml:space="preserve"><value>comprobando ingesta requisitos previos</value></data>
-  <data name="Ingest.Activity.Preflight.Title" xml:space="preserve"><value>comprobación previa ingesta</value></data>
-  <data name="Ingest.Activity.Preview.Starting" xml:space="preserve"><value>analizando entrante música</value></data>
-  <data name="Ingest.Activity.Preview.Title" xml:space="preserve"><value>vista previa ingesta</value></data>
+  <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>Iniciando importación</value></data>
+  <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>Importar música</value></data>
+  <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>Buscando diarios de importación</value></data>
+  <data name="Ingest.Activity.History.Title" xml:space="preserve"><value>Actualizar historial de importación</value></data>
+  <data name="Ingest.Activity.Preflight.Starting" xml:space="preserve"><value>Comprobando requisitos de importación</value></data>
+  <data name="Ingest.Activity.Preflight.Title" xml:space="preserve"><value>Comprobación previa de la importación</value></data>
+  <data name="Ingest.Activity.Preview.Starting" xml:space="preserve"><value>Examinando música entrante</value></data>
+  <data name="Ingest.Activity.Preview.Title" xml:space="preserve"><value>Vista previa de la importación</value></data>
   <data name="Ingest.Configuration.Diagnostic.NotLoaded" xml:space="preserve"><value>Carga una configuración de biblioteca.</value></data>
-  <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>{0:N0} configuración problema debe ser resuelto antes previsualizando.</value></data>
-  <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>{0:N0} configuración problemas debe ser resuelto antes previsualizando.</value></data>
+  <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>Debe resolverse {0:N0} problema de configuración antes de previsualizar.</value></data>
+  <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>Deben resolverse {0:N0} problemas de configuración antes de previsualizar.</value></data>
   <data name="Ingest.Configuration.Ready" xml:space="preserve"><value>La configuración de importación está lista.</value></data>
-  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>¿Importar {0:N0} álbumes, crear {1:N0} archivos de salida y limpiar {2:N0} elementos de origen? La recuperación está disponible: los álbumes completados y las acciones de limpieza se registran en los diarios de operaciones.</value></data>
-  <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>aplicar ingesta</value></data>
-  <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>aplicar ingesta plan</value></data>
-  <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>seleccionar entrante música directorio</value></data>
+  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>¿Importar {0:N0} álbumes, crear {1:N0} archivos de salida y limpiar {2:N0} elementos de origen? La recuperación está disponible: los álbumes completados y las acciones de limpieza se registran en diarios de operaciones.</value></data>
+  <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>Aplicar plan de importación</value></data>
+  <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>Aplicar plan de importación</value></data>
+  <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>Seleccionar carpeta de música entrante</value></data>
   <data name="Ingest.File.ConflictSummary" xml:space="preserve"><value>Detalles del conflicto: {0}</value></data>
   <data name="Ingest.File.OutputDestination" xml:space="preserve"><value>destino → {0}</value></data>
   <data name="Ingest.File.Progress.Complete" xml:space="preserve"><value>✓ completo</value></data>
-  <data name="Ingest.File.Progress.Failed" xml:space="preserve"><value>✕ no completado</value></data>
+  <data name="Ingest.File.Progress.Failed" xml:space="preserve"><value>✕ No completado</value></data>
   <data name="Ingest.File.Progress.InProgress" xml:space="preserve"><value>● en curso — {0}</value></data>
-  <data name="Ingest.File.Type.CdAlac" xml:space="preserve"><value>CD-calidad ALAC</value></data>
+  <data name="Ingest.File.Type.CdAlac" xml:space="preserve"><value>ALAC con calidad de CD</value></data>
   <data name="Ingest.File.Type.CdFlac" xml:space="preserve"><value>CD FLAC</value></data>
   <data name="Ingest.File.Type.Conflict" xml:space="preserve"><value>conflicto</value></data>
-  <data name="Ingest.File.Type.HiResAlac" xml:space="preserve"><value>alta resolución ALAC</value></data>
-  <data name="Ingest.File.Type.HiResFlac" xml:space="preserve"><value>alta resolución FLAC</value></data>
+  <data name="Ingest.File.Type.HiResAlac" xml:space="preserve"><value>ALAC de alta resolución</value></data>
+  <data name="Ingest.File.Type.HiResFlac" xml:space="preserve"><value>FLAC de alta resolución</value></data>
   <data name="Ingest.File.Type.Output" xml:space="preserve"><value>{0} salida</value></data>
   <data name="Ingest.File.Type.Unsupported" xml:space="preserve"><value>No compatible o no es audio</value></data>
   <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>Hay una importación en curso. Cancela o termina la operación actual antes de sustituir sus entradas.</value></data>
   <data name="Ingest.Handoff.CommonTreeRequired" xml:space="preserve"><value>Los archivos seleccionados deben estar en un mismo volumen y bajo una carpeta de origen común.</value></data>
   <data name="Ingest.Handoff.InvalidPaths" xml:space="preserve"><value>Las rutas seleccionadas no son válidas. Abre los detalles de diagnóstico para consultar el error subyacente.</value></data>
-  <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>seleccionar uno o más área de trabajo archivos primero.</value></data>
-  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>Está listo {0:N0} archivo seleccionado en el área de trabajo. Ejecuta Comprobaciones previas o Previsualizar.</value></data>
-  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>Están listos {0:N0} archivos seleccionados en el área de trabajo. Ejecuta Comprobaciones previas o Previsualizar.</value></data>
-  <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>el seleccionado archivo es no disponible: {0}</value></data>
+  <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>Selecciona primero uno o varios archivos del Área de trabajo.</value></data>
+  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>Hay {0:N0} archivo seleccionado en el Área de trabajo listo. Ejecuta la comprobación previa o la vista previa.</value></data>
+  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>Hay {0:N0} archivos seleccionados en el Área de trabajo listos. Ejecuta la comprobación previa o la vista previa.</value></data>
+  <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>El archivo seleccionado no está disponible: {0}</value></data>
   <data name="Ingest.History.AffectedItems.One" xml:space="preserve"><value>{0:N0} elemento</value></data>
   <data name="Ingest.History.AffectedItems.Other" xml:space="preserve"><value>{0:N0} elementos</value></data>
   <data name="Ingest.History.OpenForDetails" xml:space="preserve"><value>Abrir para ver los detalles del elemento</value></data>
   <data name="Ingest.History.State.Completed" xml:space="preserve"><value>completado</value></data>
-  <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>interrumpido — recuperación disponible</value></data>
-  <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>cuarentena presente</value></data>
-  <data name="Ingest.History.State.RolledBack" xml:space="preserve"><value>revertido posterior</value></data>
-  <data name="Ingest.History.Status.ChooseSource" xml:space="preserve"><value>elegir un origen carpeta antes actualizar ingesta historial.</value></data>
-  <data name="Ingest.History.Status.Failed" xml:space="preserve"><value>ingesta historial podría no ser actualizar.</value></data>
-  <data name="Ingest.History.Status.Ready" xml:space="preserve"><value>actualizar a detectar reciente ingesta y recuperación ejecuciones.</value></data>
-  <data name="Ingest.History.Status.SearchingRoots.One" xml:space="preserve"><value>buscando {0:N0} origen raíz para ingesta diario…</value></data>
-  <data name="Ingest.History.Status.SearchingRoots.Other" xml:space="preserve"><value>buscando {0:N0} origen raíces para ingesta diario…</value></data>
-  <data name="Ingest.History.Status.Summary" xml:space="preserve"><value>ejecuciones: {0:N0}; interrumpido: {1:N0}.</value></data>
-  <data name="Ingest.History.Status.SummaryWithWarnings" xml:space="preserve"><value>ejecuciones: {0:N0}; interrumpido: {1:N0}; raíz advertencias: {2:N0}.</value></data>
-  <data name="Ingest.Operation.Cancelled" xml:space="preserve"><value>cancelado</value></data>
+  <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>Interrumpida — recuperación disponible</value></data>
+  <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>Contiene elementos en cuarentena</value></data>
+  <data name="Ingest.History.State.RolledBack" xml:space="preserve"><value>Revertida</value></data>
+  <data name="Ingest.History.Status.ChooseSource" xml:space="preserve"><value>Elige una carpeta de origen antes de actualizar el historial de importación.</value></data>
+  <data name="Ingest.History.Status.Failed" xml:space="preserve"><value>No se pudo actualizar el historial de importación.</value></data>
+  <data name="Ingest.History.Status.Ready" xml:space="preserve"><value>Actualiza el historial para encontrar importaciones y recuperaciones recientes.</value></data>
+  <data name="Ingest.History.Status.SearchingRoots.One" xml:space="preserve"><value>Buscando diarios de importación en {0:N0} raíz de origen…</value></data>
+  <data name="Ingest.History.Status.SearchingRoots.Other" xml:space="preserve"><value>Buscando diarios de importación en {0:N0} raíces de origen…</value></data>
+  <data name="Ingest.History.Status.Summary" xml:space="preserve"><value>Ejecuciones: {0:N0}; interrumpidas: {1:N0}.</value></data>
+  <data name="Ingest.History.Status.SummaryWithWarnings" xml:space="preserve"><value>Ejecuciones: {0:N0}; interrumpidas: {1:N0}; advertencias de raíz: {2:N0}.</value></data>
+  <data name="Ingest.Operation.Cancelled" xml:space="preserve"><value>Cancelado</value></data>
   <data name="Ingest.Operation.Complete" xml:space="preserve"><value>completo</value></data>
-  <data name="Ingest.Operation.EmptyFoldersRemoved" xml:space="preserve"><value>vacío carpetas quitado</value></data>
+  <data name="Ingest.Operation.EmptyFoldersRemoved" xml:space="preserve"><value>Carpetas vacías eliminadas</value></data>
   <data name="Ingest.Operation.Encoding" xml:space="preserve"><value>codificación</value></data>
-  <data name="Ingest.Operation.NonMusicCleanup" xml:space="preserve"><value>no musical limpieza</value></data>
+  <data name="Ingest.Operation.NonMusicCleanup" xml:space="preserve"><value>Limpieza de archivos no musicales</value></data>
   <data name="Ingest.Operation.Preparing" xml:space="preserve"><value>preparando</value></data>
-  <data name="Ingest.Operation.Processing" xml:space="preserve"><value>procesamiento {0}</value></data>
-  <data name="Ingest.Operation.SourceComplete" xml:space="preserve"><value>origen completo</value></data>
-  <data name="Ingest.Operation.Staged" xml:space="preserve"><value>preparado {0}</value></data>
-  <data name="Ingest.Operation.StagingOutputs" xml:space="preserve"><value>preparación salidas</value></data>
+  <data name="Ingest.Operation.Processing" xml:space="preserve"><value>Procesando {0}</value></data>
+  <data name="Ingest.Operation.SourceComplete" xml:space="preserve"><value>Procesamiento del origen completado</value></data>
+  <data name="Ingest.Operation.Staged" xml:space="preserve"><value>{0} preparado</value></data>
+  <data name="Ingest.Operation.StagingOutputs" xml:space="preserve"><value>Preparando archivos de salida</value></data>
   <data name="Ingest.Operation.Working" xml:space="preserve"><value>trabajando</value></data>
   <data name="Ingest.OutputKind.Aac" xml:space="preserve"><value>AAC</value></data>
   <data name="Ingest.OutputKind.CdFlac" xml:space="preserve"><value>CD FLAC</value></data>
-  <data name="Ingest.OutputKind.HighResolutionFlac" xml:space="preserve"><value>alta resolución FLAC</value></data>
+  <data name="Ingest.OutputKind.HighResolutionFlac" xml:space="preserve"><value>FLAC de alta resolución</value></data>
   <data name="Ingest.OutputKind.Recipe" xml:space="preserve"><value>receta</value></data>
   <data name="Ingest.Preflight.Check.Configuration" xml:space="preserve"><value>configuración</value></data>
   <data name="Ingest.Preflight.Check.Destinations" xml:space="preserve"><value>destinos</value></data>
   <data name="Ingest.Preflight.Check.Ffmpeg" xml:space="preserve"><value>ffmpeg</value></data>
-  <data name="Ingest.Preflight.Check.ITunesLibrary" xml:space="preserve"><value>iTunes biblioteca</value></data>
-  <data name="Ingest.Preflight.Check.Generic" xml:space="preserve"><value>ingesta requisito previo</value></data>
-  <data name="Ingest.Preflight.Check.PathIsolation" xml:space="preserve"><value>ruta aislamiento</value></data>
+  <data name="Ingest.Preflight.Check.ITunesLibrary" xml:space="preserve"><value>Biblioteca de iTunes</value></data>
+  <data name="Ingest.Preflight.Check.Generic" xml:space="preserve"><value>Requisito de importación</value></data>
+  <data name="Ingest.Preflight.Check.PathIsolation" xml:space="preserve"><value>Aislamiento de rutas</value></data>
   <data name="Ingest.Preflight.Check.SelectedFiles" xml:space="preserve"><value>archivos seleccionados</value></data>
   <data name="Ingest.Preflight.Check.Source" xml:space="preserve"><value>origen</value></data>
   <data name="Ingest.Preflight.Check.WavPack" xml:space="preserve"><value>WavPack</value></data>
-  <data name="Ingest.Preflight.Result.Error" xml:space="preserve"><value>resolver este bloqueante error antes previsualizando.</value></data>
-  <data name="Ingest.Preflight.Result.Pass" xml:space="preserve"><value>comprobación superado.</value></data>
-  <data name="Ingest.Preflight.Result.Warning" xml:space="preserve"><value>revisar este advertencia antes previsualizando.</value></data>
+  <data name="Ingest.Preflight.Result.Error" xml:space="preserve"><value>Resuelve este error bloqueante antes de previsualizar.</value></data>
+  <data name="Ingest.Preflight.Result.Pass" xml:space="preserve"><value>Comprobación superada.</value></data>
+  <data name="Ingest.Preflight.Result.Warning" xml:space="preserve"><value>Revisa esta advertencia antes de previsualizar.</value></data>
   <data name="Ingest.PreviewFilter.Albums" xml:space="preserve"><value>álbumes</value></data>
   <data name="Ingest.PreviewFilter.All" xml:space="preserve"><value>todos</value></data>
   <data name="Ingest.PreviewFilter.Cleanup" xml:space="preserve"><value>limpieza</value></data>
@@ -4903,39 +4903,39 @@
   <data name="Ingest.PreviewFilter.Outputs" xml:space="preserve"><value>salidas</value></data>
   <data name="Ingest.SelectedSources.Summary.One" xml:space="preserve"><value>Se usa {0:N0} archivo seleccionado en el área de trabajo como origen de ingesta.</value></data>
   <data name="Ingest.SelectedSources.Summary.Other" xml:space="preserve"><value>Se usan {0:N0} archivos seleccionados en el área de trabajo como origen de ingesta.</value></data>
-  <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>cancelado. cualquiera álbum ya confirmado permanecer de forma segura diario.</value></data>
-  <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>ingesta era cancelado. cualquiera completado obra permanecer de forma segura diario.</value></data>
-  <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>ingesta era no aplicado. el revisado vista previa permanecer disponible.</value></data>
-  <data name="Ingest.Status.ApplyFailed" xml:space="preserve"><value>el ingesta plan podría no ser aplicado.</value></data>
-  <data name="Ingest.Status.ApplyIndexed" xml:space="preserve"><value>instalado: {0:N0}; fallido álbumes: {1:N0}. indexar cambios — añadido: {2:N0}, modificado: {3:N0}, quitado: {4:N0}.</value></data>
+  <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>Cancelado. Los álbumes ya confirmados permanecen registrados de forma segura.</value></data>
+  <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>La importación se canceló. El trabajo ya completado permanece registrado de forma segura.</value></data>
+  <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>La importación no se aplicó. La vista previa revisada sigue disponible.</value></data>
+  <data name="Ingest.Status.ApplyFailed" xml:space="preserve"><value>No se pudo aplicar el plan de importación.</value></data>
+  <data name="Ingest.Status.ApplyIndexed" xml:space="preserve"><value>Instalados: {0:N0}; álbumes con errores: {1:N0}. Cambios del índice — añadidos: {2:N0}, modificados: {3:N0}, eliminados: {4:N0}.</value></data>
   <data name="Ingest.Status.ApplyProgress" xml:space="preserve"><value>{0}: {1} ({2:N0}/{3:N0})</value></data>
-  <data name="Ingest.Status.ApplyResult" xml:space="preserve"><value>instalado archivos: {0:N0}; fallido álbumes: {1:N0}.</value></data>
-  <data name="Ingest.Status.ApplyResultNoLibrary" xml:space="preserve"><value>instalado archivos: {0:N0}; fallido álbumes: {1:N0}. de nuevo-indexando era omitido porque no biblioteca configuración es cargado.</value></data>
+  <data name="Ingest.Status.ApplyResult" xml:space="preserve"><value>Archivos instalados: {0:N0}; álbumes con errores: {1:N0}.</value></data>
+  <data name="Ingest.Status.ApplyResultNoLibrary" xml:space="preserve"><value>Archivos instalados: {0:N0}; álbumes con errores: {1:N0}. Se omitió la reindexación porque no hay ninguna configuración de biblioteca cargada.</value></data>
   <data name="Ingest.Status.ChooseSource" xml:space="preserve"><value>Elige una carpeta de entrada y ejecuta la comprobación previa o la vista previa.</value></data>
-  <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>no musical limpieza completado.</value></data>
-  <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>derivación era rechazado. el completo ejecutar era cancelado y nada era cambiado.</value></data>
+  <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>Limpieza de archivos no musicales completada.</value></data>
+  <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>Se rechazó la generación de archivos de salida con calidad de CD. Se canceló toda la ejecución y no se cambió nada.</value></data>
   <data name="Ingest.Status.InputsChanged" xml:space="preserve"><value>Las entradas cambiaron. Vuelve a previsualizar antes de aplicar.</value></data>
-  <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>comprobación previa cancelado.</value></data>
+  <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>Comprobación previa cancelada.</value></data>
   <data name="Ingest.Status.PreflightChecking" xml:space="preserve"><value>Comprobando la configuración de importación y las herramientas externas…</value></data>
-  <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>comprobación previa encontrado {0:N0} bloqueante error.</value></data>
-  <data name="Ingest.Status.PreflightErrors.Other" xml:space="preserve"><value>comprobación previa encontrado {0:N0} bloqueante errores.</value></data>
-  <data name="Ingest.Status.PreflightFailed" xml:space="preserve"><value>comprobación previa podría no ser completado.</value></data>
+  <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>La comprobación previa encontró {0:N0} error bloqueante.</value></data>
+  <data name="Ingest.Status.PreflightErrors.Other" xml:space="preserve"><value>La comprobación previa encontró {0:N0} errores bloqueantes.</value></data>
+  <data name="Ingest.Status.PreflightFailed" xml:space="preserve"><value>No se pudo completar la comprobación previa.</value></data>
   <data name="Ingest.Status.PreflightPassed" xml:space="preserve"><value>La comprobación previa se completó. El origen está listo para analizarse.</value></data>
-  <data name="Ingest.Status.PreflightWarnings.One" xml:space="preserve"><value>comprobación previa superado con {0:N0} advertencia. revisar ello antes previsualizando.</value></data>
-  <data name="Ingest.Status.PreflightWarnings.Other" xml:space="preserve"><value>comprobación previa superado con {0:N0} advertencias. revisar ellos antes previsualizando.</value></data>
-  <data name="Ingest.Status.PreviewCancelled" xml:space="preserve"><value>vista previa cancelado.</value></data>
-  <data name="Ingest.Status.PreviewCleanupReady" xml:space="preserve"><value>no música álbumes eran encontrado. no musical archivos: {0:N0}; origen carpetas listo para limpieza: {1:N0}. revisar, entonces aplicar.</value></data>
-  <data name="Ingest.Status.PreviewConflicts.One" xml:space="preserve"><value>el vista previa tiene {0:N0} conflicto y no puede ser aplicado.</value></data>
-  <data name="Ingest.Status.PreviewConflicts.Other" xml:space="preserve"><value>el vista previa tiene {0:N0} conflictos y no puede ser aplicado.</value></data>
-  <data name="Ingest.Status.PreviewEmpty" xml:space="preserve"><value>no importable música álbumes o habilitado no musical limpieza elementos eran encontrado.</value></data>
-  <data name="Ingest.Status.PreviewFailed" xml:space="preserve"><value>el ingesta vista previa podría no ser completado.</value></data>
-  <data name="Ingest.Status.PreviewFound" xml:space="preserve"><value>{0} ({1:N0} encontrado)</value></data>
+  <data name="Ingest.Status.PreflightWarnings.One" xml:space="preserve"><value>La comprobación previa se superó con {0:N0} advertencia. Revísala antes de previsualizar.</value></data>
+  <data name="Ingest.Status.PreflightWarnings.Other" xml:space="preserve"><value>La comprobación previa se superó con {0:N0} advertencias. Revísalas antes de previsualizar.</value></data>
+  <data name="Ingest.Status.PreviewCancelled" xml:space="preserve"><value>Vista previa cancelada.</value></data>
+  <data name="Ingest.Status.PreviewCleanupReady" xml:space="preserve"><value>No se encontraron álbumes de música. Archivos no musicales: {0:N0}; carpetas de origen listas para limpiar: {1:N0}. Revisa el plan y aplícalo.</value></data>
+  <data name="Ingest.Status.PreviewConflicts.One" xml:space="preserve"><value>La vista previa tiene {0:N0} conflicto y no se puede aplicar.</value></data>
+  <data name="Ingest.Status.PreviewConflicts.Other" xml:space="preserve"><value>La vista previa tiene {0:N0} conflictos y no se puede aplicar.</value></data>
+  <data name="Ingest.Status.PreviewEmpty" xml:space="preserve"><value>No se encontraron álbumes de música importables ni elementos habilitados para limpiar archivos no musicales.</value></data>
+  <data name="Ingest.Status.PreviewFailed" xml:space="preserve"><value>No se pudo completar la vista previa de la importación.</value></data>
+  <data name="Ingest.Status.PreviewFound" xml:space="preserve"><value>{0} ({1:N0} elementos encontrados)</value></data>
   <data name="Ingest.Status.PreviewProgress" xml:space="preserve"><value>{0} ({1:N0}/{2:N0})</value></data>
   <data name="Ingest.Status.PreviewReady" xml:space="preserve"><value>Álbumes: {0:N0}; archivos de origen: {1:N0}; aprobaciones de conversión: {2:N0}. Revisa y, después, aplica.</value></data>
   <data name="Ingest.Status.PreviewScanning" xml:space="preserve"><value>Analizando y planificando…</value></data>
-  <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>ingesta confirmado. de nuevo-indexando el biblioteca…</value></data>
-  <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>área de trabajo archivo selección borrado. elegir un entrante carpeta.</value></data>
-  <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>origen carpeta seleccionado de soltar. ejecutar comprobación previa o vista previa.</value></data>
+  <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>Importación confirmada. Reindexando la biblioteca…</value></data>
+  <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>Se borró la selección de archivos del Área de trabajo. Elige una carpeta de música entrante.</value></data>
+  <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>Carpeta de origen seleccionada mediante arrastrar y soltar. Ejecuta la comprobación previa o la vista previa.</value></data>
   <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>Aplicar plan de organización</value></data>
   <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>Calculando rutas canónicas</value></data>
   <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>Vista previa del plan de organización</value></data>

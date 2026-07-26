@@ -1085,7 +1085,7 @@
     <value>健康状况</value>
   </data>
   <data name="Ingest.Action.ClearSelectedFiles" xml:space="preserve">
-    <value>清除 所选文件</value>
+    <value>清除文件选择</value>
   </data>
   <data name="Ingest.Action.More" xml:space="preserve">
     <value>更多</value>
@@ -1094,13 +1094,13 @@
     <value>更多导入操作</value>
   </data>
   <data name="Ingest.Action.OpenRecovery" xml:space="preserve">
-    <value>打开 在 恢复</value>
+    <value>在“恢复”中打开</value>
   </data>
   <data name="Ingest.Action.Preview" xml:space="preserve">
-    <value>预览 引入</value>
+    <value>预览导入计划</value>
   </data>
   <data name="Ingest.Action.RefreshHistory" xml:space="preserve">
-    <value>刷新 历史记录</value>
+    <value>刷新历史记录</value>
   </data>
   <data name="Ingest.Action.RunPreflight" xml:space="preserve">
     <value>仅运行预检</value>
@@ -1130,31 +1130,31 @@
     <value>{0} 冲突</value>
   </data>
   <data name="Ingest.Summary.CleanupCount.One" xml:space="preserve">
-    <value>{0} 清理 操作</value>
+    <value>{0} 个清理操作</value>
   </data>
   <data name="Ingest.Summary.CleanupCount.Other" xml:space="preserve">
-    <value>{0} 清理 操作</value>
+    <value>{0} 个清理操作</value>
   </data>
   <data name="Ingest.History.EmptyDescription" xml:space="preserve">
-    <value>选择 一个 源 文件夹, 然后 刷新 到 发现 日志 和 已中断 引入 运行.</value>
+    <value>选择源文件夹，然后刷新历史记录以查找已记录或中断的导入运行。</value>
   </data>
   <data name="Ingest.History.EmptyTitle" xml:space="preserve">
-    <value>否 引入 运行 已找到</value>
+    <value>未找到导入运行</value>
   </data>
   <data name="Ingest.IncomingFolder" xml:space="preserve">
-    <value>传入 文件夹</value>
+    <value>待导入音乐文件夹</value>
   </data>
   <data name="Ingest.IncomingFolderPlaceholder" xml:space="preserve">
-    <value>放置 一个 文件夹 此处 或 浏览</value>
+    <value>将文件夹拖放到此处或浏览</value>
   </data>
   <data name="Ingest.PreviewFilterAutomation" xml:space="preserve">
-    <value>预览 筛选器</value>
+    <value>预览筛选器</value>
   </data>
   <data name="Ingest.RecentFolders" xml:space="preserve">
-    <value>最近 文件夹</value>
+    <value>最近使用的文件夹</value>
   </data>
   <data name="Ingest.RecentFoldersAutomation" xml:space="preserve">
-    <value>最近 引入 文件夹</value>
+    <value>最近使用的导入文件夹</value>
   </data>
   <data name="Ingest.Subtitle" xml:space="preserve">
     <value>预检、预览并将音乐安全导入当前媒体库。</value>
@@ -1166,7 +1166,7 @@
     <value>预览</value>
   </data>
   <data name="Ingest.Title" xml:space="preserve">
-    <value>引入</value>
+    <value>导入</value>
   </data>
   <data name="Navigation.Devices" xml:space="preserve">
     <value>设备</value>
@@ -4820,28 +4820,28 @@
   <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>请查看同步预览。计划操作：{0:N0}；移除：{1:N0}；待传输字节：{2:N0}。</value></data>
   <data name="Devices.Status.Ready" xml:space="preserve"><value>请先选择本地源并初始化托管 Android 目标，然后再预览。</value></data>
   <data name="Devices.Status.Restored" xml:space="preserve"><value>已将恢复运行 {0} 还原到 {1}。</value></data>
-  <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>正在开始 引入</value></data>
-  <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>引入 音乐</value></data>
-  <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>正在搜索 用于 引入 日志</value></data>
-  <data name="Ingest.Activity.History.Title" xml:space="preserve"><value>刷新 引入 历史记录</value></data>
-  <data name="Ingest.Activity.Preflight.Starting" xml:space="preserve"><value>正在检查 引入 先决条件</value></data>
-  <data name="Ingest.Activity.Preflight.Title" xml:space="preserve"><value>预检 引入</value></data>
-  <data name="Ingest.Activity.Preview.Starting" xml:space="preserve"><value>正在扫描 传入 音乐</value></data>
-  <data name="Ingest.Activity.Preview.Title" xml:space="preserve"><value>预览 引入</value></data>
+  <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>正在开始导入</value></data>
+  <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>导入音乐</value></data>
+  <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>正在搜索导入日志</value></data>
+  <data name="Ingest.Activity.History.Title" xml:space="preserve"><value>刷新导入历史记录</value></data>
+  <data name="Ingest.Activity.Preflight.Starting" xml:space="preserve"><value>正在检查导入先决条件</value></data>
+  <data name="Ingest.Activity.Preflight.Title" xml:space="preserve"><value>导入预检</value></data>
+  <data name="Ingest.Activity.Preview.Starting" xml:space="preserve"><value>正在扫描待导入音乐</value></data>
+  <data name="Ingest.Activity.Preview.Title" xml:space="preserve"><value>预览导入</value></data>
   <data name="Ingest.Configuration.Diagnostic.NotLoaded" xml:space="preserve"><value>请加载媒体库配置。</value></data>
-  <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>{0:N0} 配置 问题 必须 为 已解决 之前 正在预览.</value></data>
-  <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>{0:N0} 配置 问题 必须 为 已解决 之前 正在预览.</value></data>
+  <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>预览前必须解决 {0:N0} 个配置问题。</value></data>
+  <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>预览前必须解决 {0:N0} 个配置问题。</value></data>
   <data name="Ingest.Configuration.Ready" xml:space="preserve"><value>导入配置已就绪。</value></data>
-  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>是否导入 {0:N0} 张专辑、创建 {1:N0} 个输出文件并清理 {2:N0} 个源项目？可以恢复：已完成的专辑和清理操作会记录在操作日志中。</value></data>
-  <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>应用 引入</value></data>
-  <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>应用 引入 计划</value></data>
-  <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>选择 传入 音乐 目录</value></data>
+  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>是否导入 {0:N0} 张专辑、创建 {1:N0} 个输出文件并清理 {2:N0} 个源项目？可以进行恢复：已完成的专辑和清理操作会记录在操作日志中。</value></data>
+  <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>应用导入计划</value></data>
+  <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>应用导入计划</value></data>
+  <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>选择待导入音乐文件夹</value></data>
   <data name="Ingest.File.ConflictSummary" xml:space="preserve"><value>冲突详细信息：{0}</value></data>
   <data name="Ingest.File.OutputDestination" xml:space="preserve"><value>目标 → {0}</value></data>
   <data name="Ingest.File.Progress.Complete" xml:space="preserve"><value>✓ 完成</value></data>
-  <data name="Ingest.File.Progress.Failed" xml:space="preserve"><value>✕ 不 已完成</value></data>
+  <data name="Ingest.File.Progress.Failed" xml:space="preserve"><value>✕ 未完成</value></data>
   <data name="Ingest.File.Progress.InProgress" xml:space="preserve"><value>● 进行中 — {0}</value></data>
-  <data name="Ingest.File.Type.CdAlac" xml:space="preserve"><value>CD-质量 ALAC</value></data>
+  <data name="Ingest.File.Type.CdAlac" xml:space="preserve"><value>CD 品质 ALAC</value></data>
   <data name="Ingest.File.Type.CdFlac" xml:space="preserve"><value>CD FLAC</value></data>
   <data name="Ingest.File.Type.Conflict" xml:space="preserve"><value>冲突</value></data>
   <data name="Ingest.File.Type.HiResAlac" xml:space="preserve"><value>高解析度 ALAC</value></data>
@@ -4851,34 +4851,34 @@
   <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>导入正在进行。请先取消或完成当前操作，再替换输入项。</value></data>
   <data name="Ingest.Handoff.CommonTreeRequired" xml:space="preserve"><value>所选文件必须位于同一卷的公共源文件夹下。</value></data>
   <data name="Ingest.Handoff.InvalidPaths" xml:space="preserve"><value>所选路径无效。请打开诊断详细信息以查看根本错误。</value></data>
-  <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>选择 一个 或 更多 工作台 文件 第一个.</value></data>
-  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>已准备好 {0:N0} 个在工作台中选择的文件。请运行预检或预览。</value></data>
-  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>已准备好 {0:N0} 个在工作台中选择的文件。请运行预检或预览。</value></data>
-  <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>该 已选择 文件 是 不可用: {0}</value></data>
+  <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>请先在工作台中选择一个或多个文件。</value></data>
+  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>工作台中选择的 {0:N0} 个文件已准备就绪。请运行预检或预览。</value></data>
+  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>工作台中选择的 {0:N0} 个文件已准备就绪。请运行预检或预览。</value></data>
+  <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>所选文件不可用：{0}</value></data>
   <data name="Ingest.History.AffectedItems.One" xml:space="preserve"><value>{0:N0} 项目</value></data>
   <data name="Ingest.History.AffectedItems.Other" xml:space="preserve"><value>{0:N0} 项目</value></data>
   <data name="Ingest.History.OpenForDetails" xml:space="preserve"><value>打开以查看项目详细信息</value></data>
   <data name="Ingest.History.State.Completed" xml:space="preserve"><value>已完成</value></data>
-  <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>已中断 — 恢复 可用</value></data>
-  <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>隔离 存在</value></data>
-  <data name="Ingest.History.State.RolledBack" xml:space="preserve"><value>已回滚 背面</value></data>
-  <data name="Ingest.History.Status.ChooseSource" xml:space="preserve"><value>选择 一个 源 文件夹 之前 刷新 引入 历史记录.</value></data>
-  <data name="Ingest.History.Status.Failed" xml:space="preserve"><value>引入 历史记录 可以 不 为 刷新.</value></data>
-  <data name="Ingest.History.Status.Ready" xml:space="preserve"><value>刷新 到 发现 最近 引入 和 恢复 运行.</value></data>
-  <data name="Ingest.History.Status.SearchingRoots.One" xml:space="preserve"><value>正在搜索 {0:N0} 源 根 用于 引入 日志…</value></data>
-  <data name="Ingest.History.Status.SearchingRoots.Other" xml:space="preserve"><value>正在搜索 {0:N0} 源 根 用于 引入 日志…</value></data>
-  <data name="Ingest.History.Status.Summary" xml:space="preserve"><value>运行: {0:N0}; 已中断: {1:N0}.</value></data>
-  <data name="Ingest.History.Status.SummaryWithWarnings" xml:space="preserve"><value>运行: {0:N0}; 已中断: {1:N0}; 根 警告: {2:N0}.</value></data>
+  <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>已中断 — 可恢复</value></data>
+  <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>包含隔离项目</value></data>
+  <data name="Ingest.History.State.RolledBack" xml:space="preserve"><value>已回滚</value></data>
+  <data name="Ingest.History.Status.ChooseSource" xml:space="preserve"><value>刷新导入历史记录前，请选择源文件夹。</value></data>
+  <data name="Ingest.History.Status.Failed" xml:space="preserve"><value>无法刷新导入历史记录。</value></data>
+  <data name="Ingest.History.Status.Ready" xml:space="preserve"><value>刷新历史记录以查找最近的导入和恢复运行。</value></data>
+  <data name="Ingest.History.Status.SearchingRoots.One" xml:space="preserve"><value>正在 {0:N0} 个源根目录中搜索导入日志…</value></data>
+  <data name="Ingest.History.Status.SearchingRoots.Other" xml:space="preserve"><value>正在 {0:N0} 个源根目录中搜索导入日志…</value></data>
+  <data name="Ingest.History.Status.Summary" xml:space="preserve"><value>运行：{0:N0}；中断：{1:N0}。</value></data>
+  <data name="Ingest.History.Status.SummaryWithWarnings" xml:space="preserve"><value>运行：{0:N0}；中断：{1:N0}；根目录警告：{2:N0}。</value></data>
   <data name="Ingest.Operation.Cancelled" xml:space="preserve"><value>已取消</value></data>
   <data name="Ingest.Operation.Complete" xml:space="preserve"><value>完成</value></data>
-  <data name="Ingest.Operation.EmptyFoldersRemoved" xml:space="preserve"><value>空 文件夹 已移除</value></data>
+  <data name="Ingest.Operation.EmptyFoldersRemoved" xml:space="preserve"><value>已移除空文件夹</value></data>
   <data name="Ingest.Operation.Encoding" xml:space="preserve"><value>编码</value></data>
-  <data name="Ingest.Operation.NonMusicCleanup" xml:space="preserve"><value>非音乐 清理</value></data>
+  <data name="Ingest.Operation.NonMusicCleanup" xml:space="preserve"><value>清理非音乐文件</value></data>
   <data name="Ingest.Operation.Preparing" xml:space="preserve"><value>正在准备</value></data>
   <data name="Ingest.Operation.Processing" xml:space="preserve"><value>正在处理 {0}</value></data>
-  <data name="Ingest.Operation.SourceComplete" xml:space="preserve"><value>源 完成</value></data>
-  <data name="Ingest.Operation.Staged" xml:space="preserve"><value>已暂存 {0}</value></data>
-  <data name="Ingest.Operation.StagingOutputs" xml:space="preserve"><value>暂存 输出</value></data>
+  <data name="Ingest.Operation.SourceComplete" xml:space="preserve"><value>源处理已完成</value></data>
+  <data name="Ingest.Operation.Staged" xml:space="preserve"><value>{0} 已暂存</value></data>
+  <data name="Ingest.Operation.StagingOutputs" xml:space="preserve"><value>正在暂存输出</value></data>
   <data name="Ingest.Operation.Working" xml:space="preserve"><value>正在处理</value></data>
   <data name="Ingest.OutputKind.Aac" xml:space="preserve"><value>AAC</value></data>
   <data name="Ingest.OutputKind.CdFlac" xml:space="preserve"><value>CD FLAC</value></data>
@@ -4887,15 +4887,15 @@
   <data name="Ingest.Preflight.Check.Configuration" xml:space="preserve"><value>配置</value></data>
   <data name="Ingest.Preflight.Check.Destinations" xml:space="preserve"><value>目标</value></data>
   <data name="Ingest.Preflight.Check.Ffmpeg" xml:space="preserve"><value>ffmpeg</value></data>
-  <data name="Ingest.Preflight.Check.ITunesLibrary" xml:space="preserve"><value>iTunes 库</value></data>
-  <data name="Ingest.Preflight.Check.Generic" xml:space="preserve"><value>引入 先决条件</value></data>
-  <data name="Ingest.Preflight.Check.PathIsolation" xml:space="preserve"><value>路径 隔离</value></data>
+  <data name="Ingest.Preflight.Check.ITunesLibrary" xml:space="preserve"><value>iTunes 资料库</value></data>
+  <data name="Ingest.Preflight.Check.Generic" xml:space="preserve"><value>导入先决条件</value></data>
+  <data name="Ingest.Preflight.Check.PathIsolation" xml:space="preserve"><value>路径隔离</value></data>
   <data name="Ingest.Preflight.Check.SelectedFiles" xml:space="preserve"><value>所选文件</value></data>
   <data name="Ingest.Preflight.Check.Source" xml:space="preserve"><value>源</value></data>
   <data name="Ingest.Preflight.Check.WavPack" xml:space="preserve"><value>WavPack</value></data>
-  <data name="Ingest.Preflight.Result.Error" xml:space="preserve"><value>解决 此 阻止 错误 之前 正在预览.</value></data>
-  <data name="Ingest.Preflight.Result.Pass" xml:space="preserve"><value>检查 已通过.</value></data>
-  <data name="Ingest.Preflight.Result.Warning" xml:space="preserve"><value>审阅 此 警告 之前 正在预览.</value></data>
+  <data name="Ingest.Preflight.Result.Error" xml:space="preserve"><value>请在预览前解决此阻止性错误。</value></data>
+  <data name="Ingest.Preflight.Result.Pass" xml:space="preserve"><value>检查已通过。</value></data>
+  <data name="Ingest.Preflight.Result.Warning" xml:space="preserve"><value>请在预览前查看此警告。</value></data>
   <data name="Ingest.PreviewFilter.Albums" xml:space="preserve"><value>专辑</value></data>
   <data name="Ingest.PreviewFilter.All" xml:space="preserve"><value>全部</value></data>
   <data name="Ingest.PreviewFilter.Cleanup" xml:space="preserve"><value>清理</value></data>
@@ -4903,39 +4903,39 @@
   <data name="Ingest.PreviewFilter.Outputs" xml:space="preserve"><value>输出</value></data>
   <data name="Ingest.SelectedSources.Summary.One" xml:space="preserve"><value>将 {0:N0} 个在工作台中选择的文件用作引入源。</value></data>
   <data name="Ingest.SelectedSources.Summary.Other" xml:space="preserve"><value>将 {0:N0} 个在工作台中选择的文件用作引入源。</value></data>
-  <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>已取消. 任意 专辑 已经 已提交 保留 安全地 日志.</value></data>
-  <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>引入 曾是 已取消. 任意 已完成 作品 保留 安全地 日志.</value></data>
-  <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>引入 曾是 不 已应用. 该 已审阅 预览 保留 可用.</value></data>
-  <data name="Ingest.Status.ApplyFailed" xml:space="preserve"><value>该 引入 计划 可以 不 为 已应用.</value></data>
-  <data name="Ingest.Status.ApplyIndexed" xml:space="preserve"><value>已安装: {0:N0}; 失败 专辑: {1:N0}. 索引 更改 — 已添加: {2:N0}, 已修改: {3:N0}, 已移除: {4:N0}.</value></data>
+  <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>已取消。已提交的专辑仍安全地记录在日志中。</value></data>
+  <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>导入已取消。已完成的工作仍安全地记录在日志中。</value></data>
+  <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>未应用导入。已审阅的预览仍可用。</value></data>
+  <data name="Ingest.Status.ApplyFailed" xml:space="preserve"><value>无法应用导入计划。</value></data>
+  <data name="Ingest.Status.ApplyIndexed" xml:space="preserve"><value>已安装：{0:N0}；失败的专辑：{1:N0}。索引更改 — 已添加：{2:N0}，已修改：{3:N0}，已移除：{4:N0}。</value></data>
   <data name="Ingest.Status.ApplyProgress" xml:space="preserve"><value>{0}: {1} ({2:N0}/{3:N0})</value></data>
-  <data name="Ingest.Status.ApplyResult" xml:space="preserve"><value>已安装 文件: {0:N0}; 失败 专辑: {1:N0}.</value></data>
-  <data name="Ingest.Status.ApplyResultNoLibrary" xml:space="preserve"><value>已安装 文件: {0:N0}; 失败 专辑: {1:N0}. 重新-正在索引 曾是 已跳过 因为 否 库 配置 是 已加载.</value></data>
+  <data name="Ingest.Status.ApplyResult" xml:space="preserve"><value>已安装文件：{0:N0}；失败的专辑：{1:N0}。</value></data>
+  <data name="Ingest.Status.ApplyResultNoLibrary" xml:space="preserve"><value>已安装文件：{0:N0}；失败的专辑：{1:N0}。由于未加载资料库配置，已跳过重新索引。</value></data>
   <data name="Ingest.Status.ChooseSource" xml:space="preserve"><value>选择传入文件夹，然后运行预检或预览。</value></data>
-  <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>非音乐 清理 已完成.</value></data>
-  <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>派生 曾是 已拒绝. 该 整个 运行 曾是 已取消 和 无 曾是 已更改.</value></data>
+  <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>非音乐文件清理已完成。</value></data>
+  <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>已拒绝生成 CD 品质输出。整个运行已取消，未进行任何更改。</value></data>
   <data name="Ingest.Status.InputsChanged" xml:space="preserve"><value>输入已更改。请在应用前重新预览。</value></data>
-  <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>预检 已取消.</value></data>
+  <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>预检已取消。</value></data>
   <data name="Ingest.Status.PreflightChecking" xml:space="preserve"><value>正在检查导入配置和外部工具…</value></data>
-  <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>预检 已找到 {0:N0} 阻止 错误.</value></data>
-  <data name="Ingest.Status.PreflightErrors.Other" xml:space="preserve"><value>预检 已找到 {0:N0} 阻止 错误.</value></data>
-  <data name="Ingest.Status.PreflightFailed" xml:space="preserve"><value>预检 可以 不 为 已完成.</value></data>
+  <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>预检发现 {0:N0} 个阻止性错误。</value></data>
+  <data name="Ingest.Status.PreflightErrors.Other" xml:space="preserve"><value>预检发现 {0:N0} 个阻止性错误。</value></data>
+  <data name="Ingest.Status.PreflightFailed" xml:space="preserve"><value>无法完成预检。</value></data>
   <data name="Ingest.Status.PreflightPassed" xml:space="preserve"><value>预检通过。源已可扫描。</value></data>
-  <data name="Ingest.Status.PreflightWarnings.One" xml:space="preserve"><value>预检 已通过 带 {0:N0} 警告. 审阅 它 之前 正在预览.</value></data>
-  <data name="Ingest.Status.PreflightWarnings.Other" xml:space="preserve"><value>预检 已通过 带 {0:N0} 警告. 审阅 它们 之前 正在预览.</value></data>
-  <data name="Ingest.Status.PreviewCancelled" xml:space="preserve"><value>预览 已取消.</value></data>
-  <data name="Ingest.Status.PreviewCleanupReady" xml:space="preserve"><value>否 音乐 专辑 曾是 已找到. 非音乐 文件: {0:N0}; 源 文件夹 就绪 用于 清理: {1:N0}. 审阅, 然后 应用.</value></data>
-  <data name="Ingest.Status.PreviewConflicts.One" xml:space="preserve"><value>该 预览 有 {0:N0} 冲突 和 无法 为 已应用.</value></data>
-  <data name="Ingest.Status.PreviewConflicts.Other" xml:space="preserve"><value>该 预览 有 {0:N0} 冲突 和 无法 为 已应用.</value></data>
-  <data name="Ingest.Status.PreviewEmpty" xml:space="preserve"><value>否 可导入 音乐 专辑 或 已启用 非音乐 清理 项目 曾是 已找到.</value></data>
-  <data name="Ingest.Status.PreviewFailed" xml:space="preserve"><value>该 引入 预览 可以 不 为 已完成.</value></data>
-  <data name="Ingest.Status.PreviewFound" xml:space="preserve"><value>{0} ({1:N0} 已找到)</value></data>
+  <data name="Ingest.Status.PreflightWarnings.One" xml:space="preserve"><value>预检已通过，但有 {0:N0} 个警告。请在预览前查看。</value></data>
+  <data name="Ingest.Status.PreflightWarnings.Other" xml:space="preserve"><value>预检已通过，但有 {0:N0} 个警告。请在预览前查看。</value></data>
+  <data name="Ingest.Status.PreviewCancelled" xml:space="preserve"><value>预览已取消。</value></data>
+  <data name="Ingest.Status.PreviewCleanupReady" xml:space="preserve"><value>未找到音乐专辑。非音乐文件：{0:N0}；可清理的源文件夹：{1:N0}。请审阅计划，然后应用。</value></data>
+  <data name="Ingest.Status.PreviewConflicts.One" xml:space="preserve"><value>预览中有 {0:N0} 个冲突，无法应用。</value></data>
+  <data name="Ingest.Status.PreviewConflicts.Other" xml:space="preserve"><value>预览中有 {0:N0} 个冲突，无法应用。</value></data>
+  <data name="Ingest.Status.PreviewEmpty" xml:space="preserve"><value>未找到可导入的音乐专辑或已启用的非音乐清理项目。</value></data>
+  <data name="Ingest.Status.PreviewFailed" xml:space="preserve"><value>无法完成导入预览。</value></data>
+  <data name="Ingest.Status.PreviewFound" xml:space="preserve"><value>{0}（找到 {1:N0} 个项目）</value></data>
   <data name="Ingest.Status.PreviewProgress" xml:space="preserve"><value>{0} ({1:N0}/{2:N0})</value></data>
   <data name="Ingest.Status.PreviewReady" xml:space="preserve"><value>专辑：{0:N0}；源文件：{1:N0}；待批准的派生项：{2:N0}。请审阅后应用。</value></data>
   <data name="Ingest.Status.PreviewScanning" xml:space="preserve"><value>正在扫描并制定计划…</value></data>
-  <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>引入 已提交. 重新-正在索引 该 库…</value></data>
-  <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>工作台 文件 选择 已清除. 选择 一个 传入 文件夹.</value></data>
-  <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>源 文件夹 已选择 从 放置. 运行 预检 或 预览.</value></data>
+  <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>导入已提交。正在重新索引资料库…</value></data>
+  <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>已清除工作台文件选择。请选择待导入音乐文件夹。</value></data>
+  <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>已通过拖放选择源文件夹。请运行预检或预览。</value></data>
   <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>应用整理计划</value></data>
   <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>正在计算规范路径</value></data>
   <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>预览整理计划</value></data>

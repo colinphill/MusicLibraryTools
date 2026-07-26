@@ -21,7 +21,7 @@ public sealed class EditorialReviewManifestTests
 
         Assert.Equal(3_544, manifest.Records.Count);
         Assert.Equal(
-            2_075,
+            1_952,
             Count(
                 manifest,
                 EditorialReviewStatus.Pending));
@@ -31,12 +31,12 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.InvariantApproved));
         Assert.Equal(
-            44,
+            71,
             Count(
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            1_310,
+            1_406,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -443,7 +443,7 @@ public sealed class EditorialReviewManifestTests
                     requireComplete: true));
 
         Assert.Equal(
-            "Strict editorial review failed: 2,075 resources remain Pending.",
+            "Strict editorial review failed: 1,952 resources remain Pending.",
             exception.Message);
         EditorialReviewManifest unchanged =
             EditorialReviewInfrastructure.LoadAndValidate(
@@ -452,7 +452,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
         Assert.Equal(
-            2_075,
+            1_952,
             Count(
                 unchanged,
                 EditorialReviewStatus.Pending));
@@ -513,7 +513,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                1_310,
+                1_406,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));
@@ -523,12 +523,12 @@ public sealed class EditorialReviewManifestTests
                     refreshed,
                     EditorialReviewStatus.InvariantApproved));
             Assert.Equal(
-                2_075,
+                1_952,
                 Count(
                     refreshed,
                     EditorialReviewStatus.Pending));
             Assert.Equal(
-                44,
+                71,
                 Count(
                     refreshed,
                     EditorialReviewStatus.GlossaryReviewed));
@@ -735,6 +735,70 @@ public sealed class EditorialReviewManifestTests
                 Assert.Equal(
                     CatalogTranslationRoute.EditorialOverride,
                     record.Route);
+                Assert.Equal(
+                    "Codex focused editorial review",
+                    record.Reviewer);
+                Assert.Equal("2026-07-25", record.Date);
+                Assert.StartsWith(
+                    "packet:v1:",
+                    record.Disposition,
+                    StringComparison.Ordinal);
+            });
+    }
+
+    [Fact]
+    public void Ingest_review_batch_contains_the_exact_focused_domain()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: false);
+        const string batch =
+            "gui-usability-ingest-editorial-2026-07-25";
+        EditorialReviewRecord[] records =
+            manifest.Records.Values
+                .Where(record =>
+                    string.Equals(
+                        record.Batch,
+                        batch,
+                        StringComparison.Ordinal))
+                .OrderBy(
+                    record => record.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        Assert.Equal(123, records.Length);
+        Assert.Equal(
+            96,
+            records.Count(record =>
+                record.Status ==
+                EditorialReviewStatus.EditorialReviewed));
+        Assert.Equal(
+            27,
+            records.Count(record =>
+                record.Status ==
+                EditorialReviewStatus.GlossaryReviewed));
+        Assert.Equal(
+            96,
+            records.Count(record =>
+                record.Route ==
+                CatalogTranslationRoute.EditorialOverride));
+        Assert.Equal(
+            27,
+            records.Count(record =>
+                record.Route ==
+                CatalogTranslationRoute.Glossary));
+        Assert.All(
+            records,
+            record =>
+            {
+                Assert.StartsWith(
+                    "Ingest.",
+                    record.Key,
+                    StringComparison.Ordinal);
                 Assert.Equal(
                     "Codex focused editorial review",
                     record.Reviewer);

@@ -1085,7 +1085,7 @@
     <value>健康狀況</value>
   </data>
   <data name="Ingest.Action.ClearSelectedFiles" xml:space="preserve">
-    <value>清除 選取的檔案</value>
+    <value>清除檔案選取</value>
   </data>
   <data name="Ingest.Action.More" xml:space="preserve">
     <value>更多</value>
@@ -1094,13 +1094,13 @@
     <value>更多匯入動作</value>
   </data>
   <data name="Ingest.Action.OpenRecovery" xml:space="preserve">
-    <value>開啟 在 復原</value>
+    <value>在「復原」中開啟</value>
   </data>
   <data name="Ingest.Action.Preview" xml:space="preserve">
-    <value>預覽 擷取</value>
+    <value>預覽匯入計畫</value>
   </data>
   <data name="Ingest.Action.RefreshHistory" xml:space="preserve">
-    <value>重新整理 歷程記錄</value>
+    <value>重新整理歷程記錄</value>
   </data>
   <data name="Ingest.Action.RunPreflight" xml:space="preserve">
     <value>僅執行預先檢查</value>
@@ -1130,31 +1130,31 @@
     <value>{0} 衝突</value>
   </data>
   <data name="Ingest.Summary.CleanupCount.One" xml:space="preserve">
-    <value>{0} 清理 動作</value>
+    <value>{0} 個清理動作</value>
   </data>
   <data name="Ingest.Summary.CleanupCount.Other" xml:space="preserve">
-    <value>{0} 清理 動作</value>
+    <value>{0} 個清理動作</value>
   </data>
   <data name="Ingest.History.EmptyDescription" xml:space="preserve">
-    <value>選擇 一個 來源 資料夾, 然後 重新整理 至 探索 日誌 與 已中斷 擷取 執行.</value>
+    <value>選取來源資料夾，然後重新整理歷程記錄，以尋找已記錄或中斷的匯入執行。</value>
   </data>
   <data name="Ingest.History.EmptyTitle" xml:space="preserve">
-    <value>否 擷取 執行 已找到</value>
+    <value>找不到匯入執行</value>
   </data>
   <data name="Ingest.IncomingFolder" xml:space="preserve">
-    <value>傳入 資料夾</value>
+    <value>待匯入音樂資料夾</value>
   </data>
   <data name="Ingest.IncomingFolderPlaceholder" xml:space="preserve">
-    <value>放置 一個 資料夾 這裡 或 瀏覽</value>
+    <value>將資料夾拖放到此處或瀏覽</value>
   </data>
   <data name="Ingest.PreviewFilterAutomation" xml:space="preserve">
-    <value>預覽 篩選器</value>
+    <value>預覽篩選器</value>
   </data>
   <data name="Ingest.RecentFolders" xml:space="preserve">
-    <value>最近 資料夾</value>
+    <value>最近使用的資料夾</value>
   </data>
   <data name="Ingest.RecentFoldersAutomation" xml:space="preserve">
-    <value>最近 擷取 資料夾</value>
+    <value>最近使用的匯入資料夾</value>
   </data>
   <data name="Ingest.Subtitle" xml:space="preserve">
     <value>預先檢查、預覽並將音樂安全匯入目前的媒體庫。</value>
@@ -1166,7 +1166,7 @@
     <value>預覽</value>
   </data>
   <data name="Ingest.Title" xml:space="preserve">
-    <value>擷取</value>
+    <value>匯入</value>
   </data>
   <data name="Navigation.Devices" xml:space="preserve">
     <value>裝置</value>
@@ -4820,28 +4820,28 @@
   <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>請檢閱同步預覽。規劃的動作：{0:N0}；移除：{1:N0}；待傳輸位元組：{2:N0}。</value></data>
   <data name="Devices.Status.Ready" xml:space="preserve"><value>請先選擇本機來源並初始化受管理的 Android 目的地，然後再預覽。</value></data>
   <data name="Devices.Status.Restored" xml:space="preserve"><value>已將復原作業 {0} 還原到 {1}。</value></data>
-  <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>正在開始 擷取</value></data>
-  <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>擷取 音樂</value></data>
-  <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>正在搜尋 用於 擷取 日誌</value></data>
-  <data name="Ingest.Activity.History.Title" xml:space="preserve"><value>重新整理 擷取 歷程記錄</value></data>
-  <data name="Ingest.Activity.Preflight.Starting" xml:space="preserve"><value>正在檢查 擷取 必要條件</value></data>
-  <data name="Ingest.Activity.Preflight.Title" xml:space="preserve"><value>預先檢查 擷取</value></data>
-  <data name="Ingest.Activity.Preview.Starting" xml:space="preserve"><value>正在掃描 傳入 音樂</value></data>
-  <data name="Ingest.Activity.Preview.Title" xml:space="preserve"><value>預覽 擷取</value></data>
+  <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>正在開始匯入</value></data>
+  <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>匯入音樂</value></data>
+  <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>正在搜尋匯入日誌</value></data>
+  <data name="Ingest.Activity.History.Title" xml:space="preserve"><value>重新整理匯入歷程記錄</value></data>
+  <data name="Ingest.Activity.Preflight.Starting" xml:space="preserve"><value>正在檢查匯入必要條件</value></data>
+  <data name="Ingest.Activity.Preflight.Title" xml:space="preserve"><value>匯入預先檢查</value></data>
+  <data name="Ingest.Activity.Preview.Starting" xml:space="preserve"><value>正在掃描待匯入音樂</value></data>
+  <data name="Ingest.Activity.Preview.Title" xml:space="preserve"><value>預覽匯入</value></data>
   <data name="Ingest.Configuration.Diagnostic.NotLoaded" xml:space="preserve"><value>請載入媒體庫設定。</value></data>
-  <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>{0:N0} 設定 問題 必須 為 已解決 之前 正在預覽.</value></data>
-  <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>{0:N0} 設定 問題 必須 為 已解決 之前 正在預覽.</value></data>
+  <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>預覽前必須解決 {0:N0} 個設定問題。</value></data>
+  <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>預覽前必須解決 {0:N0} 個設定問題。</value></data>
   <data name="Ingest.Configuration.Ready" xml:space="preserve"><value>匯入設定已就緒。</value></data>
-  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>是否匯入 {0:N0} 張專輯、建立 {1:N0} 個輸出檔案並清理 {2:N0} 個來源項目？可以復原：已完成的專輯和清理操作會記錄在操作日誌中。</value></data>
-  <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>套用 擷取</value></data>
-  <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>套用 擷取 計畫</value></data>
-  <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>選取 傳入 音樂 目錄</value></data>
+  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>是否匯入 {0:N0} 張專輯、建立 {1:N0} 個輸出檔案並清理 {2:N0} 個來源項目？可以進行復原：已完成的專輯和清理動作會記錄在操作日誌中。</value></data>
+  <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>套用匯入計畫</value></data>
+  <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>套用匯入計畫</value></data>
+  <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>選取待匯入音樂資料夾</value></data>
   <data name="Ingest.File.ConflictSummary" xml:space="preserve"><value>衝突詳細資料：{0}</value></data>
   <data name="Ingest.File.OutputDestination" xml:space="preserve"><value>目的地 → {0}</value></data>
   <data name="Ingest.File.Progress.Complete" xml:space="preserve"><value>✓ 完成</value></data>
-  <data name="Ingest.File.Progress.Failed" xml:space="preserve"><value>✕ 不 已完成</value></data>
+  <data name="Ingest.File.Progress.Failed" xml:space="preserve"><value>✕ 未完成</value></data>
   <data name="Ingest.File.Progress.InProgress" xml:space="preserve"><value>● 進行中 — {0}</value></data>
-  <data name="Ingest.File.Type.CdAlac" xml:space="preserve"><value>CD-品質 ALAC</value></data>
+  <data name="Ingest.File.Type.CdAlac" xml:space="preserve"><value>CD 品質 ALAC</value></data>
   <data name="Ingest.File.Type.CdFlac" xml:space="preserve"><value>CD FLAC</value></data>
   <data name="Ingest.File.Type.Conflict" xml:space="preserve"><value>衝突</value></data>
   <data name="Ingest.File.Type.HiResAlac" xml:space="preserve"><value>高解析度 ALAC</value></data>
@@ -4851,34 +4851,34 @@
   <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>匯入正在進行。請先取消或完成目前的作業，再取代輸入項目。</value></data>
   <data name="Ingest.Handoff.CommonTreeRequired" xml:space="preserve"><value>所選檔案必須位於同一磁碟區的共同來源資料夾下。</value></data>
   <data name="Ingest.Handoff.InvalidPaths" xml:space="preserve"><value>所選路徑無效。請開啟診斷詳細資料以查看根本錯誤。</value></data>
-  <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>選取 一個 或 更多 工作台 檔案 第一個.</value></data>
-  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>已準備好 {0:N0} 個在工作台中選取的檔案。請執行預先檢查或預覽。</value></data>
-  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>已準備好 {0:N0} 個在工作台中選取的檔案。請執行預先檢查或預覽。</value></data>
-  <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>該 已選取 檔案 是 無法使用: {0}</value></data>
+  <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>請先在工作台中選取一或多個檔案。</value></data>
+  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>工作台中選取的 {0:N0} 個檔案已準備就緒。請執行預先檢查或預覽。</value></data>
+  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>工作台中選取的 {0:N0} 個檔案已準備就緒。請執行預先檢查或預覽。</value></data>
+  <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>所選檔案無法使用：{0}</value></data>
   <data name="Ingest.History.AffectedItems.One" xml:space="preserve"><value>{0:N0} 項目</value></data>
   <data name="Ingest.History.AffectedItems.Other" xml:space="preserve"><value>{0:N0} 項目</value></data>
   <data name="Ingest.History.OpenForDetails" xml:space="preserve"><value>開啟以查看項目詳細資料</value></data>
   <data name="Ingest.History.State.Completed" xml:space="preserve"><value>已完成</value></data>
-  <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>已中斷 — 復原 可用</value></data>
-  <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>隔離 存在</value></data>
-  <data name="Ingest.History.State.RolledBack" xml:space="preserve"><value>已回復 背面</value></data>
-  <data name="Ingest.History.Status.ChooseSource" xml:space="preserve"><value>選擇 一個 來源 資料夾 之前 重新整理 擷取 歷程記錄.</value></data>
-  <data name="Ingest.History.Status.Failed" xml:space="preserve"><value>擷取 歷程記錄 可以 不 為 重新整理.</value></data>
-  <data name="Ingest.History.Status.Ready" xml:space="preserve"><value>重新整理 至 探索 最近 擷取 與 復原 執行.</value></data>
-  <data name="Ingest.History.Status.SearchingRoots.One" xml:space="preserve"><value>正在搜尋 {0:N0} 來源 根目錄 用於 擷取 日誌…</value></data>
-  <data name="Ingest.History.Status.SearchingRoots.Other" xml:space="preserve"><value>正在搜尋 {0:N0} 來源 根目錄 用於 擷取 日誌…</value></data>
-  <data name="Ingest.History.Status.Summary" xml:space="preserve"><value>執行: {0:N0}; 已中斷: {1:N0}.</value></data>
-  <data name="Ingest.History.Status.SummaryWithWarnings" xml:space="preserve"><value>執行: {0:N0}; 已中斷: {1:N0}; 根目錄 警告: {2:N0}.</value></data>
+  <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>已中斷 — 可復原</value></data>
+  <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>包含隔離項目</value></data>
+  <data name="Ingest.History.State.RolledBack" xml:space="preserve"><value>已回復</value></data>
+  <data name="Ingest.History.Status.ChooseSource" xml:space="preserve"><value>重新整理匯入歷程記錄前，請選取來源資料夾。</value></data>
+  <data name="Ingest.History.Status.Failed" xml:space="preserve"><value>無法重新整理匯入歷程記錄。</value></data>
+  <data name="Ingest.History.Status.Ready" xml:space="preserve"><value>重新整理歷程記錄，以尋找最近的匯入和復原執行。</value></data>
+  <data name="Ingest.History.Status.SearchingRoots.One" xml:space="preserve"><value>正在 {0:N0} 個來源根目錄中搜尋匯入日誌…</value></data>
+  <data name="Ingest.History.Status.SearchingRoots.Other" xml:space="preserve"><value>正在 {0:N0} 個來源根目錄中搜尋匯入日誌…</value></data>
+  <data name="Ingest.History.Status.Summary" xml:space="preserve"><value>執行：{0:N0}；中斷：{1:N0}。</value></data>
+  <data name="Ingest.History.Status.SummaryWithWarnings" xml:space="preserve"><value>執行：{0:N0}；中斷：{1:N0}；根目錄警告：{2:N0}。</value></data>
   <data name="Ingest.Operation.Cancelled" xml:space="preserve"><value>已取消</value></data>
   <data name="Ingest.Operation.Complete" xml:space="preserve"><value>完成</value></data>
-  <data name="Ingest.Operation.EmptyFoldersRemoved" xml:space="preserve"><value>空白 資料夾 已移除</value></data>
+  <data name="Ingest.Operation.EmptyFoldersRemoved" xml:space="preserve"><value>已移除空白資料夾</value></data>
   <data name="Ingest.Operation.Encoding" xml:space="preserve"><value>編碼</value></data>
-  <data name="Ingest.Operation.NonMusicCleanup" xml:space="preserve"><value>非音樂 清理</value></data>
+  <data name="Ingest.Operation.NonMusicCleanup" xml:space="preserve"><value>清理非音樂檔案</value></data>
   <data name="Ingest.Operation.Preparing" xml:space="preserve"><value>正在準備</value></data>
   <data name="Ingest.Operation.Processing" xml:space="preserve"><value>正在處理 {0}</value></data>
-  <data name="Ingest.Operation.SourceComplete" xml:space="preserve"><value>來源 完成</value></data>
-  <data name="Ingest.Operation.Staged" xml:space="preserve"><value>已暫存 {0}</value></data>
-  <data name="Ingest.Operation.StagingOutputs" xml:space="preserve"><value>暫存 輸出</value></data>
+  <data name="Ingest.Operation.SourceComplete" xml:space="preserve"><value>來源處理已完成</value></data>
+  <data name="Ingest.Operation.Staged" xml:space="preserve"><value>{0} 已暫存</value></data>
+  <data name="Ingest.Operation.StagingOutputs" xml:space="preserve"><value>正在暫存輸出</value></data>
   <data name="Ingest.Operation.Working" xml:space="preserve"><value>正在處理</value></data>
   <data name="Ingest.OutputKind.Aac" xml:space="preserve"><value>AAC</value></data>
   <data name="Ingest.OutputKind.CdFlac" xml:space="preserve"><value>CD FLAC</value></data>
@@ -4888,14 +4888,14 @@
   <data name="Ingest.Preflight.Check.Destinations" xml:space="preserve"><value>目的地</value></data>
   <data name="Ingest.Preflight.Check.Ffmpeg" xml:space="preserve"><value>ffmpeg</value></data>
   <data name="Ingest.Preflight.Check.ITunesLibrary" xml:space="preserve"><value>iTunes 資料庫</value></data>
-  <data name="Ingest.Preflight.Check.Generic" xml:space="preserve"><value>擷取 必要條件</value></data>
-  <data name="Ingest.Preflight.Check.PathIsolation" xml:space="preserve"><value>路徑 隔離</value></data>
+  <data name="Ingest.Preflight.Check.Generic" xml:space="preserve"><value>匯入必要條件</value></data>
+  <data name="Ingest.Preflight.Check.PathIsolation" xml:space="preserve"><value>路徑隔離</value></data>
   <data name="Ingest.Preflight.Check.SelectedFiles" xml:space="preserve"><value>選取的檔案</value></data>
   <data name="Ingest.Preflight.Check.Source" xml:space="preserve"><value>來源</value></data>
   <data name="Ingest.Preflight.Check.WavPack" xml:space="preserve"><value>WavPack</value></data>
-  <data name="Ingest.Preflight.Result.Error" xml:space="preserve"><value>解決 此 封鎖 錯誤 之前 正在預覽.</value></data>
-  <data name="Ingest.Preflight.Result.Pass" xml:space="preserve"><value>檢查 已通過.</value></data>
-  <data name="Ingest.Preflight.Result.Warning" xml:space="preserve"><value>檢閱 此 警告 之前 正在預覽.</value></data>
+  <data name="Ingest.Preflight.Result.Error" xml:space="preserve"><value>請在預覽前解決此阻止性錯誤。</value></data>
+  <data name="Ingest.Preflight.Result.Pass" xml:space="preserve"><value>檢查已通過。</value></data>
+  <data name="Ingest.Preflight.Result.Warning" xml:space="preserve"><value>請在預覽前檢閱此警告。</value></data>
   <data name="Ingest.PreviewFilter.Albums" xml:space="preserve"><value>專輯</value></data>
   <data name="Ingest.PreviewFilter.All" xml:space="preserve"><value>全部</value></data>
   <data name="Ingest.PreviewFilter.Cleanup" xml:space="preserve"><value>清理</value></data>
@@ -4903,39 +4903,39 @@
   <data name="Ingest.PreviewFilter.Outputs" xml:space="preserve"><value>輸出</value></data>
   <data name="Ingest.SelectedSources.Summary.One" xml:space="preserve"><value>將 {0:N0} 個在工作台中選取的檔案用作擷取來源。</value></data>
   <data name="Ingest.SelectedSources.Summary.Other" xml:space="preserve"><value>將 {0:N0} 個在工作台中選取的檔案用作擷取來源。</value></data>
-  <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>已取消. 任意 專輯 已經 已認可 保留 安全地 日誌.</value></data>
-  <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>擷取 曾是 已取消. 任意 已完成 作品 保留 安全地 日誌.</value></data>
-  <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>擷取 曾是 不 已套用. 該 已檢閱 預覽 保留 可用.</value></data>
-  <data name="Ingest.Status.ApplyFailed" xml:space="preserve"><value>該 擷取 計畫 可以 不 為 已套用.</value></data>
-  <data name="Ingest.Status.ApplyIndexed" xml:space="preserve"><value>已安裝: {0:N0}; 失敗 專輯: {1:N0}. 索引 變更 — 已新增: {2:N0}, 已修改: {3:N0}, 已移除: {4:N0}.</value></data>
+  <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>已取消。已認可的專輯仍安全地記錄在日誌中。</value></data>
+  <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>匯入已取消。已完成的工作仍安全地記錄在日誌中。</value></data>
+  <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>未套用匯入。已檢閱的預覽仍可使用。</value></data>
+  <data name="Ingest.Status.ApplyFailed" xml:space="preserve"><value>無法套用匯入計畫。</value></data>
+  <data name="Ingest.Status.ApplyIndexed" xml:space="preserve"><value>已安裝：{0:N0}；失敗的專輯：{1:N0}。索引變更 — 已新增：{2:N0}，已修改：{3:N0}，已移除：{4:N0}。</value></data>
   <data name="Ingest.Status.ApplyProgress" xml:space="preserve"><value>{0}: {1} ({2:N0}/{3:N0})</value></data>
-  <data name="Ingest.Status.ApplyResult" xml:space="preserve"><value>已安裝 檔案: {0:N0}; 失敗 專輯: {1:N0}.</value></data>
-  <data name="Ingest.Status.ApplyResultNoLibrary" xml:space="preserve"><value>已安裝 檔案: {0:N0}; 失敗 專輯: {1:N0}. 重新-正在建立索引 曾是 已略過 因為 否 資料庫 設定 是 已載入.</value></data>
+  <data name="Ingest.Status.ApplyResult" xml:space="preserve"><value>已安裝檔案：{0:N0}；失敗的專輯：{1:N0}。</value></data>
+  <data name="Ingest.Status.ApplyResultNoLibrary" xml:space="preserve"><value>已安裝檔案：{0:N0}；失敗的專輯：{1:N0}。由於未載入資料庫設定，已略過重新建立索引。</value></data>
   <data name="Ingest.Status.ChooseSource" xml:space="preserve"><value>選擇傳入資料夾，然後執行預先檢查或預覽。</value></data>
-  <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>非音樂 清理 已完成.</value></data>
-  <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>衍生 曾是 已拒絕. 該 整個 執行 曾是 已取消 與 無 曾是 已變更.</value></data>
+  <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>非音樂檔案清理已完成。</value></data>
+  <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>已拒絕產生 CD 品質輸出。整個執行已取消，未進行任何變更。</value></data>
   <data name="Ingest.Status.InputsChanged" xml:space="preserve"><value>輸入已變更。請在套用前重新預覽。</value></data>
-  <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>預先檢查 已取消.</value></data>
+  <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>預先檢查已取消。</value></data>
   <data name="Ingest.Status.PreflightChecking" xml:space="preserve"><value>正在檢查匯入設定和外部工具…</value></data>
-  <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>預先檢查 已找到 {0:N0} 封鎖 錯誤.</value></data>
-  <data name="Ingest.Status.PreflightErrors.Other" xml:space="preserve"><value>預先檢查 已找到 {0:N0} 封鎖 錯誤.</value></data>
-  <data name="Ingest.Status.PreflightFailed" xml:space="preserve"><value>預先檢查 可以 不 為 已完成.</value></data>
+  <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>預先檢查發現 {0:N0} 個阻止性錯誤。</value></data>
+  <data name="Ingest.Status.PreflightErrors.Other" xml:space="preserve"><value>預先檢查發現 {0:N0} 個阻止性錯誤。</value></data>
+  <data name="Ingest.Status.PreflightFailed" xml:space="preserve"><value>無法完成預先檢查。</value></data>
   <data name="Ingest.Status.PreflightPassed" xml:space="preserve"><value>預先檢查通過。來源已可掃描。</value></data>
-  <data name="Ingest.Status.PreflightWarnings.One" xml:space="preserve"><value>預先檢查 已通過 含 {0:N0} 警告. 檢閱 它 之前 正在預覽.</value></data>
-  <data name="Ingest.Status.PreflightWarnings.Other" xml:space="preserve"><value>預先檢查 已通過 含 {0:N0} 警告. 檢閱 它們 之前 正在預覽.</value></data>
-  <data name="Ingest.Status.PreviewCancelled" xml:space="preserve"><value>預覽 已取消.</value></data>
-  <data name="Ingest.Status.PreviewCleanupReady" xml:space="preserve"><value>否 音樂 專輯 曾是 已找到. 非音樂 檔案: {0:N0}; 來源 資料夾 就緒 用於 清理: {1:N0}. 檢閱, 然後 套用.</value></data>
-  <data name="Ingest.Status.PreviewConflicts.One" xml:space="preserve"><value>該 預覽 有 {0:N0} 衝突 與 無法 為 已套用.</value></data>
-  <data name="Ingest.Status.PreviewConflicts.Other" xml:space="preserve"><value>該 預覽 有 {0:N0} 衝突 與 無法 為 已套用.</value></data>
-  <data name="Ingest.Status.PreviewEmpty" xml:space="preserve"><value>否 可匯入 音樂 專輯 或 已啟用 非音樂 清理 項目 曾是 已找到.</value></data>
-  <data name="Ingest.Status.PreviewFailed" xml:space="preserve"><value>該 擷取 預覽 可以 不 為 已完成.</value></data>
-  <data name="Ingest.Status.PreviewFound" xml:space="preserve"><value>{0} ({1:N0} 已找到)</value></data>
+  <data name="Ingest.Status.PreflightWarnings.One" xml:space="preserve"><value>預先檢查已通過，但有 {0:N0} 個警告。請在預覽前檢閱。</value></data>
+  <data name="Ingest.Status.PreflightWarnings.Other" xml:space="preserve"><value>預先檢查已通過，但有 {0:N0} 個警告。請在預覽前檢閱。</value></data>
+  <data name="Ingest.Status.PreviewCancelled" xml:space="preserve"><value>預覽已取消。</value></data>
+  <data name="Ingest.Status.PreviewCleanupReady" xml:space="preserve"><value>找不到音樂專輯。非音樂檔案：{0:N0}；可清理的來源資料夾：{1:N0}。請檢閱計畫，然後套用。</value></data>
+  <data name="Ingest.Status.PreviewConflicts.One" xml:space="preserve"><value>預覽中有 {0:N0} 個衝突，無法套用。</value></data>
+  <data name="Ingest.Status.PreviewConflicts.Other" xml:space="preserve"><value>預覽中有 {0:N0} 個衝突，無法套用。</value></data>
+  <data name="Ingest.Status.PreviewEmpty" xml:space="preserve"><value>找不到可匯入的音樂專輯或已啟用的非音樂清理項目。</value></data>
+  <data name="Ingest.Status.PreviewFailed" xml:space="preserve"><value>無法完成匯入預覽。</value></data>
+  <data name="Ingest.Status.PreviewFound" xml:space="preserve"><value>{0}（找到 {1:N0} 個項目）</value></data>
   <data name="Ingest.Status.PreviewProgress" xml:space="preserve"><value>{0} ({1:N0}/{2:N0})</value></data>
   <data name="Ingest.Status.PreviewReady" xml:space="preserve"><value>專輯：{0:N0}；來源檔案：{1:N0}；待核准的衍生項目：{2:N0}。請檢閱後套用。</value></data>
   <data name="Ingest.Status.PreviewScanning" xml:space="preserve"><value>正在掃描並制定計畫…</value></data>
-  <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>擷取 已認可. 重新-正在建立索引 該 資料庫…</value></data>
-  <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>工作台 檔案 選取 已清除. 選擇 一個 傳入 資料夾.</value></data>
-  <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>來源 資料夾 已選取 從 放置. 執行 預先檢查 或 預覽.</value></data>
+  <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>匯入已認可。正在重新建立資料庫索引…</value></data>
+  <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>已清除工作台檔案選取。請選取待匯入音樂資料夾。</value></data>
+  <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>已透過拖放選取來源資料夾。請執行預先檢查或預覽。</value></data>
   <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>套用整理計畫</value></data>
   <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>正在計算標準路徑</value></data>
   <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>預覽整理計畫</value></data>

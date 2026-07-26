@@ -1085,7 +1085,7 @@
     <value>健全性</value>
   </data>
   <data name="Ingest.Action.ClearSelectedFiles" xml:space="preserve">
-    <value>クリア 選択したファイル</value>
+    <value>ファイル選択を解除</value>
   </data>
   <data name="Ingest.Action.More" xml:space="preserve">
     <value>その他</value>
@@ -1097,10 +1097,10 @@
     <value>復旧で開く</value>
   </data>
   <data name="Ingest.Action.Preview" xml:space="preserve">
-    <value>プレビュー 取り込み</value>
+    <value>取り込みプランをプレビュー</value>
   </data>
   <data name="Ingest.Action.RefreshHistory" xml:space="preserve">
-    <value>更新 履歴</value>
+    <value>履歴を更新</value>
   </data>
   <data name="Ingest.Action.RunPreflight" xml:space="preserve">
     <value>事前チェックのみ実行</value>
@@ -1136,22 +1136,22 @@
     <value>クリーンアップ操作 {0} 件</value>
   </data>
   <data name="Ingest.History.EmptyDescription" xml:space="preserve">
-    <value>ソースフォルダーを選択して更新すると、記録済みまたは中断された取り込み実行を検出できます。</value>
+    <value>ソースフォルダーを選択して履歴を更新すると、記録済みまたは中断された取り込みを検索できます。</value>
   </data>
   <data name="Ingest.History.EmptyTitle" xml:space="preserve">
-    <value>取り込み実行が見つかりません</value>
+    <value>取り込み履歴が見つかりません</value>
   </data>
   <data name="Ingest.IncomingFolder" xml:space="preserve">
-    <value>受信 フォルダー</value>
+    <value>取り込み元の音楽フォルダー</value>
   </data>
   <data name="Ingest.IncomingFolderPlaceholder" xml:space="preserve">
-    <value>ここにフォルダーをドロップするか参照</value>
+    <value>フォルダーをここにドロップするか参照</value>
   </data>
   <data name="Ingest.PreviewFilterAutomation" xml:space="preserve">
-    <value>プレビュー フィルター</value>
+    <value>プレビューフィルター</value>
   </data>
   <data name="Ingest.RecentFolders" xml:space="preserve">
-    <value>最近 フォルダー</value>
+    <value>最近使用したフォルダー</value>
   </data>
   <data name="Ingest.RecentFoldersAutomation" xml:space="preserve">
     <value>最近使用した取り込みフォルダー</value>
@@ -4820,28 +4820,28 @@
   <data name="Devices.Status.PreviewReady" xml:space="preserve"><value>同期プレビューを確認してください。予定されている操作: {0:N0}; 削除: {1:N0}; 転送するバイト数: {2:N0}。</value></data>
   <data name="Devices.Status.Ready" xml:space="preserve"><value>プレビューする前に、ローカルソースを選択して管理対象の Android 宛先を初期化してください。</value></data>
   <data name="Devices.Status.Restored" xml:space="preserve"><value>復旧実行 {0} を {1} に復元しました。</value></data>
-  <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>開始中 取り込み</value></data>
-  <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>取り込み 音楽</value></data>
-  <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>インジェストジャーナルの検索</value></data>
-  <data name="Ingest.Activity.History.Title" xml:space="preserve"><value>取り込み履歴を更新する</value></data>
-  <data name="Ingest.Activity.Preflight.Starting" xml:space="preserve"><value>取り込みの前提条件の確認</value></data>
-  <data name="Ingest.Activity.Preflight.Title" xml:space="preserve"><value>事前確認 取り込み</value></data>
-  <data name="Ingest.Activity.Preview.Starting" xml:space="preserve"><value>受信した音楽をスキャンする</value></data>
-  <data name="Ingest.Activity.Preview.Title" xml:space="preserve"><value>プレビュー 取り込み</value></data>
+  <data name="Ingest.Activity.Apply.Starting" xml:space="preserve"><value>取り込みを開始しています</value></data>
+  <data name="Ingest.Activity.Apply.Title" xml:space="preserve"><value>音楽を取り込む</value></data>
+  <data name="Ingest.Activity.History.Starting" xml:space="preserve"><value>取り込みジャーナルを検索しています</value></data>
+  <data name="Ingest.Activity.History.Title" xml:space="preserve"><value>取り込み履歴を更新</value></data>
+  <data name="Ingest.Activity.Preflight.Starting" xml:space="preserve"><value>取り込みの前提条件を確認しています</value></data>
+  <data name="Ingest.Activity.Preflight.Title" xml:space="preserve"><value>取り込みの事前チェック</value></data>
+  <data name="Ingest.Activity.Preview.Starting" xml:space="preserve"><value>取り込み元の音楽をスキャンしています</value></data>
+  <data name="Ingest.Activity.Preview.Title" xml:space="preserve"><value>取り込みをプレビュー</value></data>
   <data name="Ingest.Configuration.Diagnostic.NotLoaded" xml:space="preserve"><value>ライブラリ構成を読み込んでください。</value></data>
-  <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>{0:N0} 構成の問題は、プレビューする前に解決する必要があります。</value></data>
-  <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>{0:N0} 構成の問題は、プレビューする前に解決する必要があります。</value></data>
+  <data name="Ingest.Configuration.Incomplete.One" xml:space="preserve"><value>プレビューする前に、構成の問題を {0:N0} 件解決する必要があります。</value></data>
+  <data name="Ingest.Configuration.Incomplete.Other" xml:space="preserve"><value>プレビューする前に、構成の問題を {0:N0} 件解決する必要があります。</value></data>
   <data name="Ingest.Configuration.Ready" xml:space="preserve"><value>取り込み構成の準備ができました。</value></data>
-  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>{0:N0} アルバムをインポートし、{1:N0} 出力ファイルを作成し、{2:N0} ソース アイテムをクリーンアップしますか?リカバリが可能です。完了したアルバムとクリーンアップ操作は操作ジャーナルに記録されます。</value></data>
-  <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>適用 取り込み</value></data>
-  <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>インジェストプランを適用する</value></data>
-  <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>受信音楽ディレクトリを選択</value></data>
+  <data name="Ingest.Dialog.Apply.Message" xml:space="preserve"><value>アルバム {0:N0} 件を取り込み、出力ファイル {1:N0} 件を作成し、ソース項目 {2:N0} 件をクリーンアップしますか？復旧を利用できます。完了したアルバムとクリーンアップ操作は操作ジャーナルに記録されます。</value></data>
+  <data name="Ingest.Dialog.Apply.Primary" xml:space="preserve"><value>取り込みプランを適用</value></data>
+  <data name="Ingest.Dialog.Apply.Title" xml:space="preserve"><value>取り込みプランを適用</value></data>
+  <data name="Ingest.Dialog.SelectSource" xml:space="preserve"><value>取り込み元の音楽フォルダーを選択</value></data>
   <data name="Ingest.File.ConflictSummary" xml:space="preserve"><value>競合の詳細: {0}</value></data>
   <data name="Ingest.File.OutputDestination" xml:space="preserve"><value>出力先 → {0}</value></data>
   <data name="Ingest.File.Progress.Complete" xml:space="preserve"><value>✓ 完了</value></data>
   <data name="Ingest.File.Progress.Failed" xml:space="preserve"><value>✕ 未完了</value></data>
   <data name="Ingest.File.Progress.InProgress" xml:space="preserve"><value>● 進行中 — {0}</value></data>
-  <data name="Ingest.File.Type.CdAlac" xml:space="preserve"><value>CD-品質 ALAC</value></data>
+  <data name="Ingest.File.Type.CdAlac" xml:space="preserve"><value>CD 品質の ALAC</value></data>
   <data name="Ingest.File.Type.CdFlac" xml:space="preserve"><value>CD FLAC</value></data>
   <data name="Ingest.File.Type.Conflict" xml:space="preserve"><value>競合</value></data>
   <data name="Ingest.File.Type.HiResAlac" xml:space="preserve"><value>ハイレゾ ALAC</value></data>
@@ -4851,34 +4851,34 @@
   <data name="Ingest.Handoff.Busy" xml:space="preserve"><value>取り込み処理中です。入力を置き換える前に、現在の操作をキャンセルまたは完了してください。</value></data>
   <data name="Ingest.Handoff.CommonTreeRequired" xml:space="preserve"><value>選択したファイルは、同じボリューム上の共通ソースフォルダー内にある必要があります。</value></data>
   <data name="Ingest.Handoff.InvalidPaths" xml:space="preserve"><value>選択したパスは無効です。原因となったエラーは診断の詳細で確認してください。</value></data>
-  <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>最初に 1 つ以上のワークベンチ ファイルを選択します。</value></data>
-  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>{0:N0} ワークベンチで選択されたファイルの準備ができました。プリフライトまたはプレビューを実行します。</value></data>
-  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>{0:N0} ワークベンチで選択されたファイルの準備ができました。プリフライトまたはプレビューを実行します。</value></data>
-  <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>選択したファイルは利用できません: {0}</value></data>
+  <data name="Ingest.Handoff.NoneSelected" xml:space="preserve"><value>まずワークベンチで1つ以上のファイルを選択してください。</value></data>
+  <data name="Ingest.Handoff.Ready.One" xml:space="preserve"><value>ワークベンチで選択したファイル {0:N0} 件の準備ができました。事前チェックまたはプレビューを実行してください。</value></data>
+  <data name="Ingest.Handoff.Ready.Other" xml:space="preserve"><value>ワークベンチで選択したファイル {0:N0} 件の準備ができました。事前チェックまたはプレビューを実行してください。</value></data>
+  <data name="Ingest.Handoff.Unavailable" xml:space="preserve"><value>選択したファイルを利用できません：{0}</value></data>
   <data name="Ingest.History.AffectedItems.One" xml:space="preserve"><value>{0:N0} 項目</value></data>
   <data name="Ingest.History.AffectedItems.Other" xml:space="preserve"><value>{0:N0} 項目</value></data>
   <data name="Ingest.History.OpenForDetails" xml:space="preserve"><value>開いて項目の詳細を表示</value></data>
   <data name="Ingest.History.State.Completed" xml:space="preserve"><value>完了</value></data>
-  <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>中断 — 復旧可能</value></data>
-  <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>隔離 存在</value></data>
-  <data name="Ingest.History.State.RolledBack" xml:space="preserve"><value>ロールバック済み 背面</value></data>
-  <data name="Ingest.History.Status.ChooseSource" xml:space="preserve"><value>取り込み履歴を更新する前に、ソース フォルダーを選択してください。</value></data>
+  <data name="Ingest.History.State.Interrupted" xml:space="preserve"><value>中断済み — 復旧可能</value></data>
+  <data name="Ingest.History.State.Quarantine" xml:space="preserve"><value>隔離項目を含む</value></data>
+  <data name="Ingest.History.State.RolledBack" xml:space="preserve"><value>ロールバック済み</value></data>
+  <data name="Ingest.History.Status.ChooseSource" xml:space="preserve"><value>取り込み履歴を更新する前にソースフォルダーを選択してください。</value></data>
   <data name="Ingest.History.Status.Failed" xml:space="preserve"><value>取り込み履歴を更新できませんでした。</value></data>
-  <data name="Ingest.History.Status.Ready" xml:space="preserve"><value>更新して、最近の取り込みと回復の実行を確認します。</value></data>
-  <data name="Ingest.History.Status.SearchingRoots.One" xml:space="preserve"><value>{0:N0} 件のソースルートで取り込みジャーナルを検索しています…</value></data>
-  <data name="Ingest.History.Status.SearchingRoots.Other" xml:space="preserve"><value>{0:N0} 件のソースルートで取り込みジャーナルを検索しています…</value></data>
-  <data name="Ingest.History.Status.Summary" xml:space="preserve"><value>実行: {0:N0};中断されました: {1:N0}。</value></data>
-  <data name="Ingest.History.Status.SummaryWithWarnings" xml:space="preserve"><value>実行: {0:N0};中断されました: {1:N0};ルート警告: {2:N0}。</value></data>
+  <data name="Ingest.History.Status.Ready" xml:space="preserve"><value>履歴を更新して、最近の取り込みと復旧の実行を検索します。</value></data>
+  <data name="Ingest.History.Status.SearchingRoots.One" xml:space="preserve"><value>ソースルート {0:N0} 件で取り込みジャーナルを検索しています…</value></data>
+  <data name="Ingest.History.Status.SearchingRoots.Other" xml:space="preserve"><value>ソースルート {0:N0} 件で取り込みジャーナルを検索しています…</value></data>
+  <data name="Ingest.History.Status.Summary" xml:space="preserve"><value>実行：{0:N0}、中断：{1:N0}。</value></data>
+  <data name="Ingest.History.Status.SummaryWithWarnings" xml:space="preserve"><value>実行：{0:N0}、中断：{1:N0}、ルートの警告：{2:N0}。</value></data>
   <data name="Ingest.Operation.Cancelled" xml:space="preserve"><value>キャンセル済み</value></data>
   <data name="Ingest.Operation.Complete" xml:space="preserve"><value>完了</value></data>
-  <data name="Ingest.Operation.EmptyFoldersRemoved" xml:space="preserve"><value>空のフォルダーが削除されました</value></data>
+  <data name="Ingest.Operation.EmptyFoldersRemoved" xml:space="preserve"><value>空のフォルダーを削除しました</value></data>
   <data name="Ingest.Operation.Encoding" xml:space="preserve"><value>エンコーディング</value></data>
-  <data name="Ingest.Operation.NonMusicCleanup" xml:space="preserve"><value>音楽以外 クリーンアップ</value></data>
+  <data name="Ingest.Operation.NonMusicCleanup" xml:space="preserve"><value>音楽以外のファイルをクリーンアップ</value></data>
   <data name="Ingest.Operation.Preparing" xml:space="preserve"><value>準備中</value></data>
-  <data name="Ingest.Operation.Processing" xml:space="preserve"><value>処理中 {0}</value></data>
-  <data name="Ingest.Operation.SourceComplete" xml:space="preserve"><value>ソース 完了</value></data>
-  <data name="Ingest.Operation.Staged" xml:space="preserve"><value>ステージ済み {0}</value></data>
-  <data name="Ingest.Operation.StagingOutputs" xml:space="preserve"><value>ステージング 出力</value></data>
+  <data name="Ingest.Operation.Processing" xml:space="preserve"><value>{0}を処理中</value></data>
+  <data name="Ingest.Operation.SourceComplete" xml:space="preserve"><value>ソースの処理が完了しました</value></data>
+  <data name="Ingest.Operation.Staged" xml:space="preserve"><value>{0}のステージング完了</value></data>
+  <data name="Ingest.Operation.StagingOutputs" xml:space="preserve"><value>出力をステージング中</value></data>
   <data name="Ingest.Operation.Working" xml:space="preserve"><value>処理中</value></data>
   <data name="Ingest.OutputKind.Aac" xml:space="preserve"><value>AAC</value></data>
   <data name="Ingest.OutputKind.CdFlac" xml:space="preserve"><value>CD FLAC</value></data>
@@ -4887,14 +4887,14 @@
   <data name="Ingest.Preflight.Check.Configuration" xml:space="preserve"><value>構成</value></data>
   <data name="Ingest.Preflight.Check.Destinations" xml:space="preserve"><value>宛先</value></data>
   <data name="Ingest.Preflight.Check.Ffmpeg" xml:space="preserve"><value>ffmpeg</value></data>
-  <data name="Ingest.Preflight.Check.ITunesLibrary" xml:space="preserve"><value>iTunes ライブラリ</value></data>
-  <data name="Ingest.Preflight.Check.Generic" xml:space="preserve"><value>取り込み 前提条件</value></data>
-  <data name="Ingest.Preflight.Check.PathIsolation" xml:space="preserve"><value>パス 分離</value></data>
+  <data name="Ingest.Preflight.Check.ITunesLibrary" xml:space="preserve"><value>iTunesライブラリ</value></data>
+  <data name="Ingest.Preflight.Check.Generic" xml:space="preserve"><value>取り込みの前提条件</value></data>
+  <data name="Ingest.Preflight.Check.PathIsolation" xml:space="preserve"><value>パスの分離</value></data>
   <data name="Ingest.Preflight.Check.SelectedFiles" xml:space="preserve"><value>選択したファイル</value></data>
   <data name="Ingest.Preflight.Check.Source" xml:space="preserve"><value>ソース</value></data>
   <data name="Ingest.Preflight.Check.WavPack" xml:space="preserve"><value>WavPack</value></data>
-  <data name="Ingest.Preflight.Result.Error" xml:space="preserve"><value>プレビューする前に、このブロック エラーを解決してください。</value></data>
-  <data name="Ingest.Preflight.Result.Pass" xml:space="preserve"><value>チェックは合格しました。</value></data>
+  <data name="Ingest.Preflight.Result.Error" xml:space="preserve"><value>プレビューする前に、このブロックエラーを解決してください。</value></data>
+  <data name="Ingest.Preflight.Result.Pass" xml:space="preserve"><value>チェックに合格しました。</value></data>
   <data name="Ingest.Preflight.Result.Warning" xml:space="preserve"><value>プレビューする前に、この警告を確認してください。</value></data>
   <data name="Ingest.PreviewFilter.Albums" xml:space="preserve"><value>アルバム</value></data>
   <data name="Ingest.PreviewFilter.All" xml:space="preserve"><value>すべて</value></data>
@@ -4903,39 +4903,39 @@
   <data name="Ingest.PreviewFilter.Outputs" xml:space="preserve"><value>出力</value></data>
   <data name="Ingest.SelectedSources.Summary.One" xml:space="preserve"><value>{0:N0} ワークベンチで選択されたファイルを取り込みソースとして使用します。</value></data>
   <data name="Ingest.SelectedSources.Summary.Other" xml:space="preserve"><value>{0:N0} ワークベンチで選択されたファイルを取り込みソースとして使用します。</value></data>
-  <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>キャンセルされました。すでにコミットされているアルバムは、安全にジャーナリングされたままになります。</value></data>
-  <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>取り込みがキャンセルされました。完了した作業はすべて安全に記録されます。</value></data>
-  <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>インジェストは適用されませんでした。レビュー済みのプレビューは引き続き利用可能です。</value></data>
+  <data name="Ingest.Status.ApplyCancelled" xml:space="preserve"><value>キャンセルしました。すでに確定したアルバムは安全にジャーナルへ記録されています。</value></data>
+  <data name="Ingest.Status.ApplyCancelledByResult" xml:space="preserve"><value>取り込みがキャンセルされました。完了済みの処理は安全にジャーナルへ記録されています。</value></data>
+  <data name="Ingest.Status.ApplyDeclined" xml:space="preserve"><value>取り込みは適用されませんでした。確認済みのプレビューは引き続き利用できます。</value></data>
   <data name="Ingest.Status.ApplyFailed" xml:space="preserve"><value>取り込みプランを適用できませんでした。</value></data>
-  <data name="Ingest.Status.ApplyIndexed" xml:space="preserve"><value>インストール済み: {0:N0};失敗したアルバム: {1:N0}。インデックスの変更 — 追加: {2:N0}、変更: {3:N0}、削除: {4:N0}。</value></data>
+  <data name="Ingest.Status.ApplyIndexed" xml:space="preserve"><value>インストール：{0:N0}、失敗したアルバム：{1:N0}。インデックスの変更 — 追加：{2:N0}、変更：{3:N0}、削除：{4:N0}。</value></data>
   <data name="Ingest.Status.ApplyProgress" xml:space="preserve"><value>{0}: {1} ({2:N0}/{3:N0})</value></data>
-  <data name="Ingest.Status.ApplyResult" xml:space="preserve"><value>インストールされたファイル: {0:N0};失敗したアルバム: {1:N0}。</value></data>
-  <data name="Ingest.Status.ApplyResultNoLibrary" xml:space="preserve"><value>インストールされたファイル: {0:N0};失敗したアルバム: {1:N0}。ライブラリ構成がロードされていないため、インデックスの再作成はスキップされました。</value></data>
+  <data name="Ingest.Status.ApplyResult" xml:space="preserve"><value>インストールしたファイル：{0:N0}、失敗したアルバム：{1:N0}。</value></data>
+  <data name="Ingest.Status.ApplyResultNoLibrary" xml:space="preserve"><value>インストールしたファイル：{0:N0}、失敗したアルバム：{1:N0}。ライブラリ構成が読み込まれていないため、再インデックスを省略しました。</value></data>
   <data name="Ingest.Status.ChooseSource" xml:space="preserve"><value>入力フォルダーを選択してから、事前チェックまたはプレビューを実行してください。</value></data>
-  <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>音楽以外のクリーンアップが完了しました。</value></data>
-  <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>派生は拒否されました。実行全体がキャンセルされ、何も変更されませんでした。</value></data>
+  <data name="Ingest.Status.CleanupComplete" xml:space="preserve"><value>音楽以外のファイルのクリーンアップが完了しました。</value></data>
+  <data name="Ingest.Status.DerivationDeclined" xml:space="preserve"><value>CD 品質の出力生成が拒否されました。実行全体がキャンセルされ、変更はありません。</value></data>
   <data name="Ingest.Status.InputsChanged" xml:space="preserve"><value>入力が変更されました。適用する前にもう一度プレビューしてください。</value></data>
-  <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>プリフライトはキャンセルされました。</value></data>
+  <data name="Ingest.Status.PreflightCancelled" xml:space="preserve"><value>事前チェックがキャンセルされました。</value></data>
   <data name="Ingest.Status.PreflightChecking" xml:space="preserve"><value>取り込み構成と外部ツールを確認しています…</value></data>
-  <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>プリフライトで {0:N0} ブロック エラーが見つかりました。</value></data>
-  <data name="Ingest.Status.PreflightErrors.Other" xml:space="preserve"><value>プリフライトで {0:N0} ブロック エラーが見つかりました。</value></data>
-  <data name="Ingest.Status.PreflightFailed" xml:space="preserve"><value>プリフライトを完了できませんでした。</value></data>
+  <data name="Ingest.Status.PreflightErrors.One" xml:space="preserve"><value>事前チェックでブロックエラーが {0:N0} 件見つかりました。</value></data>
+  <data name="Ingest.Status.PreflightErrors.Other" xml:space="preserve"><value>事前チェックでブロックエラーが {0:N0} 件見つかりました。</value></data>
+  <data name="Ingest.Status.PreflightFailed" xml:space="preserve"><value>事前チェックを完了できませんでした。</value></data>
   <data name="Ingest.Status.PreflightPassed" xml:space="preserve"><value>事前チェックが完了しました。ソースをスキャンできます。</value></data>
-  <data name="Ingest.Status.PreflightWarnings.One" xml:space="preserve"><value>プリフライトは{0:N0}警告とともにパスしました。プレビューする前に確認してください。</value></data>
-  <data name="Ingest.Status.PreflightWarnings.Other" xml:space="preserve"><value>プリフライトは{0:N0}警告とともにパスしました。プレビューする前に確認してください。</value></data>
+  <data name="Ingest.Status.PreflightWarnings.One" xml:space="preserve"><value>事前チェックは警告 {0:N0} 件で合格しました。プレビューする前に確認してください。</value></data>
+  <data name="Ingest.Status.PreflightWarnings.Other" xml:space="preserve"><value>事前チェックは警告 {0:N0} 件で合格しました。プレビューする前に確認してください。</value></data>
   <data name="Ingest.Status.PreviewCancelled" xml:space="preserve"><value>プレビューがキャンセルされました。</value></data>
-  <data name="Ingest.Status.PreviewCleanupReady" xml:space="preserve"><value>音楽アルバムが見つかりませんでした。音楽以外のファイル: {0:N0};クリーンアップの準備ができたソース フォルダー: {1:N0}。確認してから適用してください。</value></data>
-  <data name="Ingest.Status.PreviewConflicts.One" xml:space="preserve"><value>プレビューには {0:N0} の競合があるため、適用できません。</value></data>
-  <data name="Ingest.Status.PreviewConflicts.Other" xml:space="preserve"><value>プレビューには {0:N0} の競合があるため、適用できません。</value></data>
-  <data name="Ingest.Status.PreviewEmpty" xml:space="preserve"><value>インポート可能な音楽アルバムまたは有効な非音楽クリーンアップ項目が見つかりませんでした。</value></data>
-  <data name="Ingest.Status.PreviewFailed" xml:space="preserve"><value>取り込みプレビューを完了できませんでした。</value></data>
-  <data name="Ingest.Status.PreviewFound" xml:space="preserve"><value>{0} ({1:N0} が見つかりました)</value></data>
+  <data name="Ingest.Status.PreviewCleanupReady" xml:space="preserve"><value>音楽アルバムが見つかりませんでした。音楽以外のファイル：{0:N0}、クリーンアップ可能なソースフォルダー：{1:N0}。プランを確認してから適用してください。</value></data>
+  <data name="Ingest.Status.PreviewConflicts.One" xml:space="preserve"><value>プレビューに競合が {0:N0} 件あるため、適用できません。</value></data>
+  <data name="Ingest.Status.PreviewConflicts.Other" xml:space="preserve"><value>プレビューに競合が {0:N0} 件あるため、適用できません。</value></data>
+  <data name="Ingest.Status.PreviewEmpty" xml:space="preserve"><value>取り込み可能な音楽アルバムも、有効な音楽以外のクリーンアップ項目も見つかりませんでした。</value></data>
+  <data name="Ingest.Status.PreviewFailed" xml:space="preserve"><value>取り込みのプレビューを完了できませんでした。</value></data>
+  <data name="Ingest.Status.PreviewFound" xml:space="preserve"><value>{0}（{1:N0} 件の項目が見つかりました）</value></data>
   <data name="Ingest.Status.PreviewProgress" xml:space="preserve"><value>{0} ({1:N0}/{2:N0})</value></data>
   <data name="Ingest.Status.PreviewReady" xml:space="preserve"><value>アルバム: {0:N0}、ソースファイル: {1:N0}、変換の承認: {2:N0}。確認してから適用してください。</value></data>
   <data name="Ingest.Status.PreviewScanning" xml:space="preserve"><value>スキャンしてプランを作成しています…</value></data>
-  <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>取り込みがコミットされました。ライブラリのインデックスを再作成しています…</value></data>
-  <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>ワークベンチ ファイルの選択がクリアされました。受信フォルダーを選択します。</value></data>
-  <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>ドロップから選択されたソース フォルダー。プリフライトまたはプレビューを実行します。</value></data>
+  <data name="Ingest.Status.Reindexing" xml:space="preserve"><value>取り込みが確定しました。ライブラリを再インデックスしています…</value></data>
+  <data name="Ingest.Status.SelectionCleared" xml:space="preserve"><value>ワークベンチのファイル選択を解除しました。取り込み元の音楽フォルダーを選択してください。</value></data>
+  <data name="Ingest.Status.SourceDropped" xml:space="preserve"><value>ドラッグ＆ドロップでソースフォルダーを選択しました。事前チェックまたはプレビューを実行してください。</value></data>
   <data name="Organize.Activity.Apply.Title" xml:space="preserve"><value>整理プランを適用</value></data>
   <data name="Organize.Activity.Preview.Starting" xml:space="preserve"><value>標準パスを計算しています</value></data>
   <data name="Organize.Activity.Preview.Title" xml:space="preserve"><value>整理プランをプレビュー</value></data>
