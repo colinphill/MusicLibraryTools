@@ -2704,7 +2704,7 @@
     <value>Artwork storage</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>Built-in policies are protected; duplicate one to customize it. Assign policies to roots on the Library roots tab.</value>
+    <value>Built-in library policies cannot be deleted; duplicate one to customize it. At least one library policy must remain. Assign policies to roots on the Library roots tab.</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>These settings alter naming, metadata, artwork, health, and sidecar behavior for every root using this profile. Existing previews become invalid and must be regenerated.</value>
@@ -2957,6 +2957,9 @@
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
     <value>Preserve metadata</value>
+  </data>
+  <data name="Settings.Ingest.ProfileDeletionDescription" xml:space="preserve">
+    <value>Built-in ingest profiles cannot be deleted; duplicate one to customize it. At least one ingest profile must remain.</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
     <value>Preserve sidecars by default</value>

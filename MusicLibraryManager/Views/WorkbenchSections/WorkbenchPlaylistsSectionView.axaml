@@ -29,8 +29,10 @@
             <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Common.Format}" />
             <ComboBox Classes="app"
-                      ItemsSource="{Binding PlaylistEditor.Formats}"
-                      SelectedItem="{Binding PlaylistEditor.Format, Mode=TwoWay}"
+                      ItemsSource="{Binding PlaylistEditor.FormatChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding PlaylistEditor.Format, Mode=TwoWay}"
                       AutomationProperties.Name="{DynamicResource Loc.Workbench.Common.Format}" />
           </StackPanel>
         </Grid>

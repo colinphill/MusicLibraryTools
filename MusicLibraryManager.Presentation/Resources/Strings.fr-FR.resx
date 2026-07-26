@@ -2704,7 +2704,7 @@
     <value>Stockage des illustrations</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>Les stratégies intégrées sont protégées. Dupliquez-en une pour la personnaliser. Attribuez les stratégies aux racines dans l’onglet Racines de la bibliothèque.</value>
+    <value>Les stratégies de bibliothèque intégrées ne peuvent pas être supprimées. Dupliquez-en une pour la personnaliser. Au moins une stratégie de bibliothèque doit être conservée. Attribuez les stratégies aux racines dans l’onglet Racines de la bibliothèque.</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>Ces paramètres modifient le nommage ainsi que le comportement des métadonnées, des illustrations, des contrôles d’intégrité et des fichiers annexes pour toutes les racines qui utilisent ce profil. Les aperçus existants deviendront caducs et devront être régénérés.</value>
@@ -2957,6 +2957,9 @@
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
     <value>Conserver les métadonnées</value>
+  </data>
+  <data name="Settings.Ingest.ProfileDeletionDescription" xml:space="preserve">
+    <value>Les profils d’ingestion intégrés ne peuvent pas être supprimés. Dupliquez-en un pour le personnaliser. Au moins un profil d’ingestion doit être conservé.</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
     <value>Conserver les fichiers annexes par défaut</value>

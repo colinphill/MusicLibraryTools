@@ -19,7 +19,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
 
-        Assert.Equal(3_625, manifest.Records.Count);
+        Assert.Equal(3_626, manifest.Records.Count);
         Assert.Equal(
             0,
             Count(
@@ -36,7 +36,7 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            3_262,
+            3_263,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -515,7 +515,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                3_262,
+                3_263,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));
@@ -1016,9 +1016,9 @@ public sealed class EditorialReviewManifestTests
                     StringComparer.Ordinal)
                 .ToArray();
 
-        Assert.Equal(557, records.Length);
+        Assert.Equal(556, records.Length);
         Assert.Equal(
-            458,
+            457,
             records.Count(record =>
                 record.Status ==
                 EditorialReviewStatus.EditorialReviewed));
@@ -1028,7 +1028,7 @@ public sealed class EditorialReviewManifestTests
                 record.Status ==
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            458,
+            457,
             records.Count(record =>
                 record.Route ==
                 CatalogTranslationRoute.EditorialOverride));
@@ -1049,6 +1049,57 @@ public sealed class EditorialReviewManifestTests
                     "Codex focused editorial review",
                     record.Reviewer);
                 Assert.Equal("2026-07-25", record.Date);
+                Assert.StartsWith(
+                    "packet:v1:",
+                    record.Disposition,
+                    StringComparison.Ordinal);
+            });
+    }
+
+    [Fact]
+    public void Settings_deletion_review_batch_contains_the_exact_two_resources()
+    {
+        ReviewFixture fixture = LoadFixture();
+        EditorialReviewManifest manifest =
+            EditorialReviewInfrastructure.LoadAndValidate(
+                fixture.ManifestPath,
+                fixture.Sources,
+                fixture.InvariantApprovedValues,
+                requireComplete: false);
+        const string batch =
+            "gui-usability-settings-deletion-2026-07-26";
+        EditorialReviewRecord[] records =
+            manifest.Records.Values
+                .Where(record =>
+                    string.Equals(
+                        record.Batch,
+                        batch,
+                        StringComparison.Ordinal))
+                .OrderBy(
+                    record => record.Key,
+                    StringComparer.Ordinal)
+                .ToArray();
+
+        Assert.Equal(
+            [
+                "Settings.Ingest.ProfileDeletionDescription",
+                "Settings.RootPolicy.BuiltInDescription",
+            ],
+            records.Select(record => record.Key));
+        Assert.All(
+            records,
+            record =>
+            {
+                Assert.Equal(
+                    EditorialReviewStatus.EditorialReviewed,
+                    record.Status);
+                Assert.Equal(
+                    CatalogTranslationRoute.EditorialOverride,
+                    record.Route);
+                Assert.Equal(
+                    "Codex Settings deletion review",
+                    record.Reviewer);
+                Assert.Equal("2026-07-26", record.Date);
                 Assert.StartsWith(
                     "packet:v1:",
                     record.Disposition,

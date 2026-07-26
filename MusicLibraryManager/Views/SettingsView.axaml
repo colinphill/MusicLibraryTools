@@ -1020,34 +1020,43 @@
             <StackPanel Classes="settings-content" Margin="16" Spacing="12" DataContext="{Binding AdvancedIngestProfile}">
               <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Ingest.Title}" />
               <Border Classes="card" Padding="12">
-                <Grid Classes="responsive-form" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                  <StackPanel Classes="field" Spacing="4">
-                    <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.ActiveProfile}" />
-                    <ComboBox x:Name="IngestProfilePicker" Classes="app" ItemsSource="{Binding IngestProfiles}" SelectedItem="{Binding SelectedIngestProfile, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.ActiveProfile}">
-                      <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
-                    </ComboBox>
-                  </StackPanel>
-                  <Button x:Name="EditIngestProfileButton"
-                          Grid.Column="1" Classes="app" VerticalAlignment="Bottom"
-                          Content="{DynamicResource Loc.Workbench.Navigation.Group.Edit}"
-                          Click="OnEditIngestProfileClicked" />
-                  <Button Grid.Column="2" Classes="app" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Settings.Action.New}" Command="{Binding CreateIngestProfileCommand}" />
-                  <Button Grid.Column="3" Classes="app" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Settings.Action.Duplicate}" Command="{Binding DuplicateIngestProfileCommand}" />
-                  <Button x:Name="IngestProfileMoreButton"
-                          Grid.Column="4"
-                          Classes="app quiet overflow"
-                          VerticalAlignment="Bottom"
-                          Content="{DynamicResource Loc.Workbench.Action.More}"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.MoreAutomation}">
-                    <Button.Flyout>
-                      <MenuFlyout Placement="BottomEdgeAlignedRight">
-                        <MenuItem Classes="danger"
-                                  Header="{DynamicResource Loc.Settings.Action.Delete}"
-                                  Command="{Binding DeleteIngestProfileCommand}" />
-                      </MenuFlyout>
-                    </Button.Flyout>
-                  </Button>
-                </Grid>
+                <StackPanel Spacing="8"
+                            DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                  <Grid Classes="responsive-form"
+                        ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                        ColumnSpacing="8">
+                    <StackPanel Classes="field" Spacing="4">
+                      <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.ActiveProfile}" />
+                      <ComboBox x:Name="IngestProfilePicker" Classes="app" ItemsSource="{Binding IngestProfiles}" SelectedItem="{Binding SelectedIngestProfile, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.ActiveProfile}">
+                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                      </ComboBox>
+                    </StackPanel>
+                    <Button x:Name="EditIngestProfileButton"
+                            Grid.Column="1" Classes="app" VerticalAlignment="Bottom"
+                            Content="{DynamicResource Loc.Workbench.Navigation.Group.Edit}"
+                            Click="OnEditIngestProfileClicked" />
+                    <Button Grid.Column="2" Classes="app" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Settings.Action.New}" Command="{Binding CreateIngestProfileCommand}" />
+                    <Button Grid.Column="3" Classes="app" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Settings.Action.Duplicate}" Command="{Binding DuplicateIngestProfileCommand}" />
+                    <Button x:Name="IngestProfileMoreButton"
+                            Grid.Column="4"
+                            Classes="app quiet overflow"
+                            VerticalAlignment="Bottom"
+                            Content="{DynamicResource Loc.Workbench.Action.More}"
+                            AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.MoreAutomation}">
+                      <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                          <MenuItem Classes="danger"
+                                    Header="{DynamicResource Loc.Settings.Action.Delete}"
+                                    Command="{Binding DeleteIngestProfileCommand}" />
+                        </MenuFlyout>
+                      </Button.Flyout>
+                    </Button>
+                  </Grid>
+                  <TextBlock x:Name="IngestProfileDeletionHelp"
+                             Classes="field-help"
+                             Text="{DynamicResource Loc.Settings.Ingest.ProfileDeletionDescription}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
               </Border>
 
               <Expander x:Name="IngestProfileEditorExpander"

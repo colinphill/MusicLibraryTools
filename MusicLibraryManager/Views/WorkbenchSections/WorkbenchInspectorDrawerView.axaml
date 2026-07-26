@@ -8,18 +8,14 @@
     <local:TagLayerPresenceConverter x:Key="TagLayerPresent" />
     <local:TagLayerMissingConverter x:Key="TagLayerMissing" />
   </UserControl.Resources>
-  <Grid RowDefinitions="*,Auto">
-    <views:SelectionInspectorView
-        x:Name="WorkbenchInspectorView"
-        DataContext="{Binding Inspector}" />
-    <Expander x:Name="WorkbenchTagToolsExpander"
-              Grid.Row="1"
-              Margin="12,0,12,12"
-              Header="{DynamicResource Loc.Workbench.Inspector.TagLayers}"
-              IsVisible="{Binding SelectedFile.HasEditableTagLayers}">
-      <ScrollViewer MaxHeight="360"
-                    VerticalScrollBarVisibility="Auto"
-                    HorizontalScrollBarVisibility="Disabled">
+  <views:SelectionInspectorView
+      x:Name="WorkbenchInspectorView"
+      DataContext="{Binding Inspector}">
+    <views:SelectionInspectorView.SupplementaryContent>
+      <Expander x:Name="WorkbenchTagToolsExpander"
+                DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=local:WorkbenchInspectorDrawerView}}"
+                Header="{DynamicResource Loc.Workbench.Inspector.TagLayers}"
+                IsVisible="{Binding SelectedFile.HasEditableTagLayers}">
         <StackPanel Margin="4,8,4,4"
                     Classes="content-stack">
           <controls:LocalizedFormatTextBlock
@@ -185,7 +181,7 @@
             </StackPanel>
           </Expander>
         </StackPanel>
-      </ScrollViewer>
-    </Expander>
-  </Grid>
+      </Expander>
+    </views:SelectionInspectorView.SupplementaryContent>
+  </views:SelectionInspectorView>
 </UserControl>

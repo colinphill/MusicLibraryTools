@@ -179,6 +179,15 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     public int Count { get; }
 
     public int ActiveFindingCount => FindingGroups.Sum(group => group.ActiveCount);
+    public int ActiveRepairCount =>
+        RepairItems.Count(item => item.IsActive);
+    public int ActiveRepresentationRepairCount =>
+        RepresentationActionItems.Count(
+            item => item.IsActive);
+    public int ActiveItlRepairCount =>
+        ItlRepairItems.Count(item => item.IsActive);
+    public int ActiveArtworkRepairCount =>
+        ArtworkRepairItems.Count(item => item.IsActive);
     public IReadOnlyList<string> FilteredPaths => FindingGroups
         .SelectMany(group => group.Artists)
         .SelectMany(group => group.Albums)
@@ -466,7 +475,31 @@ public sealed class AnalysisRunViewModel : ViewModelBase
 
     private void FilterDispositionChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == "Disposition" && !_clearingFilterDispositions)
+        if (e.PropertyName != "Disposition")
+            return;
+
+        switch (sender)
+        {
+            case AnalysisRepairItemViewModel:
+                OnPropertyChanged(
+                    nameof(ActiveRepairCount));
+                break;
+            case RepresentationRepairActionItemViewModel:
+                OnPropertyChanged(
+                    nameof(
+                        ActiveRepresentationRepairCount));
+                break;
+            case ItlMetadataRepairItemViewModel:
+                OnPropertyChanged(
+                    nameof(ActiveItlRepairCount));
+                break;
+            case ArtworkRepairItemViewModel:
+                OnPropertyChanged(
+                    nameof(ActiveArtworkRepairCount));
+                break;
+        }
+
+        if (!_clearingFilterDispositions)
             OnPropertyChanged(nameof(FilteredPaths));
     }
 

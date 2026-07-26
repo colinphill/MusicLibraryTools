@@ -1,7 +1,8 @@
 <UserControl x:Class="MusicLibraryManager.Views.SelectionInspectorView"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="using:MusicLibraryManager.Controls">
+             xmlns:controls="using:MusicLibraryManager.Controls"
+             xmlns:views="using:MusicLibraryManager.Views">
   <UserControl.Styles>
     <Style Selector="Border.artwork-preview-target:pointerover">
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
@@ -11,7 +12,7 @@
       <Setter Property="BorderThickness" Value="2" />
     </Style>
   </UserControl.Styles>
-  <Grid RowDefinitions="Auto,*">
+  <Grid RowDefinitions="Auto,*,Auto">
     <Grid Margin="12,12,12,0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
       <StackPanel>
         <TextBlock Classes="faint" Text="{DynamicResource Loc.Inspector.View.Selection}" FontSize="{DynamicResource AppFontSizeCaption}" FontWeight="SemiBold" />
@@ -84,18 +85,6 @@
                 IsVisible="{Binding HasStatusDiagnosticDetail}" />
           </Grid>
         </Border>
-        <WrapPanel>
-          <Button x:Name="InspectorReviewChangesButton"
-                  Classes="app primary"
-                  Margin="0,0,8,8"
-                  Content="{DynamicResource Loc.Inspector.View.ReviewChanges}"
-                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ReviewChanges}"
-                  IsEnabled="{Binding HasUnsavedChanges}"
-                  Click="OnReviewChanges" />
-          <Button x:Name="InspectorDiscardEditsButton"
-                  Classes="app danger" Margin="0,0,8,8" Content="{DynamicResource Loc.Inspector.View.Revert}" Command="{Binding RevertCommand}" />
-        </WrapPanel>
-
         <Border Height="1" Background="{DynamicResource AppBorderBrush}" />
         <TextBlock Classes="section-title" Text="{DynamicResource Loc.Inspector.View.Artwork}" />
         <TextBlock Classes="muted" Text="{Binding ArtworkSummary}" TextWrapping="Wrap" />
@@ -229,7 +218,30 @@
             </Button.Flyout>
           </Button>
         </WrapPanel>
+        <ContentPresenter
+            x:Name="InspectorSupplementaryContent"
+            Content="{Binding SupplementaryContent, RelativeSource={RelativeSource AncestorType=views:SelectionInspectorView}}" />
       </StackPanel>
     </ScrollViewer>
+
+    <Border x:Name="InspectorStickyFooter"
+            Grid.Row="2"
+            Classes="sticky-footer"
+            IsVisible="{Binding HasSelection}">
+      <WrapPanel>
+        <Button x:Name="InspectorReviewChangesButton"
+                Classes="app primary"
+                Margin="0,0,8,8"
+                Content="{DynamicResource Loc.Inspector.View.ReviewChanges}"
+                AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ReviewChanges}"
+                IsEnabled="{Binding HasUnsavedChanges}"
+                Click="OnReviewChanges" />
+        <Button x:Name="InspectorDiscardEditsButton"
+                Classes="app danger"
+                Margin="0,0,8,8"
+                Content="{DynamicResource Loc.Inspector.View.Revert}"
+                Command="{Binding RevertCommand}" />
+      </WrapPanel>
+    </Border>
   </Grid>
 </UserControl>

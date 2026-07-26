@@ -231,6 +231,12 @@ public partial class WorkbenchView : UserControl
                 WorkbenchSection.Shortcuts;
         WorkbenchInspectorToggle.IsVisible =
             !_sectionSuppressesInspector;
+        WorkbenchInspectorToggle.IsEnabled =
+            !_sectionSuppressesInspector;
+        WorkbenchMoreInspectorMenuItem.IsVisible =
+            !_sectionSuppressesInspector;
+        WorkbenchMoreInspectorMenuItem.IsEnabled =
+            !_sectionSuppressesInspector;
         WorkbenchSourceBar.IsVisible =
             section != WorkbenchSection.Shortcuts;
 

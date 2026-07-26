@@ -48,11 +48,11 @@ public static class TechnicalLabelResourceKeys
         (group, value) switch
         {
             ("PlaylistType", "m3u") =>
-                "Technical.PlaylistFormat.M3u",
+                ForPlaylistFormat(value),
             ("PlaylistType", "m3u8") =>
-                "Technical.PlaylistFormat.M3u8",
+                ForPlaylistFormat(value),
             ("PlaylistType", "wpl") =>
-                "Technical.PlaylistFormat.Wpl",
+                ForPlaylistFormat(value),
             ("PlaylistSourceType", "m3u") =>
                 "Technical.PlaylistFormat.M3uFamily",
             ("PlaylistEncoding", "utf-8") =>
@@ -67,6 +67,16 @@ public static class TechnicalLabelResourceKeys
                 "Technical.LineEnding.CrLf",
             ("PlaylistLineEnding", "lf") =>
                 "Technical.LineEnding.Lf",
+            _ => null,
+        };
+
+    public static string? ForPlaylistFormat(
+        string value) =>
+        value.Trim().ToLowerInvariant() switch
+        {
+            "m3u" => "Technical.PlaylistFormat.M3u",
+            "m3u8" => "Technical.PlaylistFormat.M3u8",
+            "wpl" => "Technical.PlaylistFormat.Wpl",
             _ => null,
         };
 }

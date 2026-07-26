@@ -455,33 +455,70 @@ public sealed class WorkbenchResponsiveMatrixTests
                                     ListBox or
                                     NumericUpDown)),
             ];
-            ScrollViewer formScroll =
-                Assert.Single(
-                    pageScrollOwners);
-            Assert.Equal(
-                "ReviewedFileOperationFormScroll",
-                formScroll.Name);
-            Button preview =
+            Border emptyState =
                 Assert.Single(
                     renderedSection
                         .GetVisualDescendants()
-                        .OfType<Button>(),
+                        .OfType<Border>(),
                     control =>
                         control.Name ==
-                        "PreviewReviewedFileOperationButton");
-            Rect previewBounds =
-                BoundsRelativeTo(
-                    preview,
-                    sections);
-            Assert.True(
-                preview.IsEffectivelyVisible);
-            Assert.True(
-                preview.Bounds.Height >= 36);
-            Assert.True(
-                previewBounds.Top >= -1 &&
-                previewBounds.Bottom <=
-                sections.Bounds.Height + 1,
-                $"File operations Preview was clipped at 900x600: {previewBounds} within {sections.Bounds.Size}.");
+                        "FileOperationsEmptyState");
+            if (emptyState.IsEffectivelyVisible)
+            {
+                Assert.Empty(
+                    pageScrollOwners);
+                Button addFiles =
+                    Assert.Single(
+                        renderedSection
+                            .GetVisualDescendants()
+                            .OfType<Button>(),
+                        control =>
+                            control.Name ==
+                            "FileOperationsAddFilesButton");
+                Rect addFilesBounds =
+                    BoundsRelativeTo(
+                        addFiles,
+                        sections);
+                Assert.True(
+                    addFiles.IsEffectivelyVisible);
+                Assert.True(
+                    addFiles.Bounds.Height >= 36);
+                Assert.True(
+                    addFilesBounds.Top >= -1 &&
+                    addFilesBounds.Bottom <=
+                    sections.Bounds.Height + 1,
+                    $"File operations Add files was clipped at 900x600: {addFilesBounds} within {sections.Bounds.Size}.");
+            }
+            else
+            {
+                ScrollViewer formScroll =
+                    Assert.Single(
+                        pageScrollOwners);
+                Assert.Equal(
+                    "ReviewedFileOperationFormScroll",
+                    formScroll.Name);
+                Button preview =
+                    Assert.Single(
+                        renderedSection
+                            .GetVisualDescendants()
+                            .OfType<Button>(),
+                        control =>
+                            control.Name ==
+                            "PreviewReviewedFileOperationButton");
+                Rect previewBounds =
+                    BoundsRelativeTo(
+                        preview,
+                        sections);
+                Assert.True(
+                    preview.IsEffectivelyVisible);
+                Assert.True(
+                    preview.Bounds.Height >= 36);
+                Assert.True(
+                    previewBounds.Top >= -1 &&
+                    previewBounds.Bottom <=
+                    sections.Bounds.Height + 1,
+                    $"File operations Preview was clipped at 900x600: {previewBounds} within {sections.Bounds.Size}.");
+            }
         }
 
         if (section == WorkbenchSection.Reports &&

@@ -2704,7 +2704,7 @@
     <value>アートワークの保存方法</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>組み込みポリシーは保護されています。カスタマイズするには複製してください。ポリシーは「ライブラリのルート」タブでルートに割り当てます。</value>
+    <value>組み込みのライブラリポリシーは削除できません。カスタマイズするには複製してください。少なくとも1つのライブラリポリシーを残す必要があります。ポリシーは「ライブラリのルート」タブでルートに割り当てます。</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>この設定は、このプロファイルを使用するすべてのルートの命名、メタデータ、アートワーク、健全性チェック、サイドカーの動作を変更します。既存のプレビューは無効になり、再生成が必要です。</value>
@@ -2957,6 +2957,9 @@
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
     <value>メタデータを保持</value>
+  </data>
+  <data name="Settings.Ingest.ProfileDeletionDescription" xml:space="preserve">
+    <value>組み込みの取り込みプロファイルは削除できません。カスタマイズするには複製してください。少なくとも1つの取り込みプロファイルを残す必要があります。</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
     <value>既定でサイドカーファイルを保持</value>

@@ -2704,7 +2704,7 @@
     <value>封面儲存方式</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>內建原則受到保護。若要自訂，請先複製一份。請在「音樂庫根目錄」索引標籤中為根目錄指派原則。</value>
+    <value>內建的音樂庫原則無法刪除。若要自訂，請先複製一份。至少必須保留一項音樂庫原則。請在「音樂庫根目錄」索引標籤中為根目錄指派原則。</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>這些設定會變更使用此設定檔之所有根目錄的命名、中繼資料、封面、健康檢查與附屬檔案行為。現有預覽將失效，必須重新產生。</value>
@@ -2957,6 +2957,9 @@
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
     <value>保留中繼資料</value>
+  </data>
+  <data name="Settings.Ingest.ProfileDeletionDescription" xml:space="preserve">
+    <value>內建的擷取設定檔無法刪除。若要自訂，請先複製一份。至少必須保留一個擷取設定檔。</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
     <value>預設保留附屬檔案</value>

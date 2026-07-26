@@ -87,14 +87,14 @@ precedence leaves 115 manifest entries as `InvariantApproved`:
 Pending=0
 InvariantApproved=115
 GlossaryReviewed=248
-EditorialReviewed=3,262
+EditorialReviewed=3,263
 ```
 
 `FocusedEditorialReviewEvidence.v1.xml` independently records the exact 847
 ordered keys and catalog digests, the two source commits, review metadata, and
 an aggregate identity. Later digest-bound packet batches record additional
 editorial overrides and reviewed glossary or exact-resource translations
-directly in the manifest. The current complete manifest covers 3,625 resources
+directly in the manifest. The current complete manifest covers 3,626 resources
 with no pending review. Ordinary manifest refresh preserves those current
 packet approvals while loading the checked-in evidence, so CI does not require
 historical Git objects and works in shallow clones:

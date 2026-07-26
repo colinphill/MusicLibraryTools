@@ -33,10 +33,10 @@ public partial class LibraryView : UserControl
 
     private readonly LibraryViewModel _viewModel;
     private readonly GridStateService _gridState;
-    private readonly IPlatformService _platform;
     private readonly ILocalizationService _localization;
     private readonly List<AppGridColumnDefinition> _columns = [];
     private IReadOnlyList<LibraryRow> _selected = [];
+    private LibraryActionScopeSnapshot? _selectionActions;
     private LibrarySortState? _sort;
     private bool _restoringSelection;
     private bool _selectionChangePending;
@@ -54,7 +54,6 @@ public partial class LibraryView : UserControl
             10);
         _viewModel = App.GetService<LibraryViewModel>();
         _gridState = App.GetService<GridStateService>();
-        _platform = App.GetService<IPlatformService>();
         _localization = App.GetService<ILocalizationService>();
         DataContext = _viewModel;
         BuildColumns();
@@ -679,48 +678,62 @@ public partial class LibraryView : UserControl
         CreateLibraryActionMenuItems(
             bool includeFileActions)
     {
+        LibraryActionScopeSnapshot selection =
+            CaptureSelectionActions();
         var items = new List<object>
         {
             CreateHandoffScopeMenu(
-                WorkbenchHandoffScopeKind.Selected,
                 "Library.Handoff.Scope.Selected",
-                _viewModel.HasSelection),
+                selection),
             CreateHandoffScopeMenu(
-                WorkbenchHandoffScopeKind.VisibleResults,
                 "Library.Handoff.Scope.Visible",
-                _viewModel.Rows.Count > 0),
+                _viewModel.CaptureActionScope(
+                    WorkbenchHandoffScopeKind
+                        .VisibleResults)),
             CreateHandoffScopeMenu(
-                WorkbenchHandoffScopeKind.AllResults,
                 "Library.Handoff.Scope.All",
-                _viewModel.TotalCount > 0),
+                _viewModel.CaptureActionScope(
+                    WorkbenchHandoffScopeKind
+                        .AllResults)),
         };
 
-        if (includeFileActions && _selected.Count > 0)
+        if (includeFileActions && selection.HasPaths)
         {
             items.Add(new Separator());
             var copy = new MenuItem
             {
                 Header = _localization.Get(
                     "Library.Action.CopyPaths"),
+                IsEnabled = selection.CanCopyPaths,
             };
-            copy.Click += OnCopyPaths;
+            copy.Click += async (_, _) =>
+                await _viewModel.CopyPathsAsync(
+                    selection);
             items.Add(copy);
 
             var reveal = new MenuItem
             {
                 Header = _localization.Get(
                     "Library.Action.Reveal"),
-                IsEnabled = _selected.Count == 1,
+                IsEnabled = selection.CanReveal,
             };
-            reveal.Click += OnReveal;
+            reveal.Click += (_, _) =>
+                _viewModel.RevealPath(
+                    selection);
             items.Add(reveal);
 
             var refresh = new MenuItem
             {
                 Header = _localization.Get(
                     "Library.Action.RefreshAffectedPaths"),
+                IsEnabled =
+                    selection
+                        .CanRefreshAffectedPaths,
             };
-            refresh.Click += OnReindex;
+            refresh.Click += async (_, _) =>
+                await _viewModel
+                    .RefreshAffectedPathsAsync(
+                        selection);
             items.Add(refresh);
         }
 
@@ -728,9 +741,8 @@ public partial class LibraryView : UserControl
     }
 
     private MenuItem CreateHandoffScopeMenu(
-        WorkbenchHandoffScopeKind scope,
         string headerKey,
-        bool enabled)
+        LibraryActionScopeSnapshot snapshot)
     {
         var sections = new List<MenuItem>();
         foreach (WorkbenchSection section in HandoffSections)
@@ -739,17 +751,18 @@ public partial class LibraryView : UserControl
             {
                 Header = _localization.Get(
                     $"Workbench.Navigation.Section.{section}"),
+                IsEnabled = snapshot.CanHandoff,
             };
             item.Click += async (_, _) =>
                 await _viewModel.HandoffToWorkbenchAsync(
                     section,
-                    scope);
+                    snapshot);
             sections.Add(item);
         }
         return new MenuItem
         {
             Header = _localization.Get(headerKey),
-            IsEnabled = enabled,
+            IsEnabled = snapshot.CanHandoff,
             ItemsSource = sections,
         };
     }
@@ -879,17 +892,30 @@ public partial class LibraryView : UserControl
             _viewModel.SaveNamedView(name, CaptureColumns(), _sort);
     }
 
-    private async void OnCopyPaths(object? sender, RoutedEventArgs e) =>
-        await _platform.CopyTextAsync(string.Join(Environment.NewLine, _selected.Select(item => item.Path)));
-
-    private void OnReveal(object? sender, RoutedEventArgs e)
+    private async void OnCopyPaths(
+        object? sender,
+        RoutedEventArgs e)
     {
-        if (_selected.FirstOrDefault() is { } row)
-            _platform.RevealFile(row.Path);
+        if (_selectionActions is { } selection)
+            await _viewModel.CopyPathsAsync(selection);
     }
 
-    private async void OnReindex(object? sender, RoutedEventArgs e) =>
-        await _viewModel.ReindexAsync(_selected.Select(item => item.Path).ToArray());
+    private void OnReveal(
+        object? sender,
+        RoutedEventArgs e)
+    {
+        if (_selectionActions is { } selection)
+            _viewModel.RevealPath(selection);
+    }
+
+    private async void OnReindex(
+        object? sender,
+        RoutedEventArgs e)
+    {
+        if (_selectionActions is { } selection)
+            await _viewModel.RefreshAffectedPathsAsync(
+                selection);
+    }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
@@ -923,6 +949,10 @@ public partial class LibraryView : UserControl
     {
         if (e.PropertyName is nameof(LibraryViewModel.Rows) or nameof(LibraryViewModel.SelectedPaths))
             Dispatcher.UIThread.Post(RestoreVisibleSelection);
+        else if (e.PropertyName ==
+                 nameof(LibraryViewModel.IsBusy))
+            Dispatcher.UIThread.Post(
+                UpdateSelectionActions);
         else if (e.PropertyName is nameof(LibraryViewModel.IsInspectorOpen) or
                   nameof(LibraryViewModel.InspectorPreference) or
                   nameof(LibraryViewModel.HasUnsavedSelectionChanges))
@@ -950,17 +980,34 @@ public partial class LibraryView : UserControl
 
     private void UpdateSelectionActions()
     {
-        bool hasSelection = _selected.Count > 0;
+        LibraryActionScopeSnapshot selection =
+            CaptureSelectionActions();
+        _selectionActions = selection;
+        bool hasSelection = selection.HasPaths;
         SelectedCountLabel.IsVisible =
             SelectionWorkbenchButton.IsVisible =
             CopyButton.IsVisible =
             RevealButton.IsVisible =
             ReindexButton.IsVisible =
             hasSelection;
+        SelectionWorkbenchButton.IsEnabled =
+            selection.CanHandoff;
+        CopyButton.IsEnabled =
+            selection.CanCopyPaths;
+        RevealButton.IsEnabled =
+            selection.CanReveal;
+        ReindexButton.IsEnabled =
+            selection.CanRefreshAffectedPaths;
         SelectedCountLabel.Text = _localization.Format(
             "Library.Selection.CountFormat",
-            _selected.Count);
+            selection.CapturedPaths.Length);
     }
+
+    private LibraryActionScopeSnapshot
+        CaptureSelectionActions() =>
+        _viewModel.CaptureActionScope(
+            WorkbenchHandoffScopeKind.Selected,
+            _selected.Select(row => row.Path));
 
     private void OnInspectorCloseRequested(object? sender, EventArgs e)
     {

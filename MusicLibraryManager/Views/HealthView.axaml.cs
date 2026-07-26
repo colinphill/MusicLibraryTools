@@ -293,6 +293,26 @@ public partial class HealthView : UserControl
         if (width <= 0)
             return;
 
+        bool compactHeight =
+            Bounds.Height <= 700;
+        HealthAuditDescription.IsVisible =
+            !compactHeight;
+        HealthRepairDescription.IsVisible =
+            !compactHeight;
+        HealthAuditTitle.IsVisible =
+            !compactHeight;
+        HealthRepairTitle.IsVisible =
+            !compactHeight;
+        HealthStatusBanner.IsVisible =
+            !compactHeight;
+        HealthActionCard.Padding =
+            new Thickness(
+                compactHeight ? 8 : 16);
+        HealthActionContent.Spacing =
+            compactHeight ? 4 : 12;
+        HealthActionLayout.ColumnSpacing =
+            compactHeight ? 12 : 24;
+
         bool stackActions = width < 720;
         HealthActionLayout.ColumnDefinitions.Clear();
         HealthActionLayout.RowDefinitions.Clear();

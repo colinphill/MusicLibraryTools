@@ -3928,15 +3928,15 @@
     <translation culture="zh-TW">分析預設值：2 MiB 與 2,000 像素。修復預設值：225 KiB 與 600 像素。恰好等於分析閾值的封面不會被標示。</translation>
   </entry>
   <entry key="Settings.RootPolicy.BuiltInDescription">
-    <translation culture="de-DE">Integrierte Richtlinien sind geschützt. Duplizieren Sie eine Richtlinie, um sie anzupassen. Weisen Sie Richtlinien auf der Registerkarte „Bibliotheksstammordner“ zu.</translation>
-    <translation culture="es-ES">Las políticas integradas están protegidas. Duplica una para personalizarla. Asigna las políticas a las raíces en la pestaña Raíces de la biblioteca.</translation>
-    <translation culture="fr-FR">Les stratégies intégrées sont protégées. Dupliquez-en une pour la personnaliser. Attribuez les stratégies aux racines dans l’onglet Racines de la bibliothèque.</translation>
-    <translation culture="it-IT">I criteri integrati sono protetti. Duplicane uno per personalizzarlo. Assegna i criteri alle radici nella scheda Radici della libreria.</translation>
-    <translation culture="pt-BR">As políticas internas são protegidas. Duplique uma para personalizá-la. Atribua políticas às raízes na guia Raízes da biblioteca.</translation>
-    <translation culture="ja-JP">組み込みポリシーは保護されています。カスタマイズするには複製してください。ポリシーは「ライブラリのルート」タブでルートに割り当てます。</translation>
-    <translation culture="ko-KR">기본 제공 정책은 보호됩니다. 사용자 지정하려면 복제하세요. 정책은 라이브러리 루트 탭에서 루트에 할당합니다.</translation>
-    <translation culture="zh-CN">内置策略受保护。要自定义，请先复制一份。请在“音乐库根目录”选项卡中为根目录分配策略。</translation>
-    <translation culture="zh-TW">內建原則受到保護。若要自訂，請先複製一份。請在「音樂庫根目錄」索引標籤中為根目錄指派原則。</translation>
+    <translation culture="de-DE">Integrierte Bibliotheksrichtlinien können nicht gelöscht werden. Duplizieren Sie eine Richtlinie, um sie anzupassen. Mindestens eine Bibliotheksrichtlinie muss erhalten bleiben. Weisen Sie Richtlinien auf der Registerkarte „Bibliotheksstammordner“ zu.</translation>
+    <translation culture="es-ES">Las políticas integradas de la biblioteca no se pueden eliminar. Duplica una para personalizarla. Debe conservarse al menos una política de biblioteca. Asigna las políticas a las raíces en la pestaña Raíces de la biblioteca.</translation>
+    <translation culture="fr-FR">Les stratégies de bibliothèque intégrées ne peuvent pas être supprimées. Dupliquez-en une pour la personnaliser. Au moins une stratégie de bibliothèque doit être conservée. Attribuez les stratégies aux racines dans l’onglet Racines de la bibliothèque.</translation>
+    <translation culture="it-IT">I criteri integrati della libreria non possono essere eliminati. Duplicane uno per personalizzarlo. Deve essere mantenuto almeno un criterio della libreria. Assegna i criteri alle radici nella scheda Radici della libreria.</translation>
+    <translation culture="pt-BR">As políticas internas da biblioteca não podem ser excluídas. Duplique uma para personalizá-la. Pelo menos uma política de biblioteca deve ser mantida. Atribua políticas às raízes na guia Raízes da biblioteca.</translation>
+    <translation culture="ja-JP">組み込みのライブラリポリシーは削除できません。カスタマイズするには複製してください。少なくとも1つのライブラリポリシーを残す必要があります。ポリシーは「ライブラリのルート」タブでルートに割り当てます。</translation>
+    <translation culture="ko-KR">기본 제공 라이브러리 정책은 삭제할 수 없습니다. 사용자 지정하려면 복제하세요. 라이브러리 정책을 하나 이상 유지해야 합니다. 정책은 라이브러리 루트 탭에서 루트에 할당합니다.</translation>
+    <translation culture="zh-CN">内置的媒体库策略无法删除。要进行自定义，请先复制一份。必须至少保留一项媒体库策略。请在“媒体库根目录”选项卡中为根目录分配策略。</translation>
+    <translation culture="zh-TW">內建的音樂庫原則無法刪除。若要自訂，請先複製一份。至少必須保留一項音樂庫原則。請在「音樂庫根目錄」索引標籤中為根目錄指派原則。</translation>
   </entry>
   <entry key="Settings.RootPolicy.CompletePathLimit">
     <translation culture="de-DE">Maximale vollständige Pfadlänge (leer = Plattformstandard)</translation>
@@ -4113,6 +4113,17 @@
     <translation culture="ko-KR">출력 확장자</translation>
     <translation culture="zh-CN">输出扩展名</translation>
     <translation culture="zh-TW">輸出副檔名</translation>
+  </entry>
+  <entry key="Settings.Ingest.ProfileDeletionDescription">
+    <translation culture="de-DE">Integrierte Importprofile können nicht gelöscht werden. Duplizieren Sie ein Profil, um es anzupassen. Mindestens ein Importprofil muss erhalten bleiben.</translation>
+    <translation culture="es-ES">Los perfiles de ingesta integrados no se pueden eliminar. Duplica uno para personalizarlo. Debe conservarse al menos un perfil de ingesta.</translation>
+    <translation culture="fr-FR">Les profils d’ingestion intégrés ne peuvent pas être supprimés. Dupliquez-en un pour le personnaliser. Au moins un profil d’ingestion doit être conservé.</translation>
+    <translation culture="it-IT">I profili di importazione integrati non possono essere eliminati. Duplicane uno per personalizzarlo. Deve essere mantenuto almeno un profilo di importazione.</translation>
+    <translation culture="pt-BR">Os perfis de ingestão internos não podem ser excluídos. Duplique um para personalizá-lo. Pelo menos um perfil de ingestão deve ser mantido.</translation>
+    <translation culture="ja-JP">組み込みの取り込みプロファイルは削除できません。カスタマイズするには複製してください。少なくとも1つの取り込みプロファイルを残す必要があります。</translation>
+    <translation culture="ko-KR">기본 제공 수집 프로필은 삭제할 수 없습니다. 사용자 지정하려면 복제하세요. 수집 프로필을 하나 이상 유지해야 합니다.</translation>
+    <translation culture="zh-CN">内置的导入配置文件无法删除。要进行自定义，请先复制一份。必须至少保留一个导入配置文件。</translation>
+    <translation culture="zh-TW">內建的擷取設定檔無法刪除。若要自訂，請先複製一份。至少必須保留一個擷取設定檔。</translation>
   </entry>
   <entry key="Settings.Ingest.ProfileName">
     <translation culture="de-DE">Name des Aufnahmeprofils</translation>

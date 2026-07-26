@@ -55,13 +55,19 @@
             Grid.Row="1"
             Classes="card"
             Padding="16">
-      <StackPanel Spacing="12">
+      <StackPanel x:Name="HealthActionContent"
+                  Spacing="12">
         <Grid x:Name="HealthActionLayout"
               ColumnDefinitions="1.25*,1*"
               ColumnSpacing="24">
           <StackPanel Spacing="8">
-            <TextBlock Text="{DynamicResource Loc.Health.Audit.Title}" FontWeight="SemiBold" />
-            <TextBlock Classes="muted" Text="{DynamicResource Loc.Health.Audit.Description}" TextWrapping="Wrap" />
+            <TextBlock x:Name="HealthAuditTitle"
+                       Text="{DynamicResource Loc.Health.Audit.Title}"
+                       FontWeight="SemiBold" />
+            <TextBlock x:Name="HealthAuditDescription"
+                       Classes="muted"
+                       Text="{DynamicResource Loc.Health.Audit.Description}"
+                       TextWrapping="Wrap" />
             <Button x:Name="RunHealthAuditButton"
                     Classes="app primary overflow"
                     HorizontalAlignment="Left"
@@ -88,8 +94,13 @@
             </Button>
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="8">
-            <TextBlock Text="{DynamicResource Loc.Health.Repair.Title}" FontWeight="SemiBold" />
-            <TextBlock Classes="muted" Text="{DynamicResource Loc.Health.Repair.Description}" TextWrapping="Wrap" />
+            <TextBlock x:Name="HealthRepairTitle"
+                       Text="{DynamicResource Loc.Health.Repair.Title}"
+                       FontWeight="SemiBold" />
+            <TextBlock x:Name="HealthRepairDescription"
+                       Classes="muted"
+                       Text="{DynamicResource Loc.Health.Repair.Description}"
+                       TextWrapping="Wrap" />
             <WrapPanel>
               <Button x:Name="PrepareHealthRepairsButton"
                       Classes="app overflow" Margin="0,0,12,8"
@@ -124,7 +135,8 @@
           <ProgressBar Classes="app" IsIndeterminate="True"
                        IsVisible="{Binding HasIndeterminateAnalysisProgress}" />
         </Grid>
-        <Border Classes="status-banner"
+        <Border x:Name="HealthStatusBanner"
+                Classes="status-banner"
                 Classes.info="{Binding IsStatusInfo}"
                 Classes.success="{Binding IsStatusSuccess}"
                 Classes.warning="{Binding IsStatusWarning}"
@@ -705,7 +717,7 @@
                         VerticalAlignment="Center"
                         ResourceKey="Health.Repairs.MetadataCount"
                         UseCountVariant="True"
-                        Value="{Binding RepairItems.Count}" />
+                        Value="{Binding SelectedRun.ActiveRepairCount}" />
                     <Button Grid.Column="1" Classes="app primary" Content="{DynamicResource Loc.Health.Action.ApplyMetadataRepairs}"
                             Command="{Binding ApplyRepairsCommand}" />
                   </Grid>
@@ -760,7 +772,7 @@
                         VerticalAlignment="Center"
                         ResourceKey="Health.Repairs.FileCount"
                         UseCountVariant="True"
-                        Value="{Binding RepresentationActionItems.Count}" />
+                        Value="{Binding SelectedRun.ActiveRepresentationRepairCount}" />
                     <Button Grid.Column="1" Classes="app primary" Content="{DynamicResource Loc.Health.Action.ApplyFileRepairs}"
                             Command="{Binding ApplyRepresentationRepairsCommand}" />
                   </Grid>
@@ -891,7 +903,7 @@
                         VerticalAlignment="Center"
                         ResourceKey="Health.Repairs.ItunesCount"
                         UseCountVariant="True"
-                        Value="{Binding ItlRepairItems.Count}" />
+                        Value="{Binding SelectedRun.ActiveItlRepairCount}" />
                     <Button Grid.Column="1" Classes="app primary" Content="{DynamicResource Loc.Health.Action.ApplyItunesRepairs}"
                             Command="{Binding ApplyItlMetadataRepairsCommand}" />
                   </Grid>
@@ -948,7 +960,7 @@
                           Classes="muted"
                           ResourceKey="Health.Artwork.SelectedCount"
                           UseCountVariant="True"
-                          Value="{Binding ActiveArtworkRepairCount}" />
+                          Value="{Binding SelectedRun.ActiveArtworkRepairCount}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1"
                                 Classes="field"

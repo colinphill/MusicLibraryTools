@@ -11,7 +11,15 @@ public partial class OperationsView : UserControl
     public OperationsView()
     {
         InitializeComponent();
-        DataContext = App.GetService<OperationsViewModel>();
+        OperationsViewModel viewModel =
+            App.GetService<OperationsViewModel>();
+        DataContext = viewModel;
+        // MenuFlyout is detached until it opens, so seed its commands to make
+        // pre-open enabled-state inspection match the owning view model.
+        PreviewRetentionPurgeMenuItem.Command =
+            viewModel.PreviewPurgeCommand;
+        PurgeReviewedMenuItem.Command =
+            viewModel.ApplyPurgeCommand;
         HistoryGrid.ConfigureColumns([
             new AppGridColumnDefinition("Created", "When", "Created", 150, 120,
                 HeaderResourceKey: "Column.When"),

@@ -14,6 +14,22 @@ public enum WorkbenchHandoffScopeKind
 }
 
 /// <summary>
+/// An immutable action scope captured from the Library surface. Both the
+/// visible selection bar and its grid context menu use the same snapshot so a
+/// later selection or filter change cannot redirect an already-open action.
+/// </summary>
+public sealed record LibraryActionScopeSnapshot(
+    WorkbenchHandoffScopeKind ScopeKind,
+    ImmutableArray<string> CapturedPaths,
+    bool CanHandoff,
+    bool CanCopyPaths,
+    bool CanReveal,
+    bool CanRefreshAffectedPaths)
+{
+    public bool HasPaths => !CapturedPaths.IsDefaultOrEmpty;
+}
+
+/// <summary>
 /// An immutable snapshot of a request to continue Library work in a specific
 /// Workbench destination. Paths are captured when the request is created so a
 /// later filter or selection change cannot change its meaning.

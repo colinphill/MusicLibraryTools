@@ -22,18 +22,53 @@ public sealed record ParsedWorkbenchShortcut(
     string Key,
     string Display);
 
-public sealed record WorkbenchShortcutCommandChoice(
-    WorkbenchShortcutCommand Command,
-    string Label);
-
-public sealed record WorkbenchShortcutRow(
-    WorkbenchShortcutBinding Binding)
+public enum WorkbenchShortcutPlatform
 {
+    Windows,
+    MacOS,
+    Linux,
+}
+
+public sealed class WorkbenchShortcutCommandChoice(
+    WorkbenchShortcutCommand command,
+    string label) : ObservableObject
+{
+    private string _label = label;
+
+    public WorkbenchShortcutCommand Command { get; } =
+        command;
+
+    public string Label
+    {
+        get => _label;
+        set => SetProperty(ref _label, value);
+    }
+
+    public override string ToString() => Label;
+}
+
+public sealed class WorkbenchShortcutRow(
+    WorkbenchShortcutBinding binding,
+    ILocalizationService? localization = null) :
+    ObservableObject
+{
+    public WorkbenchShortcutBinding Binding { get; } =
+        binding;
     public string Gesture => Binding.Gesture;
-    public string Target => Binding.TargetLabel ??
-        Binding.Command?.ToString() ??
-        LocalizedText.Get(
-            "Workbench.Shortcuts.Target.Recipe");
+    public string Target =>
+        Binding.Command is { } command
+            ? localization?.Get(
+                  $"Workbench.Shortcuts.Command.{command}") ??
+              LocalizedText.Get(
+                  $"Workbench.Shortcuts.Command.{command}")
+            : Binding.TargetLabel ??
+              localization?.Get(
+                  "Workbench.Shortcuts.Target.Recipe") ??
+              LocalizedText.Get(
+                  "Workbench.Shortcuts.Target.Recipe");
+
+    public void RefreshLocalization() =>
+        OnPropertyChanged(nameof(Target));
 }
 
 public static class WorkbenchShortcutGestureParser
@@ -141,16 +176,11 @@ public static class WorkbenchShortcutGestureParser
 public partial class WorkbenchShortcutEditorViewModel :
     ObservableObject
 {
-    private static readonly HashSet<string> ReservedGestures =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            "Ctrl+K",
-            "Ctrl+I",
-        };
-
     private readonly IWorkbenchShortcutStore? _store;
     private readonly IOperationRecipeStore? _recipes;
     private readonly ILocalizationService? _localization;
+    private readonly WorkbenchShortcutPlatform _platform;
+    private readonly HashSet<string> _reservedGestures;
     private bool _loading;
     private string? _statusKey;
     private object?[] _statusArguments = [];
@@ -180,11 +210,21 @@ public partial class WorkbenchShortcutEditorViewModel :
     public WorkbenchShortcutEditorViewModel(
         IWorkbenchShortcutStore? store = null,
         IOperationRecipeStore? recipes = null,
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        WorkbenchShortcutPlatform? platform = null)
     {
         _store = store;
         _recipes = recipes;
         _localization = localization;
+        _platform = platform ??
+            ResolveCurrentPlatform();
+        _reservedGestures = new(
+            [
+                $"{PrimaryModifier}+K",
+                $"{PrimaryModifier}+I",
+            ],
+            StringComparer.OrdinalIgnoreCase);
+        GestureText = DefaultGesture;
         RefreshLocalizedChoices();
         SelectedCommand = Commands[0];
         ReloadRecipes();
@@ -208,6 +248,20 @@ public partial class WorkbenchShortcutEditorViewModel :
     public ObservableCollection<
         LocalizedChoice<WorkbenchShortcutTargetKind>>
         TargetKindChoices { get; } = [];
+    public WorkbenchShortcutPlatform Platform =>
+        _platform;
+    public string PrimaryModifier =>
+        _platform == WorkbenchShortcutPlatform.MacOS
+            ? "Meta"
+            : "Ctrl";
+    public string DefaultGesture =>
+        $"{PrimaryModifier}+Shift+P";
+    public string GestureHelpText =>
+        AdaptPrimaryModifier(
+            L("Workbench.Shortcuts.GestureHelp"));
+    public string InputWarningText =>
+        AdaptPrimaryModifier(
+            L("Workbench.Shortcuts.InputWarning"));
     public bool HasGestureValidationError =>
         !string.IsNullOrWhiteSpace(
             GestureValidationMessage);
@@ -219,7 +273,7 @@ public partial class WorkbenchShortcutEditorViewModel :
         try
         {
             SelectedBinding = null;
-            GestureText = "Ctrl+Shift+P";
+            GestureText = DefaultGesture;
             TargetKind =
                 WorkbenchShortcutTargetKind.Command;
             SelectedCommand = Commands[0];
@@ -251,20 +305,22 @@ public partial class WorkbenchShortcutEditorViewModel :
         }
         ParsedWorkbenchShortcut parsedGesture = gesture!;
         WorkbenchShortcutBinding binding;
+        string targetLabel;
         if (TargetKind == WorkbenchShortcutTargetKind.Command &&
             SelectedCommand is not null)
         {
+            targetLabel = SelectedCommand.Label;
             binding = new(
                 SelectedBinding?.Binding.Id ?? Guid.NewGuid(),
                 parsedGesture.Display,
                 TargetKind,
-                SelectedCommand.Command,
-                TargetLabel: SelectedCommand.Label);
+                SelectedCommand.Command);
         }
         else if (
             TargetKind == WorkbenchShortcutTargetKind.Recipe &&
             SelectedRecipe is not null)
         {
+            targetLabel = SelectedRecipe.Name;
             binding = new(
                 SelectedBinding?.Binding.Id ?? Guid.NewGuid(),
                 parsedGesture.Display,
@@ -291,7 +347,7 @@ public partial class WorkbenchShortcutEditorViewModel :
         SetStatus(
             "Workbench.Shortcuts.Status.Saved",
             binding.Gesture,
-            binding.TargetLabel);
+            targetLabel);
     }
 
     private bool CanSaveShortcut() =>
@@ -388,7 +444,9 @@ public partial class WorkbenchShortcutEditorViewModel :
         Bindings.Clear();
         foreach (WorkbenchShortcutBinding binding in
                  _store?.Load() ?? [])
-            Bindings.Add(new(binding));
+            Bindings.Add(new(
+                binding,
+                _localization));
         SelectedBinding = selectedId is null
             ? null
             : Bindings.FirstOrDefault(row =>
@@ -442,11 +500,12 @@ public partial class WorkbenchShortcutEditorViewModel :
                 GestureText,
                 out gesture,
                 out string? parserError))
-            return parserError ??
+            return AdaptPrimaryModifier(
+                parserError ??
                 L(
-                    "Workbench.Shortcuts.Validation.Invalid");
+                    "Workbench.Shortcuts.Validation.Invalid"));
         ParsedWorkbenchShortcut parsedGesture = gesture!;
-        if (ReservedGestures.Contains(
+        if (_reservedGestures.Contains(
                 parsedGesture.Display))
             return LF(
                 "Workbench.Shortcuts.Validation.Reserved",
@@ -471,14 +530,21 @@ public partial class WorkbenchShortcutEditorViewModel :
     {
         WorkbenchShortcutCommand? selected =
             SelectedCommand?.Command;
-        Commands.Clear();
         foreach (WorkbenchShortcutCommand command in
                  Enum.GetValues<WorkbenchShortcutCommand>())
-            Commands.Add(new(
-                command,
-                L($"Workbench.Shortcuts.Command.{command}")));
+        {
+            WorkbenchShortcutCommandChoice? choice =
+                Commands.FirstOrDefault(
+                    item => item.Command == command);
+            string label = L(
+                $"Workbench.Shortcuts.Command.{command}");
+            if (choice is null)
+                Commands.Add(new(command, label));
+            else
+                choice.Label = label;
+        }
         if (selected is { } selectedCommand)
-            SelectedCommand = Commands.First(
+            SelectedCommand = Commands.Single(
                 choice =>
                     choice.Command == selectedCommand);
 
@@ -502,13 +568,34 @@ public partial class WorkbenchShortcutEditorViewModel :
         EventArgs e)
     {
         RefreshLocalizedChoices();
+        foreach (WorkbenchShortcutRow row in Bindings)
+            row.RefreshLocalization();
         if (_statusKey is not null)
             Status = LF(
                 _statusKey,
                 _statusArguments);
+        OnPropertyChanged(nameof(GestureHelpText));
+        OnPropertyChanged(nameof(InputWarningText));
         GestureValidationMessage =
             GetGestureValidationError(
                 out _) ??
             "";
     }
+
+    private string AdaptPrimaryModifier(
+        string text) =>
+        _platform == WorkbenchShortcutPlatform.MacOS
+            ? text.Replace(
+                "Ctrl+",
+                "Meta+",
+                StringComparison.Ordinal)
+            : text;
+
+    private static WorkbenchShortcutPlatform
+        ResolveCurrentPlatform() =>
+        OperatingSystem.IsMacOS()
+            ? WorkbenchShortcutPlatform.MacOS
+            : OperatingSystem.IsWindows()
+                ? WorkbenchShortcutPlatform.Windows
+                : WorkbenchShortcutPlatform.Linux;
 }

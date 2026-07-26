@@ -1988,6 +1988,11 @@ public partial class WorkbenchViewModel :
                 await _operations.DiscardStageAsync(
                     metadataStage,
                     CancellationToken.None);
+            // A composed review can commit the existing metadata/transcode
+            // transaction before a later file-operation transaction fails.
+            // Rebuild from the retained semantic intents so the drawer never
+            // presents already-committed rows as still pending.
+            RebuildPendingChanges();
             EndOperation();
             NotifySessionChanged();
         }

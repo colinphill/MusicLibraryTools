@@ -216,9 +216,12 @@
                   <StackPanel Grid.Column="1" Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"
                                Text="{DynamicResource Loc.Column.Type}" />
-                    <ComboBox Classes="app"
-                              ItemsSource="{Binding ColumnEditor.FieldKinds}"
-                              SelectedItem="{Binding ColumnEditor.FieldKind, Mode=TwoWay}"
+                    <ComboBox x:Name="LibraryColumnFieldKindPicker"
+                              Classes="app"
+                              ItemsSource="{Binding ColumnEditor.FieldKindChoices}"
+                              DisplayMemberBinding="{Binding Label}"
+                              SelectedValueBinding="{Binding Value}"
+                              SelectedValue="{Binding ColumnEditor.FieldKind, Mode=TwoWay}"
                               AutomationProperties.Name="{DynamicResource Loc.Column.Type}" />
                   </StackPanel>
                 </Grid>
@@ -244,9 +247,12 @@
                   <StackPanel Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"
                                Text="{DynamicResource Loc.Library.Reports.SortByPlaceholder}" />
-                    <ComboBox Classes="app"
-                              ItemsSource="{Binding ColumnEditor.SortTypes}"
-                              SelectedItem="{Binding ColumnEditor.SortType, Mode=TwoWay}"
+                    <ComboBox x:Name="LibraryColumnSortTypePicker"
+                              Classes="app"
+                              ItemsSource="{Binding ColumnEditor.SortTypeChoices}"
+                              DisplayMemberBinding="{Binding Label}"
+                              SelectedValueBinding="{Binding Value}"
+                              SelectedValue="{Binding ColumnEditor.SortType, Mode=TwoWay}"
                               AutomationProperties.Name="{DynamicResource Loc.Library.Reports.SortByPlaceholder}" />
                   </StackPanel>
                   <StackPanel Grid.Column="1" Classes="field" Spacing="4">

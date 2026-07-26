@@ -2704,7 +2704,7 @@
     <value>Archiviazione delle copertine</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>I criteri integrati sono protetti. Duplicane uno per personalizzarlo. Assegna i criteri alle radici nella scheda Radici della libreria.</value>
+    <value>I criteri integrati della libreria non possono essere eliminati. Duplicane uno per personalizzarlo. Deve essere mantenuto almeno un criterio della libreria. Assegna i criteri alle radici nella scheda Radici della libreria.</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>Queste impostazioni modificano la denominazione e il comportamento di metadati, copertine, controlli di integrità e file associati per tutte le radici che usano questo profilo. Le anteprime esistenti non saranno più valide e dovranno essere rigenerate.</value>
@@ -2957,6 +2957,9 @@
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
     <value>Mantieni i metadati</value>
+  </data>
+  <data name="Settings.Ingest.ProfileDeletionDescription" xml:space="preserve">
+    <value>I profili di importazione integrati non possono essere eliminati. Duplicane uno per personalizzarlo. Deve essere mantenuto almeno un profilo di importazione.</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
     <value>Mantieni i file associati per impostazione predefinita</value>

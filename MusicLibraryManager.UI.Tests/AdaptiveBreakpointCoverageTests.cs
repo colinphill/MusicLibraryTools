@@ -666,6 +666,16 @@ public sealed class AdaptiveBreakpointCoverageTests
                 681,
                 columns: 2,
                 rows: 1);
+
+            AssertCompactHeight(
+                699,
+                compact: true);
+            AssertCompactHeight(
+                700,
+                compact: true);
+            AssertCompactHeight(
+                701,
+                compact: false);
         }
         finally
         {
@@ -724,6 +734,37 @@ public sealed class AdaptiveBreakpointCoverageTests
             Assert.Equal(
                 rows,
                 masterDetail.RowDefinitions.Count);
+        }
+
+        void AssertCompactHeight(
+            double height,
+            bool compact)
+        {
+            ResizeHost(
+                host,
+                view,
+                1100,
+                height);
+            Assert.Equal(
+                !compact,
+                view.FindControl<TextBlock>(
+                        "HealthAuditTitle")!
+                    .IsVisible);
+            Assert.Equal(
+                !compact,
+                view.FindControl<TextBlock>(
+                        "HealthAuditDescription")!
+                    .IsVisible);
+            Assert.Equal(
+                !compact,
+                view.FindControl<Border>(
+                        "HealthStatusBanner")!
+                    .IsVisible);
+            Assert.Equal(
+                compact ? 8 : 16,
+                view.FindControl<Border>(
+                        "HealthActionCard")!
+                    .Padding.Left);
         }
     }
 

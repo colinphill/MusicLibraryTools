@@ -969,17 +969,100 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         WorkbenchSection destinationSection,
         WorkbenchHandoffScopeKind scopeKind)
     {
-        if (_workbench is null || IsBusy)
-            return;
-        string[] paths = ResolveHandoffPaths(scopeKind);
-        if (paths.Length == 0)
+        LibraryActionScopeSnapshot snapshot =
+            CaptureActionScope(scopeKind);
+        await HandoffToWorkbenchAsync(
+            destinationSection,
+            snapshot);
+    }
+
+    public async Task HandoffToWorkbenchAsync(
+        WorkbenchSection destinationSection,
+        LibraryActionScopeSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (_workbench is null ||
+            IsBusy ||
+            !snapshot.CanHandoff ||
+            snapshot.CapturedPaths.IsDefaultOrEmpty)
             return;
         var request = WorkbenchHandoffRequest.Create(
             destinationSection,
-            scopeKind,
-            paths);
+            snapshot.ScopeKind,
+            snapshot.CapturedPaths);
         if (await _workbench.AcceptHandoffAsync(request))
             _navigation.Navigate(ShellDestination.Workbench);
+    }
+
+    public LibraryActionScopeSnapshot CaptureActionScope(
+        WorkbenchHandoffScopeKind scopeKind,
+        IEnumerable<string>? selectedPaths = null)
+    {
+        IEnumerable<string> paths = scopeKind switch
+        {
+            WorkbenchHandoffScopeKind.Selected =>
+                selectedPaths ?? _selectedPaths,
+            WorkbenchHandoffScopeKind.VisibleResults =>
+                Rows.Select(row => row.Path),
+            WorkbenchHandoffScopeKind.AllResults =>
+                _allRows.Select(row => row.Path),
+            _ => [],
+        };
+        var captured = paths
+            .Where(path =>
+                !string.IsNullOrWhiteSpace(path))
+            .Distinct(PathComparer)
+            .ToImmutableArray();
+        bool hasPaths = !captured.IsDefaultOrEmpty;
+        return new(
+            scopeKind,
+            captured,
+            CanHandoff: hasPaths &&
+                !IsBusy &&
+                _workbench is not null,
+            CanCopyPaths: hasPaths &&
+                _platform is not null,
+            CanReveal: captured.Length == 1 &&
+                _platform is not null,
+            CanRefreshAffectedPaths: hasPaths &&
+                !IsBusy);
+    }
+
+    public Task CopyPathsAsync(
+        LibraryActionScopeSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (_platform is null ||
+            !snapshot.CanCopyPaths ||
+            snapshot.CapturedPaths.IsDefaultOrEmpty)
+            return Task.CompletedTask;
+        return _platform.CopyTextAsync(
+            string.Join(
+                Environment.NewLine,
+                snapshot.CapturedPaths));
+    }
+
+    public void RevealPath(
+        LibraryActionScopeSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (_platform is null ||
+            !snapshot.CanReveal ||
+            snapshot.CapturedPaths.Length != 1)
+            return;
+        _platform.RevealFile(
+            snapshot.CapturedPaths[0]);
+    }
+
+    public async Task RefreshAffectedPathsAsync(
+        LibraryActionScopeSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (IsBusy ||
+            !snapshot.CanRefreshAffectedPaths ||
+            snapshot.CapturedPaths.IsDefaultOrEmpty)
+            return;
+        await ReindexAsync(snapshot.CapturedPaths);
     }
 
     private bool CanHandoffToWorkbench(

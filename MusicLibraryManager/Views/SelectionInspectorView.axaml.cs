@@ -1,3 +1,4 @@
+using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Input;
 using global::Avalonia.Interactivity;
@@ -8,6 +9,13 @@ namespace MusicLibraryManager.Views;
 
 public partial class SelectionInspectorView : UserControl
 {
+    public static readonly StyledProperty<object?>
+        SupplementaryContentProperty =
+        AvaloniaProperty.Register<
+            SelectionInspectorView,
+            object?>(
+            nameof(SupplementaryContent));
+
     private ArtworkPreviewWindow? _artworkPreview;
     private ArtworkPreviewItem? _previewedArtwork;
 
@@ -20,6 +28,15 @@ public partial class SelectionInspectorView : UserControl
 
     public event EventHandler? CloseRequested;
     public event EventHandler? ReviewChangesRequested;
+
+    public object? SupplementaryContent
+    {
+        get => GetValue(
+            SupplementaryContentProperty);
+        set => SetValue(
+            SupplementaryContentProperty,
+            value);
+    }
 
     public Control CloseButton =>
         InspectorCloseButton;

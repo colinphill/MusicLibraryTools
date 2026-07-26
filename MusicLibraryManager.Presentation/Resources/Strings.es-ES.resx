@@ -2704,7 +2704,7 @@
     <value>Almacenamiento de carátulas</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>Las políticas integradas están protegidas. Duplica una para personalizarla. Asigna las políticas a las raíces en la pestaña Raíces de la biblioteca.</value>
+    <value>Las políticas integradas de la biblioteca no se pueden eliminar. Duplica una para personalizarla. Debe conservarse al menos una política de biblioteca. Asigna las políticas a las raíces en la pestaña Raíces de la biblioteca.</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>Estos ajustes cambian los nombres y el comportamiento de los metadatos, las carátulas, las comprobaciones de estado y los archivos auxiliares de todas las raíces que usan este perfil. Las vistas previas existentes dejarán de ser válidas y deberán generarse de nuevo.</value>
@@ -2957,6 +2957,9 @@
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
     <value>Conservar los metadatos</value>
+  </data>
+  <data name="Settings.Ingest.ProfileDeletionDescription" xml:space="preserve">
+    <value>Los perfiles de ingesta integrados no se pueden eliminar. Duplica uno para personalizarlo. Debe conservarse al menos un perfil de ingesta.</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
     <value>Conservar los archivos asociados de forma predeterminada</value>

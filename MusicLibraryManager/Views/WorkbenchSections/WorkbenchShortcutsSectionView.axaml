@@ -83,11 +83,11 @@
                    Text="{Binding ShortcutEditor.GestureText, Mode=TwoWay}"
                    PlaceholderText="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}"
                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}"
-                   AutomationProperties.HelpText="{DynamicResource Loc.Workbench.Shortcuts.GestureHelp}" />
+                   AutomationProperties.HelpText="{Binding ShortcutEditor.GestureHelpText}" />
           <TextBlock x:Name="GestureHelp"
                      Classes="field-help"
                      TextWrapping="Wrap"
-                     Text="{DynamicResource Loc.Workbench.Shortcuts.GestureHelp}" />
+                     Text="{Binding ShortcutEditor.GestureHelpText}" />
           <TextBlock x:Name="GestureValidationMessage"
                      Classes="error field-help"
                      IsVisible="{Binding ShortcutEditor.HasGestureValidationError}"
@@ -143,7 +143,7 @@
         <Border x:Name="InputWarning"
                 Classes="status-banner warning">
           <TextBlock TextWrapping="Wrap"
-                     Text="{DynamicResource Loc.Workbench.Shortcuts.InputWarning}" />
+                     Text="{Binding ShortcutEditor.InputWarningText}" />
         </Border>
         <TextBlock Classes="muted"
                    TextWrapping="Wrap"

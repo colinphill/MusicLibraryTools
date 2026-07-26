@@ -235,7 +235,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<LibraryIngestProfile> IngestProfiles { get; } = [];
     public ObservableCollection<SettingsRootChoice> SyncTargetRootChoices { get; } = [];
     public bool CanDeleteSelectedProfile =>
-        SelectedLibraryProfile?.Preset == LibraryProfilePreset.Custom;
+        SelectedLibraryProfile?.Preset == LibraryProfilePreset.Custom &&
+        LibraryProfiles.Count > 1;
     public bool CanDeleteSelectedIngestProfile =>
         SelectedIngestProfile is not null && IngestProfiles.Count > 1 &&
         LibraryIngestProfilePresets.All.All(profile => !string.Equals(
@@ -1526,7 +1527,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [RelayCommand(CanExecute = nameof(CanDeleteLibraryProfile))]
     private async Task DeleteLibraryProfileAsync()
     {
-        if (SelectedLibraryProfile is not { Preset: LibraryProfilePreset.Custom } selectedChoice)
+        if (SelectedLibraryProfile is not
+                { Preset: LibraryProfilePreset.Custom } selectedChoice ||
+            !CanDeleteSelectedProfile)
             return;
         CommitAdvancedProfile(updateProfileChoices: true);
         LibraryProfile selected = _editing.Profiles.Single(profile => string.Equals(

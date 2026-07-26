@@ -2704,7 +2704,7 @@
     <value>Coverspeicher</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>Integrierte Richtlinien sind geschützt. Duplizieren Sie eine Richtlinie, um sie anzupassen. Weisen Sie Richtlinien auf der Registerkarte „Bibliotheksstammordner“ zu.</value>
+    <value>Integrierte Bibliotheksrichtlinien können nicht gelöscht werden. Duplizieren Sie eine Richtlinie, um sie anzupassen. Mindestens eine Bibliotheksrichtlinie muss erhalten bleiben. Weisen Sie Richtlinien auf der Registerkarte „Bibliotheksstammordner“ zu.</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>Diese Einstellungen ändern die Benennung sowie das Verhalten für Metadaten, Cover, Integritätsprüfungen und Begleitdateien bei allen Stammordnern, die dieses Profil verwenden. Vorhandene Vorschauen werden ungültig und müssen neu erzeugt werden.</value>
@@ -2957,6 +2957,9 @@
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
     <value>Metadaten beibehalten</value>
+  </data>
+  <data name="Settings.Ingest.ProfileDeletionDescription" xml:space="preserve">
+    <value>Integrierte Importprofile können nicht gelöscht werden. Duplizieren Sie ein Profil, um es anzupassen. Mindestens ein Importprofil muss erhalten bleiben.</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
     <value>Begleitdateien standardmäßig beibehalten</value>

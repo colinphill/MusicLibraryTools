@@ -29,6 +29,7 @@
                 Classes="app"
                 Content="{DynamicResource Loc.Workbench.Action.Inspector}"
                 AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.InspectorAutomation}"
+                ToolTip.Tip="{DynamicResource Loc.Library.Action.InspectorTooltip}"
                 Click="OnInspectorToggle" />
       </controls:PageHeader.SecondaryActions>
       <controls:PageHeader.MoreAction>
@@ -38,7 +39,9 @@
                 AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.MoreAutomation}">
           <Button.Flyout>
             <MenuFlyout>
-              <MenuItem Header="{DynamicResource Loc.Workbench.Action.Inspector}"
+              <MenuItem x:Name="WorkbenchMoreInspectorMenuItem"
+                        Header="{DynamicResource Loc.Workbench.Action.Inspector}"
+                        ToolTip.Tip="{DynamicResource Loc.Library.Action.InspectorTooltip}"
                         Click="OnInspectorToggle" />
               <Separator />
               <MenuItem Header="{DynamicResource Loc.Workbench.Action.UndoLastApply}"

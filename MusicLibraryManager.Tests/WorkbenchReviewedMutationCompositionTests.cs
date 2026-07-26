@@ -10,7 +10,7 @@ namespace MusicLibraryManager.Tests;
 public sealed class WorkbenchReviewedMutationCompositionTests
 {
     [Fact]
-    public async Task Same_source_metadata_file_operation_and_transcode_apply_as_one_unit()
+    public async Task Same_source_mutations_compose_as_one_review_unit_and_apply_in_existing_transaction_order()
     {
         string source = Path.GetFullPath(
             "composed-source.flac");
@@ -75,6 +75,85 @@ public sealed class WorkbenchReviewedMutationCompositionTests
         Assert.Equal(1, transcodes.ApplyCalls);
         Assert.Equal(1, files.ApplyCalls);
         Assert.Empty(workbench.PendingChanges);
+    }
+
+    [Fact]
+    public async Task Late_file_operation_failure_retains_only_the_uncommitted_intent_after_metadata_and_transcode_commit()
+    {
+        string source = Path.GetFullPath(
+            "late-file-failure-source.flac");
+        string copied = Path.GetFullPath(
+            "late-file-failure-copy.flac");
+        string transcoded = Path.GetFullPath(
+            "late-file-failure-output.flac");
+        MediaDocument document = Document(source);
+        var events = new List<string>();
+        var metadata =
+            new RecordingMetadataService(events);
+        var files =
+            new RecordingFileOperationService(
+                events,
+                throwOnApply: true);
+        var transcodes =
+            new RecordingTranscodeService(events);
+        WorkbenchViewModel workbench = CreateWorkbench(
+            document,
+            metadata,
+            files,
+            transcodes);
+        await workbench.AddSourcesAsync([source]);
+
+        Assert.True(await workbench.AddPendingMutationAsync(
+            ReviewedMetadataMutationIntent.Create(
+                MetadataPlan(document)),
+            TestContext.Current.CancellationToken));
+        Assert.True(await workbench.AddPendingMutationAsync(
+            ReviewedFileOperationMutationIntent.Create(
+                FileOperationPlan(source, copied)),
+            TestContext.Current.CancellationToken));
+        Assert.True(await workbench.AddPendingMutationAsync(
+            ReviewedTranscodeMutationIntent.Create(
+                TranscodePlan(source, transcoded)),
+            TestContext.Current.CancellationToken));
+
+        await workbench.ApplyCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [
+                "file-preview",
+                "metadata-stage",
+                "transcode-stage-overrides",
+                "transcode-apply",
+                "metadata-complete",
+                "file-preview",
+                "file-apply",
+            ],
+            events.Where(value =>
+                value != "transcode-discard"));
+        Assert.Equal(1, metadata.StageCalls);
+        Assert.Equal(1, transcodes.ApplyCalls);
+        Assert.Equal(1, files.ApplyCalls);
+        ReviewedMediaMutationUnit retained =
+            Assert.Single(
+                workbench.PendingMutationUnits);
+        Assert.Equal(
+            source,
+            retained.SourcePath);
+        Assert.Equal(
+            [ReviewedMediaMutationKind.FileOperation],
+            retained.MutationKinds);
+        MetadataPreviewRow pending =
+            Assert.Single(
+                workbench.PendingChanges);
+        Assert.Equal(
+            source,
+            pending.Before);
+        Assert.Equal(
+            copied,
+            pending.After);
+        Assert.Equal(
+            "Injected file-operation apply failure.",
+            workbench.StatusDiagnosticDetail);
     }
 
     [Fact]
@@ -534,7 +613,8 @@ public sealed class WorkbenchReviewedMutationCompositionTests
 
     private sealed class RecordingFileOperationService(
         List<string> events,
-        int? blockOnPreviewCall = null) :
+        int? blockOnPreviewCall = null,
+        bool throwOnApply = false) :
         IReviewedFileOperationService
     {
         public int ApplyCalls { get; private set; }
@@ -592,6 +672,9 @@ public sealed class WorkbenchReviewedMutationCompositionTests
         {
             events.Add("file-apply");
             ApplyCalls++;
+            if (throwOnApply)
+                throw new InvalidOperationException(
+                    "Injected file-operation apply failure.");
             return Task.FromResult(
                 new FileMutationSummary(
                     plan.MutationPlan.Actions.Count,

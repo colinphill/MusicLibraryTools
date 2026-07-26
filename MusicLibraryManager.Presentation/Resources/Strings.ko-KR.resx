@@ -2704,7 +2704,7 @@
     <value>아트워크 저장 방식</value>
   </data>
   <data name="Settings.RootPolicy.BuiltInDescription" xml:space="preserve">
-    <value>기본 제공 정책은 보호됩니다. 사용자 지정하려면 복제하세요. 정책은 라이브러리 루트 탭에서 루트에 할당합니다.</value>
+    <value>기본 제공 라이브러리 정책은 삭제할 수 없습니다. 사용자 지정하려면 복제하세요. 라이브러리 정책을 하나 이상 유지해야 합니다. 정책은 라이브러리 루트 탭에서 루트에 할당합니다.</value>
   </data>
   <data name="Settings.RootPolicy.ChangeWarning" xml:space="preserve">
     <value>이 설정은 이 프로필을 사용하는 모든 루트의 이름 지정, 메타데이터, 아트워크, 상태 검사 및 사이드카 동작을 변경합니다. 기존 미리 보기는 무효가 되므로 다시 생성해야 합니다.</value>
@@ -2957,6 +2957,9 @@
   </data>
   <data name="Settings.Ingest.PreserveMetadata" xml:space="preserve">
     <value>메타데이터 유지</value>
+  </data>
+  <data name="Settings.Ingest.ProfileDeletionDescription" xml:space="preserve">
+    <value>기본 제공 수집 프로필은 삭제할 수 없습니다. 사용자 지정하려면 복제하세요. 수집 프로필을 하나 이상 유지해야 합니다.</value>
   </data>
   <data name="Settings.Ingest.PreserveSidecars" xml:space="preserve">
     <value>기본적으로 사이드카 파일 유지</value>

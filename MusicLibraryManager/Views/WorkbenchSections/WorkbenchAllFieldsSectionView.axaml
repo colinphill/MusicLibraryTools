@@ -13,8 +13,10 @@
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.AllFields.Title}" />
         <Button Grid.Column="1"
+                x:Name="AllFieldsNewButton"
                 Classes="app"
-                Content="{DynamicResource Loc.Workbench.Action.New}">
+                Content="{DynamicResource Loc.Workbench.Action.New}"
+                IsEnabled="{Binding HasFiles}">
           <Button.Flyout>
             <MenuFlyout>
               <MenuItem Header="{DynamicResource Loc.Workbench.AllFields.Action.NewKnownField}"
@@ -25,11 +27,42 @@
           </Button.Flyout>
         </Button>
       </Grid>
-      <controls:AppDataGrid x:Name="MetadataFieldsGrid"
-                            Grid.Row="1"
-                            MinHeight="180"
-                            ItemsSource="{Binding MetadataFields}"
-                            SelectedItem="{Binding SelectedMetadataField, Mode=TwoWay}" />
+      <Grid Grid.Row="1">
+        <controls:AppDataGrid x:Name="MetadataFieldsGrid"
+                              MinHeight="180"
+                              IsVisible="{Binding HasFiles}"
+                              ItemsSource="{Binding MetadataFields}"
+                              SelectedItem="{Binding SelectedMetadataField, Mode=TwoWay}" />
+        <Border x:Name="AllFieldsEmptyState"
+                Classes="empty-state"
+                IsVisible="{Binding !HasFiles}">
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="8"
+                      MaxWidth="360">
+            <TextBlock x:Name="AllFieldsEmptyContext"
+                       Classes="faint caption"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
+                       Text="{DynamicResource Loc.Workbench.AllFields.Title}" />
+            <TextBlock x:Name="AllFieldsEmptyTitle"
+                       FontSize="17"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
+                       Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
+            <TextBlock x:Name="AllFieldsEmptyDescription"
+                       Classes="muted"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Text="{DynamicResource Loc.Workbench.Session.EmptyDescription}" />
+            <Button x:Name="AllFieldsAddFilesButton"
+                    Classes="app"
+                    HorizontalAlignment="Center"
+                    Content="{DynamicResource Loc.Workbench.Action.AddFiles}"
+                    Command="{Binding BrowseFilesCommand}" />
+          </StackPanel>
+        </Border>
+      </Grid>
     </Grid>
 
     <ScrollViewer x:Name="EditorScroll"

@@ -62,6 +62,8 @@ public partial class PlaylistEditorViewModel : ObservableObject
         Enum.GetValues<PlaylistLineEnding>();
     public ObservableCollection<PlaylistGroupFieldChoice>
         GroupFields { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>>
+        FormatChoices { get; } = [];
     public ObservableCollection<LocalizedChoice<PlaylistPathStyle>>
         PathStyleChoices { get; } = [];
     public ObservableCollection<
@@ -154,6 +156,11 @@ public partial class PlaylistEditorViewModel : ObservableObject
                 choice =>
                     choice.Field.KnownField == selectedField);
         RefreshChoices(
+            FormatChoices,
+            Formats,
+            keyPrefix: null,
+            TechnicalLabelResourceKeys.ForPlaylistFormat);
+        RefreshChoices(
             PathStyleChoices,
             PathStyles,
             "Workbench.Choice.PlaylistPathStyle");
@@ -170,7 +177,8 @@ public partial class PlaylistEditorViewModel : ObservableObject
     private void RefreshChoices<T>(
         ObservableCollection<LocalizedChoice<T>> target,
         IEnumerable<T> values,
-        string? keyPrefix)
+        string? keyPrefix,
+        Func<T, string?>? resourceKey = null)
     {
         foreach (T value in values)
         {
@@ -180,6 +188,7 @@ public partial class PlaylistEditorViewModel : ObservableObject
                         item.Value,
                         value));
             string label = L(
+                resourceKey?.Invoke(value) ??
                 TechnicalLabelResourceKeys.For(value) ??
                 $"{keyPrefix!}.{value}");
             if (choice is null)
