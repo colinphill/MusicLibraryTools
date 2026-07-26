@@ -172,13 +172,13 @@ public partial class WorkbenchToolsSectionView : UserControl
             .RowDefinitions[0]
             .Height =
             new GridLength(
-                hasPreview ? 0.4 : 1,
+                hasPreview ? 0.4 : 0.52,
                 GridUnitType.Star);
         SectionLayout
             .RowDefinitions[2]
             .Height =
             new GridLength(
-                hasPreview ? 0.6 : 1,
+                hasPreview ? 0.6 : 0.48,
                 GridUnitType.Star);
     }
 }

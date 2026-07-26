@@ -84,6 +84,7 @@
                      Text="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}" />
           <TextBox x:Name="GestureTextBox"
                    Classes="app"
+                   Classes.error="{Binding ShortcutEditor.HasGestureValidationError}"
                    Text="{Binding ShortcutEditor.GestureText, Mode=TwoWay}"
                    PlaceholderText="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}"
                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}"
@@ -135,7 +136,9 @@
           <TextBlock TextWrapping="Wrap"
                      Text="{Binding ShortcutEditor.InputWarningText}" />
         </Border>
-        <TextBlock Classes="muted"
+        <TextBlock x:Name="ShortcutStatusText"
+                   Classes="muted"
+                   IsVisible="{Binding !ShortcutEditor.HasGestureValidationError}"
                    TextWrapping="Wrap"
                    Text="{Binding ShortcutEditor.Status}" />
         </StackPanel>

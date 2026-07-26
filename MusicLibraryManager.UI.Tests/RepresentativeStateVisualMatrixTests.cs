@@ -1,4 +1,7 @@
 using System.Globalization;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -6,6 +9,7 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -30,6 +34,8 @@ public sealed class RepresentativeStateVisualMatrixTests
 {
     private const int ExpectedPresentationCount = 1320;
     private const int PresentationsPerState = 120;
+    private const int DrawerStabilityPollMilliseconds = 16;
+    private const int DrawerStabilityTimeoutMilliseconds = 500;
 
     private static readonly (int Width, int Height)[] Viewports =
     [
@@ -790,6 +796,13 @@ public sealed class RepresentativeStateVisualMatrixTests
             $"The capture name '{fileName}' collided with another matrix presentation.");
         Directory.CreateDirectory(
             captureDirectory);
+        if (caseName.StartsWith(
+                "drawer-open-",
+                StringComparison.Ordinal))
+        {
+            WaitForStableDrawerFrame(
+                window);
+        }
         using var frame =
             window.GetLastRenderedFrame();
         Assert.NotNull(frame);
@@ -842,6 +855,75 @@ public sealed class RepresentativeStateVisualMatrixTests
         AvaloniaHeadlessPlatform
             .ForceRenderTimerTick(2);
         Dispatcher.UIThread.RunJobs();
+    }
+
+    private static void WaitForStableDrawerFrame(
+        MainWindow window)
+    {
+        // Fluent animates the Expander chevron when the pending drawer first
+        // enters a newly themed viewport. Wait for two identical rendered
+        // frames so evidence cannot capture a corner-shaped interpolation.
+        // Most presentations settle in two polls; the timeout fails closed
+        // instead of silently accepting an animated screenshot.
+        byte[]? previousHash = null;
+        Stopwatch elapsed =
+            Stopwatch.StartNew();
+        while (elapsed.ElapsedMilliseconds <
+               DrawerStabilityTimeoutMilliseconds)
+        {
+            Thread.Sleep(
+                DrawerStabilityPollMilliseconds);
+            Render();
+            using Bitmap? frame =
+                window.GetLastRenderedFrame();
+            Assert.NotNull(
+                frame);
+            byte[] currentHash =
+                HashPixels(
+                    frame);
+            if (previousHash is not null &&
+                CryptographicOperations
+                    .FixedTimeEquals(
+                        previousHash,
+                        currentHash))
+            {
+                return;
+            }
+
+            previousHash =
+                currentHash;
+        }
+
+        Assert.Fail(
+            $"The drawer presentation did not settle within {DrawerStabilityTimeoutMilliseconds} ms.");
+    }
+
+    private static byte[] HashPixels(
+        Bitmap frame)
+    {
+        using var pixels =
+            new WriteableBitmap(
+                frame.PixelSize,
+                frame.Dpi,
+                PixelFormat.Bgra8888,
+                AlphaFormat.Premul);
+        using ILockedFramebuffer framebuffer =
+            pixels.Lock();
+        frame.CopyPixels(
+            framebuffer);
+        int byteCount =
+            framebuffer.RowBytes *
+            framebuffer.Size.Height;
+        var bytes =
+            GC.AllocateUninitializedArray<byte>(
+                byteCount);
+        Marshal.Copy(
+            framebuffer.Address,
+            bytes,
+            0,
+            byteCount);
+        return SHA256.HashData(
+            bytes);
     }
 
     private sealed class StateContext
@@ -1191,11 +1273,78 @@ public sealed class RepresentativeStateVisualMatrixTests
                     Assert.True(
                         _workbench.ShortcutEditor
                             .HasGestureValidationError);
-                    Assert.True(
-                        _workbenchView!
+                    WorkbenchView validationWorkbench =
+                        _workbenchView!;
+                    TextBlock validationMessage =
+                        validationWorkbench
                             .FindControl<TextBlock>(
-                                "GestureValidationMessage")!
+                                "GestureValidationMessage")!;
+                    TextBox invalidGesture =
+                        validationWorkbench
+                            .FindControl<TextBox>(
+                                "GestureTextBox")!;
+                    TextBlock shortcutStatus =
+                        validationWorkbench
+                            .FindControl<TextBlock>(
+                                "ShortcutStatusText")!;
+                    Border invalidGestureBorder =
+                        Assert.Single(
+                            invalidGesture
+                                .GetVisualDescendants()
+                                .OfType<Border>(),
+                            border =>
+                                border.Name ==
+                                "PART_BorderElement");
+                    Assert.True(
+                        validationMessage
                             .IsEffectivelyVisible);
+                    Assert.Contains(
+                        "error",
+                        validationMessage.Classes);
+                    Assert.Contains(
+                        "error",
+                        invalidGesture.Classes);
+                    Assert.False(
+                        shortcutStatus
+                            .IsEffectivelyVisible);
+                    Assert.True(
+                        Application.Current!
+                            .TryGetResource(
+                                "AppDangerBrush",
+                                _window
+                                    .ActualThemeVariant,
+                                out object?
+                                    dangerBrush));
+                    Assert.Equal(
+                        dangerBrush?.ToString(),
+                        validationMessage
+                            .Foreground?
+                            .ToString());
+                    Assert.Equal(
+                        dangerBrush?.ToString(),
+                        invalidGesture
+                            .BorderBrush?
+                            .ToString());
+                    Assert.Equal(
+                        dangerBrush?.ToString(),
+                        invalidGestureBorder
+                            .BorderBrush?
+                            .ToString());
+                    Assert.Equal(
+                        new Thickness(2),
+                        invalidGestureBorder
+                            .BorderThickness);
+                    if (_localization.IsExpanded)
+                    {
+                        Assert.StartsWith(
+                            "\u27E6",
+                            validationMessage.Text,
+                            StringComparison.Ordinal);
+                        Assert.EndsWith(
+                            "\u27E7",
+                            validationMessage.Text,
+                            StringComparison.Ordinal);
+                    }
                     break;
 
                 case RepresentativeState.UnavailableConfiguration:
@@ -1249,6 +1398,15 @@ public sealed class RepresentativeStateVisualMatrixTests
                 case RepresentativeState.DrawerOpen:
                     Assert.NotEmpty(
                         _workbench.PendingChanges);
+                    string expectedTitleField =
+                        _localization.Get(
+                            "Settings.Choice.TagFields.Title");
+                    Assert.Contains(
+                        _workbench.PendingChanges,
+                        row =>
+                            StringComparer.Ordinal.Equals(
+                                row.Field,
+                                expectedTitleField));
                     Assert.True(
                         _workbenchView!
                             .FindControl<Control>(

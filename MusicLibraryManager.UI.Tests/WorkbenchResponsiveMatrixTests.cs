@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -469,6 +470,43 @@ public sealed class WorkbenchResponsiveMatrixTests
                 scroll.Extent.Width <=
                 scroll.Viewport.Width + 1,
                 $"{section} has page-level horizontal overflow at {width}x{height}: extent {scroll.Extent.Width:0}, viewport {scroll.Viewport.Width:0}.");
+        }
+
+        if (section == WorkbenchSection.Session)
+        {
+            TextBlock status =
+                view.FindControl<TextBlock>(
+                    "SessionStatusText")!;
+            var completeStatus =
+                new TextBlock
+                {
+                    Text = status.Text,
+                    FontFamily =
+                        status.FontFamily,
+                    FontSize =
+                        status.FontSize,
+                    FontStyle =
+                        status.FontStyle,
+                    FontWeight =
+                        status.FontWeight,
+                    FontStretch =
+                        status.FontStretch,
+                    LetterSpacing =
+                        status.LetterSpacing,
+                    TextWrapping =
+                        TextWrapping.Wrap,
+                    MaxLines = 0,
+                };
+            completeStatus.Measure(
+                new Size(
+                    status.Bounds.Width,
+                    double.PositiveInfinity));
+            Assert.True(
+                completeStatus.DesiredSize.Height <=
+                status.Bounds.Height + 1,
+                $"Session status clipped '{status.Text}' at {width}x{height}: " +
+                $"{completeStatus.DesiredSize.Width:0.#}x{completeStatus.DesiredSize.Height:0.#}/" +
+                $"{status.Bounds.Width:0.#}x{status.Bounds.Height:0.#} px.");
         }
 
         if (section == WorkbenchSection.Files &&

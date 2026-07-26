@@ -92,12 +92,23 @@
                   <ComboBox x:Name="DeviceSelector" Classes="app"
                             ItemsSource="{Binding AvailableDevices}"
                             SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
-                            AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDevice}">
+                            AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDevice}"
+                            AutomationProperties.HelpText="{Binding SelectedDevice.Details}">
+                    <ComboBox.SelectionBoxItemTemplate>
+                      <DataTemplate>
+                        <TextBlock x:Name="SelectedDeviceName"
+                                   Text="{Binding DisplayName}"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding DisplayName}" />
+                      </DataTemplate>
+                    </ComboBox.SelectionBoxItemTemplate>
                     <ComboBox.ItemTemplate>
                       <DataTemplate>
                         <StackPanel Spacing="4">
                           <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-                          <TextBlock Classes="supporting" Text="{Binding Details}" />
+                          <TextBlock Classes="supporting"
+                                     Text="{Binding Details}"
+                                     TextWrapping="Wrap" />
                         </StackPanel>
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
@@ -106,6 +117,10 @@
                           Content="{DynamicResource Loc.Common.Refresh}" Command="{Binding RefreshDevicesCommand}"
                           AutomationProperties.Name="{DynamicResource Loc.Devices.RefreshAutomation}" />
                 </Grid>
+                <TextBlock x:Name="SelectedDeviceDetails"
+                           Classes="field-help"
+                           Text="{Binding SelectedDevice.Details}"
+                           TextWrapping="Wrap" />
               </StackPanel>
               <ProgressBar Classes="app" IsIndeterminate="True" IsVisible="{Binding IsLoadingDevices}"
                            AutomationProperties.Name="{DynamicResource Loc.Devices.DiscoveringAutomation}" />

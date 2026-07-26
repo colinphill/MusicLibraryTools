@@ -81,8 +81,22 @@ public static class WorkbenchShortcutGestureParser
     public static bool TryParse(
         string? value,
         out ParsedWorkbenchShortcut? gesture,
-        out string? error)
+        out string? error,
+        ILocalizationService? localization = null)
     {
+        string L(string key) =>
+            localization?.Get(key) ??
+            LocalizedText.Get(key);
+        string LF(
+            string key,
+            params object?[] arguments) =>
+            localization?.Format(
+                key,
+                arguments) ??
+            LocalizedText.Format(
+                key,
+                arguments);
+
         gesture = null;
         error = null;
         string[] parts = (value ?? "")
@@ -92,7 +106,7 @@ public static class WorkbenchShortcutGestureParser
                 StringSplitOptions.TrimEntries);
         if (parts.Length < 2)
         {
-            error = LocalizedText.Get(
+            error = L(
                 "Workbench.Shortcuts.Validation.ModifierAndKeyExample");
             return false;
         }
@@ -118,7 +132,7 @@ public static class WorkbenchShortcutGestureParser
             {
                 if (modifiers.HasFlag(modifier))
                 {
-                    error = LocalizedText.Format(
+                    error = LF(
                         "Workbench.Shortcuts.Validation.RepeatedModifier",
                         part);
                     return false;
@@ -128,7 +142,7 @@ public static class WorkbenchShortcutGestureParser
             }
             if (key is not null)
             {
-                error = LocalizedText.Get(
+                error = L(
                     "Workbench.Shortcuts.Validation.OneKey");
                 return false;
             }
@@ -137,13 +151,13 @@ public static class WorkbenchShortcutGestureParser
         if (modifiers == WorkbenchShortcutModifiers.None ||
             string.IsNullOrWhiteSpace(key))
         {
-            error = LocalizedText.Get(
+            error = L(
                 "Workbench.Shortcuts.Validation.ModifierAndKeyRequired");
             return false;
         }
         if (!KeyName.IsMatch(key))
         {
-            error = LocalizedText.Get(
+            error = L(
                 "Workbench.Shortcuts.Validation.KeyName");
             return false;
         }
@@ -426,7 +440,8 @@ public partial class WorkbenchShortcutEditorViewModel :
             if (WorkbenchShortcutGestureParser.TryParse(
                     row.Gesture,
                     out ParsedWorkbenchShortcut? gesture,
-                    out _) &&
+                    out _,
+                    _localization) &&
                 gesture!.Modifiers == modifiers &&
                 gesture.Key.Equals(
                     key,
@@ -499,7 +514,8 @@ public partial class WorkbenchShortcutEditorViewModel :
         if (!WorkbenchShortcutGestureParser.TryParse(
                 GestureText,
                 out gesture,
-                out string? parserError))
+                out string? parserError,
+                _localization))
             return AdaptPrimaryModifier(
                 parserError ??
                 L(

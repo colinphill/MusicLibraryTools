@@ -4982,7 +4982,12 @@ public partial class WorkbenchViewModel :
         foreach (MetadataPreviewRow row in Files
                      .Where(file => file.HasChanges)
                      .SelectMany(file =>
-                         file.CreatePendingChangeRows()))
+                         file.CreatePendingChangeRows(
+                             field =>
+                                 MetadataPreviewRowBuilder
+                                     .DisplayFieldName(
+                                         field,
+                                         _localization))))
         {
             if (!PendingChanges.Any(existing =>
                     PendingRowsAreEquivalent(existing, row)))
@@ -6015,6 +6020,7 @@ public partial class WorkbenchViewModel :
                 _plan,
                 _localization);
         }
+        RebuildPendingChanges();
         OnPropertyChanged(nameof(FieldSelectionSummary));
     }
 
@@ -6142,14 +6148,21 @@ public partial class WorkbenchTrackViewModel : ObservableObject
             string.IsNullOrWhiteSpace(Value(pair.Key)) ? null : Value(pair.Key)))
         .ToImmutableArray();
 
-    public IEnumerable<MetadataPreviewRow> CreatePendingChangeRows() =>
+    public IEnumerable<MetadataPreviewRow>
+        CreatePendingChangeRows(
+            Func<MetadataFieldKey, string>?
+                fieldLabel = null) =>
         _original
             .Where(pair => !StringComparer.Ordinal.Equals(
                 pair.Value,
                 Value(pair.Key)))
             .Select(pair => new MetadataPreviewRow(
                 FileName,
-                MetadataFieldKey.Known(pair.Key).DisplayName,
+                fieldLabel?.Invoke(
+                    MetadataFieldKey.Known(
+                        pair.Key)) ??
+                MetadataFieldKey.Known(
+                        pair.Key).DisplayName,
                 pair.Value ?? "",
                 Value(pair.Key) ?? ""));
 

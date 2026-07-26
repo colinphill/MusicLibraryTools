@@ -52,7 +52,7 @@ public sealed class AppVectorIcon :
             AppVectorIconKind.MoveDown =>
                 "M4,8 L10,14 L16,8",
             AppVectorIconKind.More =>
-                "M4,10 L4.1,10 M10,10 L10.1,10 M16,10 L16.1,10",
+                "M4,9 L4,11 M10,9 L10,11 M16,9 L16,11",
             AppVectorIconKind.Settings =>
                 "M3,6 L17,6 M3,14 L17,14 M7,3 L7,9 M13,11 L13,17",
             AppVectorIconKind.Information =>

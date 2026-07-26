@@ -79,10 +79,12 @@ public sealed partial class UiModernizationSourceQualityTests
     private static readonly HashSet<string>
         TooltipValueRevealBindings =
     [
-        // These tooltips reveal an untrimmed path/status value whose on-screen
-        // rendering is deliberately ellipsized or otherwise space constrained.
+        // These tooltips reveal an untrimmed path, selected device name, or
+        // status value whose on-screen rendering is deliberately ellipsized
+        // or otherwise space constrained.
         "{Binding File}",
         "{Binding Path}",
+        "{Binding DisplayName}",
         "{Binding SelectedMatrix.Root}",
         "{Binding StatusText}",
     ];

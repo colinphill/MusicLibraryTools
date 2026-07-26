@@ -694,6 +694,13 @@ public sealed class
                 reviewed,
                 "External tools status/footer");
 
+            TextBox toolName =
+                tools.FindControl<TextBox>(
+                    "ExternalToolNameInput")!;
+            AssertInside(
+                toolName,
+                editor,
+                "External tools initial tool-name field");
             TextBox arguments =
                 tools.FindControl<TextBox>(
                     "ExternalToolArgumentsInput")!;

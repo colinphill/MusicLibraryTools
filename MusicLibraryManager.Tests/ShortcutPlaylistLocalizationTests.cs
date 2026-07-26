@@ -109,6 +109,13 @@ public sealed class ShortcutPlaylistLocalizationTests
                 StringComparison.Ordinal);
 
         editor.GestureText =
+            $"{primaryModifier}+";
+        Assert.StartsWith(
+            "fr-FR:Workbench.Shortcuts.Validation.ModifierAndKeyExample",
+            editor.GestureValidationMessage,
+            StringComparison.Ordinal);
+
+        editor.GestureText =
             $"{primaryModifier}+K";
 
         Assert.Contains(

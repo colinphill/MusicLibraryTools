@@ -139,6 +139,9 @@
     <Setter Property="FontSize" Value="{DynamicResource AppFontSizeSupporting}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
+  <Style Selector="TextBlock.field-help.error">
+    <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" />
+  </Style>
   <Style Selector="TextBlock.warning-text">
     <Setter Property="Foreground" Value="{DynamicResource AppWarningBrush}" />
     <Setter Property="FontSize" Value="{DynamicResource AppFontSizeSupporting}" />
@@ -689,6 +692,17 @@
   </Style>
   <Style Selector="TextBox.app:focus, ComboBox.app:focus, NumericUpDown.app:focus, TextBox.app:focus-within, ComboBox.app:focus-within, NumericUpDown.app:focus-within, TextBox.primary:focus, ComboBox.primary:focus, NumericUpDown.primary:focus, TextBox.primary:focus-within, ComboBox.primary:focus-within, NumericUpDown.primary:focus-within">
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="TextBox.app.error">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="TextBox.app.error:pointerover, TextBox.app.error:focus, TextBox.app.error:focus-within">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
+  </Style>
+  <Style Selector="TextBox.app.error /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
     <Setter Property="BorderThickness" Value="2" />
   </Style>
   <Style Selector="TextBox.app:disabled, ComboBox.app:disabled, NumericUpDown.app:disabled, TextBox.primary:disabled, ComboBox.primary:disabled, NumericUpDown.primary:disabled">

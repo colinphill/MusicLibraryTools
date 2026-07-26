@@ -255,6 +255,76 @@ public sealed class
                                                 DevicesViewModel>(
                                                 devices
                                                     .DataContext);
+                                        string devicesContext =
+                                            $"{presentationId}/{densityId}/{fontSize:0}/{themeId}/{width}x{height}/Devices";
+                                        ComboBox deviceSelector =
+                                            devices.FindControl<
+                                                ComboBox>(
+                                                "DeviceSelector")!;
+                                        TextBlock selectedDeviceName =
+                                            Assert.Single(
+                                                deviceSelector
+                                                    .GetVisualDescendants()
+                                                    .OfType<
+                                                        TextBlock>(),
+                                                text =>
+                                                    text.Name ==
+                                                    "SelectedDeviceName");
+                                        TextBlock selectedDeviceDetails =
+                                            devices.FindControl<
+                                                TextBlock>(
+                                                "SelectedDeviceDetails")!;
+                                        Assert.Equal(
+                                            deviceModel.SelectedDevice?
+                                                .DisplayName,
+                                            selectedDeviceName.Text);
+                                        Point? selectedNameOrigin =
+                                            selectedDeviceName
+                                                .TranslatePoint(
+                                                    default,
+                                                    deviceSelector);
+                                        Assert.NotNull(
+                                            selectedNameOrigin);
+                                        Rect selectedNameBounds =
+                                            new(
+                                                selectedNameOrigin
+                                                    .Value,
+                                                selectedDeviceName
+                                                    .Bounds.Size);
+                                        Assert.True(
+                                            selectedNameBounds.Top >=
+                                            -0.5 &&
+                                            selectedNameBounds.Bottom <=
+                                            deviceSelector
+                                                .Bounds.Height +
+                                            0.5,
+                                            $"{devicesContext}: the selected Android-device name escaped its selector bounds " +
+                                            $"({selectedNameBounds} within {deviceSelector.Bounds.Size}).");
+                                        Assert.True(
+                                            selectedDeviceName
+                                                .Bounds.Height +
+                                            0.5 >=
+                                            selectedDeviceName
+                                                .DesiredSize.Height,
+                                            $"{devicesContext}: the selected Android-device name was vertically clipped " +
+                                            $"({selectedDeviceName.Bounds.Height:0.#} < {selectedDeviceName.DesiredSize.Height:0.#}).");
+                                        Assert.Equal(
+                                            deviceModel.SelectedDevice?
+                                                .Details,
+                                            selectedDeviceDetails.Text);
+                                        Assert.True(
+                                            selectedDeviceDetails
+                                                .Bounds.Height +
+                                            0.5 >=
+                                            selectedDeviceDetails
+                                                .DesiredSize.Height,
+                                            $"{devicesContext}: the selected Android-device explanation was vertically clipped " +
+                                            $"({selectedDeviceDetails.Bounds.Height:0.#} < {selectedDeviceDetails.DesiredSize.Height:0.#}).");
+                                        Assert.True(
+                                            selectedDeviceDetails
+                                                .Bounds.Width >
+                                            0,
+                                            $"{devicesContext}: the selected Android-device explanation had no readable width.");
                                         Button[] visibleLifecycle =
                                         [
                                             .. new[]

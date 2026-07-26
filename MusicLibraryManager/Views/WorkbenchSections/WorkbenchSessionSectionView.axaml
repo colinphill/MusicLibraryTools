@@ -128,8 +128,10 @@
             RowSpacing="4">
         <controls:AppVectorIcon Kind="Information" />
         <StackPanel Grid.Column="1" Spacing="4">
-          <TextBlock Text="{Binding StatusText}"
-                     TextTrimming="CharacterEllipsis"
+          <TextBlock x:Name="SessionStatusText"
+                     Text="{Binding StatusText}"
+                     TextWrapping="Wrap"
+                     MaxLines="2"
                      ToolTip.Tip="{Binding StatusText}" />
           <controls:LocalizedFormatTextBlock
               x:Name="StatusDiagnosticText"
