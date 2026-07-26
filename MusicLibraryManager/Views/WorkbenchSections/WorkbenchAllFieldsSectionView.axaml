@@ -55,18 +55,20 @@
                      FontWeight="SemiBold" />
           <TextBlock Text="{Binding SelectedMetadataField.Name}"
                      FontWeight="SemiBold" />
+          <Grid Margin="0,8,0,0"
+                ColumnDefinitions="*,Auto"
+                ColumnSpacing="8">
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding KnownFieldChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding SelectedNewKnownField, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.AllFields.ExistingField}" />
+            <Button Grid.Column="1"
+                    Classes="app"
+                    Content="{DynamicResource Loc.Workbench.AllFields.Action.NewKnownField}"
+                    Click="OnBeginNewKnownField" />
+          </Grid>
         </StackPanel>
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <ComboBox Classes="app"
-                    ItemsSource="{Binding KnownFieldChoices}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding SelectedNewKnownField, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Workbench.AllFields.ExistingField}" />
-          <Button Grid.Column="1"
-                  Classes="app"
-                  Content="{DynamicResource Loc.Workbench.AllFields.Action.NewKnownField}"
-                  Click="OnBeginNewKnownField" />
-        </Grid>
         <StackPanel Classes="field">
           <TextBlock Classes="field-label"
                      Text="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />

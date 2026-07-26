@@ -35,13 +35,15 @@
                   Classes="content-stack">
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.Columns.Visible}" />
-        <TextBlock Classes="field-label"
-                   Text="{DynamicResource Loc.Shell.Search}" />
-        <TextBox x:Name="ColumnSearchBox"
-                 Classes="app"
-                 PlaceholderText="{DynamicResource Loc.Shell.Search}"
-                 AutomationProperties.Name="{DynamicResource Loc.Shell.Search}"
-                 TextChanged="OnColumnSearchChanged" />
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Shell.Search}" />
+          <TextBox x:Name="ColumnSearchBox"
+                   Classes="app"
+                   PlaceholderText="{DynamicResource Loc.Shell.Search}"
+                   AutomationProperties.Name="{DynamicResource Loc.Shell.Search}"
+                   TextChanged="OnColumnSearchChanged" />
+        </StackPanel>
         <StackPanel x:Name="WorkbenchColumnOptions"
                     Spacing="8" />
         <Border x:Name="BuiltInColumnDetails"

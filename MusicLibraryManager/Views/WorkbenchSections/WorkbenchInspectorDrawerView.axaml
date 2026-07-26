@@ -138,14 +138,16 @@
                   Classes="muted"
                   ResourceKey="Workbench.Inspector.CurrentValueFormat"
                   Value="{Binding SelectedFile.Document.Id3Version}" />
-              <TextBlock Classes="field-label"
-                         Text="{DynamicResource Loc.Workbench.Inspector.TargetId3VersionAutomation}" />
-              <ComboBox Classes="app"
-                        ItemsSource="{Binding Id3VersionChoices}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedValueBinding="{Binding Value}"
-                        SelectedValue="{Binding TargetId3Version, Mode=TwoWay}"
-                        AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.TargetId3VersionAutomation}" />
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Workbench.Inspector.TargetId3VersionAutomation}" />
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding Id3VersionChoices}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedValueBinding="{Binding Value}"
+                          SelectedValue="{Binding TargetId3Version, Mode=TwoWay}"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.TargetId3VersionAutomation}" />
+              </StackPanel>
               <CheckBox Content="{DynamicResource Loc.Workbench.Inspector.DropUnsupportedFrames}"
                         IsChecked="{Binding DropUnsupportedId3Frames, Mode=TwoWay}" />
               <CheckBox Content="{DynamicResource Loc.Workbench.Inspector.JoinMultiValueText}"
@@ -166,14 +168,16 @@
                         AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.CopyV1ToV2Automation}"
                         Command="{Binding PreviewId3v1ToId3v2Command}" />
               </WrapPanel>
-              <TextBlock Classes="field-label"
-                         Text="{DynamicResource Loc.Workbench.Inspector.Id3EncodingAutomation}" />
-              <ComboBox Classes="app"
-                        ItemsSource="{Binding Id3EncodingPolicyChoices}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedValueBinding="{Binding Value}"
-                        SelectedValue="{Binding SelectedId3EncodingPolicy, Mode=TwoWay}"
-                        AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.Id3EncodingAutomation}" />
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label"
+                           Text="{DynamicResource Loc.Workbench.Inspector.Id3EncodingAutomation}" />
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding Id3EncodingPolicyChoices}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedValueBinding="{Binding Value}"
+                          SelectedValue="{Binding SelectedId3EncodingPolicy, Mode=TwoWay}"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.Id3EncodingAutomation}" />
+              </StackPanel>
               <Button Classes="app"
                       Content="{DynamicResource Loc.Workbench.Inspector.PreviewEncoding}"
                       AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.PreviewEncodingAutomation}"

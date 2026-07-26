@@ -22,6 +22,120 @@ namespace MusicLibraryManager.UI.Tests;
 public sealed class LibraryDrawerInteractionTests
 {
     [AvaloniaFact]
+    public void Grid_context_menu_invocation_is_scoped_to_the_focused_library_grid()
+    {
+        var settings = new MemorySettings();
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+                collection.AddSingleton<IAppSettings>(
+                    settings));
+        App.UseServicesForTests(services);
+        var view = new LibraryView();
+        var window = new Window
+        {
+            Width = 1200,
+            Height = 700,
+            Content = view,
+        };
+        try
+        {
+            window.Show();
+            Render();
+
+            AppDataGrid grid =
+                view.FindControl<AppDataGrid>(
+                    "LibraryGrid")!;
+            ContextMenu menu =
+                Assert.IsType<ContextMenu>(
+                    grid.ContextMenu);
+            grid.Focus();
+            Render();
+
+            AssertOpensFromGrid(
+                Key.F10,
+                KeyModifiers.Shift);
+            AssertOpensFromGrid(
+                Key.Apps,
+                KeyModifiers.None);
+
+            var contextRequested =
+                new ContextRequestedEventArgs
+                {
+                    RoutedEvent =
+                        InputElement
+                            .ContextRequestedEvent,
+                };
+            grid.RaiseEvent(
+                contextRequested);
+            Render();
+            Assert.True(
+                contextRequested.Handled);
+            Assert.True(
+                menu.IsOpen);
+            Assert.NotEmpty(
+                menu.ItemsSource!
+                    .Cast<object>());
+            menu.Close();
+
+            Button outsideGrid =
+                view.FindControl<Button>(
+                    "LibraryPendingChangesButton")!;
+            outsideGrid.Focus();
+            Render();
+            AssertDoesNotOpenOutsideGrid(
+                Key.F10,
+                KeyModifiers.Shift);
+            AssertDoesNotOpenOutsideGrid(
+                Key.Apps,
+                KeyModifiers.None);
+
+            void AssertOpensFromGrid(
+                Key key,
+                KeyModifiers modifiers)
+            {
+                var args = new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = key,
+                    KeyModifiers = modifiers,
+                };
+                grid.RaiseEvent(args);
+                Render();
+
+                Assert.True(args.Handled);
+                Assert.True(menu.IsOpen);
+                Assert.NotEmpty(
+                    menu.ItemsSource!
+                        .Cast<object>());
+                menu.Close();
+            }
+
+            void AssertDoesNotOpenOutsideGrid(
+                Key key,
+                KeyModifiers modifiers)
+            {
+                var args = new KeyEventArgs
+                {
+                    RoutedEvent =
+                        InputElement.KeyDownEvent,
+                    Key = key,
+                    KeyModifiers = modifiers,
+                };
+                outsideGrid.RaiseEvent(args);
+                Render();
+
+                Assert.False(args.Handled);
+                Assert.False(menu.IsOpen);
+            }
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Inspector_docking_uses_the_actual_split_host_threshold_and_preserves_the_central_minimum()
     {
         var settings = new MemorySettings();

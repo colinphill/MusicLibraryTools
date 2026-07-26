@@ -10,12 +10,14 @@
       <StackPanel Classes="content-stack">
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.Reports.Title}" />
-        <TextBlock Classes="field-label"
-                   Text="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}" />
-        <TextBox Classes="app"
-                 Text="{Binding ReportEditor.Name, Mode=TwoWay}"
-                 PlaceholderText="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}"
-                 AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}" />
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}" />
+          <TextBox Classes="app"
+                   Text="{Binding ReportEditor.Name, Mode=TwoWay}"
+                   PlaceholderText="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}"
+                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}" />
+        </StackPanel>
         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
           <StackPanel Classes="field">
             <TextBlock Classes="field-label"
@@ -74,31 +76,35 @@
         <TextBlock Classes="section-title"
                    Margin="0,8,0,0"
                    Text="{DynamicResource Loc.Workbench.Reports.Columns}" />
-        <TextBlock Classes="field-label"
-                   Text="{DynamicResource Loc.Workbench.Reports.Columns}" />
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <ComboBox Classes="app"
-                    ItemsSource="{Binding ReportEditor.AvailableFields}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding ReportEditor.SelectedAvailableField, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.Columns}" />
-          <Button Grid.Column="1"
-                  Classes="app"
-                  Content="{DynamicResource Loc.Workbench.Action.Add}"
-                  Command="{Binding ReportEditor.AddSelectedFieldCommand}" />
-        </Grid>
-        <TextBlock Classes="field-label"
-                   Text="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <TextBox Classes="app"
-                   Text="{Binding ReportEditor.CustomFieldName, Mode=TwoWay}"
-                   PlaceholderText="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}"
-                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
-          <Button Grid.Column="1"
-                  Classes="app"
-                  Content="{DynamicResource Loc.Workbench.Reports.Action.AddCustom}"
-                  Command="{Binding ReportEditor.AddCustomFieldCommand}" />
-        </Grid>
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Reports.Columns}" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding ReportEditor.AvailableFields}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding ReportEditor.SelectedAvailableField, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.Columns}" />
+            <Button Grid.Column="1"
+                    Classes="app"
+                    Content="{DynamicResource Loc.Workbench.Action.Add}"
+                    Command="{Binding ReportEditor.AddSelectedFieldCommand}" />
+          </Grid>
+        </StackPanel>
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Classes="app"
+                     Text="{Binding ReportEditor.CustomFieldName, Mode=TwoWay}"
+                     PlaceholderText="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
+            <Button Grid.Column="1"
+                    Classes="app"
+                    Content="{DynamicResource Loc.Workbench.Reports.Action.AddCustom}"
+                    Command="{Binding ReportEditor.AddCustomFieldCommand}" />
+          </Grid>
+        </StackPanel>
         <ListBox MinHeight="120"
                  MaxHeight="210"
                  ItemsSource="{Binding ReportEditor.Fields}"
@@ -157,14 +163,14 @@
         </StackPanel>
         <StackPanel Classes="field">
           <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Workbench.Reports.SortBy}" />
+                     Text="{DynamicResource Loc.Workbench.Reports.SortType}" />
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <ComboBox Classes="app"
                       ItemsSource="{Binding ReportEditor.SortTypeChoices}"
                       DisplayMemberBinding="{Binding Label}"
                       SelectedValueBinding="{Binding Value}"
                       SelectedValue="{Binding ReportEditor.SortType, Mode=TwoWay}"
-                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.SortBy}" />
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.SortType}" />
             <CheckBox Grid.Column="1"
                       VerticalAlignment="Center"
                       Content="{DynamicResource Loc.Workbench.Reports.Descending}"

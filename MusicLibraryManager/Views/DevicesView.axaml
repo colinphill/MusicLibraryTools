@@ -86,25 +86,27 @@
           <Border Classes="card">
             <StackPanel Spacing="8">
               <TextBlock Classes="section-title" Text="{DynamicResource Loc.Devices.MirrorProfile}" />
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.AndroidDevice}" />
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <ComboBox x:Name="DeviceSelector" Classes="app"
-                          ItemsSource="{Binding AvailableDevices}"
-                          SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
-                          AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDevice}">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                      <StackPanel Spacing="4">
-                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-                        <TextBlock Classes="supporting" Text="{Binding Details}" />
-                      </StackPanel>
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-                <Button x:Name="RefreshDevicesButton" Grid.Column="1" Classes="app"
-                        Content="{DynamicResource Loc.Common.Refresh}" Command="{Binding RefreshDevicesCommand}"
-                        AutomationProperties.Name="{DynamicResource Loc.Devices.RefreshAutomation}" />
-              </Grid>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.AndroidDevice}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <ComboBox x:Name="DeviceSelector" Classes="app"
+                            ItemsSource="{Binding AvailableDevices}"
+                            SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
+                            AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDevice}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+                          <TextBlock Classes="supporting" Text="{Binding Details}" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <Button x:Name="RefreshDevicesButton" Grid.Column="1" Classes="app"
+                          Content="{DynamicResource Loc.Common.Refresh}" Command="{Binding RefreshDevicesCommand}"
+                          AutomationProperties.Name="{DynamicResource Loc.Devices.RefreshAutomation}" />
+                </Grid>
+              </StackPanel>
               <ProgressBar Classes="app" IsIndeterminate="True" IsVisible="{Binding IsLoadingDevices}"
                            AutomationProperties.Name="{DynamicResource Loc.Devices.DiscoveringAutomation}" />
               <Border Classes="status-banner error" IsVisible="{Binding HasDeviceEnumerationError}"
@@ -146,27 +148,33 @@
                              TextWrapping="Wrap" />
                 </Grid>
               </Border>
-              <StackPanel Spacing="4" IsVisible="{Binding IsManualDeviceSelected}">
+              <StackPanel Classes="field" Spacing="4" IsVisible="{Binding IsManualDeviceSelected}">
                 <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.DeviceSerialOptional}" />
                 <TextBox x:Name="ManualDeviceSerial" Classes="app" Text="{Binding DeviceSerial, Mode=TwoWay}"
                          PlaceholderText="{DynamicResource Loc.Devices.DeviceSerialPlaceholder}"
                          AutomationProperties.Name="{DynamicResource Loc.Devices.DeviceSerial}" />
               </StackPanel>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.LocalSource}" />
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBox Classes="app" Text="{Binding SourcePath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Devices.LocalSourcePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Devices.LocalSourceAutomation}" />
-                <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseSourceCommand}" />
-              </Grid>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.AndroidDestination}" />
-              <TextBox Classes="app" Text="{Binding DestinationPath, Mode=TwoWay}"
-                       AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDestination}" />
-              <TextBlock Classes="field-help"
-                         Text="{DynamicResource Loc.Devices.DestinationAliasDescription}" />
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.AdbOverride}" />
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBox Classes="app" Text="{Binding AdbPath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Devices.AdbOverridePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Devices.AdbOverrideAutomation}" />
-                <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseAdbCommand}" />
-              </Grid>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.LocalSource}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBox Classes="app" Text="{Binding SourcePath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Devices.LocalSourcePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Devices.LocalSourceAutomation}" />
+                  <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseSourceCommand}" />
+                </Grid>
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.AndroidDestination}" />
+                <TextBox Classes="app" Text="{Binding DestinationPath, Mode=TwoWay}"
+                         AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDestination}" />
+                <TextBlock Classes="field-help"
+                           Text="{DynamicResource Loc.Devices.DestinationAliasDescription}" />
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.AdbOverride}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBox Classes="app" Text="{Binding AdbPath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Devices.AdbOverridePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Devices.AdbOverrideAutomation}" />
+                  <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseAdbCommand}" />
+                </Grid>
+              </StackPanel>
               <Border Classes="status-banner warning">
                 <StackPanel Spacing="4">
                   <TextBlock FontWeight="SemiBold" Text="{DynamicResource Loc.Devices.ExistingDestination}" />
@@ -195,20 +203,22 @@
                     </StackPanel>
                   </Border>
                   <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                    <StackPanel Spacing="4">
+                    <StackPanel Classes="field" Spacing="4">
                       <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.MaximumRemovals}" />
                       <NumericUpDown Classes="app" Minimum="0" Value="{Binding MaxRemovals, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Devices.MaximumRemovals}" />
                       <TextBlock Classes="field-help"
                                  Text="{DynamicResource Loc.Devices.MaximumRemovalsDescription}" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="4">
+                    <StackPanel Grid.Column="1" Classes="field" Spacing="4">
                       <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.MtimeTolerance}" />
                       <NumericUpDown Classes="app" Minimum="0" Value="{Binding MtimeToleranceSeconds, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Devices.MtimeToleranceAutomation}" />
                     </StackPanel>
                   </Grid>
-                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.ExclusionGlobs}" />
-                  <TextBox Classes="app" Text="{Binding Exclusions, Mode=TwoWay}" AcceptsReturn="True"
-                           MinHeight="72" AutomationProperties.Name="{DynamicResource Loc.Devices.ExclusionGlobsAutomation}" />
+                  <StackPanel Classes="field">
+                    <TextBlock Classes="field-label" Text="{DynamicResource Loc.Devices.ExclusionGlobs}" />
+                    <TextBox Classes="app" Text="{Binding Exclusions, Mode=TwoWay}" AcceptsReturn="True"
+                             MinHeight="72" AutomationProperties.Name="{DynamicResource Loc.Devices.ExclusionGlobsAutomation}" />
+                  </StackPanel>
                 </StackPanel>
               </Expander>
             </StackPanel>

@@ -20804,6 +20804,17 @@
     <translation culture="zh-CN">排序依据</translation>
     <translation culture="zh-TW">排序依據</translation>
   </entry>
+  <entry key="Workbench.Reports.SortType">
+    <translation culture="de-DE">Sortierart</translation>
+    <translation culture="es-ES">Tipo de ordenación</translation>
+    <translation culture="fr-FR">Type de tri</translation>
+    <translation culture="it-IT">Tipo di ordinamento</translation>
+    <translation culture="pt-BR">Tipo de ordenação</translation>
+    <translation culture="ja-JP">並べ替えの種類</translation>
+    <translation culture="ko-KR">정렬 유형</translation>
+    <translation culture="zh-CN">排序类型</translation>
+    <translation culture="zh-TW">排序類型</translation>
+  </entry>
   <entry key="Workbench.Reports.SourceOrder">
     <translation culture="de-DE">Quellreihenfolge</translation>
     <translation culture="es-ES">Orden de origen</translation>

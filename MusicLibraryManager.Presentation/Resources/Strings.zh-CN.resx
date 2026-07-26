@@ -5449,6 +5449,7 @@
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>已检查</value></data>
   <data name="Workbench.Reports.Safety" xml:space="preserve"><value>报告 输出 从不 更改 媒体 文件.</value></data>
   <data name="Workbench.Reports.SortBy" xml:space="preserve"><value>排序依据</value></data>
+  <data name="Workbench.Reports.SortType" xml:space="preserve"><value>排序类型</value></data>
   <data name="Workbench.Reports.Source.Custom" xml:space="preserve"><value>自定义：{0}</value></data>
   <data name="Workbench.Reports.Source.File" xml:space="preserve"><value>文件：{0}</value></data>
   <data name="Workbench.Reports.Source.Metadata" xml:space="preserve"><value>元数据：{0}</value></data>

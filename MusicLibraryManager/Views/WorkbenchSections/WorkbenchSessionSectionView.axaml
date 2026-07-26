@@ -21,19 +21,21 @@
             <Border Width="320"
                     Classes="card dense-card">
               <StackPanel Classes="content-stack">
-                <TextBlock Classes="field-label"
-                           FontWeight="SemiBold"
-                           Text="{DynamicResource Loc.Workbench.Session.EmptyCellAutomation}" />
-                <TextBlock Classes="muted"
-                           TextWrapping="Wrap"
-                           Text="{DynamicResource Loc.Workbench.Session.EmptyCellTooltip}" />
-                <ComboBox x:Name="ImportEmptyCellMode"
-                          Classes="app"
-                          ItemsSource="{Binding ImportEmptyCellModeChoices}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedValueBinding="{Binding Value}"
-                          SelectedValue="{Binding ImportEmptyCellMode, Mode=TwoWay}"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Session.EmptyCellAutomation}" />
+                <StackPanel Classes="field">
+                  <TextBlock Classes="field-label"
+                             FontWeight="SemiBold"
+                             Text="{DynamicResource Loc.Workbench.Session.EmptyCellAutomation}" />
+                  <TextBlock Classes="muted field-help"
+                             TextWrapping="Wrap"
+                             Text="{DynamicResource Loc.Workbench.Session.EmptyCellTooltip}" />
+                  <ComboBox x:Name="ImportEmptyCellMode"
+                            Classes="app"
+                            ItemsSource="{Binding ImportEmptyCellModeChoices}"
+                            DisplayMemberBinding="{Binding Label}"
+                            SelectedValueBinding="{Binding Value}"
+                            SelectedValue="{Binding ImportEmptyCellMode, Mode=TwoWay}"
+                            AutomationProperties.Name="{DynamicResource Loc.Workbench.Session.EmptyCellAutomation}" />
+                </StackPanel>
                 <Button Classes="app primary"
                         HorizontalContentAlignment="Left"
                         Content="{DynamicResource Loc.Workbench.Session.ImportDelimited}"

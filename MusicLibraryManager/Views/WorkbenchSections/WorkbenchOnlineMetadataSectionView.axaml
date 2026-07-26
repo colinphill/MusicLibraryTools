@@ -40,24 +40,26 @@
                      Classes="supporting"
                      TextWrapping="Wrap"
                      Text="{DynamicResource Loc.Workbench.Online.DiscoverDescription}" />
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Workbench.Online.ScopeAutomation}" />
-          <WrapPanel>
-            <ComboBox x:Name="OnlineMetadataDiscoveryScopePicker"
-                      Classes="app"
-                      Width="220"
-                      Margin="0,0,8,8"
-                      ItemsSource="{Binding OnlineMetadataScopeOptions}"
-                      DisplayMemberBinding="{Binding Label}"
-                      SelectedItem="{Binding SelectedOnlineMetadataScope, Mode=TwoWay}"
-                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ScopeAutomation}" />
-            <Button x:Name="OnlineMetadataDiscoverButton"
-                    Classes="app primary"
-                    Margin="0,0,0,8"
-                    Content="{DynamicResource Loc.Workbench.Online.Discover}"
-                    Click="OnDiscoveryStarted"
-                    Command="{Binding DiscoverOnlineAudioCommand}" />
-          </WrapPanel>
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Online.ScopeAutomation}" />
+            <WrapPanel>
+              <ComboBox x:Name="OnlineMetadataDiscoveryScopePicker"
+                        Classes="app"
+                        Width="220"
+                        Margin="0,0,8,8"
+                        ItemsSource="{Binding OnlineMetadataScopeOptions}"
+                        DisplayMemberBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedOnlineMetadataScope, Mode=TwoWay}"
+                        AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ScopeAutomation}" />
+              <Button x:Name="OnlineMetadataDiscoverButton"
+                      Classes="app primary"
+                      Margin="0,0,0,8"
+                      Content="{DynamicResource Loc.Workbench.Online.Discover}"
+                      Click="OnDiscoveryStarted"
+                      Command="{Binding DiscoverOnlineAudioCommand}" />
+            </WrapPanel>
+          </StackPanel>
         </StackPanel>
       </Border>
     </Expander>
@@ -476,25 +478,31 @@
                   <StackPanel Classes="content-stack">
                     <TextBlock Classes="section-title"
                                Text="{DynamicResource Loc.Workbench.Online.SelectedImage}" />
-                    <TextBlock Classes="field-label" Text="{DynamicResource Loc.Workbench.Online.ArtworkRole}" />
-                    <ComboBox x:Name="StagedArtworkTypePicker"
-                              Classes="app"
-                              ItemsSource="{Binding ArtworkTypeChoices}"
-                              DisplayMemberBinding="{Binding Label}"
-                              SelectedValueBinding="{Binding Value}"
-                              SelectedValue="{Binding SelectedStagedArtwork.Type, Mode=TwoWay}"
-                              AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ArtworkRole}" />
-                    <TextBlock Classes="field-label" Text="{DynamicResource Loc.Workbench.Online.Description}" />
-                    <TextBox Classes="app"
-                             Text="{Binding SelectedStagedArtwork.Description, Mode=TwoWay}"
-                             AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.Description}" />
-                    <TextBlock Classes="field-label"
-                               Text="{DynamicResource Loc.Workbench.Online.MaximumDimension}" />
-                    <NumericUpDown Classes="app"
-                                   Minimum="0"
-                                   Maximum="100000"
-                                   Value="{Binding ArtworkMaxDimension, Mode=TwoWay}"
-                                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.MaximumDimension}" />
+                    <StackPanel Classes="field">
+                      <TextBlock Classes="field-label" Text="{DynamicResource Loc.Workbench.Online.ArtworkRole}" />
+                      <ComboBox x:Name="StagedArtworkTypePicker"
+                                Classes="app"
+                                ItemsSource="{Binding ArtworkTypeChoices}"
+                                DisplayMemberBinding="{Binding Label}"
+                                SelectedValueBinding="{Binding Value}"
+                                SelectedValue="{Binding SelectedStagedArtwork.Type, Mode=TwoWay}"
+                                AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.ArtworkRole}" />
+                    </StackPanel>
+                    <StackPanel Classes="field">
+                      <TextBlock Classes="field-label" Text="{DynamicResource Loc.Workbench.Online.Description}" />
+                      <TextBox Classes="app"
+                               Text="{Binding SelectedStagedArtwork.Description, Mode=TwoWay}"
+                               AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.Description}" />
+                    </StackPanel>
+                    <StackPanel Classes="field">
+                      <TextBlock Classes="field-label"
+                                 Text="{DynamicResource Loc.Workbench.Online.MaximumDimension}" />
+                      <NumericUpDown Classes="app"
+                                     Minimum="0"
+                                     Maximum="100000"
+                                     Value="{Binding ArtworkMaxDimension, Mode=TwoWay}"
+                                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Online.MaximumDimension}" />
+                    </StackPanel>
                     <Button x:Name="StagedArtworkActionsButton"
                             Classes="app"
                             HorizontalAlignment="Left"

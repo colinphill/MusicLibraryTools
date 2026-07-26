@@ -91,14 +91,16 @@
                           IsChecked="{Binding Recursive, Mode=TwoWay}" />
                 <Border Height="1"
                         Background="{DynamicResource AppBorderBrush}" />
-                <TextBlock Classes="field-label"
-                           FontWeight="SemiBold"
-                           Text="{DynamicResource Loc.Workbench.Source.RecentLocation}" />
-                <ComboBox x:Name="RecentLocationsBox"
-                          Classes="app"
-                          ItemsSource="{Binding RecentLocations}"
-                          PlaceholderText="{DynamicResource Loc.Workbench.Source.RecentPlaceholder}"
-                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Source.RecentAutomation}" />
+                <StackPanel Classes="field">
+                  <TextBlock Classes="field-label"
+                             FontWeight="SemiBold"
+                             Text="{DynamicResource Loc.Workbench.Source.RecentLocation}" />
+                  <ComboBox x:Name="RecentLocationsBox"
+                            Classes="app"
+                            ItemsSource="{Binding RecentLocations}"
+                            PlaceholderText="{DynamicResource Loc.Workbench.Source.RecentPlaceholder}"
+                            AutomationProperties.Name="{DynamicResource Loc.Workbench.Source.RecentAutomation}" />
+                </StackPanel>
                 <Button x:Name="AddRecentWorkbenchSourceButton"
                         Classes="app"
                         HorizontalContentAlignment="Left"

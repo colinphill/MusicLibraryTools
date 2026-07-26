@@ -75,35 +75,39 @@
                 IsVisible="False" />
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.Shortcuts.BindingTitle}" />
-        <TextBlock Classes="field-label"
-                   Text="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}" />
-        <TextBox x:Name="GestureTextBox"
-                 Classes="app"
-                 Text="{Binding ShortcutEditor.GestureText, Mode=TwoWay}"
-                 PlaceholderText="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}"
-                 AutomationProperties.Name="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}"
-                 AutomationProperties.HelpText="{DynamicResource Loc.Workbench.Shortcuts.GestureHelp}" />
-        <TextBlock x:Name="GestureHelp"
-                   Classes="field-help"
-                   TextWrapping="Wrap"
-                   Text="{DynamicResource Loc.Workbench.Shortcuts.GestureHelp}" />
-        <TextBlock x:Name="GestureValidationMessage"
-                   Classes="error field-help"
-                   IsVisible="{Binding ShortcutEditor.HasGestureValidationError}"
-                   Text="{Binding ShortcutEditor.GestureValidationMessage}"
-                   TextWrapping="Wrap"
-                   AutomationProperties.LiveSetting="Polite" />
-        <TextBlock Classes="field-label"
-                   Text="{DynamicResource Loc.Workbench.Shortcuts.Target}" />
-        <ComboBox Classes="app"
-                  ItemsSource="{Binding ShortcutEditor.TargetKindChoices}"
-                  DisplayMemberBinding="{Binding Label}"
-                  SelectedValueBinding="{Binding Value}"
-                  SelectedValue="{Binding ShortcutEditor.TargetKind, Mode=TwoWay}"
-                  AutomationProperties.Name="{DynamicResource Loc.Workbench.Shortcuts.Target}" />
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}" />
+          <TextBox x:Name="GestureTextBox"
+                   Classes="app"
+                   Text="{Binding ShortcutEditor.GestureText, Mode=TwoWay}"
+                   PlaceholderText="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}"
+                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}"
+                   AutomationProperties.HelpText="{DynamicResource Loc.Workbench.Shortcuts.GestureHelp}" />
+          <TextBlock x:Name="GestureHelp"
+                     Classes="field-help"
+                     TextWrapping="Wrap"
+                     Text="{DynamicResource Loc.Workbench.Shortcuts.GestureHelp}" />
+          <TextBlock x:Name="GestureValidationMessage"
+                     Classes="error field-help"
+                     IsVisible="{Binding ShortcutEditor.HasGestureValidationError}"
+                     Text="{Binding ShortcutEditor.GestureValidationMessage}"
+                     TextWrapping="Wrap"
+                     AutomationProperties.LiveSetting="Polite" />
+        </StackPanel>
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Shortcuts.Target}" />
+          <ComboBox Classes="app"
+                    ItemsSource="{Binding ShortcutEditor.TargetKindChoices}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedValueBinding="{Binding Value}"
+                    SelectedValue="{Binding ShortcutEditor.TargetKind, Mode=TwoWay}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Shortcuts.Target}" />
+        </StackPanel>
         <StackPanel Classes="field"
                     IsVisible="{Binding ShortcutEditor.TargetKind, Converter={StaticResource ShortcutTargetKindMatch}, ConverterParameter=Command}">
-          <TextBlock Classes="muted"
+          <TextBlock Classes="muted field-label"
                      Text="{DynamicResource Loc.Workbench.Shortcuts.Command}" />
           <ComboBox Classes="app"
                     ItemsSource="{Binding ShortcutEditor.Commands}"
@@ -113,7 +117,7 @@
         </StackPanel>
         <StackPanel Classes="field"
                     IsVisible="{Binding ShortcutEditor.TargetKind, Converter={StaticResource ShortcutTargetKindMatch}, ConverterParameter=Recipe}">
-          <TextBlock Classes="muted"
+          <TextBlock Classes="muted field-label"
                      Text="{DynamicResource Loc.Workbench.Shortcuts.Recipe}" />
           <ComboBox Classes="app"
                     ItemsSource="{Binding ShortcutEditor.Recipes}"

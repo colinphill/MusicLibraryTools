@@ -10,38 +10,40 @@
       <StackPanel Classes="content-stack">
         <TextBlock Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.Tools.Title}" />
-        <TextBlock Classes="field-label"
-                   Text="{DynamicResource Loc.Workbench.Tools.SavedPlaceholder}" />
-        <Grid ColumnDefinitions="*,Auto,Auto"
-              ColumnSpacing="8">
-          <ComboBox Classes="app"
-                    ItemsSource="{Binding ExternalToolEditor.SavedTools}"
-                    DisplayMemberBinding="{Binding Name}"
-                    SelectedItem="{Binding ExternalToolEditor.SelectedSavedTool, Mode=TwoWay}"
-                    PlaceholderText="{DynamicResource Loc.Workbench.Tools.SavedPlaceholder}"
-                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Tools.SavedPlaceholder}" />
-          <Button Grid.Column="1"
-                  Classes="app"
-                  Content="{DynamicResource Loc.Workbench.Tools.Load}"
-                  Command="{Binding ExternalToolEditor.LoadToolCommand}" />
-          <Button x:Name="SavedToolMoreButton"
-                  Grid.Column="2"
-                  Classes="app"
-                  Content="{DynamicResource Loc.Workbench.Action.More}"
-                  AutomationProperties.Name="{DynamicResource Loc.Workbench.Tools.MoreAutomation}">
-            <Button.Flyout>
-              <MenuFlyout>
-                <MenuItem Header="{DynamicResource Loc.Workbench.Tools.New}"
-                          Command="{Binding ExternalToolEditor.NewToolCommand}" />
-                <MenuItem Header="{DynamicResource Loc.Workbench.Tools.Save}"
-                          Command="{Binding ExternalToolEditor.SaveToolCommand}" />
-                <Separator />
-                <MenuItem Header="{DynamicResource Loc.Workbench.Tools.Delete}"
-                          Command="{Binding ExternalToolEditor.DeleteToolCommand}" />
-              </MenuFlyout>
-            </Button.Flyout>
-          </Button>
-        </Grid>
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Tools.SavedPlaceholder}" />
+          <Grid ColumnDefinitions="*,Auto,Auto"
+                ColumnSpacing="8">
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding ExternalToolEditor.SavedTools}"
+                      DisplayMemberBinding="{Binding Name}"
+                      SelectedItem="{Binding ExternalToolEditor.SelectedSavedTool, Mode=TwoWay}"
+                      PlaceholderText="{DynamicResource Loc.Workbench.Tools.SavedPlaceholder}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Tools.SavedPlaceholder}" />
+            <Button Grid.Column="1"
+                    Classes="app"
+                    Content="{DynamicResource Loc.Workbench.Tools.Load}"
+                    Command="{Binding ExternalToolEditor.LoadToolCommand}" />
+            <Button x:Name="SavedToolMoreButton"
+                    Grid.Column="2"
+                    Classes="app"
+                    Content="{DynamicResource Loc.Workbench.Action.More}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Tools.MoreAutomation}">
+              <Button.Flyout>
+                <MenuFlyout>
+                  <MenuItem Header="{DynamicResource Loc.Workbench.Tools.New}"
+                            Command="{Binding ExternalToolEditor.NewToolCommand}" />
+                  <MenuItem Header="{DynamicResource Loc.Workbench.Tools.Save}"
+                            Command="{Binding ExternalToolEditor.SaveToolCommand}" />
+                  <Separator />
+                  <MenuItem Header="{DynamicResource Loc.Workbench.Tools.Delete}"
+                            Command="{Binding ExternalToolEditor.DeleteToolCommand}" />
+                </MenuFlyout>
+              </Button.Flyout>
+            </Button>
+          </Grid>
+        </StackPanel>
         <Grid ColumnDefinitions="*,190"
               ColumnSpacing="8">
           <StackPanel Classes="field">
@@ -78,7 +80,8 @@
                     Command="{Binding BrowseExternalToolExecutableCommand}" />
           </Grid>
         </StackPanel>
-        <StackPanel Spacing="4">
+        <StackPanel Classes="field"
+                    Spacing="4">
           <TextBlock Classes="field-label"
                      Text="{DynamicResource Loc.Workbench.Tools.WorkingDirectoryPlaceholder}" />
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
@@ -92,19 +95,21 @@
                     Command="{Binding BrowseExternalToolWorkingDirectoryCommand}" />
           </Grid>
         </StackPanel>
-        <TextBlock Classes="field-label"
-                   Text="{DynamicResource Loc.Workbench.Tools.ArgumentsLabel}" />
-        <TextBox Classes="app"
-                 MinHeight="105"
-                 AcceptsReturn="True"
-                 TextWrapping="NoWrap"
-                 Text="{Binding ExternalToolEditor.ArgumentsText, Mode=TwoWay}"
-                 PlaceholderText="{}{Files}"
-                 AutomationProperties.Name="{DynamicResource Loc.Workbench.Tools.ArgumentsLabel}" />
-        <TextBlock x:Name="PlaceholderHelp"
-                   Classes="muted"
-                   TextWrapping="Wrap"
-                   Text="{DynamicResource Loc.Workbench.Tools.PlaceholderHelp}" />
+        <StackPanel Classes="field">
+          <TextBlock Classes="field-label"
+                     Text="{DynamicResource Loc.Workbench.Tools.ArgumentsLabel}" />
+          <TextBox Classes="app"
+                   MinHeight="105"
+                   AcceptsReturn="True"
+                   TextWrapping="NoWrap"
+                   Text="{Binding ExternalToolEditor.ArgumentsText, Mode=TwoWay}"
+                   PlaceholderText="{}{Files}"
+                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Tools.ArgumentsLabel}" />
+          <TextBlock x:Name="PlaceholderHelp"
+                     Classes="muted field-help"
+                     TextWrapping="Wrap"
+                     Text="{DynamicResource Loc.Workbench.Tools.PlaceholderHelp}" />
+        </StackPanel>
         <Border x:Name="SafetyNote"
                 Classes="status-banner warning">
           <TextBlock TextWrapping="Wrap"

@@ -140,11 +140,15 @@
               <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Configuration.Active}" />
               <Border Classes="status-banner info"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><controls:AppVectorIcon Kind="Information" AutomationProperties.Name="{DynamicResource Loc.Settings.Automation.Information}" /><TextBlock Grid.Column="1" Text="{Binding ActiveConfigurationDisplay}" TextWrapping="Wrap" /></Grid></Border>
               <WrapPanel><Button Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Settings.Configuration.Open}" Command="{Binding BrowseConfigurationCommand}" /><Button Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Settings.Configuration.EditFull}" Command="{Binding EditCurrentConfigurationCommand}" /><Button Classes="app" Margin="0,0,8,8" Content="{DynamicResource Loc.Settings.Configuration.New}" Command="{Binding NewConfigurationCommand}" /><Button Classes="app primary" Margin="0,0,8,8" Content="{DynamicResource Loc.Settings.Configuration.GuidedSetup}" Command="{Binding StartGuidedSetupCommand}" /></WrapPanel>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Configuration.Recent}" />
-              <ComboBox Classes="app" ItemsSource="{Binding RecentConfigurations}" SelectedItem="{Binding SelectedRecentConfiguration, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Configuration.ChooseRecent}" AutomationProperties.Name="{DynamicResource Loc.Settings.Configuration.Recent}" />
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Configuration.Recent}" />
+                <ComboBox Classes="app" ItemsSource="{Binding RecentConfigurations}" SelectedItem="{Binding SelectedRecentConfiguration, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Configuration.ChooseRecent}" AutomationProperties.Name="{DynamicResource Loc.Settings.Configuration.Recent}" />
+              </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="8"><Button Classes="app" Content="{DynamicResource Loc.Settings.Configuration.LoadSelected}" Command="{Binding LoadRecentConfigurationCommand}" /><Button Classes="app" Content="{DynamicResource Loc.Settings.Configuration.ClearHistory}" Command="{Binding ClearRecentConfigurationsCommand}" /></StackPanel>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Configuration.Path}" />
-              <TextBox Classes="app" Text="{Binding EditorPath}" IsReadOnly="True" AutomationProperties.Name="{DynamicResource Loc.Settings.Configuration.Path}" />
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Configuration.Path}" />
+                <TextBox Classes="app" Text="{Binding EditorPath}" IsReadOnly="True" AutomationProperties.Name="{DynamicResource Loc.Settings.Configuration.Path}" />
+              </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </TabItem>
@@ -160,17 +164,17 @@
                     <Border Classes="card" Margin="0,0,0,12" Padding="12">
                       <StackPanel Spacing="12">
                         <Grid Classes="responsive-form" ColumnDefinitions="*,260,Auto,Auto" ColumnSpacing="8">
-                          <StackPanel Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.Path}" /><TextBox Classes="app" Text="{Binding Path, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.PathAutomation}" /></StackPanel>
-                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.Policy}" /><ComboBox Classes="app" ItemsSource="{Binding ProfileChoices}" SelectedItem="{Binding ProfileChoice, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.PolicyAutomation}" /></StackPanel>
+                          <StackPanel Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.Path}" /><TextBox Classes="app" Text="{Binding Path, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.PathAutomation}" /></StackPanel>
+                          <StackPanel Grid.Column="1" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.Policy}" /><ComboBox Classes="app" ItemsSource="{Binding ProfileChoices}" SelectedItem="{Binding ProfileChoice, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.PolicyAutomation}" /></StackPanel>
                           <Button Grid.Column="2" Classes="app" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding DataContext.BrowseIndexTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                           <Button Grid.Column="3" Classes="app danger" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Settings.Action.Remove}" Command="{Binding DataContext.RemoveIndexTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                         </Grid>
                         <Grid Classes="responsive-form" ColumnDefinitions="*,*,*" ColumnSpacing="12">
-                          <StackPanel Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.Formats}" /><TextBox Classes="app" Text="{Binding IndexFormats, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.FormatsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.FormatsAutomation}" /></StackPanel>
-                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.IncludePatterns}" /><TextBox Classes="app" Text="{Binding IndexIncludePatterns, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.IncludePatternsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.IncludePatternsAutomation}" /></StackPanel>
-                          <StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.ExcludePatterns}" /><TextBox Classes="app" Text="{Binding IndexExcludePatterns, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.ExcludePatternsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.ExcludePatternsAutomation}" /></StackPanel>
+                          <StackPanel Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.Formats}" /><TextBox Classes="app" Text="{Binding IndexFormats, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.FormatsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.FormatsAutomation}" /></StackPanel>
+                          <StackPanel Grid.Column="1" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.IncludePatterns}" /><TextBox Classes="app" Text="{Binding IndexIncludePatterns, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.IncludePatternsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.IncludePatternsAutomation}" /></StackPanel>
+                          <StackPanel Grid.Column="2" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.ExcludePatterns}" /><TextBox Classes="app" Text="{Binding IndexExcludePatterns, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.ExcludePatternsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.ExcludePatternsAutomation}" /></StackPanel>
                         </Grid>
-                        <StackPanel Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.CrossSetExtensions}" /><TextBox Classes="app" Text="{Binding Filter, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.CrossSetExtensionsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.CrossSetExtensions}" /></StackPanel>
+                        <StackPanel Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.CrossSetExtensions}" /><TextBox Classes="app" Text="{Binding Filter, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.CrossSetExtensionsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.CrossSetExtensions}" /></StackPanel>
                         <StackPanel Spacing="8">
                           <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.WritePermissions}" />
                           <WrapPanel>
@@ -249,7 +253,7 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <StackPanel Classes="field">
-                <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Playlists.SyncTargetTitle}" />
+                <TextBlock Classes="section-title field-label" Text="{DynamicResource Loc.Settings.Playlists.SyncTargetTitle}" />
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Playlists.SyncTargetDescription}" TextWrapping="Wrap" />
                 <ComboBox MaxWidth="420" HorizontalAlignment="Stretch" Classes="app" ItemsSource="{Binding SyncTargetRootChoices}" SelectedItem="{Binding SelectedSyncTargetRoot, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Playlists.SyncTargetAutomation}" />
               </StackPanel>
@@ -705,35 +709,63 @@
           <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="ToolsSettingsContent" Classes="settings-content" Margin="16" Spacing="12">
               <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Tools.Title}" />
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Bindings}" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding MachineBindingsFile, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Tools.BindingsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.BindingsAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseMachineBindingsCommand}" /></Grid>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Database}" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding DatabaseFile, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.Database}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseDatabaseCommand}" /></Grid>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Itunes}" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding ItunesLibraryPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.Itunes}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseItunesLibraryCommand}" /></Grid>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Ffmpeg}" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding FfmpegPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.FfmpegAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseFfmpegCommand}" /></Grid>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Wavpack}" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding WavpackPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.WavpackAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseWavpackCommand}" /></Grid>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.MonkeysAudio}" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding MonkeysAudioPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.MonkeysAudioAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseMonkeysAudioCommand}" /></Grid>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Fpcalc}" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding FpcalcPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.FpcalcAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseFpcalcCommand}" /></Grid>
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.OptimFrog}" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding OptimFrogToolsDirectory, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Tools.OptimFrogPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.OptimFrogAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseOptimFrogToolsCommand}" /></Grid>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Bindings}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding MachineBindingsFile, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Tools.BindingsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.BindingsAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseMachineBindingsCommand}" /></Grid>
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Database}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding DatabaseFile, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.Database}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseDatabaseCommand}" /></Grid>
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Itunes}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding ItunesLibraryPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.Itunes}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseItunesLibraryCommand}" /></Grid>
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Ffmpeg}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding FfmpegPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.FfmpegAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseFfmpegCommand}" /></Grid>
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Wavpack}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding WavpackPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.WavpackAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseWavpackCommand}" /></Grid>
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.MonkeysAudio}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding MonkeysAudioPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.MonkeysAudioAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseMonkeysAudioCommand}" /></Grid>
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.Fpcalc}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding FpcalcPath, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.FpcalcAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseFpcalcCommand}" /></Grid>
+              </StackPanel>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.OptimFrog}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding OptimFrogToolsDirectory, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.Tools.OptimFrogPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.OptimFrogAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Action.Browse}" Command="{Binding BrowseOptimFrogToolsCommand}" /></Grid>
+              </StackPanel>
               <TextBlock Classes="section-title" Margin="0,12,0,0" Text="{DynamicResource Loc.Settings.Tools.OnlineMetadata}" />
               <CheckBox Content="{DynamicResource Loc.Settings.Tools.OfflineMode}"
                         IsChecked="{Binding OfflineMode, Mode=TwoWay}"
                         AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.OfflineModeAutomation}" />
               <TextBlock Classes="muted" TextWrapping="Wrap" Text="{DynamicResource Loc.Settings.Tools.AcoustIdDescription}" />
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.AcoustIdKey}" />
-              <TextBox Classes="app" Text="{Binding AcoustIdClientKey, Mode=TwoWay}"
-                       AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.AcoustIdKey}" />
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.AcoustIdKey}" />
+                <TextBox Classes="app" Text="{Binding AcoustIdClientKey, Mode=TwoWay}"
+                         AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.AcoustIdKey}" />
+              </StackPanel>
               <TextBlock Classes="muted" Margin="0,8,0,0" TextWrapping="Wrap"
                          Text="{DynamicResource Loc.Settings.Tools.DiscogsDescription}" />
-              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.DiscogsToken}" />
-              <Grid Classes="responsive-form" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                <TextBox Classes="app" Text="{Binding DiscogsToken, Mode=TwoWay}"
-                         PasswordChar="●"
-                         PlaceholderText="{DynamicResource Loc.Settings.Tools.DiscogsTokenPlaceholder}"
-                         AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.DiscogsToken}" />
-                <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Tools.StoreToken}"
-                        Command="{Binding SaveDiscogsTokenCommand}" />
-                <Button Grid.Column="2" Classes="app" Content="{DynamicResource Loc.Settings.Action.Clear}"
-                        Command="{Binding ClearDiscogsTokenCommand}" />
-              </Grid>
+              <StackPanel Classes="field">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Tools.DiscogsToken}" />
+                <Grid Classes="responsive-form" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                  <TextBox Classes="app" Text="{Binding DiscogsToken, Mode=TwoWay}"
+                           PasswordChar="●"
+                           PlaceholderText="{DynamicResource Loc.Settings.Tools.DiscogsTokenPlaceholder}"
+                           AutomationProperties.Name="{DynamicResource Loc.Settings.Tools.DiscogsToken}" />
+                  <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.Tools.StoreToken}"
+                          Command="{Binding SaveDiscogsTokenCommand}" />
+                  <Button Grid.Column="2" Classes="app" Content="{DynamicResource Loc.Settings.Action.Clear}"
+                          Command="{Binding ClearDiscogsTokenCommand}" />
+                </Grid>
+              </StackPanel>
               <TextBlock Classes="muted" TextWrapping="Wrap"
                          Text="{Binding DiscogsCredentialStatus}" />
             </StackPanel>
@@ -747,14 +779,14 @@
                 <StackPanel Spacing="8">
                   <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Health.AnalysisTitle}" />
                   <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Health.AnalysisDescription}" TextWrapping="Wrap" />
-                  <StackPanel Spacing="4">
+                  <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Health.OversizedSize}" />
                   <NumericUpDown x:Name="ArtworkSizeThresholdInput" Classes="app"
                                  Minimum="0.25" Maximum="1024" Increment="0.25" FormatString="0.##"
                                  Value="{Binding OversizedArtworkSizeThresholdMib, Mode=TwoWay}"
                                  AutomationProperties.Name="{DynamicResource Loc.Settings.Health.OversizedSizeAutomation}" />
                   </StackPanel>
-                  <StackPanel Spacing="4">
+                  <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Health.OversizedDimension}" />
                   <NumericUpDown x:Name="ArtworkDimensionThresholdInput" Classes="app"
                                  Minimum="64" Maximum="100000" Increment="100"
@@ -765,14 +797,14 @@
                 <StackPanel Grid.Column="1" Spacing="8">
                   <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Health.RepairTitle}" />
                   <TextBlock Classes="muted" Text="{DynamicResource Loc.Settings.Health.RepairDescription}" TextWrapping="Wrap" />
-                  <StackPanel Spacing="4">
+                  <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Health.RepairSize}" />
                   <NumericUpDown x:Name="ArtworkRepairSizeTargetInput" Classes="app"
                                  Minimum="0.0625" Maximum="1024" Increment="0.0625" FormatString="0.####"
                                  Value="{Binding ArtworkRepairTargetSizeMib, Mode=TwoWay}"
                                  AutomationProperties.Name="{DynamicResource Loc.Settings.Health.RepairSizeAutomation}" />
                   </StackPanel>
-                  <StackPanel Spacing="4">
+                  <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Health.RepairDimension}" />
                   <NumericUpDown x:Name="ArtworkRepairDimensionTargetInput" Classes="app"
                                  Minimum="64" Maximum="100000" Increment="50"
@@ -798,7 +830,7 @@
               <Border Classes="card" Padding="12">
                 <StackPanel Spacing="12" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
                   <Grid Classes="responsive-form" ColumnDefinitions="280,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-                    <StackPanel Spacing="4">
+                    <StackPanel Classes="field" Spacing="4">
                       <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.SelectLabel}" />
                       <ComboBox x:Name="ProfilePresetPicker" Classes="app" ItemsSource="{Binding LibraryProfiles}" SelectedItem="{Binding SelectedLibraryProfile, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.SelectAutomation}">
                         <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
@@ -842,14 +874,14 @@
                 <StackPanel Spacing="12" Margin="0,8,0,0">
                   <Grid Classes="responsive-form" ColumnDefinitions="*,320" ColumnSpacing="12">
                     <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.RootPolicy.ProfileTitle}" />
-                    <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.ProfileName}" /><TextBox Classes="app" Text="{Binding Name, Mode=TwoWay}" IsEnabled="{Binding IsCustom}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.ProfileName}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.ProfileName}" /><TextBox Classes="app" Text="{Binding Name, Mode=TwoWay}" IsEnabled="{Binding IsCustom}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.ProfileName}" /></StackPanel>
                   </Grid>
                   <Border Classes="status-banner warning"><TextBlock Text="{DynamicResource Loc.Settings.RootPolicy.ChangeWarning}" TextWrapping="Wrap" /></Border>
 
                   <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.RootPolicy.NamingTitle}" />
                   <Grid Classes="responsive-form" ColumnDefinitions="*,*" ColumnSpacing="12">
-                    <StackPanel Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.FolderTemplate}" /><TextBox Classes="app" Text="{Binding DirectoryTemplate, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.FolderTemplateAutomation}" /></StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.FileNameTemplate}" /><TextBox Classes="app" Text="{Binding FileNameTemplate, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.FileNameTemplateAutomation}" /></StackPanel>
+                    <StackPanel Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.FolderTemplate}" /><TextBox Classes="app" Text="{Binding DirectoryTemplate, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.FolderTemplateAutomation}" /></StackPanel>
+                    <StackPanel Grid.Column="1" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.FileNameTemplate}" /><TextBox Classes="app" Text="{Binding FileNameTemplate, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.FileNameTemplateAutomation}" /></StackPanel>
                   </Grid>
 
                   <Expander x:Name="RootPolicyAdvancedExpander"
@@ -989,7 +1021,7 @@
               <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Ingest.Title}" />
               <Border Classes="card" Padding="12">
                 <Grid Classes="responsive-form" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                  <StackPanel Spacing="4">
+                  <StackPanel Classes="field" Spacing="4">
                     <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.ActiveProfile}" />
                     <ComboBox x:Name="IngestProfilePicker" Classes="app" ItemsSource="{Binding IngestProfiles}" SelectedItem="{Binding SelectedIngestProfile, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.ActiveProfile}">
                       <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
@@ -1023,9 +1055,9 @@
                         AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.Title}">
                 <StackPanel Spacing="12" Margin="0,8,0,0">
                 <Grid Classes="responsive-form" ColumnDefinitions="*,*,*" ColumnSpacing="12">
-                  <StackPanel Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.ProfileName}" /><TextBox Classes="app" Text="{Binding Name, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.ProfileName}" /></StackPanel>
-                  <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.SourceDisposition}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.SourceDispositionChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibrarySourceDisposition" local:LocalizedChoiceSelection.Value="{Binding SourceDisposition, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.SourceDisposition}" /></StackPanel>
-                  <StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.StableId}" /><TextBox Classes="app" Text="{Binding Id}" IsReadOnly="True" AutomationProperties.Name="{DynamicResource Loc.Settings.Common.StableId}" /></StackPanel>
+                  <StackPanel Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.ProfileName}" /><TextBox Classes="app" Text="{Binding Name, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.ProfileName}" /></StackPanel>
+                  <StackPanel Grid.Column="1" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.SourceDisposition}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.SourceDispositionChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibrarySourceDisposition" local:LocalizedChoiceSelection.Value="{Binding SourceDisposition, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.SourceDisposition}" /></StackPanel>
+                  <StackPanel Grid.Column="2" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Common.StableId}" /><TextBox Classes="app" Text="{Binding Id}" IsReadOnly="True" AutomationProperties.Name="{DynamicResource Loc.Settings.Common.StableId}" /></StackPanel>
                 </Grid>
                 <Expander x:Name="IngestProfileAdvancedExpander"
                           Header="{DynamicResource Loc.Workbench.Common.Advanced}"

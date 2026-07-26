@@ -5449,6 +5449,7 @@
   <data name="Workbench.Reports.Reviewed" xml:space="preserve"><value>Revisado</value></data>
   <data name="Workbench.Reports.Safety" xml:space="preserve"><value>informe salida nunca cambios medios archivos.</value></data>
   <data name="Workbench.Reports.SortBy" xml:space="preserve"><value>Ordenar por</value></data>
+  <data name="Workbench.Reports.SortType" xml:space="preserve"><value>Tipo de ordenación</value></data>
   <data name="Workbench.Reports.Source.Custom" xml:space="preserve"><value>Personalizado: {0}</value></data>
   <data name="Workbench.Reports.Source.File" xml:space="preserve"><value>Archivo: {0}</value></data>
   <data name="Workbench.Reports.Source.Metadata" xml:space="preserve"><value>Metadatos: {0}</value></data>

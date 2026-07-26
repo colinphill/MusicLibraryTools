@@ -41,7 +41,7 @@
     <Border x:Name="SetupCard" Grid.Row="1" Classes="card">
       <StackPanel x:Name="SetupPanel" Spacing="12">
         <Grid x:Name="SourcePickerLayout" ColumnDefinitions="*,Auto,220" ColumnSpacing="8" RowSpacing="8">
-          <StackPanel Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Ingest.IncomingFolder}" /><TextBox Classes="app" Text="{Binding SourceDirectory, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Ingest.IncomingFolderPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Ingest.IncomingFolder}" /></StackPanel>
+          <StackPanel Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Ingest.IncomingFolder}" /><TextBox Classes="app" Text="{Binding SourceDirectory, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Ingest.IncomingFolderPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Ingest.IncomingFolder}" /></StackPanel>
           <Button Grid.Column="1" Classes="app" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseSourceCommand}" />
           <StackPanel x:Name="RecentFoldersField"
                       Grid.Column="2"

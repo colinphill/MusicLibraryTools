@@ -258,6 +258,7 @@
   </Style>
   <Style Selector="StackPanel.field">
     <Setter Property="Spacing" Value="{DynamicResource AppSpaceSmall}" />
+    <Setter Property="controls:FieldAccessibility.Associate" Value="True" />
   </Style>
   <Style Selector="StackPanel.content-stack">
     <Setter Property="Spacing" Value="{DynamicResource AppSpaceLarge}" />

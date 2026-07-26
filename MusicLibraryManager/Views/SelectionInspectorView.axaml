@@ -171,24 +171,29 @@
                 IsVisible="{Binding SelectedItem, ElementName=InspectorArtworkList}"
                 DataContext="{Binding SelectedItem, ElementName=InspectorArtworkList}">
           <StackPanel Classes="content-stack">
-            <TextBlock Classes="field-label"
-                       Text="{DynamicResource Loc.Inspector.View.ArtworkType}" />
-            <ComboBox Classes="app"
-                      ItemsSource="{Binding DataContext.ArtworkTypeChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                      DisplayMemberBinding="{Binding Label}"
-                      SelectedValueBinding="{Binding Value}"
-                      SelectedValue="{Binding Type, Mode=TwoWay}"
-                      AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkType}" />
-            <TextBlock Classes="field-label"
-                       Text="{DynamicResource Loc.Inspector.View.ArtworkDescription}" />
-            <TextBox Classes="app"
-                     Text="{Binding Description, Mode=TwoWay}"
-                     PlaceholderText="{DynamicResource Loc.Inspector.View.DescriptionPlaceholder}"
-                     AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkDescription}" />
+            <StackPanel Classes="field">
+              <TextBlock Classes="field-label"
+                         Text="{DynamicResource Loc.Inspector.View.ArtworkType}" />
+              <ComboBox Classes="app"
+                        ItemsSource="{Binding DataContext.ArtworkTypeChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        DisplayMemberBinding="{Binding Label}"
+                        SelectedValueBinding="{Binding Value}"
+                        SelectedValue="{Binding Type, Mode=TwoWay}"
+                        AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkType}" />
+            </StackPanel>
+            <StackPanel Classes="field">
+              <TextBlock Classes="field-label"
+                         Text="{DynamicResource Loc.Inspector.View.ArtworkDescription}" />
+              <TextBox Classes="app"
+                       Text="{Binding Description, Mode=TwoWay}"
+                       PlaceholderText="{DynamicResource Loc.Inspector.View.DescriptionPlaceholder}"
+                       AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkDescription}" />
+            </StackPanel>
           </StackPanel>
         </Border>
         <Expander Header="{DynamicResource Loc.Inspector.View.OptimizeOptions}">
           <StackPanel Margin="0,8,0,0"
+                      Classes="field"
                       Spacing="4">
             <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Inspector.View.MaximumDimension}"

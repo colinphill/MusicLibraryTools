@@ -218,6 +218,51 @@ public sealed partial class UiModernizationSourceQualityTests
                     errors.Add(
                         $"{relativePath}: {Describe(input)} {controlName ?? input.Name.LocalName} has no visible durable label. Put the input in a shared 'field' container with a field-label TextBlock; placeholders and AutomationProperties.Name are not visible labels.");
                 }
+
+                if ((controlName is null ||
+                     !VisibleLabelExemptControlNames
+                         .Contains(controlName)) &&
+                    HasExplicitLabeledByAttribute(
+                        input) &&
+                    !HasExplicitLabeledBy(input))
+                {
+                    errors.Add(
+                        $"{relativePath}: {Describe(input)} {controlName ?? input.Name.LocalName} has an invalid AutomationProperties.LabeledBy reference. Use a resolvable element binding to a named, visible field-label TextBlock.");
+                }
+                else if ((controlName is null ||
+                          !VisibleLabelExemptControlNames
+                              .Contains(controlName)) &&
+                         !HasProgrammaticLabelAssociation(
+                             input))
+                {
+                    errors.Add(
+                        $"{relativePath}: {Describe(input)} {controlName ?? input.Name.LocalName} has no programmatic label association. Put it in a StackPanel.field, enable FieldAccessibility.Associate on its logical field container, or set AutomationProperties.LabeledBy explicitly.");
+                }
+
+                XElement? associatedField =
+                    FindAssociatedFieldContainer(
+                        input);
+                if ((controlName is null ||
+                     !VisibleLabelExemptControlNames
+                         .Contains(controlName)) &&
+                    associatedField is not null &&
+                    !HasExplicitLabeledBy(input))
+                {
+                    int ownedInputCount =
+                        associatedField
+                            .Descendants()
+                            .Count(candidate =>
+                                IsFormInput(candidate) &&
+                                ReferenceEquals(
+                                    FindAssociatedFieldContainer(
+                                        candidate),
+                                    associatedField));
+                    if (ownedInputCount != 1)
+                    {
+                        errors.Add(
+                            $"{relativePath}: {Describe(input)} {controlName ?? input.Name.LocalName} shares one automatic field association with {ownedInputCount} form inputs. Give each input its own associated field or set AutomationProperties.LabeledBy explicitly.");
+                    }
+                }
             }
         }
 
@@ -226,6 +271,87 @@ public sealed partial class UiModernizationSourceQualityTests
             string.Join(
                 Environment.NewLine,
                 errors));
+    }
+
+    [Fact]
+    public void Form_label_gate_rejects_a_statically_hidden_owned_label()
+    {
+        XElement input =
+            ParseFormLabelFixture(
+                """
+                <StackPanel Classes="field">
+                  <TextBlock Classes="field-label"
+                             Text="Title"
+                             IsVisible="False" />
+                  <TextBox />
+                </StackPanel>
+                """);
+
+        Assert.False(
+            HasVisibleDurableLabel(input));
+        Assert.False(
+            HasProgrammaticLabelAssociation(
+                input));
+    }
+
+    [Fact]
+    public void Form_label_gate_rejects_an_unrelated_preceding_label()
+    {
+        XElement input =
+            ParseFormLabelFixture(
+                """
+                <StackPanel>
+                  <TextBlock Classes="field-label"
+                             Text="Title" />
+                  <TextBox />
+                </StackPanel>
+                """);
+
+        Assert.False(
+            HasVisibleDurableLabel(input));
+        Assert.False(
+            HasProgrammaticLabelAssociation(
+                input));
+    }
+
+    [Theory]
+    [InlineData("TitleLabel")]
+    [InlineData("{Binding}")]
+    [InlineData("{Binding #MissingLabel}")]
+    public void Form_label_gate_rejects_malformed_or_missing_explicit_targets(
+        string labeledBy)
+    {
+        XElement input =
+            ParseExplicitFormLabelFixture(
+                labeledBy);
+
+        Assert.False(
+            HasVisibleDurableLabel(input));
+        Assert.False(
+            HasExplicitLabeledBy(input));
+        Assert.False(
+            HasProgrammaticLabelAssociation(
+                input));
+    }
+
+    [Theory]
+    [InlineData("{Binding #TitleLabel}")]
+    [InlineData("{Binding ElementName=TitleLabel}")]
+    [InlineData("{x:Reference TitleLabel}")]
+    public void Form_label_gate_accepts_a_resolvable_visible_explicit_association(
+        string labeledBy)
+    {
+        XElement input =
+            ParseExplicitFormLabelFixture(
+                labeledBy);
+
+        Assert.True(
+            HasVisibleDurableLabel(input));
+        Assert.True(
+            HasExplicitLabeledBy(input));
+        Assert.True(
+            HasProgrammaticLabelAssociation(
+                input));
     }
 
     [Fact]
@@ -1065,70 +1191,213 @@ public sealed partial class UiModernizationSourceQualityTests
     private static bool HasVisibleDurableLabel(
         XElement input)
     {
-        // Inline grid/list editors derive their visible identity from the
-        // row/column header or item label. They still must expose an
-        // AutomationProperties.Name, which is enforced above.
-        if (input.Ancestors()
-            .Any(element =>
-                element.Name.LocalName is
-                    "DataTemplate" or
-                    "TreeDataTemplate"))
+        XElement? field =
+            FindAssociatedFieldContainer(
+                input);
+        if (field is not null)
         {
-            return true;
+            return HasOwnedVisibleFieldLabel(
+                field);
+        }
+
+        return HasExplicitLabeledBy(input);
+    }
+
+    private static bool HasProgrammaticLabelAssociation(
+        XElement input)
+    {
+        if (HasExplicitLabeledByAttribute(
+                input))
+        {
+            return HasExplicitLabeledBy(
+                input);
         }
 
         XElement? field =
-            input.Ancestors()
-                .FirstOrDefault(element =>
-                    HasLiteralClass(
-                        (string?)element.Attribute(
-                            "Classes") ??
-                        "",
-                        "field"));
-        if (field is not null &&
-            field.Descendants()
-                .Any(element =>
-                    element.Name.LocalName ==
-                    "TextBlock" &&
-                    !string.IsNullOrWhiteSpace(
-                        (string?)element.Attribute(
-                            "Text"))))
+            FindAssociatedFieldContainer(
+                input);
+        return field is not null &&
+            HasOwnedVisibleFieldLabel(field);
+    }
+
+    private static bool HasExplicitLabeledBy(
+        XElement input) =>
+        TryResolveExplicitLabeledByTarget(
+            input,
+            out _);
+
+    private static bool
+        HasExplicitLabeledByAttribute(
+            XElement input) =>
+        input.Attributes()
+            .Any(attribute =>
+                attribute.Name.LocalName ==
+                "AutomationProperties.LabeledBy");
+
+    private static bool HasOwnedVisibleFieldLabel(
+        XElement field) =>
+        field.Descendants()
+            .Any(element =>
+                IsVisibleLabelElement(element) &&
+                ReferenceEquals(
+                    FindAssociatedFieldContainer(
+                        element),
+                    field));
+
+    private static bool
+        TryResolveExplicitLabeledByTarget(
+            XElement input,
+            out XElement? target)
+    {
+        target = null;
+        XAttribute? labeledBy =
+            input.Attributes()
+                .FirstOrDefault(attribute =>
+                    attribute.Name.LocalName ==
+                    "AutomationProperties.LabeledBy");
+        if (labeledBy is null ||
+            !TryParseElementReference(
+                labeledBy.Value,
+                out string targetName))
         {
-            return true;
+            return false;
         }
 
-        XElement current = input;
-        for (int depth = 0;
-             depth < 4 &&
-             current.Parent is
-                 { } parent;
-             depth++,
-             current = parent)
-        {
-            foreach (XElement sibling in
-                     current.ElementsBeforeSelf()
-                         .Reverse())
-            {
-                if (IsFormInput(
-                        sibling) ||
-                    sibling.Descendants()
-                        .Any(IsFormInput))
-                {
-                    break;
-                }
+        XElement? nameScope =
+            FindNameScopeRoot(input);
+        if (nameScope is null)
+            return false;
 
-                if (IsVisibleLabelElement(
-                        sibling) ||
-                    sibling.Descendants()
-                        .Any(
-                            IsVisibleLabelElement))
-                {
-                    return true;
-                }
-            }
+        XElement[] matches =
+        [
+            .. nameScope
+                .DescendantsAndSelf()
+                .Where(candidate =>
+                    ReferenceEquals(
+                        FindNameScopeRoot(candidate),
+                        nameScope) &&
+                    candidate.Attributes()
+                        .Any(attribute =>
+                            attribute.Name.LocalName ==
+                                "Name" &&
+                            string.Equals(
+                                attribute.Value,
+                                targetName,
+                                StringComparison.Ordinal)))
+                .Take(2),
+        ];
+        if (matches.Length != 1 ||
+            !IsVisibleLabelElement(
+                matches[0]))
+        {
+            return false;
         }
 
-        return false;
+        target = matches[0];
+        return true;
+    }
+
+    private static bool TryParseElementReference(
+        string value,
+        out string targetName)
+    {
+        Match match =
+            LabeledByElementReferencePattern()
+                .Match(value.Trim());
+        if (!match.Success)
+        {
+            targetName = "";
+            return false;
+        }
+
+        targetName =
+            match.Groups["name"].Value;
+        return targetName.Length > 0;
+    }
+
+    private static XElement? FindNameScopeRoot(
+        XElement element) =>
+        element.AncestorsAndSelf()
+            .FirstOrDefault(candidate =>
+                candidate.Name.LocalName is
+                    "ControlTemplate" or
+                    "DataTemplate" or
+                    "ItemsPanelTemplate" or
+                    "TreeDataTemplate") ??
+        element.Document?.Root;
+
+    private static XElement?
+        FindAssociatedFieldContainer(
+            XElement input) =>
+        input.Ancestors()
+            .FirstOrDefault(
+                IsAssociatedFieldContainer);
+
+    private static bool IsAssociatedFieldContainer(
+        XElement element)
+    {
+        bool usesSharedFieldStyle =
+            element.Name.LocalName ==
+                "StackPanel" &&
+            HasLiteralClass(
+                (string?)element.Attribute(
+                    "Classes") ??
+                "",
+                "field");
+        bool enablesAssociation =
+            element.Attributes()
+                .Any(attribute =>
+                    attribute.Name.LocalName ==
+                        "FieldAccessibility.Associate" &&
+                    string.Equals(
+                        attribute.Value,
+                        "True",
+                        StringComparison.OrdinalIgnoreCase));
+        return usesSharedFieldStyle ||
+            enablesAssociation;
+    }
+
+    private static XElement ParseFormLabelFixture(
+        string content)
+    {
+        XDocument document =
+            XDocument.Parse(
+                $"""
+                 <UserControl xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                   {content}
+                 </UserControl>
+                 """);
+        return Assert.Single(
+            document.Descendants(),
+            element =>
+                IsFormInput(element));
+    }
+
+    private static XElement
+        ParseExplicitFormLabelFixture(
+            string labeledBy)
+    {
+        XDocument document =
+            XDocument.Parse(
+                """
+                <UserControl xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                  <Grid>
+                    <TextBlock x:Name="TitleLabel"
+                               Classes="field-label"
+                               Text="Title" />
+                    <TextBox />
+                  </Grid>
+                </UserControl>
+                """);
+        XElement input =
+            Assert.Single(
+                document.Descendants(),
+                element =>
+                    IsFormInput(element));
+        input.SetAttributeValue(
+            "AutomationProperties.LabeledBy",
+            labeledBy);
+        return input;
     }
 
     private static string ResolveUiIdentity(
@@ -1345,6 +1614,12 @@ public sealed partial class UiModernizationSourceQualityTests
         throw new DirectoryNotFoundException(
             "Could not find the MusicLibraryTools repository root.");
     }
+
+    [GeneratedRegex(
+        @"^\{\s*(?:Binding\s+(?:#(?<name>[A-Za-z_][A-Za-z0-9_]*)|ElementName\s*=\s*(?<name>[A-Za-z_][A-Za-z0-9_]*))|x:Reference\s+(?:Name\s*=\s*)?(?<name>[A-Za-z_][A-Za-z0-9_]*))\s*\}$",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex
+        LabeledByElementReferencePattern();
 
     [GeneratedRegex(
         @"\.(?<name>[A-Za-z][A-Za-z0-9_-]*)",

@@ -46,7 +46,7 @@
               <StackPanel Margin="8" Spacing="12">
                 <TextBlock Classes="section-title" Text="{Binding SelectedJobChoice.Name}" />
                 <TextBlock Classes="muted" Text="{Binding SelectedJobChoice.Description}" TextWrapping="Wrap" />
-                <StackPanel Spacing="4" IsVisible="{Binding ShowPlaylistName}"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Operations.PlaylistName}" /><TextBox Classes="app" Text="{Binding JobPlaylistName, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Operations.PlaylistName}" /></StackPanel>
+                <StackPanel Classes="field" Spacing="4" IsVisible="{Binding ShowPlaylistName}"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Operations.PlaylistName}" /><TextBox Classes="app" Text="{Binding JobPlaylistName, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Operations.PlaylistName}" /></StackPanel>
                 <StackPanel Classes="field"
                             IsVisible="{Binding ShowDestinationPath}">
                   <TextBlock Classes="field-label"
@@ -77,7 +77,7 @@
                             Command="{Binding BrowseJobValidationCommand}" />
                   </Grid>
                 </StackPanel>
-                <StackPanel Spacing="4" IsVisible="{Binding ShowRemovalLimit}"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Operations.MaximumRemovals}" /><NumericUpDown Classes="app" Minimum="0" Value="{Binding JobMaxRemovals, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Operations.MaximumRemovals}" /></StackPanel>
+                <StackPanel Classes="field" Spacing="4" IsVisible="{Binding ShowRemovalLimit}"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Operations.MaximumRemovals}" /><NumericUpDown Classes="app" Minimum="0" Value="{Binding JobMaxRemovals, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Operations.MaximumRemovals}" /></StackPanel>
                 <WrapPanel>
                   <CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Operations.Initialize}" IsChecked="{Binding JobInitialize, Mode=TwoWay}" IsVisible="{Binding ShowInitialize}" />
                   <CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Operations.Rebalance}" IsChecked="{Binding JobRebalance, Mode=TwoWay}" IsVisible="{Binding ShowRebalance}" />
@@ -98,7 +98,8 @@
                     </StackPanel>
                   </Grid>
                 </Border>
-                <StackPanel Spacing="4"
+                <StackPanel Classes="field"
+                            Spacing="4"
                             IsVisible="{Binding HasJobOutput}">
                   <TextBlock Classes="field-label"
                              Text="{DynamicResource Loc.Operations.Job.OutputLabel}" />
@@ -177,6 +178,8 @@
                   RowDefinitions="Auto,Auto,Auto,*,Auto,Auto"
                   RowSpacing="12">
               <Grid x:Name="RecoveryCompactSearch"
+                    Classes="field"
+                    controls:FieldAccessibility.Associate="True"
                     RowDefinitions="Auto,Auto"
                     RowSpacing="4"
                     IsVisible="False">
@@ -230,7 +233,7 @@
                           Content="{DynamicResource Loc.Operations.Action.ApplyRestore}" Command="{Binding ApplyRestoreCommand}" />
                 </WrapPanel>
                 <WrapPanel>
-                  <StackPanel Margin="0,0,8,8" Spacing="4">
+                  <StackPanel Margin="0,0,8,8" Classes="field" Spacing="4">
                     <TextBlock Classes="field-label" Text="{DynamicResource Loc.Operations.Recovery.Retention}" />
                     <NumericUpDown Classes="app" Width="150" Minimum="1"
                                    Value="{Binding RetentionDays, Mode=TwoWay}"

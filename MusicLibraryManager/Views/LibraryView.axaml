@@ -48,7 +48,10 @@
     </controls:PageHeader>
 
     <StackPanel Grid.Row="1" Spacing="8">
-      <Grid ColumnDefinitions="Auto,150,Auto,Auto,*" ColumnSpacing="8">
+      <Grid Classes="field"
+            controls:FieldAccessibility.Associate="True"
+            ColumnDefinitions="Auto,150,Auto,Auto,*"
+            ColumnSpacing="8">
         <TextBlock Classes="field-label" VerticalAlignment="Center"
                    Text="{DynamicResource Loc.Library.Filter.ModeAutomation}" />
         <ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding FilterModeChoices}"
@@ -119,7 +122,11 @@
                                     UnloadingRow="OnUnloadingRow"
                                     PointerPressed="OnLibraryGridPointerPressed"
                                     ContextRequested="OnLibraryGridContextRequested"
-                                    AutomationProperties.Name="{DynamicResource Loc.Library.Grid.Automation}" />
+                                    AutomationProperties.Name="{DynamicResource Loc.Library.Grid.Automation}">
+                <controls:AppDataGrid.ContextMenu>
+                  <ContextMenu x:Name="LibraryGridActionMenu" />
+                </controls:AppDataGrid.ContextMenu>
+              </controls:AppDataGrid>
 
               <Border x:Name="LibraryEmptyState"
                       Classes="empty-state"
@@ -196,7 +203,7 @@
                   </ListBox.ItemTemplate>
                 </ListBox>
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                  <StackPanel Spacing="4">
+                  <StackPanel Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"
                                Text="{DynamicResource Loc.Column.Label}" />
                     <TextBox Classes="app"
@@ -204,7 +211,7 @@
                              PlaceholderText="{DynamicResource Loc.Library.Columns.LabelPlaceholder}"
                              AutomationProperties.Name="{DynamicResource Loc.Column.Label}" />
                   </StackPanel>
-                  <StackPanel Grid.Column="1" Spacing="4">
+                  <StackPanel Grid.Column="1" Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"
                                Text="{DynamicResource Loc.Column.Type}" />
                     <ComboBox Classes="app"
@@ -213,7 +220,7 @@
                               AutomationProperties.Name="{DynamicResource Loc.Column.Type}" />
                   </StackPanel>
                 </Grid>
-                <StackPanel Spacing="4">
+                <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label"
                              Text="{DynamicResource Loc.Column.Field}" />
                   <ComboBox Classes="app"
@@ -223,7 +230,7 @@
                             PlaceholderText="{DynamicResource Loc.Library.Columns.KnownFieldPlaceholder}"
                             AutomationProperties.Name="{DynamicResource Loc.Column.Field}" />
                 </StackPanel>
-                <StackPanel Spacing="4">
+                <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label"
                              Text="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}" />
                   <TextBox Classes="app"
@@ -232,7 +239,7 @@
                            AutomationProperties.Name="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}" />
                 </StackPanel>
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                  <StackPanel Spacing="4">
+                  <StackPanel Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"
                                Text="{DynamicResource Loc.Library.Reports.SortByPlaceholder}" />
                     <ComboBox Classes="app"
@@ -240,7 +247,7 @@
                               SelectedItem="{Binding ColumnEditor.SortType, Mode=TwoWay}"
                               AutomationProperties.Name="{DynamicResource Loc.Library.Reports.SortByPlaceholder}" />
                   </StackPanel>
-                  <StackPanel Grid.Column="1" Spacing="4">
+                  <StackPanel Grid.Column="1" Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"
                                Text="{DynamicResource Loc.Library.Columns.Width}" />
                     <NumericUpDown Classes="app"
@@ -333,7 +340,7 @@
               </Button>
             </Grid>
             <StackPanel Grid.Row="1" Spacing="8">
-              <StackPanel Spacing="4">
+              <StackPanel Classes="field" Spacing="4">
                 <TextBlock Classes="field-label"
                            Text="{DynamicResource Loc.Library.VisualFilter.MatchMode}" />
                 <ComboBox Classes="app"
@@ -368,7 +375,7 @@
               <StackPanel Spacing="8"
                           DataContext="{Binding VisualFilterEditor.SelectedCondition}">
                 <Grid ColumnDefinitions="110,*" ColumnSpacing="8">
-                  <StackPanel Spacing="4">
+                  <StackPanel Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"
                                Text="{DynamicResource Loc.Column.Group}" />
                     <NumericUpDown Classes="app" Minimum="1"
@@ -376,7 +383,7 @@
                                    FormatString="0"
                                    AutomationProperties.Name="{DynamicResource Loc.Column.Group}" />
                   </StackPanel>
-                  <StackPanel Grid.Column="1" Spacing="4">
+                  <StackPanel Grid.Column="1" Classes="field" Spacing="4">
                     <TextBlock Classes="field-label"
                                Text="{DynamicResource Loc.Column.Type}" />
                     <ComboBox Classes="app"
@@ -387,7 +394,7 @@
                               AutomationProperties.Name="{DynamicResource Loc.Column.Type}" />
                   </StackPanel>
                 </Grid>
-                <StackPanel Spacing="4">
+                <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label"
                              Text="{DynamicResource Loc.Library.VisualFilter.Field.Technical}" />
                   <ComboBox Classes="app"
@@ -397,7 +404,7 @@
                             PlaceholderText="{DynamicResource Loc.Library.VisualFilter.FieldPlaceholder}"
                             AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.Field.Technical}" />
                 </StackPanel>
-                <StackPanel Spacing="4">
+                <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label"
                              Text="{DynamicResource Loc.Library.VisualFilter.Field.Known}" />
                   <ComboBox Classes="app"
@@ -407,7 +414,7 @@
                             PlaceholderText="{DynamicResource Loc.Library.Columns.KnownFieldPlaceholder}"
                             AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.Field.Known}" />
                 </StackPanel>
-                <StackPanel Spacing="4">
+                <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label"
                              Text="{DynamicResource Loc.Library.VisualFilter.Field.Custom}" />
                   <TextBox Classes="app"
@@ -415,7 +422,7 @@
                            PlaceholderText="{DynamicResource Loc.Library.Columns.CustomFieldPlaceholder}"
                            AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.Field.Custom}" />
                 </StackPanel>
-                <StackPanel Spacing="4">
+                <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label"
                              Text="{DynamicResource Loc.Library.VisualFilter.Comparison}" />
                   <ComboBox Classes="app"
@@ -425,7 +432,7 @@
                             SelectedValue="{Binding Comparison, Mode=TwoWay}"
                             AutomationProperties.Name="{DynamicResource Loc.Library.VisualFilter.Comparison}" />
                 </StackPanel>
-                <StackPanel Spacing="4">
+                <StackPanel Classes="field" Spacing="4">
                   <TextBlock Classes="field-label"
                              Text="{DynamicResource Loc.Library.VisualFilter.Value}" />
                   <TextBox Classes="app"

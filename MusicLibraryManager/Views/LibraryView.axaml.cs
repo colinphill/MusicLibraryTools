@@ -357,6 +357,25 @@ public partial class LibraryView : UserControl
 
     private void OnLibraryKeyDown(object? sender, KeyEventArgs e)
     {
+        bool requestsContextMenu =
+            e.Key == Key.Apps ||
+            e.Key == Key.F10 &&
+            e.KeyModifiers.HasFlag(
+                KeyModifiers.Shift);
+        if (requestsContextMenu)
+        {
+            Control? focused =
+                TopLevel.GetTopLevel(this)?
+                    .FocusManager?
+                    .GetFocusedElement() as Control;
+            if (TryOpenLibraryGridActionMenu(
+                    focused))
+            {
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (e.Key == Key.Tab)
         {
             bool reverse =
@@ -630,16 +649,47 @@ public partial class LibraryView : UserControl
         object? sender,
         ContextRequestedEventArgs e)
     {
-        Control target = e.Source as Control ??
-            (Control)sender!;
-        ContextMenu menu = CreateLibraryActionMenu(
-            includeFileActions: true);
-        menu.Open(target);
-        e.Handled = true;
+        Control? target = e.Source as Control ??
+            sender as Control;
+        if (TryOpenLibraryGridActionMenu(
+                target))
+            e.Handled = true;
+    }
+
+    private bool TryOpenLibraryGridActionMenu(
+        Control? target)
+    {
+        bool targetIsInGrid =
+            target is not null &&
+            (ReferenceEquals(
+                 target,
+                 LibraryGrid) ||
+             target.GetVisualAncestors()
+                 .Contains(LibraryGrid));
+        if (!targetIsInGrid)
+            return false;
+
+        if (LibraryGridActionMenu.IsOpen)
+            LibraryGridActionMenu.Close();
+        LibraryGridActionMenu.ItemsSource =
+            CreateLibraryActionMenuItems(
+                includeFileActions: true);
+        LibraryGridActionMenu.Open(target!);
+        return true;
     }
 
     private ContextMenu CreateLibraryActionMenu(
-        bool includeFileActions)
+        bool includeFileActions) =>
+        new()
+        {
+            ItemsSource =
+                CreateLibraryActionMenuItems(
+                    includeFileActions),
+        };
+
+    private IReadOnlyList<object>
+        CreateLibraryActionMenuItems(
+            bool includeFileActions)
     {
         var items = new List<object>
         {
@@ -686,10 +736,7 @@ public partial class LibraryView : UserControl
             items.Add(refresh);
         }
 
-        return new ContextMenu
-        {
-            ItemsSource = items,
-        };
+        return items;
     }
 
     private MenuItem CreateHandoffScopeMenu(

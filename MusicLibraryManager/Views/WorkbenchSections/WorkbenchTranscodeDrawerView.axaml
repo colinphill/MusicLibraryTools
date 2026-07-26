@@ -35,20 +35,24 @@
           <StackPanel Classes="content-stack">
             <TextBlock Classes="section-title"
                        Text="{DynamicResource Loc.Transcode.Preset.Title}" />
-            <TextBlock Classes="field-label"
-                       Text="{DynamicResource Loc.Transcode.Preset.Title}" />
-            <ComboBox Classes="app"
-                      ItemsSource="{Binding TranscodeEditor.PresetChoices}"
-                      SelectedItem="{Binding TranscodeEditor.SelectedPreset}"
-                      DisplayMemberBinding="{Binding Name}"
-                      PlaceholderText="{DynamicResource Loc.Transcode.Preset.Custom}"
-                      AutomationProperties.Name="{DynamicResource Loc.Transcode.Preset.Title}" />
-            <TextBlock Classes="field-label"
-                       Text="{DynamicResource Loc.Transcode.Preset.Name}" />
-            <TextBox Classes="app"
-                     Text="{Binding TranscodeEditor.PresetName}"
-                     PlaceholderText="{DynamicResource Loc.Transcode.Preset.Name}"
-                     AutomationProperties.Name="{DynamicResource Loc.Transcode.Preset.Name}" />
+            <StackPanel Classes="field">
+              <TextBlock Classes="field-label"
+                         Text="{DynamicResource Loc.Transcode.Preset.Title}" />
+              <ComboBox Classes="app"
+                        ItemsSource="{Binding TranscodeEditor.PresetChoices}"
+                        SelectedItem="{Binding TranscodeEditor.SelectedPreset}"
+                        DisplayMemberBinding="{Binding Name}"
+                        PlaceholderText="{DynamicResource Loc.Transcode.Preset.Custom}"
+                        AutomationProperties.Name="{DynamicResource Loc.Transcode.Preset.Title}" />
+            </StackPanel>
+            <StackPanel Classes="field">
+              <TextBlock Classes="field-label"
+                         Text="{DynamicResource Loc.Transcode.Preset.Name}" />
+              <TextBox Classes="app"
+                       Text="{Binding TranscodeEditor.PresetName}"
+                       PlaceholderText="{DynamicResource Loc.Transcode.Preset.Name}"
+                       AutomationProperties.Name="{DynamicResource Loc.Transcode.Preset.Name}" />
+            </StackPanel>
             <WrapPanel>
               <Button Classes="app"
                       Margin="0,0,8,8"
@@ -74,14 +78,16 @@
         <StackPanel Classes="content-stack">
           <TextBlock Classes="section-title"
                      Text="{DynamicResource Loc.Transcode.Encoding.Title}" />
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Transcode.Format.Label}" />
-          <ComboBox x:Name="WorkbenchTranscodeFormat"
-                    Classes="app"
-                    ItemsSource="{Binding TranscodeEditor.FormatChoices}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding TranscodeEditor.SelectedFormatChoice, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Transcode.Format.Label}" />
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Transcode.Format.Label}" />
+            <ComboBox x:Name="WorkbenchTranscodeFormat"
+                      Classes="app"
+                      ItemsSource="{Binding TranscodeEditor.FormatChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding TranscodeEditor.SelectedFormatChoice, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Transcode.Format.Label}" />
+          </StackPanel>
           <ItemsControl ItemsSource="{Binding TranscodeEditor.Issues}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
@@ -93,22 +99,26 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Transcode.Encoder.Label}" />
-          <ComboBox x:Name="WorkbenchTranscodeEncoder"
-                    Classes="app"
-                    ItemsSource="{Binding TranscodeEditor.EncoderChoices}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding TranscodeEditor.SelectedEncoderChoice, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Transcode.Encoder.Label}" />
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Transcode.RateMode.Label}" />
-          <ComboBox x:Name="WorkbenchTranscodeRateMode"
-                    Classes="app"
-                    ItemsSource="{Binding TranscodeEditor.RateModeChoices}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding TranscodeEditor.SelectedRateModeChoice, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Transcode.RateMode.Label}" />
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Transcode.Encoder.Label}" />
+            <ComboBox x:Name="WorkbenchTranscodeEncoder"
+                      Classes="app"
+                      ItemsSource="{Binding TranscodeEditor.EncoderChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding TranscodeEditor.SelectedEncoderChoice, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Transcode.Encoder.Label}" />
+          </StackPanel>
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Transcode.RateMode.Label}" />
+            <ComboBox x:Name="WorkbenchTranscodeRateMode"
+                      Classes="app"
+                      ItemsSource="{Binding TranscodeEditor.RateModeChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding TranscodeEditor.SelectedRateModeChoice, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Transcode.RateMode.Label}" />
+          </StackPanel>
           <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
             <StackPanel IsVisible="{Binding TranscodeEditor.HasBitrateControl}"
                         Classes="field">
@@ -156,14 +166,16 @@
                         AutomationProperties.Name="{DynamicResource Loc.Transcode.BitDepth.Label}" />
             </StackPanel>
           </Grid>
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Transcode.CompressionEffort.Label}" />
-          <NumericUpDown Classes="app"
-                         Minimum="0"
-                         Maximum="10"
-                         Increment="1"
-                         Value="{Binding TranscodeEditor.CompressionEffort}"
-                         AutomationProperties.Name="{DynamicResource Loc.Transcode.CompressionEffort.Label}" />
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Transcode.CompressionEffort.Label}" />
+            <NumericUpDown Classes="app"
+                           Minimum="0"
+                           Maximum="10"
+                           Increment="1"
+                           Value="{Binding TranscodeEditor.CompressionEffort}"
+                           AutomationProperties.Name="{DynamicResource Loc.Transcode.CompressionEffort.Label}" />
+          </StackPanel>
           <CheckBox Content="{DynamicResource Loc.Transcode.Metadata.Preserve}"
                     IsChecked="{Binding TranscodeEditor.PreserveMetadata}" />
           <CheckBox Content="{DynamicResource Loc.Transcode.Artwork.Preserve}"
@@ -177,33 +189,37 @@
         <StackPanel Classes="content-stack">
           <TextBlock Classes="section-title"
                      Text="{DynamicResource Loc.Transcode.Destination.Title}" />
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Transcode.Destination.Title}" />
-          <ComboBox Classes="app"
-                    ItemsSource="{Binding TranscodeEditor.DestinationModeChoices}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedValueBinding="{Binding Value}"
-                    SelectedValue="{Binding TranscodeEditor.SelectedDestinationMode, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Transcode.Destination.Title}" />
-          <TextBlock Classes="field-label"
-                     IsVisible="{Binding TranscodeEditor.NeedsDestinationFolder}"
-                     Text="{DynamicResource Loc.Transcode.Destination.Folder}" />
-          <Grid IsVisible="{Binding TranscodeEditor.NeedsDestinationFolder}"
-                ColumnDefinitions="*,Auto"
-                ColumnSpacing="8">
-            <TextBox Classes="app"
-                     Text="{Binding TranscodeEditor.DestinationDirectory}"
-                     PlaceholderText="{DynamicResource Loc.Transcode.Destination.Folder}"
-                     AutomationProperties.Name="{DynamicResource Loc.Transcode.Destination.Folder}" />
-            <Button Grid.Column="1"
-                    Classes="app"
-                    Content="{DynamicResource Loc.Common.Browse}"
-                    Command="{Binding TranscodeEditor.BrowseDestinationCommand}" />
-          </Grid>
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Transcode.Destination.Title}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding TranscodeEditor.DestinationModeChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding TranscodeEditor.SelectedDestinationMode, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Transcode.Destination.Title}" />
+          </StackPanel>
+          <StackPanel Classes="field"
+                      IsVisible="{Binding TranscodeEditor.NeedsDestinationFolder}">
+            <TextBlock Classes="field-label"
+                       IsVisible="{Binding TranscodeEditor.NeedsDestinationFolder}"
+                       Text="{DynamicResource Loc.Transcode.Destination.Folder}" />
+            <Grid IsVisible="{Binding TranscodeEditor.NeedsDestinationFolder}"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8">
+              <TextBox Classes="app"
+                       Text="{Binding TranscodeEditor.DestinationDirectory}"
+                       PlaceholderText="{DynamicResource Loc.Transcode.Destination.Folder}"
+                       AutomationProperties.Name="{DynamicResource Loc.Transcode.Destination.Folder}" />
+              <Button Grid.Column="1"
+                      Classes="app"
+                      Content="{DynamicResource Loc.Common.Browse}"
+                      Command="{Binding TranscodeEditor.BrowseDestinationCommand}" />
+            </Grid>
+          </StackPanel>
           <StackPanel x:Name="FolderLayoutOptions"
-                      Classes="field"
                       IsVisible="{Binding TranscodeEditor.NeedsDestinationFolder}"
-                      >
+                      Spacing="{DynamicResource AppSpaceSmall}">
             <RadioButton x:Name="PreserveSourceLayoutCheckBox"
                          GroupName="TranscodeFolderLayout"
                          Content="{DynamicResource Loc.Transcode.Destination.PreserveLayout}"
@@ -213,22 +229,26 @@
                          Content="{DynamicResource Loc.Transcode.Destination.Flatten}"
                          IsChecked="{Binding TranscodeEditor.Flatten}" />
           </StackPanel>
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Transcode.Naming.Label}" />
-          <TextBox Classes="app"
-                   Text="{Binding TranscodeEditor.FileNameTemplate}"
-                   AutomationProperties.Name="{DynamicResource Loc.Transcode.Naming.Label}" />
-          <TextBlock Classes="muted"
-                     Text="{DynamicResource Loc.Transcode.Naming.Tokens}"
-                     TextWrapping="Wrap" />
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Transcode.Collision.Label}" />
-          <ComboBox Classes="app"
-                    ItemsSource="{Binding TranscodeEditor.CollisionPolicyChoices}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedValueBinding="{Binding Value}"
-                    SelectedValue="{Binding TranscodeEditor.SelectedCollisionPolicy, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Transcode.Collision.Label}" />
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Transcode.Naming.Label}" />
+            <TextBox Classes="app"
+                     Text="{Binding TranscodeEditor.FileNameTemplate}"
+                     AutomationProperties.Name="{DynamicResource Loc.Transcode.Naming.Label}" />
+            <TextBlock Classes="muted field-help"
+                       Text="{DynamicResource Loc.Transcode.Naming.Tokens}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Transcode.Collision.Label}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding TranscodeEditor.CollisionPolicyChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding TranscodeEditor.SelectedCollisionPolicy, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Transcode.Collision.Label}" />
+          </StackPanel>
         </StackPanel>
 
         <StackPanel Classes="content-stack">
@@ -236,14 +256,16 @@
                      Text="{DynamicResource Loc.Transcode.Concurrency.Title}" />
           <CheckBox Content="{DynamicResource Loc.Transcode.Concurrency.Automatic}"
                     IsChecked="{Binding TranscodeEditor.AutomaticConcurrency}" />
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Transcode.Concurrency.ParallelJobs}" />
-          <NumericUpDown Classes="app"
-                         Minimum="1"
-                         Maximum="{Binding TranscodeEditor.MaximumProcessorCount}"
-                         Value="{Binding TranscodeEditor.MaximumConcurrentProcesses}"
-                         IsEnabled="{Binding !TranscodeEditor.AutomaticConcurrency}"
-                         AutomationProperties.Name="{DynamicResource Loc.Transcode.Concurrency.ParallelJobs}" />
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Transcode.Concurrency.ParallelJobs}" />
+            <NumericUpDown Classes="app"
+                           Minimum="1"
+                           Maximum="{Binding TranscodeEditor.MaximumProcessorCount}"
+                           Value="{Binding TranscodeEditor.MaximumConcurrentProcesses}"
+                           IsEnabled="{Binding !TranscodeEditor.AutomaticConcurrency}"
+                           AutomationProperties.Name="{DynamicResource Loc.Transcode.Concurrency.ParallelJobs}" />
+          </StackPanel>
           <TextBlock Classes="muted"
                      Text="{Binding TranscodeEditor.ToolReadiness}"
                      TextWrapping="Wrap" />

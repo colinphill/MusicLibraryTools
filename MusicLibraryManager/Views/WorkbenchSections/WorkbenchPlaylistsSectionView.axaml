@@ -50,7 +50,8 @@
           </Grid>
         </StackPanel>
         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-          <StackPanel Spacing="4">
+          <StackPanel Classes="field"
+                      Spacing="4">
             <TextBlock Classes="field-label" Text="{DynamicResource Loc.Workbench.Playlists.PathStyle}" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding PlaylistEditor.PathStyleChoices}"
@@ -59,7 +60,9 @@
                       SelectedValue="{Binding PlaylistEditor.PathStyle, Mode=TwoWay}"
                       AutomationProperties.Name="{DynamicResource Loc.Workbench.Playlists.PathStyle}" />
           </StackPanel>
-          <StackPanel Grid.Column="1" Spacing="4">
+          <StackPanel Grid.Column="1"
+                      Classes="field"
+                      Spacing="4">
             <TextBlock Classes="field-label" Text="{DynamicResource Loc.Workbench.Playlists.Encoding}" />
             <ComboBox Classes="app"
                       ItemsSource="{Binding PlaylistEditor.EncodingChoices}"
@@ -70,7 +73,8 @@
           </StackPanel>
         </Grid>
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <StackPanel Spacing="4">
+          <StackPanel Classes="field"
+                      Spacing="4">
             <TextBlock Classes="field-label"
                        Text="{DynamicResource Loc.Workbench.Playlists.LineEnding}" />
             <ComboBox Classes="app"
@@ -90,19 +94,23 @@
                   IsChecked="{Binding PlaylistEditor.OnePlaylistPerGroup, Mode=TwoWay}" />
         <StackPanel IsVisible="{Binding PlaylistEditor.OnePlaylistPerGroup}"
                     Spacing="8">
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Workbench.Playlists.Grouping}" />
-          <ComboBox Classes="app"
-                    ItemsSource="{Binding PlaylistEditor.GroupFields}"
-                    DisplayMemberBinding="{Binding Label}"
-                    SelectedItem="{Binding PlaylistEditor.SelectedGroupField, Mode=TwoWay}"
-                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Playlists.Grouping}" />
-          <TextBlock Classes="field-label"
-                     Text="{DynamicResource Loc.Workbench.Playlists.Grouping}" />
-          <TextBox Classes="app"
-                   Text="{Binding PlaylistEditor.GroupFileNameTemplate, Mode=TwoWay}"
-                   PlaceholderText="{}{Name} - {Group}"
-                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Playlists.Grouping}" />
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Playlists.Grouping}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding PlaylistEditor.GroupFields}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding PlaylistEditor.SelectedGroupField, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Playlists.Grouping}" />
+          </StackPanel>
+          <StackPanel Classes="field">
+            <TextBlock Classes="field-label"
+                       Text="{DynamicResource Loc.Workbench.Reports.GroupFileNamePattern}" />
+            <TextBox Classes="app"
+                     Text="{Binding PlaylistEditor.GroupFileNameTemplate, Mode=TwoWay}"
+                     PlaceholderText="{}{Name} - {Group}"
+                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Reports.GroupFileNamePattern}" />
+          </StackPanel>
         </StackPanel>
         <Border x:Name="SafetyNote"
                 Classes="status-banner info">
