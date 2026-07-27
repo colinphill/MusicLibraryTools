@@ -646,7 +646,7 @@ public sealed class AudioFingerprintServiceTests
     private static string FpcalcFixtureExecutable =>
         Path.Combine(
             AppContext.BaseDirectory,
-            "FpcalcFixture",
+            "FpcalcFixtureRuntime",
             OperatingSystem.IsWindows()
                 ? "FpcalcFixture.exe"
                 : "FpcalcFixture");

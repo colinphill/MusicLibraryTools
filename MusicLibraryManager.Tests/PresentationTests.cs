@@ -3406,13 +3406,9 @@ public sealed class PresentationTests
         preview.Schedule(
             @"C:\second.flac",
             Recipe);
-        DateTime deadline =
-            DateTime.UtcNow.AddSeconds(3);
-        while (preview.IsBusy &&
-               DateTime.UtcNow < deadline)
-            await Task.Delay(
-                10,
-                TestContext.Current.CancellationToken);
+        await preview.PendingPreviewTask.WaitAsync(
+            TimeSpan.FromSeconds(10),
+            TestContext.Current.CancellationToken);
 
         Assert.False(preview.IsBusy);
         Assert.Equal(

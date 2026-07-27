@@ -19,6 +19,9 @@ public partial class RepresentativeMetadataPreviewViewModel :
     private object?[] _statusArguments = [];
     private long? _statusCount;
 
+    internal Task PendingPreviewTask { get; private set; } =
+        Task.CompletedTask;
+
     public RepresentativeMetadataPreviewViewModel(
         IMetadataOperationService operations,
         ILocalizationService? localization = null)
@@ -62,6 +65,7 @@ public partial class RepresentativeMetadataPreviewViewModel :
         _cancellation = null;
         if (string.IsNullOrWhiteSpace(path))
         {
+            PendingPreviewTask = Task.CompletedTask;
             IsBusy = false;
             HasPreview = false;
             BeforeText = null;
@@ -78,7 +82,7 @@ public partial class RepresentativeMetadataPreviewViewModel :
         SetStatus(
             "Workbench.Representative.Status.Updating",
             Path.GetFileName(path));
-        _ = RunAsync(
+        PendingPreviewTask = RunAsync(
             generation,
             path,
             recipeFactory,

@@ -51,7 +51,7 @@
         Include="$(MSBuildProjectDirectory)/../MusicLibrary.Core.Tests.FpcalcFixture/bin/$(FpcalcFixtureConfiguration)/$(TargetFramework)/FpcalcFixture*" />
     </ItemGroup>
     <Copy SourceFiles="@(FpcalcFixtureOutput)"
-          DestinationFolder="$(TargetDir)FpcalcFixture" />
+          DestinationFolder="$(TargetDir)FpcalcFixtureRuntime" />
   </Target>
 
 </Project>

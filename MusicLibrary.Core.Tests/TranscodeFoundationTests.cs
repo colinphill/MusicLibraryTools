@@ -2188,7 +2188,7 @@ public sealed class TranscodeFoundationTests
     private static string ManagedProcessFixtureExecutable =>
         Path.Combine(
             AppContext.BaseDirectory,
-            "FpcalcFixture",
+            "FpcalcFixtureRuntime",
             OperatingSystem.IsWindows()
                 ? "FpcalcFixture.exe"
                 : "FpcalcFixture");
