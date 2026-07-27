@@ -82,6 +82,8 @@ public partial class WorkbenchToolsSectionView : UserControl
             Bounds.Height < 430;
         _compactHeight = compactHeight;
         _narrow = narrow;
+        ToolsSectionTitle.IsVisible =
+            !compactHeight;
         PlaceholderHelp.IsVisible = !compactHeight;
         SafetyNote.IsVisible = !compactHeight;
         SectionLayout.ColumnDefinitions.Clear();

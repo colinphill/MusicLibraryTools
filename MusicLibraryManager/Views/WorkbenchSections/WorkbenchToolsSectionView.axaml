@@ -8,7 +8,8 @@
     <ScrollViewer x:Name="EditorScroll"
                   VerticalScrollBarVisibility="Auto">
       <StackPanel Classes="content-stack">
-        <TextBlock Classes="section-title"
+        <TextBlock x:Name="ToolsSectionTitle"
+                   Classes="section-title"
                    Text="{DynamicResource Loc.Workbench.Tools.Title}" />
         <StackPanel Classes="field">
           <TextBlock Classes="field-label"

@@ -4491,14 +4491,14 @@ public sealed class PresentationTests
             "Exact MusicBrainz recording ID",
             mapping.Status);
         Assert.Contains(
-            "92.0% AcoustID",
+            $"{0.92:P1} AcoustID",
             mapping.DiagnosticDetail);
 
         await viewModel.PreviewLibraryReleaseMetadataCommand.ExecuteAsync(null);
 
         IReadOnlyList<MetadataValueEdit> imported =
             metadataOperations.PreviewedValueEdits[
-                Path.GetFullPath(@"C:\music\one.flac")];
+                @"C:\music\one.flac"];
         Assert.Contains(imported, edit =>
             edit.Field.KnownField == TagFields.Album &&
             edit.Values.SequenceEqual(["Matched Album"]));

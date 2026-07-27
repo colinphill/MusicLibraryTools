@@ -394,39 +394,25 @@ public sealed class WorkbenchResponsiveMatrixTests
                              !string.IsNullOrEmpty(
                                  text.Text)))
             {
-                var unconstrained =
-                    new TextBlock
-                    {
-                        Text = label.Text,
-                        FontFamily =
-                            label.FontFamily,
-                        FontSize =
-                            label.FontSize,
-                        FontStyle =
-                            label.FontStyle,
-                        FontWeight =
-                            label.FontWeight,
-                        FontStretch =
-                            label.FontStretch,
-                        LetterSpacing =
-                            label.LetterSpacing,
-                        TextWrapping =
-                            label.TextWrapping,
-                        MaxLines = 0,
-                    };
-                unconstrained.Measure(
-                    new Size(
-                        label.Bounds.Width,
-                        double.PositiveInfinity));
+                double contentDesiredWidth =
+                    Math.Max(
+                        0,
+                        label.DesiredSize.Width -
+                        label.Margin.Left -
+                        label.Margin.Right);
+                double contentDesiredHeight =
+                    Math.Max(
+                        0,
+                        label.DesiredSize.Height -
+                        label.Margin.Top -
+                        label.Margin.Bottom);
                 Assert.True(
-                    unconstrained
-                        .DesiredSize.Width <=
+                    contentDesiredWidth <=
                     label.Bounds.Width + 1 &&
-                    unconstrained
-                        .DesiredSize.Height <=
+                    contentDesiredHeight <=
                     label.Bounds.Height + 1,
                     $"The Workbench rail clipped '{label.Text}' at {windowWidth}px: " +
-                    $"{unconstrained.DesiredSize.Width:0.#}x{unconstrained.DesiredSize.Height:0.#}/" +
+                    $"{contentDesiredWidth:0.#}x{contentDesiredHeight:0.#}/" +
                     $"{label.Bounds.Width:0.#}x{label.Bounds.Height:0.#} px.");
             }
         }

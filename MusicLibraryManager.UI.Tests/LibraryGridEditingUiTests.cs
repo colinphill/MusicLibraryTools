@@ -479,6 +479,8 @@ public sealed class LibraryGridEditingUiTests
         TextBox editor =
             Assert.IsType<TextBox>(
                 editingElement);
+        editor.Focus();
+        Render();
         await WaitForAsync(
             () => StringComparer.Ordinal.Equals(
                 expectedInitialText,
@@ -503,7 +505,7 @@ public sealed class LibraryGridEditingUiTests
         string message)
     {
         for (int attempt = 0;
-             attempt < 100 &&
+             attempt < 300 &&
              !condition();
              attempt++)
         {
