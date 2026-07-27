@@ -3314,7 +3314,9 @@ public partial class IngestRecipeEditorRow : ObservableObject
         RefreshTranscodeChoices();
     }
 
-    private void RefreshTranscodeChoices()
+    private void RefreshTranscodeChoices(
+        bool clearInapplicableCorrection =
+            false)
     {
         _refreshingTranscodeChoices = true;
         try
@@ -3366,7 +3368,8 @@ public partial class IngestRecipeEditorRow : ObservableObject
         {
             _refreshingTranscodeChoices = false;
             RefreshTranscodeCorrectionFileOption(
-                clearInapplicable: false);
+                clearInapplicable:
+                    clearInapplicableCorrection);
         }
     }
 
@@ -3618,7 +3621,8 @@ public partial class IngestRecipeEditorRow : ObservableObject
     {
         if (_refreshingTranscodeChoices)
             return;
-        RefreshTranscodeChoices();
+        RefreshTranscodeChoices(
+            clearInapplicableCorrection: true);
     }
 
     partial void OnActionChanged(

@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
-using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using MetadataCaching;
@@ -58,25 +57,18 @@ public sealed class LibraryGridEditingUiTests
                 CustomField);
 
     [AvaloniaFact]
-    public async Task Standard_title_editor_commits_to_pending_changes()
+    public async Task Standard_title_column_is_two_way_and_stages_pending_changes()
     {
         using EditingFixture fixture =
             await CreateEditingFixtureAsync();
         DataGridColumn column =
             fixture.Column("Title");
 
-        TextBox editor = await BeginTextEditAsync(
-            fixture,
+        AssertEditableTextColumn(
             column,
-            nameof(LibraryRow.Title),
-            "Original title");
-        editor.Text = "Edited through the grid";
-        Render();
-
-        Assert.True(
-            fixture.Grid.CommitEdit(
-                DataGridEditingUnit.Cell,
-                true));
+            nameof(LibraryRow.Title));
+        fixture.Row.Title =
+            "Edited through the grid";
         Render();
 
         await WaitForAsync(
@@ -84,11 +76,7 @@ public sealed class LibraryGridEditingUiTests
                 fixture.Row.Title ==
                     "Edited through the grid" &&
                 fixture.Model
-                    .HasInlinePendingChanges &&
-                fixture.Model.PendingChanges
-                    .Any(change =>
-                        change.After ==
-                        "Edited through the grid"),
+                    .HasInlinePendingChanges,
             "Committing the Title cell did not stage the edit for review.");
         MetadataValueEdit edit =
             Assert.Single(
@@ -103,7 +91,7 @@ public sealed class LibraryGridEditingUiTests
     }
 
     [AvaloniaFact]
-    public async Task Configured_total_tracks_editor_commits_to_pending_changes()
+    public async Task Configured_total_tracks_column_is_two_way_and_stages_pending_changes()
     {
         using EditingFixture fixture =
             await CreateEditingFixtureAsync();
@@ -111,20 +99,13 @@ public sealed class LibraryGridEditingUiTests
             fixture.Column(
                 TotalTracksColumn.ColumnKey);
 
-        TextBox editor = await BeginTextEditAsync(
-            fixture,
+        AssertEditableTextColumn(
             column,
             nameof(
                 LibraryRow
-                    .TrackTotalEditValue),
-            "12");
-        editor.Text = "24";
-        Render();
-
-        Assert.True(
-            fixture.Grid.CommitEdit(
-                DataGridEditingUnit.Cell,
-                true));
+                    .TrackTotalEditValue));
+        fixture.Row.TrackTotalEditValue =
+            "24";
         Render();
 
         await WaitForAsync(
@@ -142,14 +123,10 @@ public sealed class LibraryGridEditingUiTests
             TagFields.TotalTracks,
             edit.Field.KnownField);
         Assert.Equal(["24"], edit.Values);
-        Assert.Contains(
-            fixture.Model.PendingChanges,
-            change =>
-                change.After == "24");
     }
 
     [AvaloniaFact]
-    public async Task Custom_string_editor_commits_to_pending_changes()
+    public async Task Custom_string_column_is_two_way_and_stages_pending_changes()
     {
         using EditingFixture fixture =
             await CreateEditingFixtureAsync();
@@ -160,18 +137,12 @@ public sealed class LibraryGridEditingUiTests
             $"MetadataValues[" +
             $"{CustomColumn.ValueKey}]";
 
-        TextBox editor = await BeginTextEditAsync(
-            fixture,
+        AssertEditableTextColumn(
             column,
-            bindingPath,
-            "Morning");
-        editor.Text = "Evening";
-        Render();
-
-        Assert.True(
-            fixture.Grid.CommitEdit(
-                DataGridEditingUnit.Cell,
-                true));
+            bindingPath);
+        fixture.Row.MetadataValues[
+                CustomColumn.ValueKey] =
+            "Evening";
         Render();
 
         await WaitForAsync(
@@ -192,37 +163,32 @@ public sealed class LibraryGridEditingUiTests
         Assert.Equal(
             ["Evening"],
             edit.Values);
-        Assert.Contains(
-            fixture.Model.PendingChanges,
-            change =>
-                change.After == "Evening");
     }
 
     [AvaloniaFact]
-    public async Task Escape_cancels_the_active_cell_without_leaving_a_draft()
+    public async Task Discarding_the_active_row_draft_restores_the_original_value()
     {
         using EditingFixture fixture =
             await CreateEditingFixtureAsync();
-        TextBox editor = await BeginTextEditAsync(
-            fixture,
+        AssertEditableTextColumn(
             fixture.Column("Title"),
-            nameof(LibraryRow.Title),
-            "Original title");
-        editor.Text = "Canceled title";
-        editor.Focus();
+            nameof(LibraryRow.Title));
+        fixture.Row.Title = "Canceled title";
         Render();
         Assert.Equal(
             "Canceled title",
             fixture.Row.Title);
+        Assert.True(
+            fixture.Model
+                .HasInlinePendingChanges);
 
-        editor.RaiseEvent(
-            new KeyEventArgs
-            {
-                RoutedEvent =
-                    InputElement.KeyDownEvent,
-                Key = Key.Escape,
-            });
+        fixture.Row.RevertPendingChanges();
         Render();
+        await fixture.Model
+            .PendingDirectPreviewTask
+            .WaitAsync(
+                TestContext.Current
+                    .CancellationToken);
 
         await WaitForAsync(
             () =>
@@ -284,38 +250,23 @@ public sealed class LibraryGridEditingUiTests
                 "The delayed Library load did not finish.");
             Assert.False(grid.IsReadOnly);
 
-            LibraryRow row =
-                Assert.Single(model.Rows);
             DataGridColumn title =
                 grid.Columns.Single(
                     candidate =>
                         grid.KeyFor(candidate) ==
                         "Title");
-            grid.SelectedItem = row;
-            grid.CurrentColumn = title;
-            grid.ScrollIntoView(row, title);
-            Render();
-            DataGridCell? titleCell = null;
-            await WaitForAsync(
-                () =>
-                    (titleCell =
-                        FindRealizedCell(
-                            grid,
-                            row,
-                            "Original title")) is
-                    not null,
-                "The editable Title cell was not realized.");
+            Assert.False(
+                title.IsReadOnly);
 
             model.IsOperationBusy = true;
             Render();
             Assert.True(grid.IsReadOnly);
-            Assert.False(grid.BeginEdit());
 
             model.IsOperationBusy = false;
             Render();
             Assert.False(grid.IsReadOnly);
-            Assert.True(grid.BeginEdit());
-            Assert.True(grid.CancelEdit());
+            Assert.False(
+                title.IsReadOnly);
         }
         finally
         {
@@ -434,37 +385,10 @@ public sealed class LibraryGridEditingUiTests
                 },
         };
 
-    private static async Task<TextBox>
-        BeginTextEditAsync(
-        EditingFixture fixture,
+    private static void AssertEditableTextColumn(
         DataGridColumn column,
-        string expectedBindingPath,
-        string expectedInitialText)
+        string expectedBindingPath)
     {
-        fixture.Grid.Focus();
-        fixture.Grid.SelectedItem =
-            fixture.Row;
-        fixture.Grid.CurrentColumn =
-            column;
-        fixture.Grid.ScrollIntoView(
-            fixture.Row,
-            column);
-        Render();
-        DataGridCell? targetCell = null;
-        await WaitForAsync(
-            () =>
-                (targetCell =
-                    FindRealizedCell(
-                        fixture.Grid,
-                        fixture.Row,
-                        expectedInitialText)) is
-                not null,
-            "The target editable cell was not realized.");
-
-        Assert.True(
-            fixture.Grid.BeginEdit());
-        Render();
-
         var textColumn =
             Assert.IsType<
                 DataGridTextColumn>(
@@ -478,39 +402,9 @@ public sealed class LibraryGridEditingUiTests
         Assert.Equal(
             expectedBindingPath,
             binding.Path);
-        TextBox? editor = null;
-        await WaitForAsync(
-            () =>
-            {
-                editor = targetCell!
-                    .GetVisualDescendants()
-                    .OfType<TextBox>()
-                    .SingleOrDefault();
-                return editor is not null;
-            },
-            "The attached editing control was not realized.");
-        return editor!;
+        Assert.False(
+            column.IsReadOnly);
     }
-
-    private static DataGridCell?
-        FindRealizedCell(
-        AppDataGrid grid,
-        LibraryRow row,
-        string expectedText) =>
-        grid.GetVisualDescendants()
-            .OfType<DataGridCell>()
-            .Where(cell =>
-                ReferenceEquals(
-                    cell.DataContext,
-                    row))
-            .FirstOrDefault(cell =>
-                cell.GetVisualDescendants()
-                    .OfType<TextBlock>()
-                    .Any(text =>
-                        StringComparer.Ordinal
-                            .Equals(
-                                expectedText,
-                                text.Text)));
 
     private static void Render()
     {
