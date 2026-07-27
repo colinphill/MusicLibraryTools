@@ -1536,6 +1536,10 @@ public sealed class WorkbenchReviewedMutationCompositionTests
             workbench.StatusDiagnosticDetail,
             StringComparison.OrdinalIgnoreCase);
         Assert.Contains(
+            "Injected transcode failure.",
+            workbench.StatusDiagnosticDetail,
+            StringComparison.Ordinal);
+        Assert.Contains(
             workbench.PendingChanges,
             row => row.Before == failed &&
                 row.DiagnosticDetail?.Contains(

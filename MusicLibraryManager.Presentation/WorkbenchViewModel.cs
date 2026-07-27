@@ -1077,6 +1077,8 @@ public partial class WorkbenchViewModel :
         OnPropertyChanged(nameof(FieldSelectionSummary));
         SendSelectedToIngestCommand
             .NotifyCanExecuteChanged();
+        RemoveCurrentCommand
+            .NotifyCanExecuteChanged();
         FileOperations?.InvalidateTargets();
         RebuildMetadataFields();
         PreviewFieldValuesCommand.NotifyCanExecuteChanged();
@@ -1259,30 +1261,68 @@ public partial class WorkbenchViewModel :
     [RelayCommand(CanExecute = nameof(CanRemoveCurrent))]
     private void RemoveCurrent()
     {
-        if (SelectedFile is not { } current)
+        WorkbenchTrackViewModel[] removing =
+        [
+            .. SelectedFiles.Where(Files.Contains),
+        ];
+        if (removing.Length == 0 &&
+            SelectedFile is { } current &&
+            Files.Contains(current))
+        {
+            removing =
+            [
+                current,
+            ];
+        }
+        if (removing.Length == 0)
             return;
-        int index = Files.IndexOf(current);
-        current.PropertyChanged -= OnTrackChanged;
-        Files.Remove(current);
-        _artworkDrafts.Remove(current.Path);
+        int index = removing
+            .Select(Files.IndexOf)
+            .Where(candidate => candidate >= 0)
+            .DefaultIfEmpty(0)
+            .Min();
+        HashSet<string> removedPaths =
+            removing
+                .Select(file => file.Path)
+                .ToHashSet(PathComparer);
+        foreach (WorkbenchTrackViewModel file in
+                 removing)
+        {
+            file.PropertyChanged -= OnTrackChanged;
+            Files.Remove(file);
+            _artworkDrafts.Remove(file.Path);
+        }
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
         foreach (AudioDiscoveryRow row in AudioMatches
-                     .Where(row => PathComparer.Equals(row.Path, current.Path))
+                     .Where(row =>
+                         removedPaths.Contains(row.Path))
                      .ToArray())
             AudioMatches.Remove(row);
         foreach (MusicBrainzReleaseRow row in ReleaseMatches
-                     .Where(row => PathComparer.Equals(row.SourcePath, current.Path))
+                     .Where(row =>
+                         removedPaths.Contains(
+                             row.SourcePath))
                      .ToArray())
             ReleaseMatches.Remove(row);
         if (SelectedRelease is not null &&
-            PathComparer.Equals(SelectedRelease.SourcePath, current.Path))
+            removedPaths.Contains(
+                SelectedRelease.SourcePath))
             SelectedRelease = null;
         ClearReleaseTrackMappings();
-        SelectedFile = Files.Count == 0
+        WorkbenchTrackViewModel? next =
+            Files.Count == 0
             ? null
             : Files[Math.Min(index, Files.Count - 1)];
+        SelectedFile = next;
+        SetSelectedFiles(
+            next is null
+                ? []
+                :
+                [
+                    next,
+                ]);
         CancelPlan();
         SetCountStatus(
             "Workbench.Status.SessionFileCount",
@@ -3256,8 +3296,39 @@ public partial class WorkbenchViewModel :
             {
                 if (readyReviewedSources.Count == 0)
                 {
+                    string[] stageDiagnostics =
+                    [
+                        .. stages
+                            .SelectMany(stage =>
+                                stage.Items)
+                            .Where(item =>
+                                item.State !=
+                                AudioTranscodeStageState.Ready)
+                            .SelectMany(item =>
+                                new[]
+                                {
+                                    item.DiagnosticDetail,
+                                    item.ErrorCode,
+                                })
+                            .Where(detail =>
+                                !string.IsNullOrWhiteSpace(
+                                    detail))
+                            .Select(detail =>
+                                detail!)
+                            .Distinct(
+                                StringComparer.Ordinal)
+                            .Take(8),
+                    ];
                     throw new InvalidOperationException(
-                        L("Transcode.Error.NoReadyFiles"));
+                        string.Join(
+                            Environment.NewLine,
+                            new[]
+                                {
+                                    L(
+                                        "Transcode.Error.NoReadyFiles"),
+                                }
+                                .Concat(
+                                    stageDiagnostics)));
                 }
                 bool applyReady =
                     await _dialogs.ConfirmAsync(
@@ -6898,7 +6969,10 @@ public partial class WorkbenchViewModel :
     }
 
     private bool CanBrowse() => !IsBusy;
-    private bool CanRemoveCurrent() => !IsBusy && SelectedFile is not null;
+    private bool CanRemoveCurrent() =>
+        !IsBusy &&
+        (SelectedFiles.Count > 0 ||
+         SelectedFile is not null);
     private bool CanMoveUp() =>
         !IsBusy && SelectedFile is not null && Files.IndexOf(SelectedFile) > 0;
     private bool CanMoveDown() =>

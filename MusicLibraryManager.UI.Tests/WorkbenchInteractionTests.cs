@@ -290,6 +290,135 @@ public sealed class WorkbenchInteractionTests
     }
 
     [AvaloniaFact]
+    public void SelectionActionsRemoveEverySelectedTrackFromTheSession()
+    {
+        using ServiceProvider services = BuildServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(
+                    window,
+                    services,
+                    1200,
+                    700);
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            ILocalizationService localization =
+                services.GetRequiredService<
+                    ILocalizationService>();
+            var first = Track("remove-first.flac");
+            var second = Track("remove-second.flac");
+            var retained = Track("remove-retained.flac");
+            model.Files.Add(first);
+            model.Files.Add(second);
+            model.Files.Add(retained);
+            Render();
+            AppDataGrid grid =
+                view.FindControl<AppDataGrid>(
+                    "WorkbenchGrid")!;
+            grid.SelectedItems.Clear();
+            grid.SelectedItems.Add(first);
+            grid.SelectedItems.Add(second);
+            grid.SelectedItem = first;
+            model.SelectedFile = first;
+            model.SetSelectedFiles(
+                [first, second]);
+            Render();
+
+            Button selectionActions =
+                view.FindControl<Button>(
+                    "WorkbenchSessionActionsButton")!;
+            MenuFlyout flyout =
+                Assert.IsType<MenuFlyout>(
+                    selectionActions.Flyout);
+            flyout.ShowAt(selectionActions);
+            Render();
+            MenuItem remove =
+                flyout.Items
+                    .OfType<MenuItem>()
+                    .Single(item =>
+                        string.Equals(
+                            item.Header?.ToString(),
+                            localization.Get(
+                                "Workbench.Session.Action.RemoveSelected"),
+                            StringComparison.Ordinal));
+
+            Assert.NotNull(remove.Command);
+            Assert.True(
+                remove.Command.CanExecute(
+                    remove.CommandParameter));
+            remove.RaiseEvent(
+                new RoutedEventArgs(
+                    MenuItem.ClickEvent));
+            Render();
+
+            Assert.Equal(
+                [retained],
+                model.Files);
+            Assert.Equal(
+                [retained],
+                model.SelectedFiles);
+            Assert.Same(
+                retained,
+                model.SelectedFile);
+            Assert.Equal(
+                [retained],
+                grid.ItemsSource!
+                    .Cast<WorkbenchTrackViewModel>());
+            flyout.Hide();
+            var final = Track("remove-final.flac");
+            model.Files.Add(final);
+            grid.SelectedItems.Clear();
+            grid.SelectedItems.Add(retained);
+            grid.SelectedItems.Add(final);
+            grid.SelectedItem = retained;
+            model.SelectedFile = retained;
+            model.SetSelectedFiles(
+                [retained, final]);
+            Render();
+            ContextMenu contextMenu =
+                Assert.IsType<ContextMenu>(
+                    grid.ContextMenu);
+            contextMenu.Open(grid);
+            Render();
+            MenuItem contextRemove =
+                contextMenu.Items
+                    .OfType<MenuItem>()
+                    .Single(item =>
+                        string.Equals(
+                            item.Header?.ToString(),
+                            localization.Get(
+                                "Workbench.Session.Action.RemoveSelected"),
+                            StringComparison.Ordinal));
+
+            Assert.NotNull(
+                contextRemove.Command);
+            Assert.True(
+                contextRemove.Command.CanExecute(
+                    contextRemove.CommandParameter));
+            contextRemove.RaiseEvent(
+                new RoutedEventArgs(
+                    MenuItem.ClickEvent));
+            Render();
+
+            Assert.Empty(model.Files);
+            Assert.Empty(
+                model.SelectedFiles);
+            Assert.Null(
+                model.SelectedFile);
+            contextMenu.Close();
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Pointer_press_on_scrim_closes_transient_drawer_resumes_inspector_and_restores_focus()
     {
         using ServiceProvider services = BuildServices();

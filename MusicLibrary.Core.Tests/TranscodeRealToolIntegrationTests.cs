@@ -490,6 +490,195 @@ public sealed class TranscodeRealToolIntegrationTests
     }
 
     [Fact]
+    public async Task ConfiguredM4aWithUppercasePerformerCompletesReviewedFlacApply()
+    {
+        string? ffmpeg = Environment.GetEnvironmentVariable(
+            "MUSICLIBRARY_FFMPEG");
+        if (string.IsNullOrWhiteSpace(ffmpeg) ||
+            !File.Exists(ffmpeg))
+            return;
+        using var temp = new TempDirectory();
+        AppSettings settings = CreateSettings(
+            temp,
+            ffmpeg);
+        var processes = new ManagedProcessRunner();
+        using var capabilities =
+            new AudioTranscodeCapabilityService(
+                settings,
+                processes);
+        AudioTranscodeCapabilitySnapshot snapshot =
+            await capabilities.GetAsync(
+                forceRefresh: true,
+                TestContext.Current.CancellationToken);
+        string encoderId =
+            AudioTranscodeEncoderIds.Ffmpeg(
+                "libfdk_aac");
+        AudioEncoderDescriptor? sourceEncoder =
+            snapshot.FindEncoder(encoderId);
+        AudioTranscodeFormatDescriptor? sourceFormat =
+            snapshot.FindFormat(
+                AudioTranscodeFormatIds.AacM4a);
+        string outputEncoderId =
+            AudioTranscodeEncoderIds.Ffmpeg(
+                "flac");
+        AudioEncoderDescriptor? outputEncoder =
+            snapshot.FindEncoder(
+                outputEncoderId);
+        AudioTranscodeFormatDescriptor? outputFormat =
+            snapshot.FindFormat(
+                AudioTranscodeFormatIds.Flac);
+        if (sourceEncoder is null ||
+            sourceFormat is null ||
+            outputEncoder is null ||
+            outputFormat is null ||
+            !sourceFormat.EncoderIds.Contains(
+                encoderId,
+                StringComparer.Ordinal) ||
+            !outputFormat.EncoderIds.Contains(
+                outputEncoderId,
+                StringComparer.Ordinal))
+            return;
+
+        AudioTranscodeSettings sourceSettings =
+            SettingsFor(
+                sourceFormat,
+                sourceEncoder);
+        AudioTranscodeSettings reviewed =
+            SettingsFor(
+                outputFormat,
+                outputEncoder);
+        var adapter = new AudioTranscodeAdapter(
+            settings,
+            processes);
+        string source = Path.Combine(
+            temp.Path,
+            "source.m4a");
+        await adapter.EncodeAsync(
+            MediaFixtures.Path_("sample.aac"),
+            source,
+            sourceSettings,
+            sourceEncoder,
+            threadCount: 1,
+            ct: TestContext.Current
+                .CancellationToken);
+        var sourceMedia = Assert.IsType<MP4File>(
+            MediaFile.GetFile(
+                source,
+                readOnly: false));
+        sourceMedia.SetField(
+            TagFields.Title,
+            "Primary reviewed title");
+        sourceMedia.SetUserString(
+            "PERFORMER",
+            "The Donnas");
+        sourceMedia.SaveTags();
+        string outputDirectory = Path.Combine(
+            temp.Path,
+            "external-output");
+        Directory.CreateDirectory(outputDirectory);
+        var coordinator =
+            new FileMutationCoordinator();
+        var journals =
+            new OperationJournalService(
+                coordinator);
+        var service = new AudioTranscodeService(
+            settings,
+            capabilities,
+            adapter,
+            new TranscodeMetadataProjectionService(),
+            new TranscodeWorkScheduler(
+                settings,
+                processorCount: 2),
+            new ReviewedChangeBatchService(
+                new FileMutationPlanExecutor(
+                    coordinator,
+                    settings: settings),
+                journals,
+                settings),
+            new ReviewedChangeHistoryService(
+                settings,
+                journals),
+            new DecodedAudioVerificationService(
+                new FfmpegRunner()),
+            pcmReference:
+                new TranscodePcmReferenceService(
+                    settings,
+                    processes));
+        AudioTranscodePlan plan =
+            await service.PreviewAsync(
+                new(
+                    [source],
+                    reviewed,
+                    new(
+                        AudioTranscodeDestinationMode
+                            .ChosenFolder,
+                        outputDirectory,
+                        false,
+                        "{Name}{Extension}",
+                        AudioTranscodeCollisionPolicy
+                            .Stop)),
+                ct: TestContext.Current
+                    .CancellationToken);
+        Assert.True(
+            plan.CanApply,
+            string.Join(
+                Environment.NewLine,
+                plan.Issues.Concat(
+                        plan.Items.SelectMany(
+                            item => item.Issues))
+                    .Select(issue =>
+                        issue.Message)));
+
+        AudioTranscodeStageResult stage =
+            await service.StageAsync(
+                plan,
+                ct: TestContext.Current
+                    .CancellationToken);
+        AudioTranscodeStagedItem ready =
+            Assert.Single(
+                stage.ReadyItems);
+        Assert.Empty(
+            stage.FailedItems);
+
+        AudioTranscodeApplyResult result =
+            await service.ApplyBatchAsync(
+                [stage],
+                new HashSet<Guid>
+                {
+                    ready.PlanItem.Id,
+                },
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        Assert.Equal(
+            1,
+            result.ChangedFiles);
+        Assert.True(
+            File.Exists(
+                ready.PlanItem.DestinationPath));
+        Assert.True(
+            new FileInfo(
+                ready.PlanItem.DestinationPath)
+                .Length > 0);
+        IMediaFile applied = MediaFile.GetFile(
+            ready.PlanItem.DestinationPath,
+            readOnly: true);
+        Assert.NotEmpty(
+            applied.Codecs);
+        Assert.Equal(
+            "Primary reviewed title",
+            applied.Tags.First().Title);
+        Assert.Contains(
+            applied.Tags.First()
+                .GetKnownMetadata(),
+            field =>
+                field.Key ==
+                    TagFields.Performer &&
+                field.Value ==
+                    "The Donnas");
+    }
+
+    [Fact]
     public async Task ConfiguredOptimFrogToolsEncodeAndVerifyAllThreeFormats()
     {
         string? directory = Environment.GetEnvironmentVariable(

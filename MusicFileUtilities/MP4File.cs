@@ -152,6 +152,29 @@ namespace MusicFileUtilities
 
         public static Dictionary<TagFields, string> ReverseTagMapping => _reverseTagMapping.Value;
 
+        internal static bool TryGetFreeformTagField(
+            string key,
+            out TagFields field)
+        {
+            if (TagMapping.TryGetValue(
+                    key,
+                    out field))
+                return true;
+            foreach (KeyValuePair<string, TagFields> mapping in
+                     TagMapping)
+            {
+                if (!string.Equals(
+                        mapping.Key,
+                        key,
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                field = mapping.Value;
+                return true;
+            }
+            field = default;
+            return false;
+        }
+
         private static Dictionary<TagFields, string> BuildReverseTagMapping()
         {
             var map = new Dictionary<TagFields, string>();
@@ -2295,9 +2318,10 @@ namespace MusicFileUtilities
                 else if (atom.Type == "----")
                 {
                     string keystr = (ca.FindPath("name") as StringAtom).Text;
-                    if (MP4Util.TagMapping.ContainsKey(keystr))
+                    if (MP4Util.TryGetFreeformTagField(
+                            keystr,
+                            out TagFields key))
                     {
-                        var key = MP4Util.TagMapping[keystr];
                         foreach (Atom childatom in (atom as ContainerAtom).FindMultiplePath("data"))
                         {
                             Atom_data da = childatom as Atom_data;
@@ -2328,7 +2352,10 @@ namespace MusicFileUtilities
                 .OfType<ContainerAtom>())
             {
                 string key = (atom.FindPath("name") as StringAtom)?.Text;
-                if (string.IsNullOrWhiteSpace(key) || MP4Util.TagMapping.ContainsKey(key))
+                if (string.IsNullOrWhiteSpace(key) ||
+                    MP4Util.TryGetFreeformTagField(
+                        key,
+                        out _))
                     continue;
                 foreach (Atom_data data in atom.FindMultiplePath("data").OfType<Atom_data>())
                     if (data.IsText)

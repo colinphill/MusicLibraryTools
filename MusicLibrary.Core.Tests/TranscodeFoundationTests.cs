@@ -2030,6 +2030,58 @@ public sealed class TranscodeFoundationTests
         }
     }
 
+    [Fact]
+    public async Task MetadataProjectionUsesPrimaryTagWhenSourceLayersConflict()
+    {
+        using var source =
+            MediaFixtures.Copy("sample.aac");
+        using var destination =
+            MediaFixtures.Copy("sample.flac");
+        var aac = Assert.IsType<AACFile>(
+            MediaFile.GetFile(
+                source.Path,
+                readOnly: false));
+        aac.SetField(
+            TagFields.Title,
+            "Primary ID3 title");
+        aac.SaveTags();
+        var ape = new APETag();
+        ape.SetField(
+            TagFields.Title,
+            "Secondary APE title");
+        await using (var stream = new FileStream(
+                         source.Path,
+                         FileMode.Append,
+                         FileAccess.Write))
+        {
+            await stream.WriteAsync(
+                ape.ToByteArray(),
+                TestContext.Current
+                    .CancellationToken);
+        }
+        var projection =
+            new TranscodeMetadataProjectionService();
+
+        IReadOnlyList<OperationIssue> issues =
+            projection.Project(
+                source.Path,
+                destination.Path,
+                preserveMetadata: true,
+                preserveArtwork: false);
+
+        Assert.DoesNotContain(
+            issues,
+            issue =>
+                issue.Severity ==
+                OperationIssueSeverity.Blocker);
+        IMediaFile written = MediaFile.GetFile(
+            destination.Path,
+            readOnly: true);
+        Assert.Equal(
+            "Primary ID3 title",
+            written.Tags.First().Title);
+    }
+
     private static void UpdateMaximum(
         ref int target,
         int value)

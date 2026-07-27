@@ -983,19 +983,61 @@ public sealed class TranscodeMetadataProjectionService :
 
         if (preserveMetadata)
         {
-            foreach (KeyValuePair<TagFields, string> field in
-                     source.Tags.SelectMany(tag =>
-                             tag.GetKnownMetadata())
-                         .GroupBy(field => field.Key)
-                         .SelectMany(group =>
-                             group.Distinct()))
+            IMetadataProvider? sourceMetadata =
+                source.Tags.FirstOrDefault();
+            foreach (IGrouping<
+                         TagFields,
+                         KeyValuePair<TagFields, string>> group in
+                     sourceMetadata?.GetKnownMetadata()
+                         .GroupBy(field => field.Key) ??
+                     [])
             {
+                string[] values =
+                group.Select(field => field.Value)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+                if (values.Length == 0)
+                    continue;
                 try
                 {
-                    writer.SetField(
-                        field.Key,
-                        field.Value);
-                    projectedKnown.Add(field);
+                    if (values.Length > 1 &&
+                        writer is
+                            IMultiValueMetadataWriter
+                            multiValueWriter &&
+                        multiValueWriter
+                            .SupportsMultipleValues(
+                                group.Key))
+                    {
+                        multiValueWriter.SetFieldValues(
+                            group.Key,
+                            values);
+                        projectedKnown.AddRange(
+                            values.Select(value =>
+                                new KeyValuePair<
+                                    TagFields,
+                                    string>(
+                                    group.Key,
+                                    value)));
+                    }
+                    else
+                    {
+                        writer.SetField(
+                            group.Key,
+                            values[0]);
+                        projectedKnown.Add(
+                            new(
+                                group.Key,
+                                values[0]));
+                        if (values.Length > 1)
+                        {
+                            issues.Add(new(
+                                "transcode.metadata-not-representable",
+                                OperationIssueSeverity.Warning,
+                                $"The destination can retain only one value for " +
+                                $"'{group.Key}'.",
+                                sourcePath));
+                        }
+                    }
                 }
                 catch (Exception error)
                     when (error is
@@ -1006,7 +1048,7 @@ public sealed class TranscodeMetadataProjectionService :
                         "transcode.metadata-not-representable",
                         OperationIssueSeverity.Warning,
                         $"The destination cannot represent " +
-                        $"'{field.Key}'.",
+                        $"'{group.Key}'.",
                         sourcePath));
                 }
             }
@@ -1024,16 +1066,63 @@ public sealed class TranscodeMetadataProjectionService :
             if (sourceStrings is not null &&
                 destinationStrings is not null)
             {
-                foreach (KeyValuePair<string, string> field in
+                foreach (IGrouping<
+                             string,
+                             KeyValuePair<string, string>> group in
                          sourceStrings
-                             .GetAddressableUserStrings())
+                             .GetAddressableUserStrings()
+                             .GroupBy(
+                                 field => field.Key,
+                                 StringComparer
+                                     .OrdinalIgnoreCase))
                 {
+                    string[] values =
+                        group.Select(field => field.Value)
+                            .Distinct(
+                                StringComparer.Ordinal)
+                            .ToArray();
+                    if (values.Length == 0)
+                        continue;
+                    string key = group.First().Key;
                     try
                     {
-                        destinationStrings.SetUserString(
-                            field.Key,
-                            field.Value);
-                        projectedCustom.Add(field);
+                        if (values.Length > 1 &&
+                            destinationStrings is
+                                IMultiValueUserStringMetadata
+                                multiValueStrings)
+                        {
+                            multiValueStrings
+                                .SetUserStringValues(
+                                    key,
+                                    values);
+                            projectedCustom.AddRange(
+                                values.Select(value =>
+                                    new KeyValuePair<
+                                        string,
+                                        string>(
+                                        key,
+                                        value)));
+                        }
+                        else
+                        {
+                            destinationStrings
+                                .SetUserString(
+                                    key,
+                                    values[0]);
+                            projectedCustom.Add(
+                                new(
+                                    key,
+                                    values[0]));
+                            if (values.Length > 1)
+                            {
+                                issues.Add(new(
+                                    "transcode.custom-metadata-not-representable",
+                                    OperationIssueSeverity.Warning,
+                                    $"The destination can retain only one value for " +
+                                    $"the custom field '{key}'.",
+                                    sourcePath));
+                            }
+                        }
                     }
                     catch (Exception error)
                         when (error is
@@ -1044,7 +1133,7 @@ public sealed class TranscodeMetadataProjectionService :
                             "transcode.custom-metadata-not-representable",
                             OperationIssueSeverity.Warning,
                             $"The destination cannot represent " +
-                            $"the custom field '{field.Key}'.",
+                            $"the custom field '{key}'.",
                             sourcePath));
                     }
                 }
@@ -1068,8 +1157,15 @@ public sealed class TranscodeMetadataProjectionService :
                     .OfType<IArtworkWriter>()
                     .FirstOrDefault();
             IMetadataImage[] images =
-                [.. source.Tags.SelectMany(tag =>
-                    tag.GetImageMetadata())];
+            [
+                .. source.Tags
+                    .Select(tag =>
+                        tag.GetImageMetadata()
+                            .ToArray())
+                    .FirstOrDefault(layer =>
+                        layer.Length > 0) ??
+                [],
+            ];
             if (artworkWriter is null &&
                 images.Length > 0)
             {
@@ -1137,22 +1233,24 @@ public sealed class TranscodeMetadataProjectionService :
             destination.Tags
                 .OfType<IUserStringMetadata>()
                 .FirstOrDefault();
-        IReadOnlyDictionary<string, string> actualCustom =
+        ILookup<string, string> actualCustom =
             destinationStrings?.GetAddressableUserStrings()
-                .ToDictionary(
+                .ToLookup(
                     item => item.Key,
                     item => item.Value,
-                    StringComparer.Ordinal) ??
-            new Dictionary<string, string>();
+                    StringComparer.OrdinalIgnoreCase) ??
+            Enumerable.Empty<
+                    KeyValuePair<string, string>>()
+                .ToLookup(
+                    item => item.Key,
+                    item => item.Value,
+                    StringComparer.OrdinalIgnoreCase);
         foreach (KeyValuePair<string, string> expected in
                  projectedCustom)
         {
-            if (!actualCustom.TryGetValue(
-                    expected.Key,
-                    out string? written) ||
-                !StringComparer.Ordinal.Equals(
+            if (!actualCustom[expected.Key].Contains(
                     expected.Value,
-                    written))
+                    StringComparer.Ordinal))
             {
                 throw new InvalidDataException(
                     $"Projected custom metadata verification failed for '{expected.Key}'.");

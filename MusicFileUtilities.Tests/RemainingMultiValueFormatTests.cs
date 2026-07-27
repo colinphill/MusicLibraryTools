@@ -79,6 +79,41 @@ public sealed class RemainingMultiValueFormatTests
     }
 
     [Fact]
+    public void Mp4FreeformKnownFieldAliasesAreCaseInsensitive()
+    {
+        using var media =
+            MediaFixtures.Copy("sample_aac.m4a");
+        var file = Assert.IsType<MP4File>(
+            MediaFile.GetFile(
+                media.Path,
+                readOnly: false));
+        file.SetUserString(
+            "PERFORMER",
+            "The Donnas");
+        file.SaveTags();
+
+        var reopened = Assert.IsType<MP4File>(
+            MediaFile.GetFile(
+                media.Path,
+                readOnly: true));
+
+        Assert.Contains(
+            reopened.GetKnownMetadata(),
+            field =>
+                field.Key ==
+                    TagFields.Performer &&
+                field.Value ==
+                    "The Donnas");
+        Assert.DoesNotContain(
+            reopened.GetUserStrings(),
+            field => string.Equals(
+                field.Key,
+                "PERFORMER",
+                System.StringComparison
+                    .OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void AsfOrderedExtendedAndCustomValuesRoundTrip()
     {
         using var media = MediaFixtures.Copy("sample.wma");

@@ -112,7 +112,7 @@
 
     <Border Grid.Row="3"
             Classes="sticky-footer">
-      <Grid RowDefinitions="Auto,Auto"
+      <Grid RowDefinitions="Auto,Auto,Auto"
             RowSpacing="8">
         <TextBlock x:Name="StatusText"
                    Classes="compact-status"
@@ -120,7 +120,20 @@
                    Text="{Binding StatusText}"
                    ToolTip.Tip="{Binding StatusDiagnosticDetail}"
                    TextTrimming="CharacterEllipsis" />
-        <WrapPanel Grid.Row="1"
+        <controls:LocalizedFormatTextBlock
+            x:Name="PendingChangesStatusDiagnostic"
+            Grid.Row="1"
+            Classes="muted"
+            FontSize="{DynamicResource AppFontSizeCaption}"
+            TextWrapping="Wrap"
+            TextTrimming="CharacterEllipsis"
+            MaxLines="3"
+            ResourceKey="Common.DiagnosticDetailFormat"
+            Value="{Binding StatusDiagnosticDetail}"
+            IsVisible="{Binding HasStatusDiagnosticDetail}"
+            ToolTip.Tip="{Binding StatusDiagnosticDetail}"
+            AutomationProperties.HelpText="{Binding StatusDiagnosticDetail}" />
+        <WrapPanel Grid.Row="2"
                    HorizontalAlignment="Right">
           <Button x:Name="WorkbenchRevertPendingChangesButton"
                   Classes="app danger"
