@@ -6423,4 +6423,7 @@
   <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>「精簡」會縮小列、卡片與表單的間距，但不會縮小導覽或圖示的點選區域。</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>標準</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>精簡</value></data>
+  <data name="Library.Metadata.Loading" xml:space="preserve"><value>正在載入…</value></data>
+  <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>無法使用</value></data>
+  <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>請等待確切的中繼資料值載入完成後再進行編輯。</value></data>
 </root>

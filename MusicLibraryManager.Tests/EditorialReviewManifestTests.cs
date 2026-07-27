@@ -19,7 +19,7 @@ public sealed class EditorialReviewManifestTests
                 fixture.InvariantApprovedValues,
                 requireComplete: false);
 
-        Assert.Equal(3_655, manifest.Records.Count);
+        Assert.Equal(3_658, manifest.Records.Count);
         Assert.Equal(
             0,
             Count(
@@ -36,7 +36,7 @@ public sealed class EditorialReviewManifestTests
                 manifest,
                 EditorialReviewStatus.GlossaryReviewed));
         Assert.Equal(
-            3_293,
+            3_296,
             Count(
                 manifest,
                 EditorialReviewStatus.EditorialReviewed));
@@ -47,6 +47,38 @@ public sealed class EditorialReviewManifestTests
             EditorialReviewStatus.EditorialReviewed,
             manifest.Records["Common.Beta"].Status);
         Assert.Equal(127, fixture.InvariantApprovedValues.Count);
+
+        EditorialReviewRecord[] lazyMetadataRecords =
+        [
+            .. manifest.Records.Values
+                .Where(record =>
+                    record.Batch ==
+                    "memory-audit-lazy-metadata-2026-07-27")
+                .OrderBy(
+                    record => record.Key,
+                    StringComparer.Ordinal),
+        ];
+        Assert.Equal(
+        [
+            "Library.Metadata.ExactValueRequired",
+            "Library.Metadata.Loading",
+            "Library.Metadata.Unavailable",
+        ], lazyMetadataRecords.Select(record => record.Key));
+        Assert.All(
+            lazyMetadataRecords,
+            record =>
+            {
+                Assert.Equal(
+                    EditorialReviewStatus.EditorialReviewed,
+                    record.Status);
+                Assert.Equal(
+                    CatalogTranslationRoute.EditorialOverride,
+                    record.Route);
+                Assert.Equal(
+                    "Codex memory audit localization review",
+                    record.Reviewer);
+                Assert.Equal("2026-07-27", record.Date);
+            });
     }
 
     [Fact]
@@ -511,7 +543,7 @@ public sealed class EditorialReviewManifestTests
                     seed.Date);
 
             Assert.Equal(
-                3_293,
+                3_296,
                 Count(
                     refreshed,
                     EditorialReviewStatus.EditorialReviewed));

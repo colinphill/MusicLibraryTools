@@ -6423,4 +6423,7 @@
   <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>Compacta reduz o espaçamento de linhas, cartões e formulários sem diminuir os alvos de navegação ou dos ícones.</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>Padrão</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>Compacta</value></data>
+  <data name="Library.Metadata.Loading" xml:space="preserve"><value>Carregando…</value></data>
+  <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>Indisponível</value></data>
+  <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>Aguarde o carregamento do valor exato dos metadados antes de editá-lo.</value></data>
 </root>

@@ -6423,4 +6423,7 @@
   <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>„Kompakt“ verringert die Abstände von Zeilen, Karten und Formularen, ohne Navigations- oder Symbolziele zu verkleinern.</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>Standard</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>Kompakt</value></data>
+  <data name="Library.Metadata.Loading" xml:space="preserve"><value>Wird geladen…</value></data>
+  <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>Nicht verfügbar</value></data>
+  <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>Warten Sie, bis der genaue Metadatenwert geladen wurde, bevor Sie ihn bearbeiten.</value></data>
 </root>

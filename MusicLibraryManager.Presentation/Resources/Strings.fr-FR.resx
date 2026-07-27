@@ -6423,4 +6423,7 @@
   <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>Compacte réduit l’espacement des lignes, des cartes et des formulaires sans réduire les cibles de navigation ni des icônes.</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>Standard</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>Compacte</value></data>
+  <data name="Library.Metadata.Loading" xml:space="preserve"><value>Chargement…</value></data>
+  <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>Indisponible</value></data>
+  <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>Attendez le chargement de la valeur exacte des métadonnées avant de la modifier.</value></data>
 </root>

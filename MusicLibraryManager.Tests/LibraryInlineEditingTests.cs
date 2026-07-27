@@ -12,6 +12,65 @@ namespace MusicLibraryManager.Tests;
 public sealed class LibraryInlineEditingTests
 {
     [Fact]
+    public void Lazy_comment_projection_preserves_exact_edit_original_and_releases_when_unedited()
+    {
+        var row = new LibraryRow(
+            new TrackRecord
+            {
+                Path =
+                    @"C:\Music\Lazy.flac",
+                Title = "Lazy",
+            });
+        MetadataFieldKey comment =
+            MetadataFieldKey.Known(
+                TagFields.Comment);
+
+        Assert.False(
+            row.HasExactMetadataValue(
+                comment));
+        row.LoadMetadataProjection(
+            new Dictionary<
+                MetadataFieldKey,
+                System.Collections.Immutable
+                    .ImmutableArray<string>>
+            {
+                [comment] =
+                    ["Exact original"],
+            },
+            [comment]);
+
+        Assert.True(
+            row.HasExactMetadataValue(
+                comment));
+        Assert.Equal(
+            "Exact original",
+            row.Comment);
+        Assert.False(row.HasChanges);
+
+        row.Comment = "Edited";
+        LibraryPendingMetadataEdit edit =
+            Assert.Single(
+                row.CreatePendingEditStates());
+        Assert.Equal(
+            ["Exact original"],
+            edit.OriginalValues);
+        row.ClearMetadataProjection(
+            [comment]);
+        Assert.Equal("Edited", row.Comment);
+        Assert.True(
+            row.HasExactMetadataValue(
+                comment));
+
+        row.RevertPendingChanges();
+        row.ClearMetadataProjection(
+            [comment]);
+        Assert.Empty(row.Comment);
+        Assert.False(
+            row.HasExactMetadataValue(
+                comment));
+    }
+
+    [Fact]
     public async Task Standard_total_and_custom_edits_stage_immediately_without_writing()
     {
         TestContext context = CreateLibrary();

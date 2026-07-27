@@ -75,8 +75,78 @@ public sealed class LibraryFilterQuery
         if (IsEmpty)
             return true;
         return IsAdvanced
-            ? _root!.IsMatch(row, defaultText)
-            : _simpleMatcher!.IsMatch(defaultText);
+            ? _root!.IsMatch(
+                row,
+                defaultText,
+                fieldWise: false,
+                extraFields: null)
+            : _simpleMatcher!.IsMatch(
+                defaultText);
+    }
+
+    /// <summary>
+    /// Match unqualified terms against individual detail fields without retaining a concatenated
+    /// per-row search string.
+    /// </summary>
+    public bool IsMatch(DetailsRow row)
+    {
+        if (!IsValid)
+            return false;
+        if (IsEmpty)
+            return true;
+        return IsAdvanced
+            ? _root!.IsMatch(
+                row,
+                "",
+                fieldWise: true,
+                extraFields: null)
+            : IsMatchAnyDetail(
+                row,
+                _simpleMatcher!,
+                extraFields: null);
+    }
+
+    public bool IsMatch(
+        DetailsRow row,
+        IReadOnlyCollection<string>
+            extraFields)
+    {
+        ArgumentNullException.ThrowIfNull(
+            extraFields);
+        if (!IsValid)
+            return false;
+        if (IsEmpty)
+            return true;
+        return IsAdvanced
+            ? _root!.IsMatch(
+                row,
+                "",
+                fieldWise: true,
+                extraFields:
+                    extraFields)
+            : IsMatchAnyDetail(
+                row,
+                _simpleMatcher!,
+                extraFields);
+    }
+
+    private static bool IsMatchAnyDetail(
+        DetailsRow row,
+        PatternMatcher matcher,
+        IReadOnlyCollection<string>?
+            extraFields)
+    {
+        foreach (DetailsColumn column in
+                 DetailsColumns.All)
+            if (matcher.IsMatch(
+                    row[column.Key]))
+                return true;
+        if (extraFields is not null)
+            foreach (string value in
+                     extraFields)
+                if (matcher.IsMatch(value))
+                    return true;
+        return false;
     }
 
     private static LibraryFilterQuery Invalid(bool isAdvanced, string error) =>
@@ -311,31 +381,87 @@ public sealed class LibraryFilterQuery
 
     private abstract record QueryNode
     {
-        public abstract bool IsMatch(DetailsRow row, string defaultText);
+        public abstract bool IsMatch(
+            DetailsRow row,
+            string defaultText,
+            bool fieldWise,
+            IReadOnlyCollection<string>?
+                extraFields);
     }
 
     private sealed record TermNode(string? Key, PatternMatcher Matcher) : QueryNode
     {
-        public override bool IsMatch(DetailsRow row, string defaultText) =>
-            Matcher.IsMatch(Key is null ? defaultText : row[Key]);
+        public override bool IsMatch(
+            DetailsRow row,
+            string defaultText,
+            bool fieldWise,
+            IReadOnlyCollection<string>?
+                extraFields) =>
+            Key is null
+                ? fieldWise
+                    ? IsMatchAnyDetail(
+                        row,
+                        Matcher,
+                        extraFields)
+                    : Matcher.IsMatch(
+                        defaultText)
+                : Matcher.IsMatch(
+                    row[Key]);
     }
 
     private sealed record AndNode(QueryNode Left, QueryNode Right) : QueryNode
     {
-        public override bool IsMatch(DetailsRow row, string defaultText) =>
-            Left.IsMatch(row, defaultText) && Right.IsMatch(row, defaultText);
+        public override bool IsMatch(
+            DetailsRow row,
+            string defaultText,
+            bool fieldWise,
+            IReadOnlyCollection<string>?
+                extraFields) =>
+            Left.IsMatch(
+                row,
+                defaultText,
+                fieldWise,
+                extraFields) &&
+            Right.IsMatch(
+                row,
+                defaultText,
+                fieldWise,
+                extraFields);
     }
 
     private sealed record OrNode(QueryNode Left, QueryNode Right) : QueryNode
     {
-        public override bool IsMatch(DetailsRow row, string defaultText) =>
-            Left.IsMatch(row, defaultText) || Right.IsMatch(row, defaultText);
+        public override bool IsMatch(
+            DetailsRow row,
+            string defaultText,
+            bool fieldWise,
+            IReadOnlyCollection<string>?
+                extraFields) =>
+            Left.IsMatch(
+                row,
+                defaultText,
+                fieldWise,
+                extraFields) ||
+            Right.IsMatch(
+                row,
+                defaultText,
+                fieldWise,
+                extraFields);
     }
 
     private sealed record NotNode(QueryNode Inner) : QueryNode
     {
-        public override bool IsMatch(DetailsRow row, string defaultText) =>
-            !Inner.IsMatch(row, defaultText);
+        public override bool IsMatch(
+            DetailsRow row,
+            string defaultText,
+            bool fieldWise,
+            IReadOnlyCollection<string>?
+                extraFields) =>
+            !Inner.IsMatch(
+                row,
+                defaultText,
+                fieldWise,
+                extraFields);
     }
 
     private sealed record QueryToken(QueryTokenKind Kind, string Text, bool WasQuoted);

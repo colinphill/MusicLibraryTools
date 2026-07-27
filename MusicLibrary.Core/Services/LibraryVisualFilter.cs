@@ -95,6 +95,21 @@ public sealed class LibraryVisualFilter
     public bool IsValid { get; }
     public string? Error { get; }
     public bool IsEmpty => _root is null;
+    public IReadOnlyList<MetadataFieldKey>
+        RequiredMetadataFields =>
+        Conditions(_root)
+            .Where(condition =>
+                condition.Field.Kind is
+                    LibraryFilterFieldKind
+                        .KnownMetadata or
+                    LibraryFilterFieldKind
+                        .CustomMetadata)
+            .Select(condition =>
+                ProjectionField(
+                    condition.Field))
+            .OfType<MetadataFieldKey>()
+            .Distinct()
+            .ToArray();
 
     public bool IsMatch(TrackRecord record)
     {
@@ -103,20 +118,51 @@ public sealed class LibraryVisualFilter
             (_root is null || Evaluate(_root, record));
     }
 
+    public bool IsMatch(
+        TrackRecord record,
+        IReadOnlyDictionary<
+            MetadataFieldKey,
+            ImmutableArray<string>>
+            metadataProjection)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        ArgumentNullException.ThrowIfNull(
+            metadataProjection);
+        return IsValid &&
+            (_root is null ||
+             Evaluate(
+                 _root,
+                 record,
+                 metadataProjection));
+    }
+
     private bool Evaluate(
         LibraryVisualFilterNode node,
-        TrackRecord record)
+        TrackRecord record,
+        IReadOnlyDictionary<
+            MetadataFieldKey,
+            ImmutableArray<string>>?
+            metadataProjection = null)
     {
         bool result = node switch
         {
             LibraryFilterCondition condition =>
-                EvaluateCondition(condition, record),
+                EvaluateCondition(
+                    condition,
+                    record,
+                    metadataProjection),
             LibraryFilterGroup group =>
                 group.Mode == LibraryFilterGroupMode.All
                     ? group.Children.All(child =>
-                        Evaluate(child, record))
+                        Evaluate(
+                            child,
+                            record,
+                            metadataProjection))
                     : group.Children.Any(child =>
-                        Evaluate(child, record)),
+                        Evaluate(
+                            child,
+                            record,
+                            metadataProjection)),
             _ => false,
         };
         return node.Negate ? !result : result;
@@ -124,9 +170,16 @@ public sealed class LibraryVisualFilter
 
     private bool EvaluateCondition(
         LibraryFilterCondition condition,
-        TrackRecord record)
+        TrackRecord record,
+        IReadOnlyDictionary<
+            MetadataFieldKey,
+            ImmutableArray<string>>?
+            metadataProjection)
     {
-        string[] values = Values(condition.Field, record);
+        string[] values = Values(
+            condition.Field,
+            record,
+            metadataProjection);
         string expected = condition.Value ?? "";
         return condition.Comparison switch
         {
@@ -164,7 +217,11 @@ public sealed class LibraryVisualFilter
 
     private static string[] Values(
         LibraryFilterField field,
-        TrackRecord record)
+        TrackRecord record,
+        IReadOnlyDictionary<
+            MetadataFieldKey,
+            ImmutableArray<string>>?
+            metadataProjection)
     {
         if (field.Kind == LibraryFilterFieldKind.Technical)
         {
@@ -190,6 +247,18 @@ public sealed class LibraryVisualFilter
             LibraryFilterFieldKind.CustomMetadata
             ? CachedMetadataKeys.Custom(field.Name)
             : field.Name;
+        if (metadataProjection is not null)
+        {
+            MetadataFieldKey? projectionKey =
+                ProjectionField(field);
+            if (projectionKey is not null &&
+                metadataProjection
+                .TryGetValue(
+                    projectionKey,
+                    out ImmutableArray<string>
+                        projected))
+                return projected.ToArray();
+        }
         if (record.Metadata.TryGetValue(
                 key,
                 out string[]? values))
@@ -205,6 +274,31 @@ public sealed class LibraryVisualFilter
                 return [fallback.Get(record)];
         }
         return [];
+    }
+
+    private static MetadataFieldKey?
+        ProjectionField(
+            LibraryFilterField field)
+    {
+        if (field.Kind ==
+            LibraryFilterFieldKind
+                .CustomMetadata)
+            return string.IsNullOrWhiteSpace(
+                field.Name)
+                ? null
+                : MetadataFieldKey.Custom(
+                    field.Name);
+        return field.Kind ==
+                   LibraryFilterFieldKind
+                       .KnownMetadata &&
+               Enum.TryParse(
+                   field.Name,
+                   ignoreCase: true,
+                   out TagFields known) &&
+               known != TagFields.NullField
+            ? MetadataFieldKey.Known(
+                known)
+            : null;
     }
 
     private static string KnownDetailsKey(string name) => name switch

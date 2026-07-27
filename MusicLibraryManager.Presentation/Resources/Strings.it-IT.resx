@@ -6423,4 +6423,7 @@
   <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>Compatta riduce la spaziatura di righe, schede e moduli senza ridurre le aree di navigazione o delle icone.</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>Standard</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>Compatta</value></data>
+  <data name="Library.Metadata.Loading" xml:space="preserve"><value>Caricamento…</value></data>
+  <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>Non disponibile</value></data>
+  <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>Attendi il caricamento del valore esatto dei metadati prima di modificarlo.</value></data>
 </root>

@@ -6423,4 +6423,7 @@
   <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>“紧凑”会减小行、卡片和表单的间距，但不会缩小导航或图标的点击区域。</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>标准</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>紧凑</value></data>
+  <data name="Library.Metadata.Loading" xml:space="preserve"><value>正在加载…</value></data>
+  <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>请等待准确的元数据值加载完成后再进行编辑。</value></data>
 </root>

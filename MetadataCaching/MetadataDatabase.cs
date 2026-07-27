@@ -92,6 +92,22 @@ namespace MetadataCaching
         long Length,
         DateTime LastWriteTimeUtc);
 
+    /// <summary>
+    /// Aggregate values used by library overview surfaces. This deliberately contains no
+    /// per-file metadata so callers do not have to materialize the catalog to display counts.
+    /// </summary>
+    public readonly record struct MetadataLibrarySummary(
+        int TrackCount,
+        int AlbumCount,
+        int ArtistCount);
+
+    public enum MetadataValueSortKind
+    {
+        Text,
+        Numeric,
+        Date,
+    }
+
     public readonly record struct IndexProgress(int Scanned, int Added, int Modified, int Unchanged)
     {
         public IndexPhase Phase { get; init; }
@@ -865,6 +881,290 @@ namespace MetadataCaching
             return BuildCache(
                 paths.Select<string, (string Path, string[] Extensions)>(p => (p, null)),
                 buildSecondaryIndexes);
+        }
+
+        /// <summary>
+        /// Reads the scalar browse projection for configured roots without constructing a
+        /// <see cref="MetadataCache"/> and without selecting arbitrary metadata or artwork blobs.
+        /// Genre, composer, and grouping are the only sparse metadata fields included because they
+        /// are standard Library browse columns.
+        /// </summary>
+        public IReadOnlyList<(string Path, MetadataCacheEntry Entry)>
+            GetBrowseEntries(
+                IEnumerable<string> paths,
+                CancellationToken cancellationToken = default)
+            => GetRecordEntries(
+                paths,
+                includeAllMetadata: false,
+                cancellationToken);
+
+        /// <summary>
+        /// Reads complete records directly without constructing secondary cache indexes or a
+        /// second file dictionary. This is the compatibility path for consumers that explicitly
+        /// require every metadata value.
+        /// </summary>
+        public IReadOnlyList<(string Path, MetadataCacheEntry Entry)>
+            GetCompleteEntries(
+                IEnumerable<string> paths,
+                CancellationToken cancellationToken = default)
+            => GetRecordEntries(
+                paths,
+                includeAllMetadata: true,
+                cancellationToken);
+
+        private IReadOnlyList<(
+            string Path,
+            MetadataCacheEntry Entry)>
+            GetRecordEntries(
+                IEnumerable<string> paths,
+                bool includeAllMetadata,
+                CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(paths);
+            var requestedRoots = paths
+                .Select(Path.TrimEndingDirectorySeparator)
+                .Distinct(FilePathComparer)
+                .ToArray();
+            if (requestedRoots.Length == 0)
+                return [];
+
+            var dbsets = new List<(string Path, long ID)>();
+            using (var setsCommand = conn_.CreateCommand())
+            {
+                setsCommand.CommandText = "SELECT Path, ID FROM ScanSets";
+                using var reader = setsCommand.ExecuteReader();
+                while (reader.Read())
+                {
+                    string path = reader.GetString(0);
+                    if (requestedRoots.Any(root =>
+                            FilePathComparer.Equals(
+                                root,
+                                Path.TrimEndingDirectorySeparator(path))))
+                        dbsets.Add((path, reader.GetInt64(1)));
+                }
+            }
+            if (dbsets.Count == 0)
+                return [];
+
+            var indexed = new Dictionary<long, IndexedBrowseMetadata>();
+            using (var metadataCommand = conn_.CreateCommand())
+            {
+                var sql = new StringBuilder(
+                    "SELECT m.FileID, k.\"Key\", m.Value FROM Metadata m " +
+                    "JOIN MetadataKeys k ON m.KeyID = k.ID " +
+                    "JOIN Tracks t ON t.ID = m.FileID " +
+                    "JOIN Albums a ON a.ID = t.AlbumID WHERE a.ScanSetID IN (");
+                for (int index = 0; index < dbsets.Count; index++)
+                {
+                    if (index > 0)
+                        sql.Append(',');
+                    string parameterName = "@set" + index;
+                    sql.Append(parameterName);
+                    metadataCommand.Parameters
+                        .Add(parameterName, DbType.Int64)
+                        .Value = dbsets[index].ID;
+                }
+                if (!includeAllMetadata)
+                    sql.Append(
+                        ") AND k.\"Key\" IN ('Compilation','Genre','Composer','Grouping')");
+                else
+                    sql.Append(')');
+                metadataCommand.CommandText =
+                    sql.Append(
+                            " ORDER BY m.FileID, m.ID")
+                        .ToString();
+                using var reader = metadataCommand.ExecuteReader();
+                while (reader.Read())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    long fileId = reader.GetInt64(0);
+                    if (!indexed.TryGetValue(fileId, out IndexedBrowseMetadata fields))
+                    {
+                        fields = new();
+                        indexed.Add(fileId, fields);
+                    }
+                    fields.Add(
+                        reader.GetString(1),
+                        reader.GetString(2),
+                        includeAllMetadata);
+                }
+            }
+
+            var result = new List<(string Path, MetadataCacheEntry Entry)>();
+            var sharedStrings = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach ((string root, long setId) in dbsets)
+            {
+                using var command = conn_.CreateCommand();
+                command.CommandText =
+                    "SELECT ID, Path, LastWriteTime, FileSize, HasAlbumArtist, " +
+                    "CodecName, TagType, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, " +
+                    "SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album, " +
+                    "TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, AlbumPath " +
+                    "FROM MetadataSummaryView WHERE ScanSetID = @set";
+                command.Parameters.Add("@set", DbType.Int64).Value = setId;
+                using var reader = command.ExecuteReader();
+                int albumPathOrdinal = reader.GetOrdinal("AlbumPath");
+                int pathOrdinal = reader.GetOrdinal("Path");
+                while (reader.Read())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    long fileId = reader.GetInt64("ID");
+                    indexed.TryGetValue(fileId, out IndexedBrowseMetadata fields);
+                    var entry = new MetadataCacheEntry(
+                        reader,
+                        fields?.Compilation ?? false);
+                    entry.SetIndexedMetadata(
+                        fields?.Genre,
+                        fields?.Composer,
+                        fields?.Grouping);
+                    if (includeAllMetadata)
+                        entry.SetCachedMetadata(
+                            fields?.All ?? []);
+                    indexed.Remove(fileId);
+                    entry.Strip(sharedStrings);
+                    string fullPath = Path.Combine(
+                        root,
+                        reader.GetString(albumPathOrdinal),
+                        reader.GetString(pathOrdinal));
+                    result.Add((fullPath, entry));
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Computes overview counts while reading only the four grouping columns required by the
+        /// calculation. No titles, technical data, arbitrary metadata, or artwork are selected.
+        /// </summary>
+        public MetadataLibrarySummary GetLibrarySummary(
+            IEnumerable<string> paths,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(paths);
+            string[] requestedRoots = paths
+                .Select(Path.TrimEndingDirectorySeparator)
+                .Distinct(FilePathComparer)
+                .ToArray();
+            if (requestedRoots.Length == 0)
+                return default;
+
+            var artists = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var albums = new HashSet<(string Artist, string Album)>(
+                EffectiveAlbumComparer.Instance);
+            int tracks = 0;
+            using var setsCommand = conn_.CreateCommand();
+            setsCommand.CommandText = "SELECT Path, ID FROM ScanSets";
+            using var setsReader = setsCommand.ExecuteReader();
+            var sets = new List<(string Path, long ID)>();
+            while (setsReader.Read())
+            {
+                string root = setsReader.GetString(0);
+                if (requestedRoots.Any(requested =>
+                        FilePathComparer.Equals(
+                            requested,
+                            Path.TrimEndingDirectorySeparator(root))))
+                    sets.Add((root, setsReader.GetInt64(1)));
+            }
+            foreach ((_, long setId) in sets)
+            {
+                using var command = conn_.CreateCommand();
+                command.CommandText =
+                    "SELECT Artist, AlbumArtist, HasAlbumArtist, Album " +
+                    "FROM MetadataSummaryView WHERE ScanSetID = @set";
+                command.Parameters.Add("@set", DbType.Int64).Value = setId;
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    tracks++;
+                    string artist = reader.GetString(0);
+                    string albumArtist = reader.GetString(1);
+                    bool hasAlbumArtist = reader.GetInt64(2) != 0 &&
+                        !string.IsNullOrWhiteSpace(albumArtist);
+                    string effectiveArtist = hasAlbumArtist
+                        ? albumArtist
+                        : artist;
+                    artists.Add(effectiveArtist);
+                    albums.Add((effectiveArtist, reader.GetString(3)));
+                }
+            }
+            return new(tracks, albums.Count, artists.Count);
+        }
+
+        private sealed class IndexedBrowseMetadata
+        {
+            public bool Compilation { get; private set; }
+            public string Genre { get; private set; }
+            public string Composer { get; private set; }
+            public string Grouping { get; private set; }
+            public List<KeyValuePair<
+                string,
+                string>> All { get; } = [];
+
+            public void Add(
+                string key,
+                string value,
+                bool retainValue)
+            {
+                if (retainValue)
+                    All.Add(
+                        KeyValuePair.Create(
+                            key,
+                            value));
+                switch (key)
+                {
+                    case "Compilation":
+                        Compilation |= IsTrue(value);
+                        break;
+                    case "Genre":
+                        Genre = Append(Genre, value);
+                        break;
+                    case "Composer":
+                        Composer = Append(Composer, value);
+                        break;
+                    case "Grouping":
+                        Grouping = Append(Grouping, value);
+                        break;
+                }
+            }
+
+            private static bool IsTrue(string value) =>
+                value is not null &&
+                (value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                 value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                 value.Equals("yes", StringComparison.OrdinalIgnoreCase));
+
+            private static string Append(string existing, string value)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    return existing;
+                if (string.IsNullOrWhiteSpace(existing))
+                    return value;
+                return existing.Split(';', StringSplitOptions.TrimEntries)
+                    .Contains(value, StringComparer.Ordinal)
+                    ? existing
+                    : existing + "; " + value;
+            }
+        }
+
+        private sealed class EffectiveAlbumComparer :
+            IEqualityComparer<(string Artist, string Album)>
+        {
+            public static EffectiveAlbumComparer Instance { get; } = new();
+
+            public bool Equals(
+                (string Artist, string Album) x,
+                (string Artist, string Album) y) =>
+                StringComparer.OrdinalIgnoreCase.Equals(x.Artist, y.Artist) &&
+                StringComparer.Ordinal.Equals(x.Album, y.Album);
+
+            public int GetHashCode(
+                (string Artist, string Album) value) =>
+                HashCode.Combine(
+                    StringComparer.OrdinalIgnoreCase.GetHashCode(
+                        value.Artist ?? ""),
+                    StringComparer.Ordinal.GetHashCode(
+                        value.Album ?? ""));
         }
 
         /// <summary>
@@ -2077,6 +2377,266 @@ namespace MetadataCaching
             }
 
             return details;
+        }
+
+        /// <summary>
+        /// Read only selected metadata keys for the requested paths. Results retain input order,
+        /// do not hydrate deferred artwork, and never select image data.
+        /// </summary>
+        public IReadOnlyList<
+            IReadOnlyDictionary<string, string[]>>
+            GetMetadataProjection(
+                IReadOnlyList<string> fullPaths,
+                IReadOnlyList<string> metadataKeys,
+                CancellationToken cancellationToken =
+                    default)
+        {
+            ArgumentNullException.ThrowIfNull(
+                fullPaths);
+            ArgumentNullException.ThrowIfNull(
+                metadataKeys);
+            var builders = new Dictionary<
+                string,
+                List<string>>[
+                fullPaths.Count];
+            if (fullPaths.Count == 0 ||
+                metadataKeys.Count == 0)
+                return builders
+                    .Select(_ =>
+                        (IReadOnlyDictionary<
+                            string,
+                            string[]>)
+                        new Dictionary<
+                            string,
+                            string[]>(
+                            StringComparer
+                                .OrdinalIgnoreCase))
+                    .ToArray();
+
+            string[] keys = metadataKeys
+                .Where(key =>
+                    !string.IsNullOrWhiteSpace(
+                        key))
+                .Distinct(
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .ToArray();
+            const int pathsPerQuery = 200;
+            for (int start = 0;
+                 start < fullPaths.Count;
+                 start += pathsPerQuery)
+            {
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+                int count = Math.Min(
+                    pathsPerQuery,
+                    fullPaths.Count - start);
+                using var command =
+                    conn_.CreateCommand();
+                string requested =
+                    AddRequestedPaths(
+                        command,
+                        fullPaths,
+                        start,
+                        count);
+                var sql = new StringBuilder(
+                    requested +
+                    " SELECT r.RequestOrdinal, k.\"Key\", m.Value" +
+                    " FROM Requested r" +
+                    " JOIN Albums a ON a.ScanSetID = r.ScanSetID AND a.Path = r.AlbumPath" +
+                    " JOIN Tracks t ON t.AlbumID = a.ID" +
+                    " JOIN Files f ON f.ID = t.ID AND f.Path = r.FileName" +
+                    " JOIN Metadata m ON m.FileID = f.ID" +
+                    " JOIN MetadataKeys k ON k.ID = m.KeyID" +
+                    " WHERE k.\"Key\" IN (");
+                for (int keyIndex = 0;
+                     keyIndex < keys.Length;
+                     keyIndex++)
+                {
+                    if (keyIndex > 0)
+                        sql.Append(',');
+                    string name =
+                        "@metadataKey" +
+                        keyIndex;
+                    sql.Append(name);
+                    command.Parameters.Add(
+                            name,
+                            DbType.String)
+                        .Value = keys[keyIndex];
+                }
+                command.CommandText = sql.Append(
+                    ") ORDER BY r.RequestOrdinal, m.ID")
+                    .ToString();
+                using var reader =
+                    command.ExecuteReader();
+                while (reader.Read())
+                {
+                    cancellationToken
+                        .ThrowIfCancellationRequested();
+                    int ordinal =
+                        reader.GetInt32(0);
+                    Dictionary<
+                        string,
+                        List<string>> values =
+                        builders[ordinal] ??=
+                            new(
+                                StringComparer
+                                    .OrdinalIgnoreCase);
+                    string key =
+                        reader.GetString(1);
+                    if (!values.TryGetValue(
+                            key,
+                            out List<string>
+                                fieldValues))
+                    {
+                        fieldValues = [];
+                        values.Add(
+                            key,
+                            fieldValues);
+                    }
+                    fieldValues.Add(
+                        reader.GetString(2));
+                }
+            }
+
+            return builders.Select(builder =>
+            {
+                if (builder is null)
+                    return
+                        (IReadOnlyDictionary<
+                            string,
+                            string[]>)
+                        new Dictionary<
+                            string,
+                            string[]>(
+                            StringComparer
+                                .OrdinalIgnoreCase);
+                return builder.ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value
+                        .ToArray(),
+                    StringComparer
+                        .OrdinalIgnoreCase);
+            }).ToArray();
+        }
+
+        /// <summary>
+        /// Returns full paths in ascending metadata-field order without materializing field
+        /// values in the caller. Missing values sort first. The query never reads artwork data.
+        /// </summary>
+        public IReadOnlyList<string>
+            GetMetadataSortOrder(
+                IEnumerable<string> paths,
+                string metadataKey,
+                MetadataValueSortKind sortKind,
+                CancellationToken cancellationToken =
+                    default)
+        {
+            ArgumentNullException.ThrowIfNull(paths);
+            ArgumentException.ThrowIfNullOrWhiteSpace(
+                metadataKey);
+            string[] requestedRoots = paths
+                .Select(Path.TrimEndingDirectorySeparator)
+                .Distinct(FilePathComparer)
+                .ToArray();
+            if (requestedRoots.Length == 0)
+                return [];
+
+            var dbsets = new List<(string Path, long ID)>();
+            using (var setsCommand =
+                   conn_.CreateCommand())
+            {
+                setsCommand.CommandText =
+                    "SELECT Path, ID FROM ScanSets";
+                using var reader =
+                    setsCommand.ExecuteReader();
+                while (reader.Read())
+                {
+                    string root =
+                        reader.GetString(0);
+                    if (requestedRoots.Any(
+                            requested =>
+                                FilePathComparer.Equals(
+                                    requested,
+                                    Path.TrimEndingDirectorySeparator(
+                                        root))))
+                        dbsets.Add(
+                            (root,
+                                reader.GetInt64(1)));
+                }
+            }
+            if (dbsets.Count == 0)
+                return [];
+
+            using var command =
+                conn_.CreateCommand();
+            var sql = new StringBuilder(
+                "SELECT s.Path, a.Path, f.Path, MIN(m.Value) AS SortValue " +
+                "FROM ScanSets s " +
+                "JOIN Albums a ON a.ScanSetID = s.ID " +
+                "JOIN Tracks t ON t.AlbumID = a.ID " +
+                "JOIN Files f ON f.ID = t.ID " +
+                "LEFT JOIN MetadataKeys k ON k.\"Key\" = @metadataKey " +
+                "LEFT JOIN Metadata m ON m.FileID = f.ID AND m.KeyID = k.ID " +
+                "WHERE s.ID IN (");
+            command.Parameters.Add(
+                    "@metadataKey",
+                    DbType.String)
+                .Value = metadataKey;
+            for (int index = 0;
+                 index < dbsets.Count;
+                 index++)
+            {
+                if (index > 0)
+                    sql.Append(',');
+                string parameter =
+                    "@sortSet" + index;
+                sql.Append(parameter);
+                command.Parameters.Add(
+                        parameter,
+                        DbType.Int64)
+                    .Value = dbsets[index].ID;
+            }
+            sql.Append(
+                ") GROUP BY s.Path, a.Path, f.Path, f.ID " +
+                "ORDER BY CASE WHEN MIN(m.Value) IS NULL THEN 0 ELSE 1 END, ");
+#if SQLITE
+            sql.Append(sortKind switch
+            {
+                MetadataValueSortKind.Numeric =>
+                    "CAST(MIN(m.Value) AS REAL)",
+                MetadataValueSortKind.Date =>
+                    "julianday(MIN(m.Value))",
+                _ =>
+                    "MIN(m.Value) COLLATE NOCASE",
+            });
+#else
+            sql.Append(sortKind switch
+            {
+                MetadataValueSortKind.Numeric =>
+                    "TRY_CONVERT(float, MIN(m.Value))",
+                MetadataValueSortKind.Date =>
+                    "TRY_CONVERT(datetime2, MIN(m.Value))",
+                _ => "MIN(m.Value)",
+            });
+#endif
+            command.CommandText = sql
+                .Append(", f.ID")
+                .ToString();
+
+            var result = new List<string>();
+            using var resultReader =
+                command.ExecuteReader();
+            while (resultReader.Read())
+            {
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+                result.Add(Path.Combine(
+                    resultReader.GetString(0),
+                    resultReader.GetString(1),
+                    resultReader.GetString(2)));
+            }
+            return result;
         }
 
         /// <summary>

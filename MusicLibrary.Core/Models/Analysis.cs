@@ -1,11 +1,17 @@
 using MusicFileUtilities;
 using MusicLibraryTools;
+using System.Collections.ObjectModel;
 
 namespace MusicLibrary.Core.Models;
 
 /// <summary>A flat per-file record used by the analyzers and duplicate finder (from the cache).</summary>
 public sealed record TrackRecord
 {
+    private static readonly IReadOnlyDictionary<string, string[]>
+        EmptyMetadata = new ReadOnlyDictionary<string, string[]>(
+            new Dictionary<string, string[]>(
+                StringComparer.OrdinalIgnoreCase));
+
     public required string Path { get; init; }
     public string? Artist { get; init; }
     public string? AlbumArtist { get; init; }
@@ -33,8 +39,7 @@ public sealed record TrackRecord
     public long Length { get; init; }
     public DateTime LastWriteTime { get; init; }
     public IReadOnlyDictionary<string, string[]> Metadata { get; init; } =
-        new Dictionary<string, string[]>(
-            StringComparer.OrdinalIgnoreCase);
+        EmptyMetadata;
 
     /// <summary>Best available "album artist" for grouping (AlbumArtist, else Artist).</summary>
     public string EffectiveAlbumArtist =>

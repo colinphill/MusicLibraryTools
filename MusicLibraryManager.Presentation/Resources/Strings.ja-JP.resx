@@ -6423,4 +6423,7 @@
   <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>「コンパクト」では、ナビゲーションやアイコンの操作領域を縮小せずに、行、カード、フォームの間隔を狭めます。</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>標準</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>コンパクト</value></data>
+  <data name="Library.Metadata.Loading" xml:space="preserve"><value>読み込み中…</value></data>
+  <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>利用できません</value></data>
+  <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>正確なメタデータ値の読み込みが完了してから編集してください。</value></data>
 </root>

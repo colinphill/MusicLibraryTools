@@ -6423,4 +6423,7 @@
   <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>컴팩트는 탐색이나 아이콘의 조작 영역을 줄이지 않고 행, 카드 및 양식 간격을 좁힙니다.</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>표준</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>컴팩트</value></data>
+  <data name="Library.Metadata.Loading" xml:space="preserve"><value>불러오는 중…</value></data>
+  <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>사용할 수 없음</value></data>
+  <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>정확한 메타데이터 값을 불러온 후 편집하세요.</value></data>
 </root>

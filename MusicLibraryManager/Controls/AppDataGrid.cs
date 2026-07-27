@@ -201,6 +201,22 @@ public sealed class AppDataGrid : DataGrid
     public string? KeyFor(DataGridColumn column) =>
         _definitions.TryGetValue(column, out AppGridColumnDefinition? definition) ? definition.Key : null;
 
+    public bool SetCustomSortComparer(
+        string key,
+        IComparer comparer)
+    {
+        DataGridColumn? column =
+            _definitions.Keys.FirstOrDefault(
+                candidate => string.Equals(
+                    KeyFor(candidate),
+                    key,
+                    StringComparison.OrdinalIgnoreCase));
+        if (column is null)
+            return false;
+        column.CustomSortComparer = comparer;
+        return true;
+    }
+
     /// <summary>
     /// Refreshes localized display headers without rebuilding columns or disturbing their
     /// persisted order, widths, visibility, or sort state.
@@ -258,7 +274,6 @@ public sealed class AppDataGrid : DataGrid
             CurrentSortKey = key;
             CurrentSortDescending =
                 _programmaticSortDescending;
-            _programmaticSortKey = null;
             return;
         }
         _sortApplicationVersion++;

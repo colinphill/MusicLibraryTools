@@ -856,7 +856,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.ArtworkRepairs);
         try
         {
-            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var records = await _library.GetBrowseRecordsAsync(scope.Token);
             var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
             AnalysisRunViewModel run = await BuildArtworkHealthRunAsync(
                 records, artwork, GetArtworkHealthSettings(), CreateAnalysisProgress(), scope.Token);
@@ -947,7 +947,7 @@ public partial class AnalyzerViewModel : ViewModelBase
                 "Health.Progress.ReadingDeferredArtwork",
                 paths.Length);
             _ = await _library.GetImageSignaturesAsync(paths, scope.Token);
-            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var records = await _library.GetBrowseRecordsAsync(scope.Token);
             var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
             AnalysisRunViewModel run = await BuildArtworkHealthRunAsync(
                 records, artwork, GetArtworkHealthSettings(), CreateAnalysisProgress(), scope.Token);
@@ -1112,7 +1112,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.Findings);
         try
         {
-            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var records = await _library.GetBrowseRecordsAsync(scope.Token);
             LibraryConfiguration? configuration = _settings.Configuration;
             IProgress<AnalysisProgress> progress = CreateAnalysisProgress();
             var prepared = await Task.Run(() => (
@@ -1275,7 +1275,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.RepresentationRepairs);
         try
         {
-            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var records = await _library.GetBrowseRecordsAsync(scope.Token);
             IProgress<AnalysisProgress> progress = CreateAnalysisProgress();
             var preview = await Task.Run(
                 () => _representationRepairs.PreviewAsync(
@@ -1364,7 +1364,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.Repairs);
         try
         {
-            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var records = await _library.GetBrowseRecordsAsync(scope.Token);
             var run = await Task.Run(() =>
             {
                 AnalysisRepairPlan preview = _settings.Configuration is { } configuration
@@ -1428,7 +1428,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.Conflicts);
         try
         {
-            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var records = await _library.GetBrowseRecordsAsync(scope.Token);
             var run = await Task.Run(() =>
             {
                 var groups = _repairs.FindAlbumArtistConflicts(records).Select(conflict =>
@@ -1489,7 +1489,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.Repairs);
         try
         {
-            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var records = await _library.GetBrowseRecordsAsync(scope.Token);
             var run = await Task.Run(() =>
             {
                 AnalysisRepairPlan plan = StampPolicy(
@@ -1890,7 +1890,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.Findings);
         try
         {
-            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var records = await _library.GetBrowseRecordsAsync(scope.Token);
             var report = await _library.CheckSetsAsync(scope.Token);
             HealthRunText text = report.Count == 0
                 ? RunText(
@@ -1937,7 +1937,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         using var scope = BeginRun(labelResourceKey, view);
         try
         {
-            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var records = await _library.GetBrowseRecordsAsync(scope.Token);
             IProgress<AnalysisProgress> progress = CreateAnalysisProgress();
             var (_, run) = await Task.Run(
                 () => body(records, progress, scope.Token), scope.Token);

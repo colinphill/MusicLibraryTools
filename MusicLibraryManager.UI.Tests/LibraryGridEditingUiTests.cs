@@ -364,6 +364,12 @@ public sealed class LibraryGridEditingUiTests
                         candidate.DataContext,
                         row)),
             "The Library row was not realized for editing.");
+        await model.LoadMetadataProjectionAsync(
+            row);
+        await WaitForAsync(
+            () => row.HasExactMetadataValue(
+                CustomField),
+            "The visible custom metadata cell did not finish loading its exact value.");
         return new(
             services,
             window,

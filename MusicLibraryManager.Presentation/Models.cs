@@ -121,7 +121,7 @@ public partial class LibraryRow : ObservableObject
             TagFields.Comment,
         ];
     private readonly string?[] _originalKnownValues;
-    private readonly ImmutableArray<string>[]
+    private ImmutableArray<string>[]?
         _originalKnownValueSets;
     private bool _suppressPendingNotification;
     private bool _synchronizingMetadataProjection;
@@ -131,7 +131,11 @@ public partial class LibraryRow : ObservableObject
         MetadataFieldKey,
         ImmutableArray<string>>?
         _pendingExpectedOriginalValues;
+    private HashSet<MetadataFieldKey>?
+        _loadedProjectionFields;
     private bool _isEditReserved;
+    private LibraryMetadataValueMap?
+        _metadataValues;
 
     public LibraryRow(TrackRecord record)
     {
@@ -145,10 +149,11 @@ public partial class LibraryRow : ObservableObject
         Record = flacWithTagNameAsCodec
             ? record with { CodecName = "FLAC" }
             : record;
-        MetadataValues = BuildMetadataValues(
+        _metadataValues = BuildMetadataValues(
             Record.Metadata);
-        MetadataValues.Changed +=
-            OnMetadataValuesChanged;
+        if (_metadataValues is not null)
+            _metadataValues.Changed +=
+                OnMetadataValuesChanged;
         _title = Record.Title ?? "";
         _artist = Record.Artist ?? "";
         _albumArtist = Record.AlbumArtist ?? "";
@@ -169,7 +174,7 @@ public partial class LibraryRow : ObservableObject
         _discTotalEditValue =
             Record.DiscTotal?.ToString();
         _comment =
-            MetadataValues.GetValueOrDefault(
+            _metadataValues?.GetValueOrDefault(
                 MetadataGridValueKey.For(
                     MetadataFieldKey.Known(
                         TagFields.Comment))) ??
@@ -190,17 +195,12 @@ public partial class LibraryRow : ObservableObject
             DiscTotalEditValue,
             Comment,
         ];
-        _originalKnownValueSets =
-        [
-            .. InlineEditFields.Select(
-                OriginalKnownValues),
-        ];
         Details = new DetailsRow(Record);
-        Details.RebuildSearchText(DetailsColumns.All.Select(column => column.Key).ToArray());
     }
 
     public TrackRecord Record { get; private set; }
-    public LibraryMetadataValueMap MetadataValues { get; }
+    public LibraryMetadataValueMap MetadataValues =>
+        EnsureMetadataValues();
     public DetailsRow Details { get; private set; }
     public string Path => Record.Path;
     public int? Track => Record.TrackNumber;
@@ -220,7 +220,7 @@ public partial class LibraryRow : ObservableObject
     public string SearchText => Details.SearchText;
     public bool HasChanges =>
         HasKnownChanges() ||
-        MetadataValues.HasChanges;
+        _metadataValues?.HasChanges == true;
 
     [ObservableProperty]
     private string _title;
@@ -274,7 +274,7 @@ public partial class LibraryRow : ObservableObject
     internal void SetEditReservation(bool reserved)
     {
         _isEditReserved = reserved;
-        MetadataValues.SetEditReservation(
+        _metadataValues?.SetEditReservation(
             reserved);
     }
 
@@ -299,7 +299,8 @@ public partial class LibraryRow : ObservableObject
                 InlineEditFields[index];
             MetadataFieldKey key =
                 MetadataFieldKey.Known(field);
-            if (MetadataValues.IsPending(key))
+            if (_metadataValues?.IsPending(
+                    key) == true)
                 continue;
             string? original =
                 _originalKnownValues[index];
@@ -315,11 +316,12 @@ public partial class LibraryRow : ObservableObject
                         LibraryMetadataValueMap
                             .ParseEditorValues(
                                 current ?? "")),
-                    _originalKnownValueSets[index]);
+                    OriginalKnownValueSet(index));
         }
         foreach (LibraryPendingMetadataEdit edit in
-                 MetadataValues
-                     .CreatePendingEditStates())
+                 _metadataValues?
+                     .CreatePendingEditStates() ??
+                 [])
         {
             string key =
                 MetadataGridValueKey.For(
@@ -358,9 +360,9 @@ public partial class LibraryRow : ObservableObject
         {
             TagFields field =
                 InlineEditFields[index];
-            if (MetadataValues.IsPending(
+            if (_metadataValues?.IsPending(
                     MetadataFieldKey.Known(
-                        field)))
+                        field)) == true)
                 continue;
             string? original =
                 _originalKnownValues[index];
@@ -378,14 +380,16 @@ public partial class LibraryRow : ObservableObject
                     .DisplayName,
                 LibraryMetadataValueMap
                     .FormatEditorValues(
-                        _originalKnownValueSets[
-                            index]),
+                        OriginalKnownValueSet(
+                            index)),
                 current ?? "");
         }
         foreach ((MetadataFieldKey field,
                      string before,
                      string after) in
-                 MetadataValues.CreatePendingRows())
+                 _metadataValues?
+                     .CreatePendingRows() ??
+                 [])
         {
             yield return new(
                 System.IO.Path.GetFileName(Path),
@@ -437,8 +441,8 @@ public partial class LibraryRow : ObservableObject
                     TryInlineEditIndex(
                         known,
                         out int index) &&
-                    !MetadataValues.IsPending(
-                        field))
+                    _metadataValues?.IsPending(
+                        field) != true)
                 {
                     string current =
                         KnownValue(known) ?? "";
@@ -460,8 +464,8 @@ public partial class LibraryRow : ObservableObject
                             destinationKnown,
                             out int destinationIndex)
                         ? destination
-                            ._originalKnownValueSets[
-                                destinationIndex]
+                            .OriginalKnownValueSet(
+                                destinationIndex)
                         : destination
                             .MetadataValues
                             .OriginalValues(field);
@@ -517,6 +521,149 @@ public partial class LibraryRow : ObservableObject
         ThumbnailLoaded = false;
     }
 
+    internal void LoadMetadataProjection(
+        IReadOnlyDictionary<
+            MetadataFieldKey,
+            ImmutableArray<string>> values,
+        IReadOnlyList<
+            MetadataFieldKey> requestedFields)
+    {
+        foreach (MetadataFieldKey field in
+                 requestedFields)
+        {
+            ImmutableArray<string> fieldValues =
+                values.GetValueOrDefault(
+                    field,
+                    []);
+            MetadataValues.LoadProjection(
+                field,
+                fieldValues);
+            (_loadedProjectionFields ??= [])
+                .Add(field);
+            if (field.KnownField is
+                    TagFields.Comment &&
+                !IsFieldPending(field))
+            {
+                _synchronizingMetadataProjection =
+                    true;
+                try
+                {
+                    string projected =
+                        LibraryMetadataValueMap
+                            .FormatEditorValues(
+                                fieldValues);
+                    Comment = projected;
+                    int index = Array.IndexOf(
+                        InlineEditFields,
+                        TagFields.Comment);
+                    _originalKnownValues[index] =
+                        projected;
+                    if (_originalKnownValueSets is
+                        not null)
+                        _originalKnownValueSets[index] =
+                            fieldValues;
+                }
+                finally
+                {
+                    _synchronizingMetadataProjection =
+                        false;
+                }
+            }
+        }
+    }
+
+    internal void BeginMetadataProjection(
+        IReadOnlyList<
+            MetadataFieldKey> fields)
+    {
+        foreach (MetadataFieldKey field in
+                 fields)
+            MetadataValues
+                .BeginProjection(field);
+    }
+
+    internal void FailMetadataProjection(
+        IReadOnlyList<
+            MetadataFieldKey> fields)
+    {
+        foreach (MetadataFieldKey field in
+                 fields)
+            MetadataValues
+                .FailProjection(field);
+    }
+
+    internal void ClearMetadataProjection(
+        IReadOnlyList<
+            MetadataFieldKey> fields)
+    {
+        foreach (MetadataFieldKey field in
+                 fields)
+        {
+            _metadataValues?.ClearProjection(
+                field);
+            _loadedProjectionFields?.Remove(
+                field);
+            if (field.KnownField is
+                    TagFields.Comment &&
+                !IsFieldPending(field))
+            {
+                _synchronizingMetadataProjection =
+                    true;
+                try
+                {
+                    Comment = "";
+                    int index = Array.IndexOf(
+                        InlineEditFields,
+                        TagFields.Comment);
+                    _originalKnownValues[index] = "";
+                    if (_originalKnownValueSets is
+                        not null)
+                        _originalKnownValueSets[index] =
+                            [];
+                }
+                finally
+                {
+                    _synchronizingMetadataProjection =
+                        false;
+                }
+            }
+        }
+        if (_loadedProjectionFields?.Count == 0)
+            _loadedProjectionFields = null;
+    }
+
+    public bool HasExactMetadataValue(
+        MetadataFieldKey field) =>
+        IsBrowseScalarField(field) ||
+        IsFieldPending(field) ||
+        _loadedProjectionFields?.Contains(
+            field) == true;
+
+    internal ImmutableArray<string>
+        MetadataValuesForFilter(
+            MetadataFieldKey field,
+            ImmutableArray<string>
+                projectedValues) =>
+        IsFieldPending(field)
+            ? CurrentValues(field)
+            : projectedValues;
+
+    private static bool IsBrowseScalarField(
+        MetadataFieldKey field) =>
+        field.KnownField is
+            TagFields.Title or
+            TagFields.Artist or
+            TagFields.AlbumArtist or
+            TagFields.Album or
+            TagFields.Genre or
+            TagFields.Composer or
+            TagFields.Grouping or
+            TagFields.Date or
+            TagFields.TrackNumber or
+            TagFields.TotalTracks or
+            TagFields.DiscNumber or
+            TagFields.TotalDiscs;
+
     public void RevertPendingChanges()
     {
         _suppressPendingNotification = true;
@@ -524,7 +671,7 @@ public partial class LibraryRow : ObservableObject
             true;
         try
         {
-            MetadataValues
+            _metadataValues?
                 .RevertPendingChanges();
             for (int index = 0;
                  index < InlineEditFields.Length;
@@ -533,13 +680,13 @@ public partial class LibraryRow : ObservableObject
                 SetKnownValue(
                     InlineEditFields[index],
                     _originalKnownValues[index]);
-                MetadataValues.SetProjection(
+                _metadataValues?.SetProjection(
                     MetadataFieldKey.Known(
                         InlineEditFields[index]),
                     LibraryMetadataValueMap
                         .FormatEditorValues(
-                            _originalKnownValueSets[
-                                index]));
+                            OriginalKnownValueSet(
+                                index)));
             }
         }
         finally
@@ -608,10 +755,6 @@ public partial class LibraryRow : ObservableObject
                         lastWriteTimeUtc,
                 };
             Details = new(Record);
-            Details.RebuildSearchText(
-                DetailsColumns.All
-                    .Select(column => column.Key)
-                    .ToArray());
         }
         finally
         {
@@ -649,7 +792,8 @@ public partial class LibraryRow : ObservableObject
                 field,
                 notificationErrors);
         TryNotify(
-            MetadataValues.NotifyAppliedValuesChanged,
+            () => _metadataValues?
+                .NotifyAppliedValuesChanged(),
             notificationErrors);
         TryNotify(
             () => OnPropertyChanged(
@@ -672,7 +816,24 @@ public partial class LibraryRow : ObservableObject
             ImmutableArray<TagFields>
                 ChangedKnownFields);
 
-    private static LibraryMetadataValueMap
+    private LibraryMetadataValueMap
+        EnsureMetadataValues()
+    {
+        if (_metadataValues is not null)
+            return _metadataValues;
+        _metadataValues = new(
+            new Dictionary<
+                string,
+                ImmutableArray<string>>(
+                StringComparer.OrdinalIgnoreCase));
+        _metadataValues.SetEditReservation(
+            _isEditReserved);
+        _metadataValues.Changed +=
+            OnMetadataValuesChanged;
+        return _metadataValues;
+    }
+
+    private static LibraryMetadataValueMap?
         BuildMetadataValues(
             IReadOnlyDictionary<string, string[]> metadata)
     {
@@ -701,7 +862,9 @@ public partial class LibraryRow : ObservableObject
                     [.. fieldValues];
             }
         }
-        return new(values);
+        return values.Count == 0
+            ? null
+            : new(values);
     }
 
     private string? KnownValue(TagFields field) =>
@@ -778,9 +941,16 @@ public partial class LibraryRow : ObservableObject
         string? value)
     {
         if (!_synchronizingMetadataProjection)
-            MetadataValues.SetProjection(
+        {
+            if (TryInlineEditIndex(
+                    field,
+                    out int index))
+                _ = OriginalKnownValueSet(
+                    index);
+            _metadataValues?.SetProjection(
                 MetadataFieldKey.Known(field),
                 value ?? "");
+        }
         NotifyPendingChangesChanged();
     }
 
@@ -796,12 +966,13 @@ public partial class LibraryRow : ObservableObject
             {
                 MetadataFieldKey key =
                     MetadataFieldKey.Known(field);
-                if (!MetadataValues.IsPending(key))
+                if (_metadataValues?.IsPending(
+                        key) != true)
                     continue;
                 string? projected =
                     LibraryMetadataValueMap
                         .FormatEditorValues(
-                            MetadataValues
+                            _metadataValues!
                                 .CurrentValues(
                                     key));
                 if (!StringComparer.Ordinal.Equals(
@@ -889,8 +1060,9 @@ public partial class LibraryRow : ObservableObject
                 known,
                 out int index))
         {
-            _originalKnownValueSets[index] =
-                edit.Values;
+            SetOriginalKnownValueSet(
+                index,
+                edit.Values);
             _originalKnownValues[index] =
                 LibraryMetadataValueMap
                     .FormatEditorValues(
@@ -900,7 +1072,7 @@ public partial class LibraryRow : ObservableObject
                     known,
                     _originalKnownValues[index]);
         }
-        MetadataValues.AcceptAppliedEdit(
+        _metadataValues?.AcceptAppliedEdit(
             edit,
             preserveCurrent,
             notify: false);
@@ -1037,7 +1209,8 @@ public partial class LibraryRow : ObservableObject
     private bool IsFieldPending(
         MetadataFieldKey field)
     {
-        if (MetadataValues.IsPending(field))
+        if (_metadataValues?.IsPending(
+                field) == true)
             return true;
         return field.KnownField is
             { } known &&
@@ -1053,8 +1226,9 @@ public partial class LibraryRow : ObservableObject
         CurrentValues(
             MetadataFieldKey field)
     {
-        if (MetadataValues.IsPending(field))
-            return MetadataValues.CurrentValues(
+        if (_metadataValues?.IsPending(
+                field) == true)
+            return _metadataValues.CurrentValues(
                 field);
         if (field.KnownField is
             { } known &&
@@ -1065,7 +1239,9 @@ public partial class LibraryRow : ObservableObject
                 .ParseEditorValues(
                     value ?? "");
         }
-        return MetadataValues.CurrentValues(field);
+        return _metadataValues?.CurrentValues(
+                   field) ??
+               [];
     }
 
     private static bool TryInlineEditIndex(
@@ -1199,14 +1375,49 @@ public partial class LibraryRow : ObservableObject
             TagFields field)
     {
         ImmutableArray<string> mapped =
-            MetadataValues.OriginalValues(
-                MetadataFieldKey.Known(field));
+            _metadataValues?.OriginalValues(
+                MetadataFieldKey.Known(field)) ??
+            [];
         if (!mapped.IsDefaultOrEmpty)
             return mapped;
-        string? value = KnownValue(field);
+        string? value =
+            TryInlineEditIndex(
+                field,
+                out int index)
+                ? _originalKnownValues[
+                    index]
+                : KnownValue(field);
         return string.IsNullOrWhiteSpace(value)
             ? []
             : [value];
+    }
+
+    private ImmutableArray<string>
+        OriginalKnownValueSet(int index)
+    {
+        _originalKnownValueSets ??=
+            new ImmutableArray<string>[
+                InlineEditFields.Length];
+        ImmutableArray<string> values =
+            _originalKnownValueSets[index];
+        if (!values.IsDefault)
+            return values;
+        values = OriginalKnownValues(
+            InlineEditFields[index]);
+        _originalKnownValueSets[index] =
+            values;
+        return values;
+    }
+
+    private void SetOriginalKnownValueSet(
+        int index,
+        ImmutableArray<string> values)
+    {
+        _originalKnownValueSets ??=
+            new ImmutableArray<string>[
+                InlineEditFields.Length];
+        _originalKnownValueSets[index] =
+            values;
     }
 
     private void CapturePendingSourceSnapshot()
@@ -1347,16 +1558,20 @@ public sealed class LibraryMetadataValueMap :
     ObservableObject,
     IReadOnlyDictionary<string, string>
 {
-    private readonly Dictionary<string, string>
+    private Dictionary<string, string>?
         _values;
-    private readonly Dictionary<
+    private Dictionary<
         string,
-        ImmutableArray<string>>
+        ImmutableArray<string>>?
         _originalValues;
     private Dictionary<
         string,
         ImmutableArray<string>>?
         _editedOriginals;
+    private HashSet<string>?
+        _loadingFields;
+    private HashSet<string>?
+        _unavailableFields;
     private bool _suppressChanged;
     private bool _isEditReserved;
 
@@ -1365,20 +1580,38 @@ public sealed class LibraryMetadataValueMap :
             string,
             ImmutableArray<string>> values)
     {
-        _originalValues = new(
-            values,
-            StringComparer.OrdinalIgnoreCase);
-        _values = values.ToDictionary(
-            pair => pair.Key,
-            pair => Display(pair.Value),
-            StringComparer.OrdinalIgnoreCase);
+        if (values.Count > 0)
+        {
+            _originalValues = new(
+                values,
+                StringComparer.OrdinalIgnoreCase);
+            _values = values.ToDictionary(
+                pair => pair.Key,
+                pair => Display(pair.Value),
+                StringComparer.OrdinalIgnoreCase);
+        }
     }
 
     public event EventHandler? Changed;
 
     public string this[string key]
     {
-        get => _values.GetValueOrDefault(key) ?? "";
+        get
+        {
+            if (_values?.TryGetValue(
+                    key,
+                    out string? value) == true)
+                return value;
+            if (_loadingFields?.Contains(
+                    key) == true)
+                return LocalizedText.Get(
+                    "Library.Metadata.Loading");
+            if (_unavailableFields?.Contains(
+                    key) == true)
+                return LocalizedText.Get(
+                    "Library.Metadata.Unavailable");
+            return "";
+        }
         set
         {
             if (_isEditReserved)
@@ -1399,16 +1632,16 @@ public sealed class LibraryMetadataValueMap :
                     out ImmutableArray<string>
                         original) != true)
                 original =
-                    _originalValues
+                    _originalValues?
                         .GetValueOrDefault(
                             key,
-                            []);
+                            []) ?? [];
             (_editedOriginals ??= new(
                     StringComparer.OrdinalIgnoreCase))
                 .TryAdd(
                 key,
                 original);
-            _values[key] = normalized;
+            EnsureValues()[key] = normalized;
             if (ParseValues(normalized).SequenceEqual(
                     original,
                     StringComparer.Ordinal))
@@ -1418,26 +1651,34 @@ public sealed class LibraryMetadataValueMap :
         }
     }
 
-    public IEnumerable<string> Keys => _values.Keys;
-    public IEnumerable<string> Values => _values.Values;
-    public int Count => _values.Count;
+    public IEnumerable<string> Keys =>
+        _values is null
+            ? []
+            : _values.Keys;
+    public IEnumerable<string> Values =>
+        _values is null
+            ? []
+            : _values.Values;
+    public int Count => _values?.Count ?? 0;
     public bool HasChanges =>
         _editedOriginals?.Count > 0;
 
     public bool ContainsKey(string key) =>
-        _values.ContainsKey(key);
+        _values?.ContainsKey(key) == true;
 
     public bool TryGetValue(
         string key,
         out string value)
     {
         value = this[key];
-        return _values.ContainsKey(key);
+        return _values?.ContainsKey(key) ==
+            true;
     }
 
     public IEnumerator<KeyValuePair<string, string>>
         GetEnumerator() =>
-        _values.GetEnumerator();
+        (_values ??
+         EmptyValues).GetEnumerator();
 
     System.Collections.IEnumerator
         System.Collections.IEnumerable.GetEnumerator() =>
@@ -1449,7 +1690,7 @@ public sealed class LibraryMetadataValueMap :
     {
         string key =
             MetadataGridValueKey.For(field);
-        _values[key] = value;
+        EnsureValues()[key] = value;
         _editedOriginals?.Remove(key);
         OnPropertyChanged("Item[]");
     }
@@ -1464,9 +1705,9 @@ public sealed class LibraryMetadataValueMap :
         string key =
             MetadataGridValueKey.For(
                 state.Edit.Field);
-        _originalValues[key] =
+        EnsureOriginalValues()[key] =
             state.OriginalValues;
-        _values[key] =
+        EnsureValues()[key] =
             Display(state.Edit.Values);
         if (state.Edit.Values.SequenceEqual(
                 state.OriginalValues,
@@ -1476,6 +1717,70 @@ public sealed class LibraryMetadataValueMap :
             (_editedOriginals ??= new(
                 StringComparer.OrdinalIgnoreCase))[
                 key] = state.OriginalValues;
+        OnPropertyChanged("Item[]");
+    }
+
+    internal void LoadProjection(
+        MetadataFieldKey field,
+        ImmutableArray<string> values)
+    {
+        string key =
+            MetadataGridValueKey.For(field);
+        if (_editedOriginals?.ContainsKey(
+                key) == true)
+            return;
+        _loadingFields?.Remove(key);
+        _unavailableFields?.Remove(key);
+        EnsureOriginalValues()[key] =
+            values;
+        EnsureValues()[key] =
+            Display(values);
+        OnPropertyChanged("Item[]");
+    }
+
+    internal void ClearProjection(
+        MetadataFieldKey field)
+    {
+        string key =
+            MetadataGridValueKey.For(field);
+        if (_editedOriginals?.ContainsKey(
+                key) == true)
+            return;
+        _loadingFields?.Remove(key);
+        _unavailableFields?.Remove(key);
+        _originalValues?.Remove(key);
+        _values?.Remove(key);
+        OnPropertyChanged("Item[]");
+    }
+
+    internal void BeginProjection(
+        MetadataFieldKey field)
+    {
+        string key =
+            MetadataGridValueKey.For(field);
+        if (_values?.ContainsKey(key) == true ||
+            _editedOriginals?.ContainsKey(
+                key) == true)
+            return;
+        _unavailableFields?.Remove(key);
+        (_loadingFields ??= new(
+            StringComparer.OrdinalIgnoreCase))
+            .Add(key);
+        OnPropertyChanged("Item[]");
+    }
+
+    internal void FailProjection(
+        MetadataFieldKey field)
+    {
+        string key =
+            MetadataGridValueKey.For(field);
+        _loadingFields?.Remove(key);
+        if (_editedOriginals?.ContainsKey(
+                key) == true)
+            return;
+        (_unavailableFields ??= new(
+            StringComparer.OrdinalIgnoreCase))
+            .Add(key);
         OnPropertyChanged("Item[]");
     }
 
@@ -1494,9 +1799,9 @@ public sealed class LibraryMetadataValueMap :
     internal ImmutableArray<string>
         OriginalValues(
             MetadataFieldKey field) =>
-        _originalValues.GetValueOrDefault(
+        _originalValues?.GetValueOrDefault(
             MetadataGridValueKey.For(field),
-            []);
+            []) ?? [];
 
     internal IReadOnlyList<MetadataValueEdit>
         CreatePendingEdits() =>
@@ -1511,7 +1816,7 @@ public sealed class LibraryMetadataValueMap :
             .Select(pair =>
             {
                 string current =
-                    _values.GetValueOrDefault(
+                    _values?.GetValueOrDefault(
                         pair.Key) ??
                     "";
                 if (!TryParseField(
@@ -1542,7 +1847,7 @@ public sealed class LibraryMetadataValueMap :
             return (
                 field,
                 Display(pair.Value),
-                _values.GetValueOrDefault(
+                _values?.GetValueOrDefault(
                     pair.Key) ??
                 "");
         });
@@ -1558,7 +1863,8 @@ public sealed class LibraryMetadataValueMap :
             foreach ((string key,
                          ImmutableArray<string> value)
                      in edited)
-                _values[key] = Display(value);
+                EnsureValues()[key] =
+                    Display(value);
             edited.Clear();
             OnPropertyChanged("Item[]");
         }
@@ -1576,7 +1882,7 @@ public sealed class LibraryMetadataValueMap :
         string key =
             MetadataGridValueKey.For(
                 edit.Field);
-        _originalValues[key] =
+        EnsureOriginalValues()[key] =
             edit.Values;
         if (preserveCurrent)
         {
@@ -1586,7 +1892,7 @@ public sealed class LibraryMetadataValueMap :
         }
         else
         {
-            _values[key] = Display(
+            EnsureValues()[key] = Display(
                 edit.Values);
             _editedOriginals?.Remove(key);
         }
@@ -1604,6 +1910,18 @@ public sealed class LibraryMetadataValueMap :
                 this,
                 EventArgs.Empty);
     }
+
+    private Dictionary<string, string>
+        EnsureValues() =>
+        _values ??= new(
+            StringComparer.OrdinalIgnoreCase);
+
+    private Dictionary<
+        string,
+        ImmutableArray<string>>
+        EnsureOriginalValues() =>
+        _originalValues ??= new(
+            StringComparer.OrdinalIgnoreCase);
 
     internal static bool TryParseField(
         string valueKey,
@@ -1705,6 +2023,12 @@ public sealed class LibraryMetadataValueMap :
     private static string Display(
         ImmutableArray<string> values) =>
         FormatEditorValues(values);
+
+    private static readonly IReadOnlyDictionary<
+        string,
+        string>
+        EmptyValues =
+        new Dictionary<string, string>();
 
     private static readonly IReadOnlyDictionary<
         string,

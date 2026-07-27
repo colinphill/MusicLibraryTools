@@ -515,6 +515,123 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Home_summary_does_not_materialize_browse_records()
+    {
+        TrackRecord[] records =
+        [
+            Track(
+                "Artist",
+                "Album",
+                "Track",
+                "FLAC",
+                @"C:\Music\Track.flac"),
+        ];
+        var library = new FakeLibrary(records);
+        var settings = new FakeSettings();
+        var activities =
+            new AppActivityService();
+        var home = new HomeViewModel(
+            library,
+            settings,
+            new NavigationService(),
+            new IndexingViewModel(
+                library,
+                settings,
+                activities),
+            activities);
+
+        await home.RefreshAsync();
+
+        Assert.Equal("1", home.TrackCount);
+        Assert.Equal(
+            1,
+            library.SummaryReadCount);
+        Assert.Equal(
+            0,
+            library.BrowseReadCount);
+    }
+
+    [Fact]
+    public async Task Library_metadata_projection_cache_obeys_cell_and_byte_budgets()
+    {
+        MetadataFieldKey field =
+            MetadataFieldKey.Custom(
+                "LARGE_VALUE");
+        TrackRecord[] records =
+            Enumerable.Range(0, 4_200)
+                .Select(index =>
+                    Track(
+                        "Artist",
+                        "Album",
+                        $"Track {index}",
+                        "FLAC",
+                        $@"C:\Music\Track {index}.flac")
+                    with
+                    {
+                        Metadata =
+                            new Dictionary<
+                                string,
+                                string[]>
+                            {
+                                [CachedMetadataKeys
+                                    .Custom(
+                                        "LARGE_VALUE")] =
+                                [
+                                    new string(
+                                        (char)('a' +
+                                            index % 26),
+                                        12_000),
+                                ],
+                            },
+                    })
+                .ToArray();
+        var library = new FakeLibrary(records);
+        LibraryViewModel viewModel =
+            BuildLibrary(
+                new FakeSettings(),
+                records,
+                library);
+        viewModel.ColumnEditor.Columns.Add(
+            new UserMetadataColumnRow(
+                new(
+                    Guid.NewGuid(),
+                    "Large value",
+                    field,
+                    Visible: true,
+                    Order: 20,
+                    Width: 160)));
+        await viewModel.ReloadAsync();
+
+        foreach (LibraryRow row in
+                 viewModel.Rows)
+        {
+            await viewModel
+                .LoadMetadataProjectionAsync(
+                    row);
+            viewModel
+                .ReleaseMetadataProjection(
+                    row);
+        }
+
+        Assert.InRange(
+            viewModel
+                .MetadataProjectionCacheCount,
+            1,
+            4_096);
+        Assert.InRange(
+            viewModel
+                .MetadataProjectionCacheBytes,
+            1,
+            32L * 1024 * 1024);
+        Assert.All(
+            viewModel.Rows.Take(32),
+            row =>
+                Assert.False(
+                    row.HasExactMetadataValue(
+                        field)));
+    }
+
+    [Fact]
     public async Task Library_view_labels_flac_correctly_and_loads_only_realized_thumbnails()
     {
         var settings = new FakeSettings();
@@ -554,7 +671,16 @@ public sealed class PresentationTests
         {
             IndexRelease = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously),
         };
-        LibraryViewModel viewModel = BuildLibrary(settings, records, library);
+        var navigation =
+            new NavigationService();
+        await navigation.NavigateAsync(
+            ShellDestination.Library);
+        LibraryViewModel viewModel =
+            BuildLibrary(
+                settings,
+                records,
+                library,
+                navigation);
         var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         viewModel.Indexing.IndexCompleted += () => completed.TrySetResult(true);
 
@@ -2956,7 +3082,8 @@ public sealed class PresentationTests
     private static LibraryViewModel BuildLibrary(
         FakeSettings settings,
         IReadOnlyList<TrackRecord> records,
-        FakeLibrary? library = null)
+        FakeLibrary? library = null,
+        NavigationService? navigation = null)
     {
         library ??= new FakeLibrary(records);
         var activity = new AppActivityService();
@@ -2965,7 +3092,7 @@ public sealed class PresentationTests
             new FakeThumbnails(), activity);
         var indexing = new IndexingViewModel(library, settings, activity);
         return new LibraryViewModel(library, new FakeReindex(), settings, inspector,
-            new NavigationService(), indexing, new FakeThumbnails());
+            navigation ?? new NavigationService(), indexing, new FakeThumbnails());
     }
 
     [Fact]
@@ -3012,7 +3139,8 @@ public sealed class PresentationTests
         Assert.All(viewModel.OperationEditor.OperationDescriptors, descriptor =>
             Assert.True(descriptor.Supports(MetadataOperationSurface.Library)));
 
-        viewModel.RevertPendingChangesCommand.Execute(null);
+        await viewModel.RevertPendingChangesCommand
+            .ExecuteAsync(null);
 
         Assert.False(viewModel.HasApplicableOperationPreview);
         Assert.Empty(viewModel.OperationPreviewChanges);
@@ -4583,8 +4711,23 @@ internal sealed class FakeSettings : IAppSettings
 
 internal sealed class FakeLibrary(IReadOnlyList<TrackRecord> records) : ILibraryService
 {
+    private readonly Dictionary<string, TrackRecord>
+        _recordsByPath = records
+            .GroupBy(
+                record => record.Path,
+                OperatingSystem.IsWindows()
+                    ? StringComparer.OrdinalIgnoreCase
+                    : StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                OperatingSystem.IsWindows()
+                    ? StringComparer.OrdinalIgnoreCase
+                    : StringComparer.Ordinal);
     public int ArtworkReadCount { get; private set; }
     public int IndexCallCount { get; private set; }
+    public int BrowseReadCount { get; private set; }
+    public int SummaryReadCount { get; private set; }
     public TaskCompletionSource<bool> IndexStarted { get; } =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource<bool>? IndexRelease { get; init; }
@@ -4603,6 +4746,78 @@ internal sealed class FakeLibrary(IReadOnlyList<TrackRecord> records) : ILibrary
         => Task.FromResult(new LibrarySnapshot { TotalTracks = records.Count });
     public Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default)
         => Task.FromResult(records);
+    public Task<IReadOnlyList<TrackRecord>>
+        GetBrowseRecordsAsync(
+            CancellationToken ct = default)
+    {
+        BrowseReadCount++;
+        return Task.FromResult(records);
+    }
+    public Task<LibrarySummary>
+        GetLibrarySummaryAsync(
+            CancellationToken ct = default)
+    {
+        SummaryReadCount++;
+        int albums = records
+            .Select(record => (
+                record.EffectiveAlbumArtist,
+                record.Album))
+            .Distinct()
+            .Count();
+        int artists = records
+            .Select(record =>
+                record.EffectiveAlbumArtist)
+            .Distinct(
+                StringComparer.OrdinalIgnoreCase)
+            .Count();
+        return Task.FromResult(
+            new LibrarySummary(
+                records.Count,
+                albums,
+                artists));
+    }
+    public Task<IReadOnlyList<
+        LibraryMetadataProjection>>
+        GetMetadataProjectionAsync(
+            IReadOnlyList<string> paths,
+            IReadOnlyList<MetadataFieldKey> fields,
+            CancellationToken ct = default)
+    {
+        IReadOnlyList<
+            LibraryMetadataProjection> result =
+            paths.Select(path =>
+            {
+                var values = new Dictionary<
+                    MetadataFieldKey,
+                    System.Collections.Immutable
+                        .ImmutableArray<string>>();
+                if (_recordsByPath.TryGetValue(
+                        path,
+                        out TrackRecord? record))
+                    foreach (MetadataFieldKey field in
+                             fields)
+                    {
+                        string key =
+                            field.KnownField?
+                                .ToString() ??
+                            CachedMetadataKeys
+                                .Custom(
+                                    field.CustomName!);
+                        if (record.Metadata
+                            .TryGetValue(
+                                key,
+                                out string[]?
+                                    fieldValues))
+                            values[field] =
+                                [.. fieldValues];
+                    }
+                return new
+                    LibraryMetadataProjection(
+                        path,
+                        values);
+            }).ToArray();
+        return Task.FromResult(result);
+    }
     public Task<AnalysisReport> CheckSetsAsync(CancellationToken ct = default)
         => Task.FromResult(new AnalysisReport("Sets", []));
     public Task<FileDetails?> GetFileDetailsAsync(string path, bool includeArtwork, CancellationToken ct = default)

@@ -81,6 +81,51 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly LinkedList<string> _thumbnailLru = [];
     private CancellationTokenSource _thumbnailLifetime = new();
     private const int ThumbnailCacheLimit = 256;
+    private readonly SemaphoreSlim
+        _metadataProjectionGate = new(4, 4);
+    private readonly object
+        _metadataProjectionSync = new();
+    private readonly Dictionary<
+        LibraryRow,
+        CancellationTokenSource>
+        _metadataProjectionLoads = [];
+    private readonly Dictionary<
+        LibraryRow,
+        MetadataFieldKey[]>
+        _metadataProjectionLoadedRows = [];
+    private readonly Dictionary<
+        string,
+        MetadataProjectionCacheItem>
+        _metadataProjectionCache =
+            new(PathComparer);
+    private readonly LinkedList<string>
+        _metadataProjectionLru = [];
+    private CancellationTokenSource
+        _metadataProjectionLifetime = new();
+    private long _metadataProjectionCacheBytes;
+    private const int
+        MetadataProjectionCacheLimit = 4096;
+    private const long
+        MetadataProjectionCacheByteLimit =
+            32L * 1024 * 1024;
+    internal int MetadataProjectionCacheCount
+    {
+        get
+        {
+            lock (_metadataProjectionSync)
+                return _metadataProjectionCache
+                    .Count;
+        }
+    }
+
+    internal long MetadataProjectionCacheBytes
+    {
+        get
+        {
+            lock (_metadataProjectionSync)
+                return _metadataProjectionCacheBytes;
+        }
+    }
     private List<LibraryRow> _allRows = [];
     private readonly HashSet<LibraryRow>
         _inlinePendingRows = [];
@@ -103,6 +148,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private CancellationTokenSource? _filterCancellation;
     private CancellationTokenSource? _operationCancellation;
     private bool _loadingWorkspace;
+    private bool _reloadRequired = true;
     private string? _statusTextKey;
     private object?[] _statusTextArguments = [];
     private long? _statusTextCount;
@@ -477,7 +523,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         LoadViews();
         LoadWorkspace();
         settings.ConfigurationChanged += OnConfigurationChanged;
-        indexing.IndexCompleted += () => _ = ReloadAsync();
+        indexing.IndexCompleted +=
+            OnIndexCompleted;
+        navigation.NavigationRequested +=
+            OnNavigationRequested;
         inspector.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName is
@@ -693,11 +742,40 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         SavedViews.Clear();
         LoadViews();
         LoadWorkspace();
-        // Restore cached browsing first, then return to the UI loop before starting the root scan.
-        // This mirrors the portable app and ensures Home is painted before progress begins.
-        await ReloadAsync();
+        _reloadRequired = true;
+        if (_navigation.Current ==
+            ShellDestination.Library)
+            await ReloadAsync();
+        else
+        {
+            ResetThumbnails();
+            ResetMetadataProjections();
+            ReplaceLibraryRows([]);
+            Rows = [];
+            PageState =
+                LibraryPageState.Loading;
+        }
         await Task.Yield();
         await Indexing.StartAutomaticIndexAsync();
+    }
+
+    private void OnIndexCompleted()
+    {
+        _reloadRequired = true;
+        if (_navigation.Current ==
+            ShellDestination.Library)
+            _ = ReloadAsync();
+    }
+
+    private void OnNavigationRequested(
+        ShellDestination destination)
+    {
+        if (destination ==
+                ShellDestination.Library &&
+            (_reloadRequired ||
+             Rows.Count == 0) &&
+            !IsBusy)
+            _ = ReloadAsync();
     }
 
     partial void OnFilterTextChanged(string? value)
@@ -865,6 +943,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         _loadCancellation?.Cancel();
         ResetThumbnails();
+        ResetMetadataProjections();
         var cancellation = new CancellationTokenSource();
         _loadCancellation = cancellation;
         if (!_library.IsReady)
@@ -882,14 +961,16 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         PageState = LibraryPageState.Loading;
         SetStatusText(
             "Library.Status.LoadingCache");
+        RetainDraftRowsForReload();
         try
         {
-            var records = await _library.GetAllRecordsAsync(cancellation.Token);
+            var records = await _library.GetBrowseRecordsAsync(cancellation.Token);
             var rows = await Task.Run(() => records.Select(record => new LibraryRow(record)).ToList(), cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
             PreserveDraftRows(rows);
             ReplaceLibraryRows(rows);
             await ApplyFilterAsync(immediate: true);
+            _reloadRequired = false;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -909,6 +990,40 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 IsBusy = false;
             }
             cancellation.Dispose();
+        }
+    }
+
+    private void RetainDraftRowsForReload()
+    {
+        if (_allRows.Count == 0)
+            return;
+        HashSet<string> inspectorPaths =
+            _inspector.HasUnsavedChanges
+                ? _selectedPaths.ToHashSet(
+                    PathComparer)
+                : new(PathComparer);
+        LibraryRow[] retained =
+            _allRows.Where(row =>
+                    row.HasChanges ||
+                    inspectorPaths.Contains(
+                        row.Path) ||
+                    _committedRowOverlays
+                        .ContainsKey(
+                            row.Path))
+                .Distinct()
+                .ToArray();
+        ReplaceLibraryRows(retained);
+        try
+        {
+            // Release the view-model's reference to the old browse snapshot before
+            // loading its replacement. A faulty UI observer must not strand the
+            // model in this intentionally empty transitional state.
+            Rows = [];
+        }
+        catch
+        {
+            // ObservableProperty assigns the backing field before notifying
+            // observers, so the old snapshot has still been released.
         }
     }
 
@@ -4798,6 +4913,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private void InvalidateThumbnail(
         LibraryRow row)
     {
+        object? image = null;
         lock (_thumbnailSync)
         {
             if (_thumbnailLoads.TryGetValue(
@@ -4811,10 +4927,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             if (_thumbnailCache.Remove(
                     row.Path,
                     out ThumbnailCacheItem? cached))
+            {
                 _thumbnailLru.Remove(
                     cached.Node);
+                image = cached.Image;
+            }
         }
         row.InvalidateThumbnail();
+        DisposeThumbnailImage(image);
     }
 
     private static async Task<(
@@ -5406,6 +5526,346 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         row.ThumbnailLoaded = false;
     }
 
+    /// <summary>
+    /// Hydrates only metadata fields used by visible user columns for a realized Library row.
+    /// The cache is bounded independently of the number of tracks in the catalog.
+    /// </summary>
+    public async Task LoadMetadataProjectionAsync(
+        LibraryRow row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        MetadataFieldKey[] fields =
+            VisibleMetadataProjectionFields();
+        if (fields.Length == 0)
+            return;
+        row.BeginMetadataProjection(fields);
+
+        CancellationTokenSource cancellation;
+        MetadataProjectionCacheItem? cached;
+        lock (_metadataProjectionSync)
+        {
+            if (_metadataProjectionLoadedRows
+                    .ContainsKey(row))
+                return;
+            if (_metadataProjectionLoads.TryGetValue(
+                    row,
+                    out CancellationTokenSource?
+                        existingLoad))
+            {
+                if (!existingLoad
+                        .IsCancellationRequested)
+                    return;
+                // A recycled row can become visible again before its canceled
+                // projection task reaches finally. Replace that stale load now;
+                // the old task removes only its own matching registration.
+                _metadataProjectionLoads.Remove(
+                    row);
+            }
+            if (TryGetCachedMetadataProjection(
+                    row.Path,
+                    out cached))
+            {
+                _metadataProjectionLoadedRows[
+                    row] = fields;
+                cancellation = null!;
+            }
+            else
+            {
+                cancellation =
+                    CancellationTokenSource
+                        .CreateLinkedTokenSource(
+                            _metadataProjectionLifetime
+                                .Token);
+                _metadataProjectionLoads[row] =
+                    cancellation;
+            }
+        }
+
+        if (cached is not null)
+        {
+            row.LoadMetadataProjection(
+                cached.Values,
+                fields);
+            return;
+        }
+
+        bool enteredGate = false;
+        try
+        {
+            await _metadataProjectionGate
+                .WaitAsync(cancellation.Token);
+            enteredGate = true;
+            LibraryMetadataProjection projection =
+                (await _library
+                    .GetMetadataProjectionAsync(
+                        [row.Path],
+                        fields,
+                        cancellation.Token))[0];
+            cancellation.Token
+                .ThrowIfCancellationRequested();
+            lock (_metadataProjectionSync)
+            {
+                if (!_metadataProjectionLoads
+                        .TryGetValue(
+                            row,
+                            out CancellationTokenSource?
+                                active) ||
+                    !ReferenceEquals(
+                        active,
+                        cancellation))
+                    return;
+                AddCachedMetadataProjection(
+                    row.Path,
+                    projection.Values);
+                _metadataProjectionLoadedRows[
+                    row] = fields;
+            }
+            row.LoadMetadataProjection(
+                projection.Values,
+                fields);
+        }
+        catch (OperationCanceledException)
+            when (cancellation
+                .IsCancellationRequested)
+        {
+            row.ClearMetadataProjection(
+                fields);
+        }
+        catch
+        {
+            row.FailMetadataProjection(
+                fields);
+        }
+        finally
+        {
+            if (enteredGate)
+                _metadataProjectionGate
+                    .Release();
+            lock (_metadataProjectionSync)
+            {
+                if (_metadataProjectionLoads
+                        .TryGetValue(
+                            row,
+                            out CancellationTokenSource?
+                                active) &&
+                    ReferenceEquals(
+                        active,
+                        cancellation))
+                    _metadataProjectionLoads
+                        .Remove(row);
+            }
+            cancellation.Dispose();
+        }
+    }
+
+    public void ReleaseMetadataProjection(
+        LibraryRow row)
+    {
+        MetadataFieldKey[]? fields = null;
+        lock (_metadataProjectionSync)
+        {
+            if (_metadataProjectionLoads
+                    .TryGetValue(
+                        row,
+                        out CancellationTokenSource?
+                            cancellation))
+                cancellation.Cancel();
+            if (_metadataProjectionLoadedRows
+                    .Remove(
+                        row,
+                        out MetadataFieldKey[]?
+                            loaded))
+                fields = loaded;
+        }
+        if (fields is not null)
+            row.ClearMetadataProjection(
+                fields);
+    }
+
+    public async Task<IReadOnlyDictionary<
+        LibraryRow,
+        int>> GetMetadataSortRanksAsync(
+            MetadataFieldKey field,
+            MetadataGridColumnSortType sortType,
+            CancellationToken cancellationToken =
+                default)
+    {
+        IReadOnlyList<string> sortedPaths =
+            await _library
+                .GetMetadataSortOrderAsync(
+                    field,
+                    sortType switch
+                    {
+                        MetadataGridColumnSortType.Numeric =>
+                            LibraryMetadataSortKind.Numeric,
+                        MetadataGridColumnSortType.Date =>
+                            LibraryMetadataSortKind.Date,
+                        _ =>
+                            LibraryMetadataSortKind.Text,
+                    },
+                    cancellationToken);
+        cancellationToken
+            .ThrowIfCancellationRequested();
+        var rowsByPath = Rows.ToDictionary(
+            row => row.Path,
+            PathComparer);
+        var ranks = new Dictionary<
+            LibraryRow,
+            int>(
+            sortedPaths.Count);
+        for (int rank = 0;
+             rank < sortedPaths.Count;
+             rank++)
+            if (rowsByPath.TryGetValue(
+                    sortedPaths[rank],
+                    out LibraryRow? row))
+                ranks[row] = rank;
+        return ranks;
+    }
+
+    public void ReportExactMetadataValueRequired() =>
+        SetStatusText(
+            "Library.Metadata.ExactValueRequired");
+
+    public void ResetMetadataProjections()
+    {
+        List<(
+            LibraryRow Row,
+            MetadataFieldKey[] Fields)> loaded;
+        lock (_metadataProjectionSync)
+        {
+            _metadataProjectionLifetime
+                .Cancel();
+            _metadataProjectionLifetime
+                .Dispose();
+            _metadataProjectionLifetime =
+                new CancellationTokenSource();
+            foreach (CancellationTokenSource
+                         cancellation in
+                     _metadataProjectionLoads
+                         .Values)
+                cancellation.Cancel();
+            loaded = _metadataProjectionLoadedRows
+                .Select(pair =>
+                    (pair.Key, pair.Value))
+                .ToList();
+            _metadataProjectionLoadedRows
+                .Clear();
+            _metadataProjectionCache
+                .Clear();
+            _metadataProjectionLru.Clear();
+            _metadataProjectionCacheBytes = 0;
+        }
+        foreach ((LibraryRow row,
+                     MetadataFieldKey[] fields)
+                 in loaded)
+            row.ClearMetadataProjection(
+                fields);
+    }
+
+    private MetadataFieldKey[]
+        VisibleMetadataProjectionFields() =>
+        ColumnEditor.Columns
+            .Where(column =>
+                column.Descriptor.Visible)
+            .Select(column =>
+                column.Descriptor.Field)
+            .Distinct()
+            .ToArray();
+
+    private bool TryGetCachedMetadataProjection(
+        string path,
+        out MetadataProjectionCacheItem?
+            item)
+    {
+        if (!_metadataProjectionCache
+                .TryGetValue(
+                    path,
+                    out item))
+            return false;
+        _metadataProjectionLru.Remove(
+            item.Node);
+        _metadataProjectionLru.AddFirst(
+            item.Node);
+        return true;
+    }
+
+    private void AddCachedMetadataProjection(
+        string path,
+        IReadOnlyDictionary<
+            MetadataFieldKey,
+            ImmutableArray<string>> values)
+    {
+        if (_metadataProjectionCache
+                .Remove(
+                    path,
+                    out MetadataProjectionCacheItem?
+                        old))
+        {
+            _metadataProjectionLru.Remove(
+                old.Node);
+            _metadataProjectionCacheBytes -=
+                old.RetainedBytes;
+        }
+        long retainedBytes =
+            EstimateProjectionBytes(values);
+        if (retainedBytes >
+            MetadataProjectionCacheByteLimit)
+            return;
+        var node =
+            new LinkedListNode<string>(
+                path);
+        _metadataProjectionLru.AddFirst(
+            node);
+        _metadataProjectionCache[path] =
+            new(
+                values,
+                node,
+                retainedBytes);
+        _metadataProjectionCacheBytes +=
+            retainedBytes;
+        while ((_metadataProjectionCache
+                    .Count >
+                MetadataProjectionCacheLimit ||
+                _metadataProjectionCacheBytes >
+                MetadataProjectionCacheByteLimit) &&
+               _metadataProjectionLru.Last is
+                   { } last)
+        {
+            string evictedPath =
+                last.Value;
+            if (_metadataProjectionCache
+                    .Remove(
+                        evictedPath,
+                        out MetadataProjectionCacheItem?
+                            evicted))
+                _metadataProjectionCacheBytes -=
+                    evicted.RetainedBytes;
+            _metadataProjectionLru
+                .RemoveLast();
+        }
+    }
+
+    private static long EstimateProjectionBytes(
+        IReadOnlyDictionary<
+            MetadataFieldKey,
+            ImmutableArray<string>> values)
+    {
+        long bytes = 64;
+        foreach ((MetadataFieldKey field,
+                     ImmutableArray<string> items)
+                 in values)
+        {
+            bytes += 64 +
+                (field.CustomName?.Length ?? 0) *
+                sizeof(char);
+            foreach (string value in items)
+                bytes += 32 +
+                    value.Length * sizeof(char);
+        }
+        return bytes;
+    }
+
     private bool TryGetCachedThumbnail(string path, out object? image)
     {
         if (!_thumbnailCache.TryGetValue(path, out ThumbnailCacheItem? item))
@@ -5422,19 +5882,32 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private void AddCachedThumbnail(string path, object? image)
     {
         if (_thumbnailCache.Remove(path, out ThumbnailCacheItem? old))
+        {
             _thumbnailLru.Remove(old.Node);
+            if (!ReferenceEquals(
+                    old.Image,
+                    image))
+                DisposeThumbnailImage(
+                    old.Image);
+        }
         var node = new LinkedListNode<string>(path);
         _thumbnailLru.AddFirst(node);
         _thumbnailCache[path] = new ThumbnailCacheItem(image, node);
         while (_thumbnailCache.Count > ThumbnailCacheLimit && _thumbnailLru.Last is { } last)
         {
-            _thumbnailCache.Remove(last.Value);
+            if (_thumbnailCache.Remove(
+                    last.Value,
+                    out ThumbnailCacheItem?
+                        evicted))
+                DisposeThumbnailImage(
+                    evicted.Image);
             _thumbnailLru.RemoveLast();
         }
     }
 
     private void ResetThumbnails()
     {
+        object?[] images;
         lock (_thumbnailSync)
         {
             _thumbnailLifetime.Cancel();
@@ -5442,9 +5915,31 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _thumbnailLifetime = new CancellationTokenSource();
             foreach (CancellationTokenSource cancellation in _thumbnailLoads.Values)
                 cancellation.Cancel();
+            images = _thumbnailCache
+                .Values
+                .Select(item =>
+                    item.Image)
+                .Where(image =>
+                    image is not null)
+                .Distinct(
+                    ReferenceEqualityComparer
+                        .Instance)
+                .ToArray();
             _thumbnailCache.Clear();
             _thumbnailLru.Clear();
         }
+        foreach (LibraryRow row in
+                 _allRows)
+            row.InvalidateThumbnail();
+        foreach (object? image in images)
+            DisposeThumbnailImage(image);
+    }
+
+    private static void DisposeThumbnailImage(
+        object? image)
+    {
+        if (image is IDisposable disposable)
+            disposable.Dispose();
     }
 
     [RelayCommand]
@@ -5551,11 +6046,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         HashSet<string>? healthPaths = _healthFilterPaths.Count == 0
             ? null
             : new HashSet<string>(_healthFilterPaths, PathComparer);
-        List<LibraryRow> filtered = await Task.Run(() => source
-            .Where(row => (healthPaths is null || healthPaths.Contains(row.Path)) &&
-                query.IsMatch(row.Details, row.SearchText) &&
-                visual.IsMatch(row.Record))
-            .ToList(), cancellationToken);
+        List<LibraryRow> filtered =
+            await FilterLibraryRowsAsync(
+                source,
+                query,
+                visual,
+                healthPaths,
+                cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         int preservedSelectionCount = 0;
@@ -5657,6 +6154,118 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         if (refreshInspectorSelection &&
             updatedSelection is not null)
             await _inspector.LoadAsync(updatedSelection);
+    }
+
+    private async Task<List<LibraryRow>>
+        FilterLibraryRowsAsync(
+            IReadOnlyList<LibraryRow> source,
+            LibraryFilterQuery query,
+            LibraryVisualFilter visual,
+            HashSet<string>? healthPaths,
+            CancellationToken cancellationToken)
+    {
+        List<LibraryRow> candidates =
+            await Task.Run(
+                () => source
+                    .Where(row =>
+                        (healthPaths is null ||
+                         healthPaths.Contains(
+                             row.Path)))
+                    .ToList(),
+                cancellationToken);
+
+        IReadOnlyList<MetadataFieldKey>
+            searchMetadataFields =
+                query.IsEmpty
+                    ? []
+                    : ColumnEditor.Columns
+                        .Where(column =>
+                            column.Descriptor
+                                .Visible &&
+                            (column.Descriptor.Field
+                                 .CustomName is not
+                                 null ||
+                             column.Descriptor.Field
+                                 .KnownField is
+                                 TagFields.Comment))
+                        .Select(column =>
+                            column.Descriptor
+                                .Field)
+                        .Distinct()
+                        .ToArray();
+        MetadataFieldKey[] requiredFields =
+            visual.RequiredMetadataFields
+                .Concat(
+                    searchMetadataFields)
+                .Distinct()
+                .ToArray();
+        if (requiredFields.Length == 0)
+            return await Task.Run(
+                () => candidates
+                    .Where(row =>
+                        query.IsMatch(
+                            row.Details) &&
+                        visual.IsMatch(
+                            row.Record))
+                    .ToList(),
+                cancellationToken);
+
+        const int projectionBatchSize = 200;
+        var filtered =
+            new List<LibraryRow>();
+        for (int start = 0;
+             start < candidates.Count;
+             start += projectionBatchSize)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+            LibraryRow[] batch = candidates
+                .Skip(start)
+                .Take(
+                    projectionBatchSize)
+                .ToArray();
+            IReadOnlyList<
+                LibraryMetadataProjection>
+                projections =
+                    await _library
+                        .GetMetadataProjectionAsync(
+                            batch.Select(row =>
+                                    row.Path)
+                                .ToArray(),
+                            requiredFields,
+                            cancellationToken);
+            for (int index = 0;
+                 index < batch.Length;
+                 index++)
+            {
+                LibraryRow row =
+                    batch[index];
+                IReadOnlyDictionary<
+                    MetadataFieldKey,
+                    ImmutableArray<string>>
+                    values =
+                        projections[index]
+                            .Values;
+                string[] extraSearchValues =
+                    searchMetadataFields
+                        .SelectMany(field =>
+                            row.MetadataValuesForFilter(
+                                field,
+                                values.GetValueOrDefault(
+                                    field,
+                                    [])))
+                        .ToArray();
+                if (query.IsMatch(
+                        row.Details,
+                        extraSearchValues) &&
+                    visual.IsMatch(
+                        row.Record,
+                        values))
+                    filtered.Add(
+                        row);
+            }
+        }
+        return filtered;
     }
 
     private bool InspectorSelectionUsesRows(
@@ -6116,6 +6725,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     }
 
     private sealed record ThumbnailCacheItem(object? Image, LinkedListNode<string> Node);
+
+    private sealed record
+        MetadataProjectionCacheItem(
+            IReadOnlyDictionary<
+                MetadataFieldKey,
+                ImmutableArray<string>> Values,
+            LinkedListNode<string> Node,
+            long RetainedBytes);
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;

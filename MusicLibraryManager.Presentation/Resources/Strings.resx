@@ -6423,4 +6423,7 @@
   <data name="Settings.Appearance.DensityDescription" xml:space="preserve"><value>Compact reduces row, card, and form spacing without shrinking navigation or icon targets.</value></data>
   <data name="Settings.Choice.UiDensity.Standard" xml:space="preserve"><value>Standard</value></data>
   <data name="Settings.Choice.UiDensity.Compact" xml:space="preserve"><value>Compact</value></data>
+  <data name="Library.Metadata.Loading" xml:space="preserve"><value>Loading…</value></data>
+  <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>Wait for the exact metadata value to load before editing it.</value></data>
 </root>

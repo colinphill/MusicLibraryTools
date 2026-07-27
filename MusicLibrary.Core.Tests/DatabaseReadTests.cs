@@ -78,6 +78,197 @@ public class DatabaseReadTests
     }
 
     [Fact]
+    public async Task BrowseProjectionPreservesScalarFieldsWithoutRetainingMetadata()
+    {
+        var (work, _, config, song) = Setup(
+            "sample.flac");
+        try
+        {
+            IMediaFile media =
+                MediaFile.GetFile(song);
+            var custom = Assert.IsAssignableFrom<
+                IUserStringMetadata>(
+                media.Tags.First());
+            custom.SetUserString(
+                "MEMORY_TEST_VALUE",
+                new string('x', 16_384));
+            media.SaveTags();
+
+            var settings = new AppSettings(
+                Path.Combine(
+                    work,
+                    "settings.json"));
+            settings.LoadConfig(config);
+            using var library =
+                new LibraryService(settings);
+            await library.IndexAsync();
+
+            TrackRecord browse =
+                Assert.Single(
+                    await library
+                        .GetBrowseRecordsAsync());
+            Assert.Equal("TestTitle", browse.Title);
+            Assert.Equal("TestArtist", browse.Artist);
+            Assert.Equal("Rock", browse.Genre);
+            Assert.Empty(browse.Metadata);
+
+            MetadataFieldKey requested =
+                MetadataFieldKey.Custom(
+                    "MEMORY_TEST_VALUE");
+            LibraryMetadataProjection projected =
+                Assert.Single(
+                    await library
+                        .GetMetadataProjectionAsync(
+                            [song],
+                            [requested]));
+            Assert.Equal(song, projected.Path);
+            Assert.Equal(
+                new string('x', 16_384),
+                Assert.Single(
+                    projected.Values[
+                        requested]));
+            Assert.Single(projected.Values);
+
+            TrackRecord complete =
+                Assert.Single(
+                    await library
+                        .GetAllRecordsAsync());
+            Assert.Equal(
+                new string('x', 16_384),
+                Assert.Single(
+                    complete.Metadata[
+                        CachedMetadataKeys.Custom(
+                            "MEMORY_TEST_VALUE")]));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try
+            {
+                Directory.Delete(
+                    work,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task LibrarySummaryMatchesBrowseProjectionWithoutLoadingMetadata()
+    {
+        var (work, _, config, _) = Setup(
+            "sample.flac");
+        try
+        {
+            var settings = new AppSettings(
+                Path.Combine(
+                    work,
+                    "settings.json"));
+            settings.LoadConfig(config);
+            using var library =
+                new LibraryService(settings);
+            await library.IndexAsync();
+
+            LibrarySummary summary =
+                await library
+                    .GetLibrarySummaryAsync();
+
+            Assert.Equal(1, summary.TrackCount);
+            Assert.Equal(1, summary.AlbumCount);
+            Assert.Equal(1, summary.ArtistCount);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try
+            {
+                Directory.Delete(
+                    work,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task MetadataSortOrderReturnsPathsWithoutHydratingBrowseRows()
+    {
+        var (work, music, config, song) =
+            Setup("sample.flac");
+        string second = Path.Combine(
+            music,
+            "second.flac");
+        string missing = Path.Combine(
+            music,
+            "missing.flac");
+        try
+        {
+            File.Copy(song, second);
+            File.Copy(song, missing);
+            SetCustom(song, "SORT_VALUE", "10");
+            SetCustom(second, "SORT_VALUE", "2");
+
+            var settings = new AppSettings(
+                Path.Combine(
+                    work,
+                    "settings.json"));
+            settings.LoadConfig(config);
+            using var library =
+                new LibraryService(settings);
+            await library.IndexAsync();
+
+            IReadOnlyList<string> ordered =
+                await library
+                    .GetMetadataSortOrderAsync(
+                        MetadataFieldKey.Custom(
+                            "SORT_VALUE"),
+                        LibraryMetadataSortKind
+                            .Numeric);
+
+            Assert.Equal(
+                [missing, second, song],
+                ordered);
+            Assert.All(
+                await library
+                    .GetBrowseRecordsAsync(),
+                record =>
+                    Assert.Empty(
+                        record.Metadata));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try
+            {
+                Directory.Delete(
+                    work,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+        }
+
+        static void SetCustom(
+            string path,
+            string key,
+            string value)
+        {
+            IMediaFile media =
+                MediaFile.GetFile(path);
+            Assert.IsAssignableFrom<
+                    IUserStringMetadata>(
+                    media.Tags.First())
+                .SetUserString(key, value);
+            media.SaveTags();
+        }
+    }
+
+    [Fact]
     public async Task CustomMetadataBackfillIgnoresUnnamedFieldsWithoutFailingIndex()
     {
         var (work, _, config, song) = Setup("sample.mp3");

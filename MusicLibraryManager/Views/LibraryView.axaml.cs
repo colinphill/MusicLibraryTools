@@ -48,6 +48,9 @@ public partial class LibraryView : UserControl
     private bool _shellRequestedCompact;
     private bool _responsiveCompact;
     private bool _drawerOpen;
+    private CancellationTokenSource?
+        _metadataSortCancellation;
+    private bool _applyingMetadataSortRanks;
     private readonly OverlayInteractionController
         _pendingChangesOverlay = new();
     private readonly OverlayInteractionController
@@ -66,10 +69,17 @@ public partial class LibraryView : UserControl
         BuildColumns();
         ApplySnapshot(_gridState.Load());
         ConfigureGrid();
-        LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();
-        LibraryGrid.SortChanged += (_, _) => Dispatcher.UIThread.Post(CaptureSortAndPersist);
+        LibraryGrid.SortChanged +=
+            OnLibrarySortChanged;
+        LibraryGrid.BeginningEdit +=
+            OnLibraryBeginningEdit;
+        if (_sort?.Key.StartsWith(
+                "Metadata.",
+                StringComparison.Ordinal) == true)
+            _ = PrepareMetadataSortAsync(
+                _sort);
         InspectorView.CloseRequested += OnInspectorCloseRequested;
         InspectorView.ReviewChangesRequested +=
             OnInspectorReviewChangesRequested;
@@ -82,7 +92,9 @@ public partial class LibraryView : UserControl
             RecalculateResponsiveLayout();
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
-        if (_viewModel.Rows.Count == 0)
+        if (_viewModel.Rows.Count == 0 &&
+            _viewModel.PageState !=
+                LibraryPageState.Loading)
             _ = _viewModel.ReloadAsync();
     }
 
@@ -280,6 +292,7 @@ public partial class LibraryView : UserControl
 
     private void RebuildMetadataColumns()
     {
+        _viewModel.ResetMetadataProjections();
         List<LibraryColumnState> columns =
             CaptureColumns()
                 .Where(column =>
@@ -356,6 +369,11 @@ public partial class LibraryView : UserControl
         _columns[index] = _columns[index] with { Visible = visible };
         ConfigureGrid();
         PersistLayout();
+        if (key.StartsWith(
+                "Metadata.",
+                StringComparison.Ordinal))
+            _viewModel
+                .ResetMetadataProjections();
     }
 
     private IReadOnlyList<LibraryColumnState> CaptureColumns() =>
@@ -377,6 +395,130 @@ public partial class LibraryView : UserControl
             ? null
             : new LibrarySortState(key, LibraryGrid.CurrentSortDescending);
         PersistLayout();
+    }
+
+    private async void OnLibrarySortChanged(
+        object? sender,
+        EventArgs e)
+    {
+        CaptureSortAndPersist();
+        if (_applyingMetadataSortRanks ||
+            _sort is not { } sort ||
+            !sort.Key.StartsWith(
+                "Metadata.",
+                StringComparison.Ordinal))
+            return;
+        await PrepareMetadataSortAsync(sort);
+    }
+
+    private async Task PrepareMetadataSortAsync(
+        LibrarySortState sort)
+    {
+        UserMetadataColumnDescriptor?
+            descriptor =
+                _viewModel.ColumnEditor.Columns
+                    .Select(row =>
+                        row.Descriptor)
+                    .FirstOrDefault(column =>
+                        string.Equals(
+                            column.ColumnKey,
+                            sort.Key,
+                            StringComparison.Ordinal));
+        if (descriptor is null)
+            return;
+        if (_viewModel.Rows.All(row =>
+                row.HasExactMetadataValue(
+                    descriptor.Field)))
+            return;
+
+        _metadataSortCancellation?.Cancel();
+        _metadataSortCancellation?.Dispose();
+        var cancellation =
+            new CancellationTokenSource();
+        _metadataSortCancellation =
+            cancellation;
+        try
+        {
+            IReadOnlyDictionary<
+                LibraryRow,
+                int> ranks =
+                await _viewModel
+                    .GetMetadataSortRanksAsync(
+                        descriptor.Field,
+                        descriptor.SortType,
+                        cancellation.Token);
+            if (cancellation.IsCancellationRequested ||
+                _sort is not { } current ||
+                !string.Equals(
+                    current.Key,
+                    sort.Key,
+                    StringComparison.Ordinal) ||
+                current.Descending !=
+                sort.Descending)
+                return;
+            if (!LibraryGrid
+                    .SetCustomSortComparer(
+                        sort.Key,
+                        new LibraryMetadataRankComparer(
+                            ranks)))
+                return;
+            _applyingMetadataSortRanks =
+                true;
+            try
+            {
+                LibraryGrid.ApplySort(sort);
+            }
+            finally
+            {
+                _applyingMetadataSortRanks =
+                    false;
+            }
+        }
+        catch (OperationCanceledException)
+            when (cancellation
+                .IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    _metadataSortCancellation,
+                    cancellation))
+                _metadataSortCancellation = null;
+            cancellation.Dispose();
+        }
+    }
+
+    private void OnLibraryBeginningEdit(
+        object? sender,
+        DataGridBeginningEditEventArgs e)
+    {
+        string? key =
+            LibraryGrid.KeyFor(e.Column);
+        if (key is null ||
+            e.Row.DataContext is not
+                LibraryRow row)
+            return;
+        UserMetadataColumnDescriptor?
+            descriptor =
+                _viewModel.ColumnEditor.Columns
+                    .Select(column =>
+                        column.Descriptor)
+                    .FirstOrDefault(column =>
+                        string.Equals(
+                            column.ColumnKey,
+                            key,
+                            StringComparison.Ordinal));
+        if (descriptor is null ||
+            row.HasExactMetadataValue(
+                descriptor.Field))
+            return;
+        e.Cancel = true;
+        _viewModel
+            .ReportExactMetadataValueRequired();
+        _ = _viewModel
+            .LoadMetadataProjectionAsync(
+                row);
     }
 
     private async void OnGridSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -418,13 +560,23 @@ public partial class LibraryView : UserControl
     private void OnLoadingRow(object? sender, DataGridRowEventArgs e)
     {
         if (e.Row.DataContext is LibraryRow row)
+        {
             _ = _viewModel.LoadThumbnailAsync(row);
+            _ = _viewModel
+                .LoadMetadataProjectionAsync(
+                    row);
+        }
     }
 
     private void OnUnloadingRow(object? sender, DataGridRowEventArgs e)
     {
         if (e.Row.DataContext is LibraryRow row)
+        {
             _viewModel.ReleaseThumbnail(row);
+            _viewModel
+                .ReleaseMetadataProjection(
+                    row);
+        }
     }
 
     private void OnColumnsClick(object? sender, RoutedEventArgs e)
@@ -934,6 +1086,9 @@ public partial class LibraryView : UserControl
         object? sender,
         VisualTreeAttachmentEventArgs e)
     {
+        _metadataSortCancellation?.Cancel();
+        _metadataSortCancellation?.Dispose();
+        _metadataSortCancellation = null;
         DetachViewModelEvents();
         _localization.CultureChanged -= OnLocalizationCultureChanged;
     }
@@ -1218,6 +1373,39 @@ public partial class LibraryView : UserControl
                 right,
                 StringComparison
                     .CurrentCultureIgnoreCase);
+        }
+    }
+
+    private sealed class
+        LibraryMetadataRankComparer(
+            IReadOnlyDictionary<
+                LibraryRow,
+                int> ranks) : IComparer
+    {
+        public int Compare(
+            object? x,
+            object? y)
+        {
+            int left =
+                x is LibraryRow leftRow &&
+                ranks.TryGetValue(
+                    leftRow,
+                    out int leftRank)
+                    ? leftRank
+                    : int.MaxValue;
+            int right =
+                y is LibraryRow rightRow &&
+                ranks.TryGetValue(
+                    rightRow,
+                    out int rightRank)
+                    ? rightRank
+                    : int.MaxValue;
+            return left != right
+                ? left.CompareTo(right)
+                : string.Compare(
+                    (x as LibraryRow)?.Path,
+                    (y as LibraryRow)?.Path,
+                    StringComparison.Ordinal);
         }
     }
 

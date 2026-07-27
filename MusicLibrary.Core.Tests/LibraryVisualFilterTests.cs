@@ -2,6 +2,7 @@ using MetadataCaching;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using System.Collections.Immutable;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -116,5 +117,53 @@ public sealed class LibraryVisualFilterTests
             "regular expression",
             filter.Error!,
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SparseProjectionSuppliesMetadataWithoutMutatingBrowseRecord()
+    {
+        MetadataFieldKey custom =
+            MetadataFieldKey.Custom(
+                "DJ_SET");
+        var filter =
+            new LibraryVisualFilter(
+                new LibraryFilterGroup(
+                    LibraryFilterGroupMode.All,
+                    [
+                        new LibraryFilterCondition(
+                            LibraryFilterField
+                                .Custom(
+                                    "DJ_SET"),
+                            LibraryFilterComparison
+                                .Equals,
+                            "Sunrise"),
+                        new LibraryFilterCondition(
+                            LibraryFilterField
+                                .Technical(
+                                    "Codec"),
+                            LibraryFilterComparison
+                                .Equals,
+                            "FLAC"),
+                    ]));
+        var browse = new TrackRecord
+        {
+            Path = "song.flac",
+            CodecName = "FLAC",
+        };
+        var projection = new Dictionary<
+            MetadataFieldKey,
+            ImmutableArray<string>>
+        {
+            [custom] = ["Sunrise"],
+        };
+
+        Assert.Equal(
+            [custom],
+            filter.RequiredMetadataFields);
+        Assert.True(
+            filter.IsMatch(
+                browse,
+                projection));
+        Assert.Empty(browse.Metadata);
     }
 }

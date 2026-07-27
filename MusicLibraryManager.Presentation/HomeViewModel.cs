@@ -102,18 +102,15 @@ public partial class HomeViewModel : ObservableObject
         _refreshFailed = false;
         try
         {
-            var records = await _library.GetAllRecordsAsync();
-            var counts = await Task.Run(() => new
-            {
-                Tracks = records.Count,
-                Albums = records.Select(record => (record.EffectiveAlbumArtist, record.Album ?? ""))
-                    .Distinct().Count(),
-                Artists = records.Select(record => record.EffectiveAlbumArtist)
-                    .Distinct(StringComparer.OrdinalIgnoreCase).Count(),
-            });
-            TrackCount = counts.Tracks.ToString("N0");
-            AlbumCount = counts.Albums.ToString("N0");
-            ArtistCount = counts.Artists.ToString("N0");
+            LibrarySummary summary =
+                await _library
+                    .GetLibrarySummaryAsync();
+            TrackCount = summary.TrackCount
+                .ToString("N0");
+            AlbumCount = summary.AlbumCount
+                .ToString("N0");
+            ArtistCount = summary.ArtistCount
+                .ToString("N0");
             ArtworkCount = (await _library.GetMaterializedArtworkFileCountAsync()).ToString("N0");
             IReadOnlyList<ScanRootHealth> roots = await _library.GetScanRootHealthAsync();
             _lastSuccessfulIndex = roots

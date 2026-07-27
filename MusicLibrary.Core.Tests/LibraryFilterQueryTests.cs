@@ -151,6 +151,31 @@ public sealed class LibraryFilterQueryTests
         Assert.True(ordinary.IsMatch(row, row.SearchText));
     }
 
+    [Fact]
+    public void OrdinarySearchMatchesDeferredDisplayedMetadataWithoutConcatenation()
+    {
+        var row = new DetailsRow(
+            new TrackRecord
+            {
+                Path = "Song.flac",
+                Title = "Song",
+                Artist = "Artist",
+                Album = "Album",
+                CodecName = "FLAC",
+            });
+        LibraryFilterQuery query =
+            LibraryFilterQuery.Create(
+                "fingerprint fragment",
+                FilterMode.Substring);
+
+        Assert.False(query.IsMatch(row));
+        Assert.True(
+            query.IsMatch(
+                row,
+                ["fingerprint fragment"]));
+        Assert.Empty(row.SearchText);
+    }
+
     private static DetailsRow Row(string title, string artist, string album, string codec,
         string? albumArtist = null, int sampleRate = 0, string? genre = null,
         string? composer = null, string? grouping = null, int? year = null)

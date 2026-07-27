@@ -36259,4 +36259,37 @@
     <translation culture="zh-CN">开始编辑后，文件已更改。请先重新加载文件，再应用待处理的更改。</translation>
     <translation culture="zh-TW">開始編輯後，檔案已變更。請先重新載入檔案，再套用待處理的變更。</translation>
   </entry>
+  <entry key="Library.Metadata.Loading">
+    <translation culture="de-DE">Wird geladen…</translation>
+    <translation culture="es-ES">Cargando…</translation>
+    <translation culture="fr-FR">Chargement…</translation>
+    <translation culture="it-IT">Caricamento…</translation>
+    <translation culture="pt-BR">Carregando…</translation>
+    <translation culture="ja-JP">読み込み中…</translation>
+    <translation culture="ko-KR">불러오는 중…</translation>
+    <translation culture="zh-CN">正在加载…</translation>
+    <translation culture="zh-TW">正在載入…</translation>
+  </entry>
+  <entry key="Library.Metadata.Unavailable">
+    <translation culture="de-DE">Nicht verfügbar</translation>
+    <translation culture="es-ES">No disponible</translation>
+    <translation culture="fr-FR">Indisponible</translation>
+    <translation culture="it-IT">Non disponibile</translation>
+    <translation culture="pt-BR">Indisponível</translation>
+    <translation culture="ja-JP">利用できません</translation>
+    <translation culture="ko-KR">사용할 수 없음</translation>
+    <translation culture="zh-CN">不可用</translation>
+    <translation culture="zh-TW">無法使用</translation>
+  </entry>
+  <entry key="Library.Metadata.ExactValueRequired">
+    <translation culture="de-DE">Warten Sie, bis der genaue Metadatenwert geladen wurde, bevor Sie ihn bearbeiten.</translation>
+    <translation culture="es-ES">Espere a que se cargue el valor exacto de los metadatos antes de editarlo.</translation>
+    <translation culture="fr-FR">Attendez le chargement de la valeur exacte des métadonnées avant de la modifier.</translation>
+    <translation culture="it-IT">Attendi il caricamento del valore esatto dei metadati prima di modificarlo.</translation>
+    <translation culture="pt-BR">Aguarde o carregamento do valor exato dos metadados antes de editá-lo.</translation>
+    <translation culture="ja-JP">正確なメタデータ値の読み込みが完了してから編集してください。</translation>
+    <translation culture="ko-KR">정확한 메타데이터 값을 불러온 후 편집하세요.</translation>
+    <translation culture="zh-CN">请等待准确的元数据值加载完成后再进行编辑。</translation>
+    <translation culture="zh-TW">請等待確切的中繼資料值載入完成後再進行編輯。</translation>
+  </entry>
 </editorial-overrides>

@@ -2,6 +2,7 @@ using MetadataCaching;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibraryTools;
+using System.Collections.Immutable;
 using System.Text;
 
 namespace MusicLibrary.Core.Services;
@@ -150,41 +151,24 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             var db = GetDatabase(context);
             return await Task.Run(() =>
             {
-                var cache = db.BuildCache(roots, buildSecondaryIndexes: false);
-                var records = new List<TrackRecord>(cache.FileCache.Count);
-                foreach (var (path, e) in cache.FileCache)
+                IReadOnlyList<(
+                    string Path,
+                    MetadataCacheEntry Entry)> entries =
+                    db.GetCompleteEntries(
+                        roots,
+                        ct);
+                var records =
+                    new List<TrackRecord>(
+                        entries.Count);
+                foreach ((string path,
+                             MetadataCacheEntry entry)
+                         in entries)
                 {
                     ct.ThrowIfCancellationRequested();
-                    records.Add(new TrackRecord
-                    {
-                        Path = path,
-                        Artist = e.Artist,
-                        AlbumArtist = e.AlbumArtist,
-                        HasAlbumArtist = e.HasAlbumArtist,
-                        Album = e.Album,
-                        StrippedAlbum = e.StrippedAlbum,
-                        Title = e.Title,
-                        ReleaseDate = e.ReleaseDate,
-                        Genre = e.Genre,
-                        Composer = e.Composer,
-                        Grouping = e.Grouping,
-                        Year = e.Year,
-                        TrackNumber = e.TrackNumber,
-                        TrackTotal = e.TrackTotal,
-                        DiscNumber = e.DiscNumber,
-                        DiscTotal = e.DiscTotal,
-                        CodecName = e.CodecName,
-                        TagType = e.TagType,
-                        CodecType = e.CodecType,
-                        SampleRate = e.SampleRate,
-                        BitsPerSample = e.BitsPerSample,
-                        AverageBitRate = e.AverageBitRate,
-                        Channels = e.Channels,
-                        DurationInSeconds = e.DurationInSeconds,
-                        Length = e.Length,
-                        LastWriteTime = e.LastWriteTime,
-                        Metadata = e.Metadata,
-                    });
+                    records.Add(ProjectRecord(
+                        path,
+                        entry,
+                        includeMetadata: true));
                 }
                 return (IReadOnlyList<TrackRecord>)records;
             }, ct);
@@ -193,6 +177,241 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         {
             _gate.Release();
         }
+    }
+
+    public async Task<IReadOnlyList<TrackRecord>> GetBrowseRecordsAsync(
+        CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var context = GetContext();
+            var roots = GetRoots(context.Configuration);
+            var db = GetDatabase(context);
+            return await Task.Run(() =>
+            {
+                IReadOnlyList<(
+                    string Path,
+                    MetadataCacheEntry Entry)> entries =
+                    db.GetBrowseEntries(roots, ct);
+                var records = new List<TrackRecord>(
+                    entries.Count);
+                foreach ((string path,
+                             MetadataCacheEntry entry) in
+                         entries)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    records.Add(ProjectRecord(
+                        path,
+                        entry,
+                        includeMetadata: false));
+                }
+                return (IReadOnlyList<TrackRecord>)
+                    records;
+            }, ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<LibrarySummary>
+        GetLibrarySummaryAsync(
+            CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var context = GetContext();
+            var roots = GetRoots(context.Configuration);
+            var db = GetDatabase(context);
+            MetadataLibrarySummary summary =
+                await Task.Run(
+                    () => db.GetLibrarySummary(
+                        roots,
+                        ct),
+                    ct);
+            return new(
+                summary.TrackCount,
+                summary.AlbumCount,
+                summary.ArtistCount);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<
+        LibraryMetadataProjection>>
+        GetMetadataProjectionAsync(
+            IReadOnlyList<string> paths,
+            IReadOnlyList<
+                MetadataFieldKey> fields,
+            CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        ArgumentNullException.ThrowIfNull(fields);
+        await _gate.WaitAsync(ct);
+        try
+        {
+            MetadataFieldKey[] requestedFields =
+                fields
+                    .Distinct()
+                    .ToArray();
+            var cacheKeys = requestedFields
+                .ToDictionary(
+                    field =>
+                        field.KnownField?
+                            .ToString() ??
+                        CachedMetadataKeys.Custom(
+                            field.CustomName!),
+                    field => field,
+                    StringComparer
+                        .OrdinalIgnoreCase);
+            var db = GetDatabase(
+                GetContext());
+            IReadOnlyList<
+                IReadOnlyDictionary<
+                    string,
+                    string[]>> projected =
+                await Task.Run(
+                    () => db
+                        .GetMetadataProjection(
+                            paths,
+                            cacheKeys.Keys
+                                .ToArray(),
+                            ct),
+                    ct);
+            return paths.Select(
+                    (path, index) =>
+                    {
+                        var values =
+                            new Dictionary<
+                                MetadataFieldKey,
+                                ImmutableArray<
+                                    string>>();
+                        foreach ((
+                                     string key,
+                                     string[]
+                                         fieldValues)
+                                 in projected[index])
+                            if (cacheKeys
+                                .TryGetValue(
+                                    key,
+                                    out MetadataFieldKey?
+                                        field))
+                                values[field] =
+                                    [.. fieldValues];
+                        return new
+                            LibraryMetadataProjection(
+                                path,
+                                values);
+                    })
+                .ToArray();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<string>>
+        GetMetadataSortOrderAsync(
+            MetadataFieldKey field,
+            LibraryMetadataSortKind sortKind,
+            CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            LibraryContext context =
+                GetContext();
+            string metadataKey =
+                field.KnownField?
+                    .ToString() ??
+                CachedMetadataKeys.Custom(
+                    field.CustomName!);
+            MetadataValueSortKind databaseSort =
+                sortKind switch
+                {
+                    LibraryMetadataSortKind.Numeric =>
+                        MetadataValueSortKind.Numeric,
+                    LibraryMetadataSortKind.Date =>
+                        MetadataValueSortKind.Date,
+                    _ =>
+                        MetadataValueSortKind.Text,
+                };
+            MetadataDatabase db =
+                GetDatabase(context);
+            List<string> roots =
+                GetRoots(
+                    context.Configuration);
+            return await Task.Run(
+                () => db.GetMetadataSortOrder(
+                    roots,
+                    metadataKey,
+                    databaseSort,
+                    ct),
+                ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private static TrackRecord ProjectRecord(
+        string path,
+        MetadataCacheEntry entry,
+        bool includeMetadata)
+    {
+        var record = new TrackRecord
+        {
+            Path = path,
+            Artist = entry.Artist,
+            AlbumArtist = entry.AlbumArtist,
+            HasAlbumArtist =
+                entry.HasAlbumArtist,
+            Album = entry.Album,
+            StrippedAlbum =
+                entry.StrippedAlbum,
+            Title = entry.Title,
+            ReleaseDate =
+                entry.ReleaseDate,
+            Genre = entry.Genre,
+            Composer = entry.Composer,
+            Grouping = entry.Grouping,
+            Year = entry.Year,
+            TrackNumber =
+                entry.TrackNumber,
+            TrackTotal = entry.TrackTotal,
+            DiscNumber =
+                entry.DiscNumber,
+            DiscTotal = entry.DiscTotal,
+            CodecName = entry.CodecName,
+            TagType = entry.TagType,
+            CodecType = entry.CodecType,
+            SampleRate = entry.SampleRate,
+            BitsPerSample =
+                entry.BitsPerSample,
+            AverageBitRate =
+                entry.AverageBitRate,
+            Channels = entry.Channels,
+            DurationInSeconds =
+                entry.DurationInSeconds,
+            Length = entry.Length,
+            LastWriteTime =
+                entry.LastWriteTime,
+        };
+        return includeMetadata
+            ? record with
+            {
+                Metadata =
+                    entry.Metadata,
+            }
+            : record;
     }
 
     public async Task<AnalysisReport> CheckSetsAsync(CancellationToken ct = default)

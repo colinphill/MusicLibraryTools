@@ -1,6 +1,7 @@
 using MetadataCaching;
 using MusicLibrary.Core.Models;
 using MusicLibraryTools;
+using System.Collections.Immutable;
 
 namespace MusicLibrary.Core.Services;
 
@@ -11,6 +12,29 @@ namespace MusicLibrary.Core.Services;
 public interface IArtworkMaterializationNotifier
 {
     event Action? ArtworkMaterializationChanged;
+}
+
+/// <summary>
+/// Aggregate catalog counts for overview surfaces. Computing this projection must not materialize
+/// per-file metadata or artwork.
+/// </summary>
+public readonly record struct LibrarySummary(
+    int TrackCount,
+    int AlbumCount,
+    int ArtistCount);
+
+/// <summary>Selected metadata values for one requested Library path.</summary>
+public sealed record LibraryMetadataProjection(
+    string Path,
+    IReadOnlyDictionary<
+        MetadataFieldKey,
+        ImmutableArray<string>> Values);
+
+public enum LibraryMetadataSortKind
+{
+    Text,
+    Numeric,
+    Date,
 }
 
 /// <summary>
@@ -47,6 +71,122 @@ public interface ILibraryService
 
     /// <summary>Flatten the current cache into per-file records for the analyzers/duplicate finder.</summary>
     Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Return the compact scalar projection used by the Library grid and scalar-only analyzers.
+    /// Arbitrary metadata and artwork are deliberately excluded.
+    /// </summary>
+    async Task<IReadOnlyList<TrackRecord>> GetBrowseRecordsAsync(
+        CancellationToken ct = default)
+        => await GetAllRecordsAsync(ct);
+
+    /// <summary>
+    /// Return overview counts without retaining the catalog. The default keeps test and external
+    /// implementations compatible; the production service uses a database aggregate projection.
+    /// </summary>
+    async Task<LibrarySummary> GetLibrarySummaryAsync(
+        CancellationToken ct = default)
+    {
+        IReadOnlyList<TrackRecord> records =
+            await GetBrowseRecordsAsync(ct);
+        int albums = records
+            .Select(record => (
+                record.EffectiveAlbumArtist,
+                record.Album ?? ""))
+            .Distinct()
+            .Count();
+        int artists = records
+            .Select(record =>
+                record.EffectiveAlbumArtist)
+            .Distinct(
+                StringComparer.OrdinalIgnoreCase)
+            .Count();
+        return new(records.Count, albums, artists);
+    }
+
+    /// <summary>
+    /// Load only the requested metadata fields for the requested paths. Results retain path order.
+    /// </summary>
+    async Task<IReadOnlyList<
+        LibraryMetadataProjection>>
+        GetMetadataProjectionAsync(
+            IReadOnlyList<string> paths,
+            IReadOnlyList<
+                MetadataFieldKey> fields,
+            CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        ArgumentNullException.ThrowIfNull(fields);
+        IReadOnlyList<TrackRecord> records =
+            await GetAllRecordsAsync(ct);
+        var byPath = records.ToDictionary(
+            record => record.Path,
+            OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal);
+        return paths.Select(path =>
+        {
+            var values = new Dictionary<
+                MetadataFieldKey,
+                ImmutableArray<string>>();
+            if (byPath.TryGetValue(
+                    path,
+                    out TrackRecord? record))
+            {
+                foreach (MetadataFieldKey field
+                         in fields)
+                {
+                    string key =
+                        field.KnownField?
+                            .ToString() ??
+                        CachedMetadataKeys
+                            .Custom(
+                                field
+                                    .CustomName!);
+                    if (record.Metadata
+                        .TryGetValue(
+                            key,
+                            out string[]?
+                                fieldValues))
+                        values[field] =
+                            [.. fieldValues];
+                }
+            }
+            return new
+                LibraryMetadataProjection(
+                    path,
+                    values);
+        }).ToArray();
+    }
+
+    /// <summary>
+    /// Return paths in ascending order for a metadata field without retaining that field in browse
+    /// rows. Production implementations execute this against the catalog.
+    /// </summary>
+    async Task<IReadOnlyList<string>>
+        GetMetadataSortOrderAsync(
+            MetadataFieldKey field,
+            LibraryMetadataSortKind sortKind,
+            CancellationToken ct = default)
+    {
+        IReadOnlyList<TrackRecord> records =
+            await GetAllRecordsAsync(ct);
+        string key = field.KnownField?
+            .ToString() ??
+            CachedMetadataKeys.Custom(
+                field.CustomName!);
+        return records
+            .OrderBy(
+                record =>
+                    record.Metadata
+                        .GetValueOrDefault(
+                            key)?
+                        .FirstOrDefault() ?? "",
+                StringComparer
+                    .CurrentCultureIgnoreCase)
+            .Select(record => record.Path)
+            .ToArray();
+    }
 
     /// <summary>
     /// Capture the active configuration and a metadata snapshot from the already-open cache.

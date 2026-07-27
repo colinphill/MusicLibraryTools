@@ -87,7 +87,7 @@ so status precedence leaves 115 manifest entries as `InvariantApproved`:
 Pending=0
 InvariantApproved=115
 GlossaryReviewed=247
-EditorialReviewed=3,293
+EditorialReviewed=3,296
 ```
 
 `FocusedEditorialReviewEvidence.v1.xml` is now an intentionally empty,
@@ -97,7 +97,7 @@ final copy pass are bound to the
 `gui-usability-final-copy-2026-07-26` approval packet. Later digest-bound
 packet batches likewise record editorial overrides and reviewed glossary or
 exact-resource translations directly in the manifest. The current complete
-manifest covers 3,655 resources with no pending review. Ordinary manifest
+manifest covers 3,658 resources with no pending review. Ordinary manifest
 refresh preserves those current approvals while loading the checked-in empty
 seed, so CI does not require historical Git objects and works in shallow
 clones:
