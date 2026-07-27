@@ -4228,6 +4228,7 @@ public sealed class UiControlTests
                         DateTime.UtcNow,
                         "hash"),
                     true));
+            track.MarkArtworkAuthoritative();
             model.Files.Add(track);
             model.SelectedFile = track;
             Dispatcher.UIThread.RunJobs();
