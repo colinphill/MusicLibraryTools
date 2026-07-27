@@ -441,47 +441,29 @@ public sealed class LibraryGridEditingUiTests
         string expectedBindingPath,
         string expectedInitialText)
     {
-        Control? editingElement = null;
-        void OnPreparing(
-            object? sender,
-            DataGridPreparingCellForEditEventArgs
-                eventArgs) =>
-            editingElement =
-                eventArgs.EditingElement;
+        fixture.Grid.Focus();
+        fixture.Grid.SelectedItem =
+            fixture.Row;
+        fixture.Grid.CurrentColumn =
+            column;
+        fixture.Grid.ScrollIntoView(
+            fixture.Row,
+            column);
+        Render();
+        DataGridCell? targetCell = null;
+        await WaitForAsync(
+            () =>
+                (targetCell =
+                    FindRealizedCell(
+                        fixture.Grid,
+                        fixture.Row,
+                        expectedInitialText)) is
+                not null,
+            "The target editable cell was not realized.");
 
-        fixture.Grid.PreparingCellForEdit +=
-            OnPreparing;
-        try
-        {
-            fixture.Grid.Focus();
-            fixture.Grid.SelectedItem =
-                fixture.Row;
-            fixture.Grid.CurrentColumn =
-                column;
-            fixture.Grid.ScrollIntoView(
-                fixture.Row,
-                column);
-            Render();
-            DataGridCell? targetCell = null;
-            await WaitForAsync(
-                () =>
-                    (targetCell =
-                        FindRealizedCell(
-                            fixture.Grid,
-                            fixture.Row,
-                            expectedInitialText)) is
-                    not null,
-                "The target editable cell was not realized.");
-
-            Assert.True(
-                fixture.Grid.BeginEdit());
-            Render();
-        }
-        finally
-        {
-            fixture.Grid.PreparingCellForEdit -=
-                OnPreparing;
-        }
+        Assert.True(
+            fixture.Grid.BeginEdit());
+        Render();
 
         var textColumn =
             Assert.IsType<
@@ -496,17 +478,24 @@ public sealed class LibraryGridEditingUiTests
         Assert.Equal(
             expectedBindingPath,
             binding.Path);
-        TextBox editor =
-            Assert.IsType<TextBox>(
-                editingElement);
+        TextBox? editor = null;
         await WaitForAsync(
-            () => StringComparer.Ordinal.Equals(
-                expectedInitialText,
-                editor.Text),
-            "The editing control did not receive its row binding.");
+            () =>
+            {
+                editor = targetCell!
+                    .GetVisualDescendants()
+                    .OfType<TextBox>()
+                    .SingleOrDefault();
+                return editor is not null &&
+                    StringComparer.Ordinal
+                        .Equals(
+                            expectedInitialText,
+                            editor.Text);
+            },
+            "The attached editing control did not receive its row binding.");
         Assert.Equal(
             expectedInitialText,
-            editor.Text);
+            editor!.Text);
         return editor;
     }
 
