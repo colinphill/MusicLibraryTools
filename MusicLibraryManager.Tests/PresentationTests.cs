@@ -387,15 +387,17 @@ public sealed class PresentationTests
         await viewModel.ReloadAsync();
 
         await viewModel.SelectAsync(viewModel.Rows);
-        viewModel.SetHealthFilter([upperPath]);
-        await viewModel.ApplyFilterNowAsync(
-            TestContext.Current.CancellationToken);
-
         int expectedDistinctPaths =
             OperatingSystem.IsWindows() ? 1 : 2;
         Assert.Equal(
             expectedDistinctPaths,
             viewModel.SelectedPaths.Count);
+
+        viewModel.SetHealthFilter([upperPath]);
+        await viewModel.ApplyFilterNowAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.Single(viewModel.SelectedPaths);
         Assert.Equal(
             OperatingSystem.IsWindows() ? 2 : 1,
             viewModel.Rows.Count);
@@ -1436,7 +1438,9 @@ public sealed class PresentationTests
     [Fact]
     public async Task Library_inspector_edits_appear_in_pending_changes_and_revert()
     {
-        const string path = @"C:\Music\Pending.flac";
+        string path = Path.Combine(
+            Path.GetTempPath(),
+            "Pending.flac");
         TrackRecord record = Track(
             "Artist",
             "Album",
@@ -3607,7 +3611,9 @@ public sealed class PresentationTests
     public void Workbench_shortcut_editor_persists_matches_and_rejects_conflicts()
     {
         var store = new FakeWorkbenchShortcutStore();
-        var editor = new WorkbenchShortcutEditorViewModel(store)
+        var editor = new WorkbenchShortcutEditorViewModel(
+            store,
+            platform: WorkbenchShortcutPlatform.Windows)
         {
             GestureText = "control+shift+p",
         };
@@ -4377,7 +4383,7 @@ public sealed class PresentationTests
             DelimitedMetadataEmptyCellMode.Ignore,
             delimited.Options!.EmptyCellMode);
         Assert.Equal(
-            delimited.CandidatePaths.Select(Path.GetFullPath),
+            delimited.CandidatePaths,
             metadataOperations.PreviewedValueEdits.Keys);
         Assert.Contains(
             "matched rows: 2 of 2",

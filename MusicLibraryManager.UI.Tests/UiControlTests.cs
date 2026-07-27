@@ -362,7 +362,9 @@ public sealed class UiControlTests
             {
                 RoutedEvent = InputElement.KeyDownEvent,
                 Key = Key.K,
-                KeyModifiers = KeyModifiers.Control,
+                KeyModifiers = OperatingSystem.IsMacOS()
+                    ? KeyModifiers.Meta
+                    : KeyModifiers.Control,
             });
             Dispatcher.UIThread.RunJobs();
 

@@ -132,7 +132,7 @@
                  Text="{DynamicResource Loc.Workbench.Tools.ReviewedTitle}" />
       <controls:AppDataGrid x:Name="ExternalToolInvocationGrid"
                             Grid.Row="1"
-                            MinHeight="150"
+                            MinHeight="96"
                             IsVisible="{Binding ExternalToolInvocations.Count}"
                             ItemsSource="{Binding ExternalToolInvocations}" />
       <Border x:Name="ExternalToolPreviewEmptyState"
@@ -166,13 +166,15 @@
                      TextTrimming="CharacterEllipsis"
                      ToolTip.Tip="{Binding StatusText}"
                      AutomationProperties.HelpText="{Binding StatusText}" />
-          <controls:LocalizedFormatTextBlock
-              Classes="muted"
-              FontSize="{DynamicResource AppFontSizeCaption}"
-              TextWrapping="Wrap"
-              ResourceKey="Common.DiagnosticDetailFormat"
-              Value="{Binding StatusDiagnosticDetail}"
-              IsVisible="{Binding HasStatusDiagnosticDetail}" />
+          <Panel x:Name="ToolsStatusDiagnosticContainer">
+            <controls:LocalizedFormatTextBlock
+                Classes="muted"
+                FontSize="{DynamicResource AppFontSizeCaption}"
+                TextWrapping="Wrap"
+                ResourceKey="Common.DiagnosticDetailFormat"
+                Value="{Binding StatusDiagnosticDetail}"
+                IsVisible="{Binding HasStatusDiagnosticDetail}" />
+          </Panel>
         </StackPanel>
       </Border>
       <Border x:Name="ToolsStickyFooter"

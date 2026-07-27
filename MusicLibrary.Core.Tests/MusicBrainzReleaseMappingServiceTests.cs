@@ -115,7 +115,9 @@ public sealed class MusicBrainzReleaseMappingServiceTests
         Assert.Equal(
             MusicBrainzMappingConfidence.RecordingId,
             match.Confidence);
-        Assert.Contains("97.0% AcoustID", match.Status);
+        Assert.Contains(
+            $"{0.97:P1} AcoustID",
+            match.Status);
         Assert.True(
             match.Candidates[0].Score >
             match.Candidates[1].Score);

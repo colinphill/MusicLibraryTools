@@ -650,6 +650,7 @@
                   <Button x:Name="LibraryRevertPendingChangesButton"
                           Classes="app danger"
                           Margin="0,0,8,8"
+                          MinWidth="220"
                           MaxWidth="240"
                           ToolTip.Tip="{DynamicResource Loc.Library.PendingChanges.RevertTooltip}"
                           IsEnabled="{Binding HasPendingChanges}"

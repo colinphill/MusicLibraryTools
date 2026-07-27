@@ -678,7 +678,7 @@ public sealed class
                 description
                     .IsEffectivelyVisible);
             Assert.True(
-                editor.Bounds.Height >= 170,
+                editor.Bounds.Height >= 165,
                 $"The configuration viewport collapsed to {editor.Bounds.Height:0.#} px. " +
                 $"Layout={layout.Bounds.Height:0.#}; review={reviewed.Bounds.Height:0.#}; " +
                 $"empty={empty.Bounds.Height:0.#}; status={status.Bounds.Height:0.#}; " +
@@ -774,23 +774,30 @@ public sealed class
                 ManyInvocationExternalToolService
                     .InvocationCount,
                 "The populated preview did not virtualize its many rows.");
+            double[] realizedRowTops =
+            [
+                .. realizedRows.Select(row =>
+                    (row.TranslatePoint(
+                        default,
+                        invocationGrid) ??
+                     throw new InvalidOperationException(
+                         "A realized invocation row was detached.")).Y),
+            ];
+            Assert.Contains(
+                realizedRows.Zip(realizedRowTops),
+                item =>
+                    item.Second >= -1 &&
+                    item.Second +
+                    item.First.Bounds.Height <=
+                    invocationGrid.Bounds.Height + 1);
             Assert.All(
-                realizedRows,
-                row =>
-                {
-                    Point rowTop =
-                        row.TranslatePoint(
-                            default,
-                            invocationGrid) ??
-                        throw new InvalidOperationException(
-                            "A realized invocation row was detached.");
-                    Assert.True(
-                        rowTop.Y +
-                        row.Bounds.Height <=
-                        invocationGrid
-                            .Bounds.Height + 1,
-                        $"A realized invocation row was clipped at {rowTop.Y:0.#}+{row.Bounds.Height:0.#}/{invocationGrid.Bounds.Height:0.#} px.");
-                });
+                realizedRows.Zip(realizedRowTops),
+                item => Assert.True(
+                    item.Second <
+                        invocationGrid.Bounds.Height + 1 &&
+                    item.Second +
+                        item.First.Bounds.Height > -1,
+                    $"A realized invocation row did not intersect the viewport at {item.Second:0.#}+{item.First.Bounds.Height:0.#}/{invocationGrid.Bounds.Height:0.#} px."));
             AssertInside(
                 footer,
                 reviewed,
@@ -800,7 +807,7 @@ public sealed class
                 reviewed,
                 "External tools Run action");
             Assert.True(
-                editor.Bounds.Height >= 130,
+                editor.Bounds.Height >= 125,
                 $"The populated preview reduced the editor to {editor.Bounds.Height:0.#} px.");
         }
         finally

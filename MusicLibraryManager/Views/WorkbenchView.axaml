@@ -178,6 +178,7 @@
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Grid RowDefinitions="Auto,Auto"
+                          MinWidth="170"
                           AutomationProperties.Name="{Binding Label}">
                       <TextBlock Classes="faint caption"
                                  Margin="0,8,0,4"

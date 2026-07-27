@@ -150,6 +150,14 @@ public partial class WorkbenchToolsSectionView : UserControl
         }
         ExternalToolPreviewEmptyDescription.IsVisible =
             !compactHeight;
+        ToolsStatusDiagnosticContainer.IsVisible =
+            !compactHeight;
+        if (compactHeight)
+            ToolsStatusBanner.Padding =
+                new Thickness(4);
+        else
+            ToolsStatusBanner.ClearValue(
+                Decorator.PaddingProperty);
         ReviewedPanel.RowSpacing =
             compactHeight ? 4 : 8;
         ToolsStatusText.MaxLines =

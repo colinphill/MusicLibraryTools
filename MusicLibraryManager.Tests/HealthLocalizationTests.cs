@@ -11,12 +11,12 @@ public sealed class HealthLocalizationTests
 {
     private static readonly string[] RuntimeFiles =
     [
-        @"MusicLibraryManager.Presentation\Workflows\AnalyzerViewModel.cs",
-        @"MusicLibraryManager.Presentation\Workflows\AnalysisRunViewModel.cs",
-        @"MusicLibraryManager.Presentation\Workflows\ArtistGroupViewModel.cs",
-        @"MusicLibraryManager.Presentation\Workflows\ArtworkRepairViewModels.cs",
-        @"MusicLibraryManager\Views\HealthView.axaml",
-        @"MusicLibraryManager\Views\HealthView.axaml.cs",
+        "MusicLibraryManager.Presentation/Workflows/AnalyzerViewModel.cs",
+        "MusicLibraryManager.Presentation/Workflows/AnalysisRunViewModel.cs",
+        "MusicLibraryManager.Presentation/Workflows/ArtistGroupViewModel.cs",
+        "MusicLibraryManager.Presentation/Workflows/ArtworkRepairViewModels.cs",
+        "MusicLibraryManager/Views/HealthView.axaml",
+        "MusicLibraryManager/Views/HealthView.axaml.cs",
     ];
 
     [Fact]
