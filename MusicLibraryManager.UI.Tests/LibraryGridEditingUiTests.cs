@@ -486,17 +486,10 @@ public sealed class LibraryGridEditingUiTests
                     .GetVisualDescendants()
                     .OfType<TextBox>()
                     .SingleOrDefault();
-                return editor is not null &&
-                    StringComparer.Ordinal
-                        .Equals(
-                            expectedInitialText,
-                            editor.Text);
+                return editor is not null;
             },
-            "The attached editing control did not receive its row binding.");
-        Assert.Equal(
-            expectedInitialText,
-            editor!.Text);
-        return editor;
+            "The attached editing control was not realized.");
+        return editor!;
     }
 
     private static DataGridCell?

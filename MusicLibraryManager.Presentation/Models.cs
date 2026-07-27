@@ -3040,52 +3040,79 @@ public partial class IngestRecipeEditorRow : ObservableObject
         OnPropertyChanged(nameof(Summary));
     }
 
-    public static IngestRecipeEditorRow From(LibraryIngestRecipe recipe) => new()
+    public static IngestRecipeEditorRow From(
+        LibraryIngestRecipe recipe)
     {
-        Source = recipe,
-        Id = recipe.Id,
-        Name = recipe.Name,
-        Enabled = recipe.Enabled,
-        InputExtensions = string.Join(", ", recipe.InputExtensions),
-        RequireLossless = recipe.RequireLossless,
-        MinimumSampleRateHz = recipe.MinimumSampleRateHz,
-        MinimumBitsPerSample = recipe.MinimumBitsPerSample,
-        InputChannelChoice = SettingsChoiceLists.ChannelChoice(recipe.InputChannels),
-        MatchAnyQualityMinimum = recipe.MatchAnyQualityMinimum,
-        AlbumCondition = recipe.AlbumCondition,
-        SourceSelection = recipe.SourceSelection,
-        RequireFallbackApproval = recipe.RequireFallbackApproval,
-        Action = recipe.Action,
-        DestinationRootId = recipe.DestinationRootId,
-        OutputExtension = recipe.OutputExtension,
-        Codec = recipe.Codec,
-        Encoder = recipe.Encoder,
-        ExtraFfmpegOptions = recipe.ExtraFfmpegOptions,
-        AddToMediaCatalog = recipe.AddToMediaCatalog,
-        BitrateKbps = recipe.BitrateKbps,
-        SampleRateHz = recipe.SampleRateHz,
-        BitsPerSample = recipe.BitsPerSample,
-        TranscodeFormatId = recipe.TranscodeFormatId ??
-            InferLegacyFormatId(recipe),
-        TranscodeEncoderId = recipe.TranscodeEncoderId ??
-            InferLegacyEncoderId(recipe),
-        TranscodeRateMode = Enum.TryParse(
-            recipe.TranscodeRateMode,
-            ignoreCase: true,
-            out AudioTranscodeRateMode rateMode)
-                ? rateMode
-                : InferLegacyRateMode(recipe),
-        TranscodeQuality = recipe.TranscodeQuality,
-        TranscodeCompressionEffort =
-            recipe.TranscodeCompressionEffort,
-        TranscodeCreateCorrectionFile =
-            recipe.TranscodeCreateCorrectionFile,
-        OutputChannelChoice = SettingsChoiceLists.ChannelChoice(recipe.OutputChannels),
-        PreserveMetadata = recipe.PreserveMetadata,
-        PreserveArtwork = recipe.PreserveArtwork,
-        UseProfileCollision = recipe.CollisionPolicy is null,
-        CollisionPolicy = recipe.CollisionPolicy ?? LibraryPathCollisionPolicy.Stop,
-    };
+        var row = new IngestRecipeEditorRow
+        {
+            Source = recipe,
+            Id = recipe.Id,
+            Name = recipe.Name,
+            Enabled = recipe.Enabled,
+            InputExtensions = string.Join(
+                ", ",
+                recipe.InputExtensions),
+            RequireLossless = recipe.RequireLossless,
+            MinimumSampleRateHz =
+                recipe.MinimumSampleRateHz,
+            MinimumBitsPerSample =
+                recipe.MinimumBitsPerSample,
+            InputChannelChoice =
+                SettingsChoiceLists.ChannelChoice(
+                    recipe.InputChannels),
+            MatchAnyQualityMinimum =
+                recipe.MatchAnyQualityMinimum,
+            AlbumCondition = recipe.AlbumCondition,
+            SourceSelection = recipe.SourceSelection,
+            RequireFallbackApproval =
+                recipe.RequireFallbackApproval,
+            Action = recipe.Action,
+            DestinationRootId =
+                recipe.DestinationRootId,
+            OutputExtension = recipe.OutputExtension,
+            Codec = recipe.Codec,
+            Encoder = recipe.Encoder,
+            ExtraFfmpegOptions =
+                recipe.ExtraFfmpegOptions,
+            AddToMediaCatalog =
+                recipe.AddToMediaCatalog,
+            BitrateKbps = recipe.BitrateKbps,
+            SampleRateHz = recipe.SampleRateHz,
+            BitsPerSample = recipe.BitsPerSample,
+            TranscodeFormatId =
+                recipe.TranscodeFormatId ??
+                InferLegacyFormatId(recipe),
+            TranscodeEncoderId =
+                recipe.TranscodeEncoderId ??
+                InferLegacyEncoderId(recipe),
+            TranscodeRateMode = Enum.TryParse(
+                recipe.TranscodeRateMode,
+                ignoreCase: true,
+                out AudioTranscodeRateMode rateMode)
+                    ? rateMode
+                    : InferLegacyRateMode(recipe),
+            TranscodeQuality =
+                recipe.TranscodeQuality,
+            TranscodeCompressionEffort =
+                recipe.TranscodeCompressionEffort,
+            TranscodeCreateCorrectionFile =
+                recipe.TranscodeCreateCorrectionFile,
+            OutputChannelChoice =
+                SettingsChoiceLists.ChannelChoice(
+                    recipe.OutputChannels),
+            PreserveMetadata =
+                recipe.PreserveMetadata,
+            PreserveArtwork =
+                recipe.PreserveArtwork,
+            UseProfileCollision =
+                recipe.CollisionPolicy is null,
+            CollisionPolicy =
+                recipe.CollisionPolicy ??
+                LibraryPathCollisionPolicy.Stop,
+        };
+        row.RefreshTranscodeChoices();
+        return row;
+    }
 
     public static IngestRecipeEditorRow Create() => From(new(
         Id: "recipe-" + Guid.NewGuid().ToString("N")[..12],
@@ -3591,9 +3618,19 @@ public partial class IngestRecipeEditorRow : ObservableObject
     {
         if (_refreshingTranscodeChoices)
             return;
-        OnPropertyChanged(
-            nameof(SelectedTranscodeFormatChoice));
-        RefreshTranscodeEncoderChoices();
+        RefreshTranscodeChoices();
+    }
+
+    partial void OnActionChanged(
+        LibraryIngestAction value)
+    {
+        if (value !=
+                LibraryIngestAction.Transcode ||
+            !string.IsNullOrWhiteSpace(
+                TranscodeFormatId))
+            return;
+        TranscodeFormatId =
+            AudioTranscodeFormatIds.Flac;
     }
 
     partial void OnTranscodeEncoderIdChanged(string value)
