@@ -474,15 +474,15 @@ public sealed class AudioTranscodeCapabilityService :
                 fields[0].Length > 8 ||
                 !fields[0].Contains(requiredFlag) ||
                 fields[0].Any(character =>
+                    character != '.' &&
+                    !char.IsAsciiLetterUpper(character)) ||
+                fields[1].Any(character =>
+                    !char.IsAsciiLetterOrDigit(character) &&
                     character is not (
+                        '_' or
+                        '-' or
                         '.' or
-                        'A' or
-                        'V' or
-                        'S' or
-                        'F' or
-                        'X' or
-                        'D' or
-                        'E')))
+                        ',')))
                 continue;
             foreach (string value in fields[1].Split(
                          ',',

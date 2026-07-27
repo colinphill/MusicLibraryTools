@@ -307,7 +307,7 @@ public sealed partial class TranscodeEditorViewModel :
             _capabilitySnapshot =
                 await _capabilities.GetAsync(
                     forceRefresh,
-                    ct).ConfigureAwait(false);
+                    ct);
             RefreshCapabilityChoices();
             int ready = _capabilitySnapshot.Tools.Count(tool =>
                 tool.State == AudioToolProbeState.Ready);
@@ -353,7 +353,7 @@ public sealed partial class TranscodeEditorViewModel :
             AudioTranscodePlan plan =
                 await _transcodes.PreviewAsync(
                     CreateRequest(),
-                    ct: ct).ConfigureAwait(false);
+                    ct: ct);
             foreach (OperationIssue issue in
                      plan.Issues.Concat(
                          plan.Items.SelectMany(item =>
@@ -373,8 +373,7 @@ public sealed partial class TranscodeEditorViewModel :
             }
             if (!await _pending.AddPendingTranscodeAsync(
                     plan,
-                    ct)
-                    .ConfigureAwait(false))
+                    ct))
             {
                 Status = L("Transcode.Status.PreviewUnchanged");
                 return;

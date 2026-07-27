@@ -757,6 +757,18 @@ public sealed class SettingsRuleSummaryCardTests
                                 AudioTranscodeEncoderIds
                                     .WavPackCli,
                             ]),
+                        new(
+                            AudioTranscodeFormatIds
+                                .AacM4a,
+                            "aac",
+                            "ipod",
+                            ".m4a",
+                            false,
+                            [
+                                AudioTranscodeEncoderIds
+                                    .Ffmpeg(
+                                        "libfdk_aac"),
+                            ]),
                     ],
                     [
                         new(
@@ -783,6 +795,24 @@ public sealed class SettingsRuleSummaryCardTests
                             [16, 24],
                             SupportsCorrectionFile:
                                 true),
+                        new(
+                            AudioTranscodeEncoderIds
+                                .Ffmpeg(
+                                    "libfdk_aac"),
+                            AudioTranscodeToolKind
+                                .Ffmpeg,
+                            "libfdk_aac",
+                            AudioEncoderThreadingMode
+                                .ThreadCountControllable,
+                            [
+                                new(
+                                    AudioTranscodeRateMode
+                                        .VariableQuality,
+                                    MinimumQuality: 1,
+                                    MaximumQuality: 5),
+                            ],
+                            [],
+                            []),
                     ],
                     DateTimeOffset.UtcNow,
                     1);
@@ -812,6 +842,69 @@ public sealed class SettingsRuleSummaryCardTests
                     card,
                     "IngestRecipeAdvancedExpander")
                 .IsExpanded = true;
+            Render();
+            ComboBox formatPicker =
+                FindNamed<ComboBox>(
+                    card,
+                    "IngestTranscodeFormatPicker");
+            Assert.True(
+                formatPicker.ItemCount >= 2,
+                $"Expected multiple transcode formats, but found {formatPicker.ItemCount}.");
+            Assert.Equal(
+                recipe.SelectedTranscodeFormatChoice,
+                formatPicker.SelectedItem);
+            LocalizedChoice<string> aacChoice =
+                Assert.Single(
+                    recipe.TranscodeFormatChoices,
+                    choice =>
+                        choice.Value ==
+                        AudioTranscodeFormatIds
+                            .AacM4a);
+            formatPicker.SelectedItem =
+                aacChoice;
+            Render();
+            Assert.Same(
+                aacChoice,
+                formatPicker.SelectedItem);
+            Assert.Same(
+                aacChoice,
+                recipe.SelectedTranscodeFormatChoice);
+            LocalizedChoice<string> wavPackChoice =
+                Assert.Single(
+                    recipe.TranscodeFormatChoices,
+                    choice =>
+                        choice.Value ==
+                        AudioTranscodeFormatIds
+                            .WavPack);
+            formatPicker.SelectedItem =
+                wavPackChoice;
+            Render();
+            Assert.Same(
+                wavPackChoice,
+                formatPicker.SelectedItem);
+            formatPicker.IsDropDownOpen = true;
+            Render();
+            Assert.True(
+                formatPicker.IsDropDownOpen);
+            formatPicker.IsDropDownOpen = false;
+            Render();
+            ComboBox destinationRootPicker =
+                FindNamed<ComboBox>(
+                    card,
+                    "IngestDestinationRootPicker");
+            Assert.Same(
+                recipe.DestinationRootChoices,
+                destinationRootPicker.ItemsSource);
+            Assert.Equal(
+                recipe.DestinationRootChoice,
+                destinationRootPicker.SelectedItem);
+            recipe.TranscodeEncoderId =
+                AudioTranscodeEncoderIds
+                    .WavPackCli;
+            recipe.TranscodeRateMode =
+                AudioTranscodeRateMode.Lossless;
+            recipe.TranscodeCreateCorrectionFile =
+                true;
             Render();
 
             string correctionLabel =

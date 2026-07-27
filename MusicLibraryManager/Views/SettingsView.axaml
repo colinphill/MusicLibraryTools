@@ -1233,15 +1233,29 @@
                           <StackPanel Grid.Column="1" Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.MatchedSourceSelection}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.IngestSourceSelectionChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibraryIngestSourceSelection" local:LocalizedChoiceSelection.Value="{Binding SourceSelection, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.MatchedSourceSelection}" /></StackPanel>
                           <CheckBox Grid.Column="2" Content="{DynamicResource Loc.Settings.Ingest.RequireFallbackApproval}" IsChecked="{Binding RequireFallbackApproval, Mode=TwoWay}" VerticalAlignment="Bottom" />
                         </Grid>
+                        <TextBlock Classes="section-title"
+                                   Text="{DynamicResource Loc.Workbench.Navigation.Group.Output}" />
                         <StackPanel Classes="field">
                           <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Ingest.DestinationRoot}" />
-                          <ComboBox Classes="app" ItemsSource="{Binding DestinationRootChoices}" SelectedItem="{Binding DestinationRootChoice, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.DestinationRootAutomation}" />
+                          <ComboBox x:Name="IngestDestinationRootPicker"
+                                    Classes="app"
+                                    ItemsSource="{Binding DestinationRootChoices}"
+                                    SelectedItem="{Binding DestinationRootChoice, Mode=TwoWay}"
+                                    AutomationProperties.Name="{DynamicResource Loc.Settings.Ingest.DestinationRoot}"
+                                    AutomationProperties.HelpText="{DynamicResource Loc.Settings.Ingest.DestinationRootAutomation}" />
                         </StackPanel>
                         <StackPanel Spacing="12" IsVisible="{Binding IsTranscode}">
                           <Grid Classes="responsive-form" ColumnDefinitions="*,*,*" ColumnSpacing="12">
                             <StackPanel Classes="field">
                               <TextBlock Classes="field-label" Text="{DynamicResource Loc.Transcode.Format.Label}" />
-                              <ComboBox Classes="app" ItemsSource="{Binding TranscodeFormatChoices}" SelectedItem="{Binding SelectedTranscodeFormatChoice, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Transcode.Format.Label}" />
+                              <ComboBox x:Name="IngestTranscodeFormatPicker"
+                                        Classes="app"
+                                        HorizontalAlignment="Stretch"
+                                        MaxDropDownHeight="360"
+                                        ItemsSource="{Binding TranscodeFormatChoices}"
+                                        SelectedItem="{Binding SelectedTranscodeFormatChoice, Mode=TwoWay}"
+                                        DisplayMemberBinding="{Binding Label}"
+                                        AutomationProperties.Name="{DynamicResource Loc.Transcode.Format.Label}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Classes="field">
                               <TextBlock Classes="field-label" Text="{DynamicResource Loc.Transcode.Encoder.Label}" />

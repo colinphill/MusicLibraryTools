@@ -203,6 +203,7 @@ public sealed class TranscodeFoundationTests
              A..... flac_fixed           Test-only similarly named encoder
              V..... h264                 Video encoder
              A..... libmp3lame           MP3 encoder
+             A...BD libfdk_aac           Fraunhofer FDK AAC (codec aac)
             """;
 
         var values = AudioTranscodeCapabilityService.ParseToolTable(
@@ -212,8 +213,10 @@ public sealed class TranscodeFoundationTests
         Assert.Contains("flac", values);
         Assert.Contains("flac_fixed", values);
         Assert.Contains("libmp3lame", values);
+        Assert.Contains("libfdk_aac", values);
         Assert.DoesNotContain("h264", values);
         Assert.DoesNotContain("fla", values);
+        Assert.DoesNotContain("=", values);
     }
 
     private static LibraryIngestRecipe IngestRecipe() => new(
@@ -371,6 +374,15 @@ public sealed class TranscodeFoundationTests
         Assert.DoesNotContain(
             AudioTranscodeEncoderIds.Ffmpeg("flac_fixed"),
             flac.EncoderIds);
+        AudioTranscodeFormatDescriptor aac = Assert.Single(
+            first.Formats,
+            item =>
+                item.Id ==
+                AudioTranscodeFormatIds.AacM4a);
+        Assert.Contains(
+            AudioTranscodeEncoderIds.Ffmpeg(
+                "libfdk_aac"),
+            aac.EncoderIds);
         Assert.Equal(first.ConfigurationVersion, forced.ConfigurationVersion);
     }
 
@@ -2447,6 +2459,7 @@ public sealed class TranscodeFoundationTests
                     A..... flac_fixed
                     A..... libmp3lame
                     A..... aac
+                    A...BD libfdk_aac
                     """,
                 "-decoders" => """
                     A..... flac

@@ -2854,6 +2854,9 @@ public partial class IngestRecipeEditorRow : ObservableObject
         LocalizedText.Get;
     private Func<string, object?[], string> _formatText =
         LocalizedText.Format;
+    private Func<string, long, object?[], string>
+        _formatCountText =
+            LocalizedText.FormatCount;
 
     public required LibraryIngestRecipe Source { get; init; }
     [ObservableProperty] private string _id = "";
@@ -3036,6 +3039,8 @@ public partial class IngestRecipeEditorRow : ObservableObject
             localization);
         _getText = localization.Get;
         _formatText = localization.Format;
+        _formatCountText =
+            localization.FormatCount;
         RefreshTranscodeChoices();
         OnPropertyChanged(nameof(Summary));
     }
@@ -3152,6 +3157,8 @@ public partial class IngestRecipeEditorRow : ObservableObject
         };
         clone._getText = _getText;
         clone._formatText = _formatText;
+        clone._formatCountText =
+            _formatCountText;
         clone.Id = id;
         clone.Name = name;
         clone.Enabled = Enabled;
@@ -3311,6 +3318,8 @@ public partial class IngestRecipeEditorRow : ObservableObject
         _transcodeCapabilities = snapshot;
         _getText = localization.Get;
         _formatText = localization.Format;
+        _formatCountText =
+            localization.FormatCount;
         RefreshTranscodeChoices();
     }
 
@@ -3354,9 +3363,10 @@ public partial class IngestRecipeEditorRow : ObservableObject
                 new int?[] { null, 16, 24, 32 },
                 value => value is null
                     ? _getText("Transcode.Value.Preserve")
-                    : _formatText(
+                    : _formatCountText(
                         "Transcode.Value.Bits",
-                        [value.Value]));
+                        value.Value,
+                        []));
             OnPropertyChanged(
                 nameof(SelectedTranscodeFormatChoice));
             OnPropertyChanged(
@@ -3621,8 +3631,21 @@ public partial class IngestRecipeEditorRow : ObservableObject
     {
         if (_refreshingTranscodeChoices)
             return;
-        RefreshTranscodeChoices(
-            clearInapplicableCorrection: true);
+        if (!string.IsNullOrWhiteSpace(value) &&
+            !TranscodeFormatChoices.Any(choice =>
+                choice.Value == value))
+        {
+            TranscodeFormatChoices.Add(new(
+                value,
+                value + " — " +
+                _getText(
+                    "Transcode.Value.Unavailable")));
+        }
+        OnPropertyChanged(
+            nameof(SelectedTranscodeFormatChoice));
+        RefreshTranscodeEncoderChoices();
+        RefreshTranscodeCorrectionFileOption(
+            clearInapplicable: true);
     }
 
     partial void OnActionChanged(

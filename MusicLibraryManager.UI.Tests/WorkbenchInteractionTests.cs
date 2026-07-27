@@ -26,6 +26,55 @@ namespace MusicLibraryManager.UI.Tests;
 public sealed class WorkbenchInteractionTests
 {
     [AvaloniaFact]
+    public async Task Transcode_preview_resumes_on_the_ui_dispatcher()
+    {
+        var transcodes =
+            new WorkerThreadPreviewTranscodeService();
+        using ServiceProvider services =
+            BuildServices(
+                transcodeService: transcodes);
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            WorkbenchView view =
+                ShowWorkbench(
+                    window,
+                    services,
+                    1200,
+                    700);
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            WorkbenchTrackViewModel track =
+                Track("worker-preview.flac");
+            model.Files.Add(track);
+            model.SetSelectedFiles([track]);
+
+            Assert.True(
+                await view
+                    .OpenTranscodeDrawerAsync());
+            Render();
+
+            await model.TranscodeEditor!
+                .PreviewCommand.ExecuteAsync(null);
+            Render();
+
+            Assert.True(
+                transcodes.PreviewCompletedOnWorker);
+            Assert.False(
+                model.TranscodeEditor.IsBusy);
+            Assert.Single(
+                model.PendingChanges);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Session_context_menu_keys_are_scoped_to_the_focused_grid()
     {
         using ServiceProvider services = BuildServices();
@@ -1668,7 +1717,9 @@ public sealed class WorkbenchInteractionTests
     private static ServiceProvider BuildServices(
         TestSettings? settings = null,
         IMetadataDocumentService?
-            metadataDocuments = null)
+            metadataDocuments = null,
+        IAudioTranscodeService?
+            transcodeService = null)
     {
         settings ??= new TestSettings();
         settings.SetPreference(
@@ -1685,6 +1736,11 @@ public sealed class WorkbenchInteractionTests
             collection.AddSingleton<
                 IAudioTranscodeCapabilityService>(
                 new FixedTranscodeCapabilities());
+            if (transcodeService is not null)
+            {
+                collection.AddSingleton(
+                    transcodeService);
+            }
             if (metadataDocuments is not null)
             {
                 collection.AddSingleton<
@@ -1946,5 +2002,109 @@ public sealed class WorkbenchInteractionTests
         public void Invalidate()
         {
         }
+    }
+
+    private sealed class
+        WorkerThreadPreviewTranscodeService :
+        IAudioTranscodeService
+    {
+        public bool PreviewCompletedOnWorker
+        {
+            get;
+            private set;
+        }
+
+        public async Task<AudioTranscodePlan>
+            PreviewAsync(
+                AudioTranscodeRequest request,
+                IProgress<OperationProgress>?
+                    progress = null,
+                CancellationToken ct = default)
+        {
+            await Task.Run(
+                () =>
+                {
+                    ct.ThrowIfCancellationRequested();
+                    PreviewCompletedOnWorker = true;
+                },
+                ct).ConfigureAwait(false);
+            AudioTranscodeSettings settings =
+                request.Settings;
+            return new(
+                Guid.NewGuid(),
+                request,
+                [
+                    .. request.SourcePaths.Select(
+                        sourcePath =>
+                        {
+                            string destinationPath =
+                                Path.ChangeExtension(
+                                    sourcePath,
+                                    ".transcoded.flac");
+                            return new
+                                AudioTranscodePlanItem(
+                                    Guid.NewGuid(),
+                                    sourcePath,
+                                    destinationPath,
+                                    OperationPathSnapshot
+                                        .Missing(
+                                            sourcePath),
+                                    OperationPathSnapshot
+                                        .Missing(
+                                            destinationPath),
+                                    "",
+                                    settings,
+                                    []);
+                        }),
+                ],
+                [],
+                DateTimeOffset.UtcNow,
+                1);
+        }
+
+        public Task<AudioTranscodeStageResult>
+            StageAsync(
+                AudioTranscodePlan plan,
+                IProgress<OperationProgress>?
+                    progress = null,
+                CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<AudioTranscodeStageResult>
+            StageWithSourceOverridesAsync(
+                AudioTranscodePlan plan,
+                IReadOnlyDictionary<string, string>
+                    sourceOverrides,
+                IProgress<OperationProgress>?
+                    progress = null,
+                CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<AudioTranscodeApplyResult>
+            ApplyAsync(
+                AudioTranscodeStageResult stage,
+                IReadOnlySet<Guid>?
+                    readyItemIds = null,
+                IProgress<OperationProgress>?
+                    progress = null,
+                CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<AudioTranscodeApplyResult>
+            ApplyBatchAsync(
+                IReadOnlyList<
+                    AudioTranscodeStageResult>
+                    stages,
+                IReadOnlySet<Guid>?
+                    readyItemIds = null,
+                IProgress<OperationProgress>?
+                    progress = null,
+                CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task DiscardStageAsync(
+            AudioTranscodeStageResult stage,
+            CancellationToken ct = default) =>
+            Task.CompletedTask;
     }
 }

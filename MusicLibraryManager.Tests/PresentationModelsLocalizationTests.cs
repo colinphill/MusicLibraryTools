@@ -10,6 +10,28 @@ namespace MusicLibraryManager.Tests;
 public sealed class PresentationModelsLocalizationTests
 {
     [Fact]
+    public void Ingest_bit_depth_choices_use_cardinal_localization()
+    {
+        IngestRecipeEditorRow recipe =
+            IngestRecipeEditorRow.Create();
+        recipe.Action =
+            LibraryIngestAction.Transcode;
+
+        LocalizedChoice<int?> sixteen =
+            Assert.Single(
+                recipe.TranscodeBitDepthChoices,
+                choice => choice.Value == 16);
+
+        Assert.Equal(
+            "16 bits",
+            sixteen.Label);
+        Assert.DoesNotContain(
+            "⟦",
+            sixteen.Label,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Permission_and_ingest_summaries_have_no_English_runtime_fallbacks()
     {
         string source = File.ReadAllText(

@@ -153,7 +153,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         ExportProfiles.CollectionChanged += OnTrackedCollectionChanged;
         foreach (MetadataFieldMapping mapping in _fieldMappings.Load())
             FieldMappings.Add(MetadataFieldMappingEditorRow.From(mapping));
-        settings.ConfigurationChanged += (_, _) => RefreshActiveConfiguration();
+        settings.ConfigurationChanged +=
+            OnConfigurationChanged;
         RefreshProfileChoices();
         RefreshIngestProfileChoices();
         RefreshActiveConfiguration();
@@ -2398,7 +2399,17 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         ApplyIngestTranscodeCapabilities();
     }
 
-    private async Task RefreshIngestTranscodeCapabilitiesAsync()
+    private void OnConfigurationChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshActiveConfiguration();
+        _ = RefreshIngestTranscodeCapabilitiesAsync(
+            forceRefresh: true);
+    }
+
+    private async Task RefreshIngestTranscodeCapabilitiesAsync(
+        bool forceRefresh = false)
     {
         if (_transcodeCapabilities is null)
             return;
@@ -2406,7 +2417,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         {
             _transcodeCapabilitySnapshot =
                 await _transcodeCapabilities.GetAsync(
-                    forceRefresh: false);
+                    forceRefresh);
             ApplyIngestTranscodeCapabilities();
         }
         catch

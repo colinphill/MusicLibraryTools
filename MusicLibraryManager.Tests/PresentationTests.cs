@@ -2401,6 +2401,140 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Settings_refreshes_ingest_transcode_capabilities_after_configuration_change()
+    {
+        var settings = new FakeSettings();
+        var capabilities =
+            new MutableTranscodeCapabilityService
+            {
+                Snapshot = new(
+                    [],
+                    [
+                        new(
+                            AudioTranscodeFormatIds.Flac,
+                            "flac",
+                            "flac",
+                            ".flac",
+                            true,
+                            [
+                                AudioTranscodeEncoderIds
+                                    .Ffmpeg("flac"),
+                            ]),
+                    ],
+                    [
+                        new(
+                            AudioTranscodeEncoderIds
+                                .Ffmpeg("flac"),
+                            AudioTranscodeToolKind.Ffmpeg,
+                            "flac",
+                            AudioEncoderThreadingMode
+                                .ThreadCountControllable,
+                            [
+                                new(
+                                    AudioTranscodeRateMode
+                                        .Lossless),
+                            ],
+                            [],
+                            [16, 24]),
+                    ],
+                    DateTimeOffset.UtcNow,
+                    1),
+            };
+        var viewModel = new SettingsViewModel(
+            settings,
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeTheme(),
+            transcodeCapabilities: capabilities);
+        await viewModel.NewConfigurationCommand
+            .ExecuteAsync(null);
+        viewModel.AddIngestRecipeCommand
+            .Execute(null);
+        IngestRecipeEditorRow recipe =
+            Assert.Single(
+                Assert.IsType<
+                    IngestProfileEditorRow>(
+                    viewModel.AdvancedIngestProfile)
+                    .Recipes);
+        recipe.Action =
+            LibraryIngestAction.Transcode;
+        Assert.Contains(
+            recipe.TranscodeFormatChoices,
+            choice =>
+                choice.Value ==
+                AudioTranscodeFormatIds.Flac);
+
+        capabilities.Snapshot = new(
+            [],
+            [
+                new(
+                    AudioTranscodeFormatIds.AacM4a,
+                    "aac",
+                    "ipod",
+                    ".m4a",
+                    false,
+                    [
+                        AudioTranscodeEncoderIds
+                            .Ffmpeg("libfdk_aac"),
+                    ]),
+            ],
+            [
+                new(
+                    AudioTranscodeEncoderIds
+                        .Ffmpeg("libfdk_aac"),
+                    AudioTranscodeToolKind.Ffmpeg,
+                    "libfdk_aac",
+                    AudioEncoderThreadingMode
+                        .ThreadCountControllable,
+                    [
+                        new(
+                            AudioTranscodeRateMode
+                                .VariableQuality,
+                            MinimumQuality: 1,
+                            MaximumQuality: 5),
+                    ],
+                    [],
+                    []),
+            ],
+            DateTimeOffset.UtcNow,
+            2);
+
+        settings.RaiseConfigurationChanged();
+
+        Assert.True(
+            capabilities.ForceRefreshes[^1]);
+        Assert.Contains(
+            recipe.TranscodeFormatChoices,
+            choice =>
+                choice.Value ==
+                AudioTranscodeFormatIds.AacM4a);
+        LocalizedChoice<string> aacChoice =
+            Assert.Single(
+                recipe.TranscodeFormatChoices,
+                choice =>
+                    choice.Value ==
+                    AudioTranscodeFormatIds
+                        .AacM4a);
+        recipe.SelectedTranscodeFormatChoice =
+            aacChoice;
+        Assert.Same(
+            aacChoice,
+            recipe.SelectedTranscodeFormatChoice);
+        Assert.Contains(
+            recipe.TranscodeFormatChoices,
+            choice =>
+                ReferenceEquals(
+                    choice,
+                    aacChoice));
+        Assert.Contains(
+            recipe.TranscodeEncoderChoices,
+            choice =>
+                choice.Value ==
+                AudioTranscodeEncoderIds
+                    .Ffmpeg("libfdk_aac"));
+    }
+
+    [Fact]
     public void Ingest_recipe_correction_option_tracksEncoderAndRateModeAndKeepsInvalidStoredValuesRepairable()
     {
         IngestRecipeEditorRow seed =
@@ -4707,6 +4841,10 @@ internal sealed class FakeSettings : IAppSettings
     public event EventHandler? ConfigurationChanged;
     public AppConfigurationSnapshot GetSnapshot() => new(ConfigPath, Configuration, 1);
     public void LoadConfig(string path) { ConfigPath = path; ConfigurationChanged?.Invoke(this, EventArgs.Empty); }
+    public void RaiseConfigurationChanged() =>
+        ConfigurationChanged?.Invoke(
+            this,
+            EventArgs.Empty);
     public string? GetRememberedConfigPath() => ConfigPath;
     public IReadOnlyList<string> RecentConfigPaths => ConfigPath is null ? [] : [ConfigPath];
     public void ClearRecentConfigs() { }
@@ -4714,6 +4852,32 @@ internal sealed class FakeSettings : IAppSettings
     public void SetPreference(string key, string? value)
     {
         if (value is null) Preferences.Remove(key); else Preferences[key] = value;
+    }
+}
+
+internal sealed class MutableTranscodeCapabilityService :
+    IAudioTranscodeCapabilityService
+{
+    public required AudioTranscodeCapabilitySnapshot
+        Snapshot
+    {
+        get;
+        set;
+    }
+
+    public List<bool> ForceRefreshes { get; } = [];
+
+    public Task<AudioTranscodeCapabilitySnapshot>
+        GetAsync(
+            bool forceRefresh = false,
+            CancellationToken ct = default)
+    {
+        ForceRefreshes.Add(forceRefresh);
+        return Task.FromResult(Snapshot);
+    }
+
+    public void Invalidate()
+    {
     }
 }
 
