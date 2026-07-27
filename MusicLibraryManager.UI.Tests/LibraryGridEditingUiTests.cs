@@ -295,12 +295,18 @@ public sealed class LibraryGridEditingUiTests
             grid.CurrentColumn = title;
             grid.ScrollIntoView(row, title);
             Render();
+            DataGridCell? titleCell = null;
             await WaitForAsync(
-                () => HasRealizedCell(
-                    grid,
-                    row,
-                    "Original title"),
+                () =>
+                    (titleCell =
+                        FindRealizedCell(
+                            grid,
+                            row,
+                            "Original title")) is
+                    not null,
                 "The editable Title cell was not realized.");
+            Assert.True(titleCell!.Focus());
+            Render();
 
             model.IsOperationBusy = true;
             Render();
@@ -458,12 +464,18 @@ public sealed class LibraryGridEditingUiTests
                 fixture.Row,
                 column);
             Render();
+            DataGridCell? targetCell = null;
             await WaitForAsync(
-                () => HasRealizedCell(
-                    fixture.Grid,
-                    fixture.Row,
-                    expectedInitialText),
+                () =>
+                    (targetCell =
+                        FindRealizedCell(
+                            fixture.Grid,
+                            fixture.Row,
+                            expectedInitialText)) is
+                    not null,
                 "The target editable cell was not realized.");
+            Assert.True(targetCell!.Focus());
+            Render();
 
             Assert.True(
                 fixture.Grid.BeginEdit());
@@ -502,7 +514,8 @@ public sealed class LibraryGridEditingUiTests
         return editor;
     }
 
-    private static bool HasRealizedCell(
+    private static DataGridCell?
+        FindRealizedCell(
         AppDataGrid grid,
         LibraryRow row,
         string expectedText) =>
@@ -512,13 +525,14 @@ public sealed class LibraryGridEditingUiTests
                 ReferenceEquals(
                     cell.DataContext,
                     row))
-            .SelectMany(cell =>
+            .FirstOrDefault(cell =>
                 cell.GetVisualDescendants()
-                    .OfType<TextBlock>())
-            .Any(text =>
-                StringComparer.Ordinal.Equals(
-                    expectedText,
-                    text.Text));
+                    .OfType<TextBlock>()
+                    .Any(text =>
+                        StringComparer.Ordinal
+                            .Equals(
+                                expectedText,
+                                text.Text)));
 
     private static void Render()
     {
