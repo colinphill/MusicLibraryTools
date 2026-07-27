@@ -9,7 +9,11 @@ namespace MusicLibraryManager.Views;
 
 public partial class DevicesView : UserControl
 {
+    internal const double CompactActionsMinimumHeight = 96;
+    private const double StandardIssueSummaryMaximumHeight = 144;
+
     private bool _startedDeviceDiscovery;
+    private bool _usesStackedLayout;
     private Task _initialDeviceDiscovery =
         Task.CompletedTask;
     private readonly DevicesViewModel _viewModel;
@@ -38,6 +42,8 @@ public partial class DevicesView : UserControl
         ]);
         SizeChanged += (_, _) =>
             ApplyResponsiveLayout();
+        DeviceResultsPane.SizeChanged += (_, _) =>
+            ApplyResultsPaneConstraints();
         _viewModel.PropertyChanged +=
             OnViewModelPropertyChanged;
         _viewModel.InitializeCommand.CanExecuteChanged +=
@@ -109,6 +115,7 @@ public partial class DevicesView : UserControl
             return;
 
         bool stacked = width < 920;
+        _usesStackedLayout = stacked;
         DevicesContentLayout.ColumnDefinitions.Clear();
         DevicesContentLayout.RowDefinitions.Clear();
         if (!stacked)
@@ -125,6 +132,7 @@ public partial class DevicesView : UserControl
             Grid.SetRow(DeviceConfigurationScroll, 0);
             Grid.SetColumn(DeviceResultsPane, 2);
             Grid.SetRow(DeviceResultsPane, 0);
+            ApplyResultsPaneConstraints();
             return;
         }
 
@@ -146,5 +154,41 @@ public partial class DevicesView : UserControl
         Grid.SetRow(DeviceConfigurationScroll, 0);
         Grid.SetColumn(DeviceResultsPane, 0);
         Grid.SetRow(DeviceResultsPane, 2);
+        ApplyResultsPaneConstraints();
+    }
+
+    private void ApplyResultsPaneConstraints()
+    {
+        RowDefinition actionsRow =
+            DeviceResultsPane.RowDefinitions[1];
+        if (!_usesStackedLayout)
+        {
+            actionsRow.MinHeight = 0;
+            ActionsGrid.MinHeight = 0;
+            IssueSummaryScroll.MaxHeight =
+                StandardIssueSummaryMaximumHeight;
+            return;
+        }
+
+        ActionsGrid.MinHeight =
+            CompactActionsMinimumHeight;
+        double actionsPaneChrome =
+            ActionsPane.BorderThickness.Top +
+            ActionsPane.BorderThickness.Bottom +
+            ActionsPane.Padding.Top +
+            ActionsPane.Padding.Bottom;
+        double reservedActionsHeight =
+            CompactActionsMinimumHeight +
+            actionsPaneChrome;
+        actionsRow.MinHeight =
+            reservedActionsHeight;
+        double availableIssueHeight = Math.Max(
+            0,
+            DeviceResultsPane.Bounds.Height -
+            DeviceResultsPane.RowSpacing -
+            reservedActionsHeight);
+        IssueSummaryScroll.MaxHeight = Math.Min(
+            StandardIssueSummaryMaximumHeight,
+            availableIssueHeight);
     }
 }

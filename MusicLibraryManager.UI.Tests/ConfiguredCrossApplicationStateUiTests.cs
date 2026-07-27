@@ -515,13 +515,23 @@ public sealed class ConfiguredCrossApplicationStateUiTests
             Grid results =
                 view.FindControl<Grid>(
                     "DeviceResultsPane")!;
+            Border actionsPane =
+                view.FindControl<Border>(
+                    "ActionsPane")!;
             ScrollViewer issueSummary =
                 Assert.Single(
                     results.Children
                         .OfType<ScrollViewer>());
-            Assert.Equal(
-                144,
-                issueSummary.MaxHeight);
+            Assert.True(
+                issueSummary.MaxHeight <= 144,
+                $"Device issue summary exceeded its standard cap: {issueSummary.MaxHeight:0.#}/144.");
+            Assert.True(
+                issueSummary.MaxHeight <=
+                results.Bounds.Height -
+                results.RowSpacing -
+                actionsPane.Bounds.Height +
+                1,
+                $"Device issue summary did not reserve the compact actions area: max={issueSummary.MaxHeight:0.#}, results={results.Bounds.Height:0.#}, spacing={results.RowSpacing:0.#}.");
             Assert.True(
                 issueSummary.Bounds.Height <=
                 issueSummary.MaxHeight + 1,
@@ -536,10 +546,22 @@ public sealed class ConfiguredCrossApplicationStateUiTests
             Assert.True(
                 results.Bounds.Height >= 120,
                 $"Device results retained only {results.Bounds.Height:0.#} px.");
-            Assert.True(
+            AppDataGrid actionsGrid =
                 view.FindControl<AppDataGrid>(
-                    "ActionsGrid")!
+                    "ActionsGrid")!;
+            Assert.True(
+                actionsGrid
                     .IsEffectivelyVisible);
+            Assert.True(
+                actionsGrid.Bounds.Height >=
+                DevicesView
+                    .CompactActionsMinimumHeight -
+                1,
+                $"Device actions retained only {actionsGrid.Bounds.Height:0.#} px; compact layouts require at least {DevicesView.CompactActionsMinimumHeight:0.#} px.");
+            AssertVisibleWithin(
+                actionsGrid,
+                view,
+                "Device actions");
 
             Button[] lifecycle =
             [

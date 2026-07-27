@@ -245,7 +245,8 @@
             Grid.Column="2"
             RowDefinitions="Auto,*"
             RowSpacing="12">
-        <ScrollViewer MaxHeight="144"
+        <ScrollViewer x:Name="IssueSummaryScroll"
+                      MaxHeight="144"
                       VerticalScrollBarVisibility="Auto">
         <ItemsControl ItemsSource="{Binding Issues}">
           <ItemsControl.ItemTemplate>
@@ -263,7 +264,11 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
         </ScrollViewer>
-        <Border Grid.Row="1" Classes="card" Padding="0" ClipToBounds="True">
+        <Border x:Name="ActionsPane"
+                Grid.Row="1"
+                Classes="card"
+                Padding="0"
+                ClipToBounds="True">
           <Grid>
             <controls:AppDataGrid x:Name="ActionsGrid" ItemsSource="{Binding Actions}" />
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8"
