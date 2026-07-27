@@ -295,6 +295,12 @@ public sealed class LibraryGridEditingUiTests
             grid.CurrentColumn = title;
             grid.ScrollIntoView(row, title);
             Render();
+            await WaitForAsync(
+                () => HasRealizedCell(
+                    grid,
+                    row,
+                    "Original title"),
+                "The editable Title cell was not realized.");
 
             model.IsOperationBusy = true;
             Render();
@@ -452,6 +458,12 @@ public sealed class LibraryGridEditingUiTests
                 fixture.Row,
                 column);
             Render();
+            await WaitForAsync(
+                () => HasRealizedCell(
+                    fixture.Grid,
+                    fixture.Row,
+                    expectedInitialText),
+                "The target editable cell was not realized.");
 
             Assert.True(
                 fixture.Grid.BeginEdit());
@@ -479,8 +491,6 @@ public sealed class LibraryGridEditingUiTests
         TextBox editor =
             Assert.IsType<TextBox>(
                 editingElement);
-        editor.Focus();
-        Render();
         await WaitForAsync(
             () => StringComparer.Ordinal.Equals(
                 expectedInitialText,
@@ -491,6 +501,24 @@ public sealed class LibraryGridEditingUiTests
             editor.Text);
         return editor;
     }
+
+    private static bool HasRealizedCell(
+        AppDataGrid grid,
+        LibraryRow row,
+        string expectedText) =>
+        grid.GetVisualDescendants()
+            .OfType<DataGridCell>()
+            .Where(cell =>
+                ReferenceEquals(
+                    cell.DataContext,
+                    row))
+            .SelectMany(cell =>
+                cell.GetVisualDescendants()
+                    .OfType<TextBlock>())
+            .Any(text =>
+                StringComparer.Ordinal.Equals(
+                    expectedText,
+                    text.Text));
 
     private static void Render()
     {

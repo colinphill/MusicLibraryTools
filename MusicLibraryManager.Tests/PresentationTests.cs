@@ -4323,11 +4323,17 @@ public sealed class PresentationTests
     [Fact]
     public async Task Library_audio_discovery_uses_explicit_scope_and_preserves_candidates()
     {
+        string firstPath = Path.GetFullPath(
+            Path.Combine("music", "one.flac"));
+        string secondPath = Path.GetFullPath(
+            Path.Combine("music", "two.flac"));
+        string thirdPath = Path.GetFullPath(
+            Path.Combine("music", "three.flac"));
         TrackRecord[] records =
         [
-            Track("Artist", "First", "One", "FLAC", @"C:\music\one.flac"),
-            Track("Artist", "First", "Two", "FLAC", @"C:\music\two.flac"),
-            Track("Artist", "Second", "Three", "FLAC", @"C:\music\three.flac"),
+            Track("Artist", "First", "One", "FLAC", firstPath),
+            Track("Artist", "First", "Two", "FLAC", secondPath),
+            Track("Artist", "Second", "Three", "FLAC", thirdPath),
         ];
         var library = new FakeLibrary(records);
         var settings = new FakeSettings();
@@ -4377,7 +4383,7 @@ public sealed class PresentationTests
             .ExecuteAsync(null);
 
         Assert.Equal(
-            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            [firstPath, secondPath],
             delimited.CandidatePaths);
         Assert.Equal(
             DelimitedMetadataEmptyCellMode.Ignore,
@@ -4397,7 +4403,7 @@ public sealed class PresentationTests
         await viewModel.DiscoverLibraryAudioCommand.ExecuteAsync(null);
 
         Assert.Equal(
-            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            [firstPath, secondPath],
             discovery.Paths);
         AudioDiscoveryRow row = Assert.Single(viewModel.AudioMatches);
         Assert.Equal(0.92, row.Score);
@@ -4409,7 +4415,7 @@ public sealed class PresentationTests
         await viewModel.PreviewLibraryReportCommand.ExecuteAsync(null);
 
         Assert.Equal(
-            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            [firstPath, secondPath],
             reports.PreviewedPaths);
         Assert.Single(viewModel.ReportOutputs);
         Assert.True(viewModel.HasUnsavedChanges);
@@ -4428,7 +4434,7 @@ public sealed class PresentationTests
         await viewModel.PreviewLibraryPlaylistCommand.ExecuteAsync(null);
 
         Assert.Equal(
-            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            [firstPath, secondPath],
             playlists.PreviewedPaths);
         Assert.Single(viewModel.PlaylistOutputs);
         Assert.True(viewModel.HasUnsavedChanges);
@@ -4447,7 +4453,7 @@ public sealed class PresentationTests
         viewModel.PreviewLibraryExternalToolCommand.Execute(null);
 
         Assert.Equal(
-            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            [firstPath, secondPath],
             externalTools.PreviewedPaths);
         Assert.Single(viewModel.ExternalToolInvocations);
         Assert.True(viewModel.HasUnsavedChanges);
@@ -4460,7 +4466,7 @@ public sealed class PresentationTests
 
         await viewModel.PreviewLibraryAudioIdentifiersCommand.ExecuteAsync(null);
 
-        Assert.Equal([@"C:\music\one.flac"], metadataOperations.PreviewedPaths);
+        Assert.Equal([firstPath], metadataOperations.PreviewedPaths);
         Assert.Contains(metadataOperations.PreviewedRecipe!.EnabledOperations,
             operation => operation is AssignFieldOperation assign &&
                 assign.Field.KnownField == TagFields.AcoustID_Fingerprint);
@@ -4484,7 +4490,7 @@ public sealed class PresentationTests
         await viewModel.BuildLibraryReleaseMappingCommand.ExecuteAsync(null);
 
         MusicBrainzTrackMappingRow mapping = viewModel.ReleaseTrackMappings
-            .Single(row => row.Path == @"C:\music\one.flac");
+            .Single(row => row.Path == firstPath);
         Assert.True(mapping.IsIncluded);
         Assert.Equal("1-1", mapping.Position);
         Assert.Equal(
@@ -4498,7 +4504,7 @@ public sealed class PresentationTests
 
         IReadOnlyList<MetadataValueEdit> imported =
             metadataOperations.PreviewedValueEdits[
-                @"C:\music\one.flac"];
+                firstPath];
         Assert.Contains(imported, edit =>
             edit.Field.KnownField == TagFields.Album &&
             edit.Values.SequenceEqual(["Matched Album"]));
@@ -4525,7 +4531,7 @@ public sealed class PresentationTests
 
         Assert.Equal(searchResult.ReleaseId, musicBrainz.RequestedReleaseId);
         Assert.Contains(viewModel.ReleaseTrackMappings,
-            row => row.Path == @"C:\music\one.flac" && row.IsIncluded);
+            row => row.Path == firstPath && row.IsIncluded);
 
         viewModel.DiscogsSearch.Artist = "Matched Artist";
         viewModel.DiscogsSearch.Album = "Matched Album";

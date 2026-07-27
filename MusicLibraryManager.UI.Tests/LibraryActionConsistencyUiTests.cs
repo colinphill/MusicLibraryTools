@@ -191,6 +191,11 @@ public sealed class LibraryActionConsistencyUiTests
                 grid.CurrentSortKey);
             Assert.True(
                 grid.CurrentSortDescending);
+            await WaitForAsync(
+                () =>
+                    model.PendingChanges.Count ==
+                    3,
+                "Inline edits did not finish aggregating into pending changes.");
             Assert.Equal(
                 3,
                 model.PendingChanges.Count);
