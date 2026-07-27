@@ -1857,15 +1857,30 @@ public sealed class TranscodeFoundationTests
     {
         var runner = new ManagedProcessRunner();
         using var cancellation =
-            new CancellationTokenSource(
-                TimeSpan.FromMilliseconds(250));
-        var elapsed = Stopwatch.StartNew();
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => runner.RunAsync(
+            new CancellationTokenSource();
+        var ready = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<ManagedProcessResult> runTask =
+            runner.RunAsync(
                 ManagedProcessFixtureExecutable,
                 ["--managed-process", "wait"],
-                ct: cancellation.Token));
+                standardOutputLines:
+                    new InlineProgress<string>(
+                        line =>
+                        {
+                            if (line == "ready")
+                                ready.TrySetResult();
+                        }),
+                ct: cancellation.Token);
+
+        await ready.Task.WaitAsync(
+            TimeSpan.FromSeconds(10),
+            TestContext.Current.CancellationToken);
+        var elapsed = Stopwatch.StartNew();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => runTask);
 
         Assert.True(
             elapsed.Elapsed < TimeSpan.FromSeconds(5),
@@ -2198,6 +2213,13 @@ public sealed class TranscodeFoundationTests
         public List<T> Values { get; } = [];
 
         public void Report(T value) => Values.Add(value);
+    }
+
+    private sealed class InlineProgress<T>(
+        Action<T> callback) : IProgress<T>
+    {
+        public void Report(T value) =>
+            callback(value);
     }
 
     private sealed class FixedCapabilityService :

@@ -33,6 +33,7 @@ public sealed class ManagedProcessRunner(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentNullException.ThrowIfNull(arguments);
+        ct.ThrowIfCancellationRequested();
         var start = new ProcessStartInfo(executable)
         {
             UseShellExecute = false,
@@ -77,9 +78,16 @@ public sealed class ManagedProcessRunner(
             stderr,
             null,
             ct);
+        Task exitTask = process.WaitForExitAsync(ct);
+        using CancellationTokenRegistration terminateRegistration =
+            ct.Register(
+                static state =>
+                    TryKillProcessTree(
+                        (Process)state!),
+                process);
         try
         {
-            await process.WaitForExitAsync(ct)
+            await exitTask
                 .ConfigureAwait(false);
             await Task.WhenAll(stdoutTask, stderrTask)
                 .ConfigureAwait(false);
@@ -88,8 +96,7 @@ public sealed class ManagedProcessRunner(
         {
             try
             {
-                if (!process.HasExited)
-                    process.Kill(entireProcessTree: true);
+                TryKillProcessTree(process);
                 await process.WaitForExitAsync(
                     CancellationToken.None).ConfigureAwait(false);
                 await Task.WhenAll(
@@ -108,6 +115,21 @@ public sealed class ManagedProcessRunner(
             process.ExitCode,
             stdout.ToString(),
             stderr.ToString());
+    }
+
+    private static void TryKillProcessTree(
+        Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+        }
+        catch
+        {
+            // The process may have exited between the state check
+            // and the termination request.
+        }
     }
 
     private static async Task DrainAsync(

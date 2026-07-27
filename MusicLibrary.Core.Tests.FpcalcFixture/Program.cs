@@ -22,6 +22,7 @@ if (args.Length >= 2 &&
                     args.Skip(2).ToArray()));
             return 0;
         case "wait":
+            Console.WriteLine("ready");
             await Task.Delay(TimeSpan.FromSeconds(30));
             return 0;
         default:
