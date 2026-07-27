@@ -645,6 +645,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public bool IsDirectPendingPreviewBusy =>
         _directPendingPreviewTask is
             { IsCompleted: false };
+    internal Task PendingDirectPreviewTask =>
+        _directPendingPreviewTask ??
+        Task.CompletedTask;
     public bool HasDirectPendingPreviewFailure =>
         _directPendingPreviewFailed;
     public bool CanRetryDirectPendingPreview =>

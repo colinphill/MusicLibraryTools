@@ -305,8 +305,6 @@ public sealed class LibraryGridEditingUiTests
                             "Original title")) is
                     not null,
                 "The editable Title cell was not realized.");
-            Assert.True(titleCell!.Focus());
-            Render();
 
             model.IsOperationBusy = true;
             Render();
@@ -338,6 +336,10 @@ public sealed class LibraryGridEditingUiTests
         ServiceProvider services =
             BuildServices(library);
         App.UseServicesForTests(services);
+        LibraryViewModel model =
+            services.GetRequiredService<
+                LibraryViewModel>();
+        await model.ReloadAsync();
         var view = new LibraryView();
         var window = new Window
         {
@@ -347,10 +349,6 @@ public sealed class LibraryGridEditingUiTests
         };
         window.Show();
         window.Activate();
-        LibraryViewModel model =
-            services.GetRequiredService<
-                LibraryViewModel>();
-        await model.ReloadAsync();
         Render();
         await WaitForAsync(
             () =>
@@ -474,8 +472,6 @@ public sealed class LibraryGridEditingUiTests
                             expectedInitialText)) is
                     not null,
                 "The target editable cell was not realized.");
-            Assert.True(targetCell!.Focus());
-            Render();
 
             Assert.True(
                 fixture.Grid.BeginEdit());

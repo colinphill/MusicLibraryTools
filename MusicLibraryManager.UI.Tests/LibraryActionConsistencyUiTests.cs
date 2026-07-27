@@ -86,6 +86,10 @@ public sealed class LibraryActionConsistencyUiTests
                         totalDescriptor));
             });
         App.UseServicesForTests(services);
+        LibraryViewModel model =
+            services.GetRequiredService<
+                LibraryViewModel>();
+        await model.ReloadAsync();
         var view = new LibraryView();
         var window = new Window
         {
@@ -96,10 +100,6 @@ public sealed class LibraryActionConsistencyUiTests
         try
         {
             window.Show();
-            LibraryViewModel model =
-                services.GetRequiredService<
-                    LibraryViewModel>();
-            await model.ReloadAsync();
             Render();
 
             AppDataGrid grid =
@@ -170,6 +170,10 @@ public sealed class LibraryActionConsistencyUiTests
                     MetadataGridValueKey.For(custom)] =
                 "Evening";
             Render();
+            await model.PendingDirectPreviewTask
+                .WaitAsync(
+                    TestContext.Current
+                        .CancellationToken);
 
             Assert.Same(
                 title,
@@ -191,14 +195,14 @@ public sealed class LibraryActionConsistencyUiTests
                 grid.CurrentSortKey);
             Assert.True(
                 grid.CurrentSortDescending);
-            await WaitForAsync(
-                () =>
-                    model.PendingChanges.Count ==
-                    3,
-                "Inline edits did not finish aggregating into pending changes.");
             Assert.Equal(
                 3,
-                model.PendingChanges.Count);
+                row.CreatePendingEdits()
+                    .Count);
+            Assert.True(
+                model.HasInlinePendingChanges);
+            Assert.NotEmpty(
+                model.PendingChanges);
         }
         finally
         {

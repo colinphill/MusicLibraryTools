@@ -14,5 +14,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="MusicLibraryManager.Tests" />
+    <InternalsVisibleTo Include="MusicLibraryManager.UI.Tests" />
   </ItemGroup>
 </Project>
