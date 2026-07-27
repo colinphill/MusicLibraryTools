@@ -160,7 +160,8 @@ public partial class OrganizeViewModel : ViewModelBase
                 total),
             ShellDestination.Organize,
             Cancel);
-        var progress = new Progress<int>(completed =>
+        var progress =
+            new DispatchingProgress<int>(completed =>
             SetStatus(
                 "Organize.Status.Moving",
                 completed,
@@ -171,6 +172,7 @@ public partial class OrganizeViewModel : ViewModelBase
                 moves,
                 progress,
                 _cts.Token);
+            await progress.DrainAsync();
             SetStatus(
                 result.FailedCount == 0
                     ? "Organize.Status.ApplyComplete"
@@ -180,7 +182,7 @@ public partial class OrganizeViewModel : ViewModelBase
             Moves.Clear();
             OnPropertyChanged(nameof(IsMoveListEmpty));
             HasPreview = false;
-            MovesApplied?.Invoke();
+            NotifyMovesApplied();
             FinishActivity(
                 activity,
                 StatusText!,
@@ -190,11 +192,12 @@ public partial class OrganizeViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
+            await progress.DrainAsync();
             SetStatus("Organize.Status.ApplyCancelled");
             Moves.Clear();
             OnPropertyChanged(nameof(IsMoveListEmpty));
             HasPreview = false;
-            MovesApplied?.Invoke();
+            NotifyMovesApplied();
             FinishActivity(
                 activity,
                 StatusText!,
@@ -202,6 +205,7 @@ public partial class OrganizeViewModel : ViewModelBase
         }
         catch (Exception error)
         {
+            await progress.DrainAsync();
             SetFailure(
                 "Organize.Status.ApplyFailed",
                 error);
@@ -311,5 +315,37 @@ public partial class OrganizeViewModel : ViewModelBase
                 id,
                 message,
                 state);
+    }
+
+    private void NotifyMovesApplied()
+    {
+        if (MovesApplied is not { } subscribers)
+            return;
+        foreach (Action subscriber in
+                 subscribers.GetInvocationList())
+        {
+            try
+            {
+                subscriber();
+            }
+            catch (Exception error)
+            {
+                try
+                {
+                    DiagnosticDetail =
+                        string.IsNullOrWhiteSpace(
+                            DiagnosticDetail)
+                            ? error.Message
+                            : DiagnosticDetail +
+                              Environment.NewLine +
+                              error.Message;
+                }
+                catch
+                {
+                    // A presentation observer cannot alter the completed
+                    // filesystem operation.
+                }
+            }
+        }
     }
 }

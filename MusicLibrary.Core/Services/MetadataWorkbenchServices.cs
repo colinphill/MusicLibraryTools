@@ -212,6 +212,10 @@ public interface IEditHistoryService
 {
     IReadOnlyList<EditHistoryEntry> Entries { get; }
     IReadOnlyList<EditHistoryEntry> RedoEntries { get; }
+    IReadOnlyList<OperationIssue> LastUndoIssues => [];
+    Task<IReadOnlyList<OperationIssue>> LastUndoReconciliation =>
+        Task.FromResult<IReadOnlyList<OperationIssue>>([]);
+    bool ReconcilesInternalCatalogOnUndo => false;
     bool CanUndo { get; }
     bool CanRedo { get; }
     void Record(EditHistoryEntry entry);
@@ -2316,7 +2320,7 @@ public sealed class MetadataOperationService(
                         IMediaFile saved = MediaFile.GetFile(
                             changedFile.Path,
                             readOnly: true,
-                            readArtwork: false,
+                            readArtwork: true,
                             formatRegistry: formats);
                         await reindex.ReindexFileAsync(
                                 changedFile.Path,
@@ -3171,6 +3175,8 @@ public sealed class EditHistoryService : IEditHistoryService
     private readonly IAppSettings _settings;
     private readonly IOperationJournalService _journals;
     private readonly HistoryState _state;
+    private readonly object _undoIssueGate = new();
+    private Guid _lastUndoEntryId;
 
     public EditHistoryService(
         IAppSettings settings,
@@ -3184,8 +3190,27 @@ public sealed class EditHistoryService : IEditHistoryService
 
     public IReadOnlyList<EditHistoryEntry> Entries => _state.Undo;
     public IReadOnlyList<EditHistoryEntry> RedoEntries => _state.Redo;
-    public bool CanUndo => _state.Undo.Count > 0;
-    public bool CanRedo => _state.Redo.Any(entry => entry.Recipe is not null);
+    public IReadOnlyList<OperationIssue> LastUndoIssues
+    {
+        get;
+        private set;
+    } = [];
+    public Task<IReadOnlyList<OperationIssue>>
+        LastUndoReconciliation
+    {
+        get;
+        private set;
+    } = Task.FromResult<IReadOnlyList<OperationIssue>>([]);
+    public bool ReconcilesInternalCatalogOnUndo =>
+        _journals.ReconcilesInternalCatalogOnRestore;
+    public bool CanUndo =>
+        _state.PendingTransition?.Stage !=
+            HistoryTransitionStage.Committed &&
+        _state.Undo.Count > 0;
+    public bool CanRedo =>
+        _state.PendingTransition is null &&
+        _state.Redo.Any(entry =>
+            entry.Recipe is not null);
 
     public void Record(EditHistoryEntry entry)
     {
@@ -3200,6 +3225,14 @@ public sealed class EditHistoryService : IEditHistoryService
         IProgress<int>? progress = null,
         CancellationToken ct = default)
     {
+        lock (_undoIssueGate)
+        {
+            LastUndoIssues = [];
+            LastUndoReconciliation =
+                Task.FromResult<IReadOnlyList<OperationIssue>>(
+                    []);
+            _lastUndoEntryId = Guid.Empty;
+        }
         if (_state.PendingTransition is not null)
         {
             ReconcilePendingTransition();
@@ -3211,6 +3244,7 @@ public sealed class EditHistoryService : IEditHistoryService
         if (_state.Undo.Count == 0)
             return 0;
         EditHistoryEntry entry = _state.Undo[0];
+        _lastUndoEntryId = entry.Id;
         var restorePlans = new List<OperationRestorePlan>();
         foreach (string journalPath in entry.JournalPaths.Reverse())
         {
@@ -3261,51 +3295,198 @@ public sealed class EditHistoryService : IEditHistoryService
         {
             result = await _journals.ApplyRestoreBatchAsync(batch, progress, ct);
         }
-        catch
+        catch (Exception applyError)
         {
             try
             {
-                // Apply can fail after the filesystem commit point while compact-payload cleanup
-                // is still pending. Reconcile the durable journals before deciding whether this
-                // remains an undo entry. If cleanup is still blocked, retain both the pending
-                // transition and history so the next startup/undo can retry it.
-                OperationRestoreTransitionState restoreState =
-                    await _journals.ReconcileRestoreBatchAsync(
+                OperationRestoreReconciliationResult reconciliation =
+                    await _journals.ReconcileRestoreBatchDetailedAsync(
                         _state.PendingTransition!.RestoreJournalPaths,
-                        CancellationToken.None);
-                if (restoreState is
+                        reconcileInternalCatalog: true,
+                        ct: CancellationToken.None);
+                if (reconciliation.State is
                     OperationRestoreTransitionState.Committed or
                     OperationRestoreTransitionState.Consumed)
                 {
-                    _state.PendingTransition = _state.PendingTransition with
+                    var issues = new List<OperationIssue>(
+                        reconciliation.Issues)
                     {
-                        Stage = HistoryTransitionStage.Committed,
+                        new(
+                            "edit-history.undo-reconciled",
+                            OperationIssueSeverity.Warning,
+                            "Undo committed and required post-commit " +
+                            "reconciliation: " +
+                            applyError.Message),
                     };
-                    Persist();
-                    CompletePendingTransition(entry);
+                    CompleteCommittedUndo(
+                        entry,
+                        issues,
+                        retainReconciliation:
+                        reconciliation.State ==
+                        OperationRestoreTransitionState
+                            .Committed);
                     return batch.Actions.Count;
                 }
                 _state.PendingTransition = null;
-                Persist();
+                PersistRequired();
             }
-            catch
+            catch (Exception reconciliationError)
             {
-                // Do not consume or clear a transition whose cleanup state is unknown.
                 Persist();
+                LastUndoIssues =
+                [
+                    new(
+                        "edit-history.undo-reconciliation-failed",
+                        OperationIssueSeverity.Warning,
+                        "Undo failed before its durable outcome could be " +
+                        "confirmed: " +
+                        reconciliationError.Message),
+                ];
             }
             throw;
         }
-        _state.PendingTransition = _state.PendingTransition with
-        {
-            Stage = HistoryTransitionStage.Committed,
-        };
-        Persist();
-        CompletePendingTransition(entry);
+
+        var resultIssues =
+            new List<OperationIssue>(result.Issues);
+        CompleteCommittedUndo(
+            entry,
+            resultIssues,
+            retainReconciliation:
+                result.TransitionState ==
+                    OperationRestoreTransitionState
+                        .Committed &&
+                result.PostCommitReconciliation is not null);
+        ObservePostCommitReconciliation(
+            entry.Id,
+            _state.PendingTransition?
+                .RestoreJournalPaths ??
+            [],
+            result.PostCommitReconciliation,
+            resultIssues);
         return result.RestoredCount;
     }
 
-    private void CompletePendingTransition(EditHistoryEntry entry)
+    private void CompleteCommittedUndo(
+        EditHistoryEntry entry,
+        ICollection<OperationIssue> issues,
+        bool retainReconciliation = false)
     {
+        _state.PendingTransition =
+            _state.PendingTransition is null
+                ? new(
+                    entry.Id,
+                    HistoryTransitionStage.Committed,
+                    [])
+                : _state.PendingTransition with
+                {
+                    Stage =
+                        HistoryTransitionStage.Committed,
+                };
+        try
+        {
+            PersistRequired();
+        }
+        catch (Exception error)
+        {
+            issues.Add(new(
+                "edit-history.undo-state-persistence-failed",
+                OperationIssueSeverity.Warning,
+                "Undo committed, but its intermediate history state " +
+                "could not be persisted: " + error.Message));
+        }
+
+        try
+        {
+            CompletePendingTransition(
+                entry,
+                retainReconciliation);
+        }
+        catch (Exception error)
+        {
+            // CompletePendingTransition mutates the in-memory lists before
+            // persistence. Do not put the committed entry back into Undo or
+            // allow the operation to replay.
+            issues.Add(new(
+                "edit-history.undo-finalization-failed",
+                OperationIssueSeverity.Warning,
+                "Undo committed, but its history finalization could not " +
+                "be persisted: " + error.Message));
+        }
+        lock (_undoIssueGate)
+            LastUndoIssues = [.. issues];
+    }
+
+    private void ObservePostCommitReconciliation(
+        Guid entryId,
+        ImmutableArray<string> restoreJournalPaths,
+        PostCommitReconciliationHandle? reconciliation,
+        IReadOnlyList<OperationIssue> initialIssues)
+    {
+        if (reconciliation is null)
+        {
+            LastUndoReconciliation =
+                Task.FromResult<IReadOnlyList<OperationIssue>>(
+                    []);
+            return;
+        }
+
+        LastUndoReconciliation = ObserveAsync();
+        return;
+
+        async Task<IReadOnlyList<OperationIssue>> ObserveAsync()
+        {
+            IReadOnlyList<OperationIssue> issues;
+            try
+            {
+                issues = await reconciliation.Completion
+                    .ConfigureAwait(false);
+            }
+            catch (Exception error)
+            {
+                issues =
+                [
+                    new(
+                        "edit-history.undo-reconciliation-failed",
+                        OperationIssueSeverity.Warning,
+                        "Undo committed, but post-commit reconciliation " +
+                        "could not finish: " + error.Message),
+                ];
+            }
+            lock (_undoIssueGate)
+            {
+                if (_lastUndoEntryId == entryId)
+                    LastUndoIssues =
+                    [
+                        .. initialIssues,
+                        .. issues,
+                    ];
+            }
+            if (_state.PendingTransition?.EntryId ==
+                entryId)
+            {
+                if (issues.Count == 0)
+                {
+                    _state.PendingTransition = null;
+                }
+                else
+                {
+                    _state.PendingTransition = new(
+                        entryId,
+                        HistoryTransitionStage.Committed,
+                        restoreJournalPaths);
+                }
+                Persist();
+            }
+            return issues;
+        }
+    }
+
+    private void CompletePendingTransition(
+        EditHistoryEntry entry,
+        bool retainReconciliation = false)
+    {
+        HistoryTransition? transition =
+            _state.PendingTransition;
         int index = _state.Undo.FindIndex(item => item.Id == entry.Id);
         if (index >= 0)
             _state.Undo.RemoveAt(index);
@@ -3313,8 +3494,16 @@ public sealed class EditHistoryService : IEditHistoryService
             _state.Redo.Insert(0, entry);
         if (_state.Redo.Count > 100)
             _state.Redo.RemoveRange(100, _state.Redo.Count - 100);
-        _state.PendingTransition = null;
-        Persist();
+        _state.PendingTransition =
+            retainReconciliation &&
+            transition is not null
+                ? transition with
+                {
+                    Stage =
+                        HistoryTransitionStage.Committed,
+                }
+                : null;
+        PersistRequired();
     }
 
     private void ReconcilePendingTransition()
@@ -3322,31 +3511,65 @@ public sealed class EditHistoryService : IEditHistoryService
         HistoryTransition? transition = _state.PendingTransition;
         if (transition is null)
             return;
-        EditHistoryEntry? entry = _state.Undo.FirstOrDefault(item =>
-            item.Id == transition.EntryId);
-        OperationRestoreTransitionState restoreState;
+        EditHistoryEntry? entry =
+            _state.Undo.FirstOrDefault(item =>
+                item.Id == transition.EntryId) ??
+            _state.Redo.FirstOrDefault(item =>
+                item.Id == transition.EntryId);
+        OperationRestoreReconciliationResult reconciliation;
         try
         {
-            restoreState = transition.Stage == HistoryTransitionStage.Committed
-                ? OperationRestoreTransitionState.Committed
-                : _journals.ReconcileRestoreBatchAsync(
+            reconciliation =
+                _journals.ReconcileRestoreBatchDetailedAsync(
                         transition.RestoreJournalPaths,
-                        CancellationToken.None)
+                        reconcileInternalCatalog: true,
+                        ct: CancellationToken.None)
                     .GetAwaiter()
                     .GetResult();
         }
-        catch
+        catch (Exception error)
         {
-            // Keep the transition and its history entry intact so startup or the next explicit
-            // undo can retry reconciliation after a transient lock or storage failure.
+            if (transition.Stage ==
+                    HistoryTransitionStage.Committed &&
+                entry is not null)
+            {
+                var issues = new List<OperationIssue>
+                {
+                    new(
+                        "edit-history.undo-reconciliation-failed",
+                        OperationIssueSeverity.Warning,
+                        "Undo was already committed, but startup " +
+                        "reconciliation could not finish: " +
+                        error.Message),
+                };
+                CompleteCommittedUndo(
+                    entry,
+                    issues,
+                    retainReconciliation: true);
+            }
+            // A prepared transition whose journal outcome is unknown stays
+            // intact so a later startup can determine whether it committed.
             return;
         }
+        LastUndoIssues =
+        [
+            .. reconciliation.Issues,
+        ];
         if (entry is not null &&
-            restoreState is
+            reconciliation.State is
                 OperationRestoreTransitionState.Committed or
                 OperationRestoreTransitionState.Consumed)
         {
-            CompletePendingTransition(entry);
+            var issues =
+                new List<OperationIssue>(
+                    reconciliation.Issues);
+            CompleteCommittedUndo(
+                entry,
+                issues,
+                retainReconciliation:
+                    reconciliation.State ==
+                    OperationRestoreTransitionState
+                        .Committed);
             return;
         }
         _state.PendingTransition = null;

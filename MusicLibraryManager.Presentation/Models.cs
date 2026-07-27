@@ -131,6 +131,7 @@ public partial class LibraryRow : ObservableObject
         MetadataFieldKey,
         ImmutableArray<string>>?
         _pendingExpectedOriginalValues;
+    private bool _isEditReserved;
 
     public LibraryRow(TrackRecord record)
     {
@@ -268,6 +269,14 @@ public partial class LibraryRow : ObservableObject
 
     public event EventHandler? PendingChangesChanged;
     public long PendingChangesVersion { get; private set; }
+    internal bool IsEditReserved => _isEditReserved;
+
+    internal void SetEditReservation(bool reserved)
+    {
+        _isEditReserved = reserved;
+        MetadataValues.SetEditReservation(
+            reserved);
+    }
 
     public IReadOnlyList<MetadataValueEdit>
         CreatePendingEdits()
@@ -555,14 +564,37 @@ public partial class LibraryRow : ObservableObject
         long? postLength,
         DateTime? postLastWriteTimeUtc)
     {
+        AppliedEditNotification notification =
+            AcceptAppliedEditsState(
+                appliedEdits,
+                postLength,
+                postLastWriteTimeUtc);
+        NotifyAppliedEdits(notification);
+    }
+
+    internal AppliedEditNotification
+        AcceptAppliedEditsState(
+            IReadOnlyList<MetadataValueEdit> appliedEdits,
+            long? postLength,
+            DateTime? postLastWriteTimeUtc)
+    {
         ArgumentNullException.ThrowIfNull(
             appliedEdits);
+        var changedKnownFields =
+            new HashSet<TagFields>();
         _suppressPendingNotification = true;
         try
         {
             foreach (MetadataValueEdit edit in
                      appliedEdits)
-                AcceptAppliedEdit(edit);
+            {
+                TagFields? changedField =
+                    AcceptAppliedEditState(
+                        edit);
+                if (changedField is { } known)
+                    changedKnownFields.Add(
+                        known);
+            }
             if (postLength is { } length)
                 Record = Record with
                 {
@@ -580,8 +612,6 @@ public partial class LibraryRow : ObservableObject
                 DetailsColumns.All
                     .Select(column => column.Key)
                     .ToArray());
-            OnPropertyChanged(nameof(Details));
-            OnPropertyChanged(nameof(SearchText));
         }
         finally
         {
@@ -603,8 +633,44 @@ public partial class LibraryRow : ObservableObject
         }
         else
             ClearPendingSourceSnapshot();
-        NotifyPendingChangesChanged();
+
+        return new(
+            [.. changedKnownFields]);
     }
+
+    internal void NotifyAppliedEdits(
+        AppliedEditNotification notification)
+    {
+        var notificationErrors =
+            new List<Exception>();
+        foreach (TagFields field in
+                 notification.ChangedKnownFields)
+            TryNotifyAppliedField(
+                field,
+                notificationErrors);
+        TryNotify(
+            MetadataValues.NotifyAppliedValuesChanged,
+            notificationErrors);
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(Details)),
+            notificationErrors);
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(SearchText)),
+            notificationErrors);
+        TryNotify(
+            NotifyPendingChangesChanged,
+            notificationErrors);
+        if (notificationErrors.Count > 0)
+            throw new AggregateException(
+                notificationErrors);
+    }
+
+    internal readonly record struct
+        AppliedEditNotification(
+            ImmutableArray<TagFields>
+                ChangedKnownFields);
 
     private static LibraryMetadataValueMap
         BuildMetadataValues(
@@ -762,10 +828,28 @@ public partial class LibraryRow : ObservableObject
         else
             ClearPendingSourceSnapshot();
         PendingChangesVersion++;
-        OnPropertyChanged(nameof(HasChanges));
-        PendingChangesChanged?.Invoke(
-            this,
-            EventArgs.Empty);
+        var notificationErrors =
+            new List<Exception>();
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(HasChanges)),
+            notificationErrors);
+        EventHandler? handlers =
+            PendingChangesChanged;
+        if (handlers is not null)
+        {
+            foreach (EventHandler handler in
+                     handlers.GetInvocationList()
+                         .Cast<EventHandler>())
+                TryNotify(
+                    () => handler(
+                        this,
+                        EventArgs.Empty),
+                    notificationErrors);
+        }
+        if (notificationErrors.Count > 0)
+            throw new AggregateException(
+                notificationErrors);
     }
 
     private static bool IsInlineEditField(
@@ -789,7 +873,7 @@ public partial class LibraryRow : ObservableObject
         return false;
     }
 
-    private void AcceptAppliedEdit(
+    private TagFields? AcceptAppliedEditState(
         MetadataValueEdit edit)
     {
         ImmutableArray<string> currentValues =
@@ -812,14 +896,142 @@ public partial class LibraryRow : ObservableObject
                     .FormatEditorValues(
                         edit.Values);
             if (!preserveCurrent)
-                SetKnownValue(
+                SetKnownValueSilently(
                     known,
                     _originalKnownValues[index]);
         }
         MetadataValues.AcceptAppliedEdit(
             edit,
-            preserveCurrent);
+            preserveCurrent,
+            notify: false);
         UpdateRecord(edit);
+        return edit.Field.KnownField is
+                { } changed &&
+            IsInlineEditField(changed)
+                ? changed
+                : null;
+    }
+
+    // A durable commit must advance semantic state before invoking fallible
+    // observers. Direct backing-field assignment is intentional here; normal
+    // interactive edits continue to use the generated observable properties.
+#pragma warning disable MVVMTK0034
+    private void SetKnownValueSilently(
+        TagFields field,
+        string? value)
+    {
+        switch (field)
+        {
+            case TagFields.Title:
+                _title = value ?? "";
+                break;
+            case TagFields.Artist:
+                _artist = value ?? "";
+                break;
+            case TagFields.AlbumArtist:
+                _albumArtist = value ?? "";
+                break;
+            case TagFields.Album:
+                _album = value ?? "";
+                break;
+            case TagFields.Genre:
+                _genre = value ?? "";
+                break;
+            case TagFields.Composer:
+                _composer = value ?? "";
+                break;
+            case TagFields.Grouping:
+                _grouping = value ?? "";
+                break;
+            case TagFields.Date:
+                _year = value ?? "";
+                break;
+            case TagFields.TrackNumber:
+                _trackEditValue = value;
+                break;
+            case TagFields.TotalTracks:
+                _trackTotalEditValue = value;
+                break;
+            case TagFields.DiscNumber:
+                _discEditValue = value;
+                break;
+            case TagFields.TotalDiscs:
+                _discTotalEditValue = value;
+                break;
+            case TagFields.Comment:
+                _comment = value ?? "";
+                break;
+        }
+    }
+#pragma warning restore MVVMTK0034
+
+    private void TryNotifyAppliedField(
+        TagFields field,
+        ICollection<Exception> errors)
+    {
+        string propertyName = field switch
+        {
+            TagFields.Title => nameof(Title),
+            TagFields.Artist => nameof(Artist),
+            TagFields.AlbumArtist =>
+                nameof(AlbumArtist),
+            TagFields.Album => nameof(Album),
+            TagFields.Genre => nameof(Genre),
+            TagFields.Composer =>
+                nameof(Composer),
+            TagFields.Grouping =>
+                nameof(Grouping),
+            TagFields.Date => nameof(Year),
+            TagFields.TrackNumber =>
+                nameof(TrackEditValue),
+            TagFields.TotalTracks =>
+                nameof(TrackTotalEditValue),
+            TagFields.DiscNumber =>
+                nameof(DiscEditValue),
+            TagFields.TotalDiscs =>
+                nameof(DiscTotalEditValue),
+            TagFields.Comment => nameof(Comment),
+            _ => "",
+        };
+        if (propertyName.Length > 0)
+            TryNotify(
+                () => OnPropertyChanged(
+                    propertyName),
+                errors);
+        if (field is TagFields.TrackNumber)
+            TryNotify(
+                () => OnPropertyChanged(
+                    nameof(Track)),
+                errors);
+        else if (field is TagFields.TotalTracks)
+            TryNotify(
+                () => OnPropertyChanged(
+                    nameof(TrackTotal)),
+                errors);
+        else if (field is TagFields.DiscNumber)
+            TryNotify(
+                () => OnPropertyChanged(
+                    nameof(Disc)),
+                errors);
+        else if (field is TagFields.TotalDiscs)
+            TryNotify(
+                () => OnPropertyChanged(
+                    nameof(DiscTotal)),
+                errors);
+    }
+
+    private static void TryNotify(
+        Action notification,
+        ICollection<Exception> errors)
+    {
+        try
+        {
+            notification();
+        }
+        catch (Exception error)
+        {
+            errors.Add(error);
+        }
     }
 
     private bool IsFieldPending(
@@ -1025,6 +1237,54 @@ public partial class LibraryRow : ObservableObject
             null;
     }
 
+    private void EnsureEditIsNotReserved()
+    {
+        if (_isEditReserved)
+            throw new InvalidOperationException(
+                LocalizedText.Get(
+                    "Workbench.Status.PendingChangesBlocked"));
+    }
+
+    partial void OnTitleChanging(
+        string value) =>
+        EnsureEditIsNotReserved();
+    partial void OnArtistChanging(
+        string value) =>
+        EnsureEditIsNotReserved();
+    partial void OnAlbumArtistChanging(
+        string value) =>
+        EnsureEditIsNotReserved();
+    partial void OnAlbumChanging(
+        string value) =>
+        EnsureEditIsNotReserved();
+    partial void OnGenreChanging(
+        string value) =>
+        EnsureEditIsNotReserved();
+    partial void OnComposerChanging(
+        string value) =>
+        EnsureEditIsNotReserved();
+    partial void OnGroupingChanging(
+        string value) =>
+        EnsureEditIsNotReserved();
+    partial void OnYearChanging(
+        string value) =>
+        EnsureEditIsNotReserved();
+    partial void OnTrackEditValueChanging(
+        string? value) =>
+        EnsureEditIsNotReserved();
+    partial void OnTrackTotalEditValueChanging(
+        string? value) =>
+        EnsureEditIsNotReserved();
+    partial void OnDiscEditValueChanging(
+        string? value) =>
+        EnsureEditIsNotReserved();
+    partial void OnDiscTotalEditValueChanging(
+        string? value) =>
+        EnsureEditIsNotReserved();
+    partial void OnCommentChanging(
+        string value) =>
+        EnsureEditIsNotReserved();
+
     partial void OnTitleChanged(string value) =>
         OnKnownValueChanged(
             TagFields.Title,
@@ -1098,6 +1358,7 @@ public sealed class LibraryMetadataValueMap :
         ImmutableArray<string>>?
         _editedOriginals;
     private bool _suppressChanged;
+    private bool _isEditReserved;
 
     public LibraryMetadataValueMap(
         IReadOnlyDictionary<
@@ -1120,6 +1381,10 @@ public sealed class LibraryMetadataValueMap :
         get => _values.GetValueOrDefault(key) ?? "";
         set
         {
+            if (_isEditReserved)
+                throw new InvalidOperationException(
+                    LocalizedText.Get(
+                        "Workbench.Status.PendingChangesBlocked"));
             string normalized = value ?? "";
             if (StringComparer.Ordinal.Equals(
                     this[key],
@@ -1188,6 +1453,10 @@ public sealed class LibraryMetadataValueMap :
         _editedOriginals?.Remove(key);
         OnPropertyChanged("Item[]");
     }
+
+    internal void SetEditReservation(
+        bool reserved) =>
+        _isEditReserved = reserved;
 
     internal void ImportPendingEdit(
         LibraryPendingMetadataEdit state)
@@ -1301,7 +1570,8 @@ public sealed class LibraryMetadataValueMap :
 
     internal void AcceptAppliedEdit(
         MetadataValueEdit edit,
-        bool preserveCurrent)
+        bool preserveCurrent,
+        bool notify = true)
     {
         string key =
             MetadataGridValueKey.For(
@@ -1320,8 +1590,12 @@ public sealed class LibraryMetadataValueMap :
                 edit.Values);
             _editedOriginals?.Remove(key);
         }
-        OnPropertyChanged("Item[]");
+        if (notify)
+            OnPropertyChanged("Item[]");
     }
+
+    internal void NotifyAppliedValuesChanged() =>
+        OnPropertyChanged("Item[]");
 
     private void NotifyChanged()
     {
@@ -1445,6 +1719,8 @@ public partial class EditableTagField : ObservableObject
 {
     private string? _loadedValue;
     private bool _loadedMixed;
+    private bool _isEditReserved;
+    private bool _bypassEditReservation;
     private Func<string, string> _getText =
         LocalizedText.Get;
 
@@ -1528,22 +1804,141 @@ public partial class EditableTagField : ObservableObject
             .Where(value => !string.IsNullOrEmpty(value))
             .Distinct(StringComparer.Ordinal),
         ];
-        Verification = verification;
-        Value = verification ==
-                    FieldValueVerification.Exact &&
-                !mixed
-            ? distinctValues.Length == 0
-                ? null
-                : LibraryMetadataValueMap
-                    .FormatEditorValues(
-                        distinctValues)
-            : null;
-        IsMixed = mixed || verification == FieldValueVerification.Unverified;
-        _loadedValue = Value;
-        _loadedMixed = IsMixed;
-        IsModified = false;
-        OnPropertyChanged(nameof(PlaceholderText));
+        _bypassEditReservation = true;
+        try
+        {
+            Verification = verification;
+            Value = verification ==
+                        FieldValueVerification.Exact &&
+                    !mixed
+                ? distinctValues.Length == 0
+                    ? null
+                    : LibraryMetadataValueMap
+                        .FormatEditorValues(
+                            distinctValues)
+                : null;
+            IsMixed = mixed ||
+                verification ==
+                FieldValueVerification.Unverified;
+            _loadedValue = Value;
+            _loadedMixed = IsMixed;
+            IsModified = false;
+            OnPropertyChanged(
+                nameof(PlaceholderText));
+        }
+        finally
+        {
+            _bypassEditReservation = false;
+        }
     }
+
+    /// <summary>
+    /// Advances the loaded baseline to values that were durably applied while
+    /// preserving any newer value entered after the reviewed operation began.
+    /// </summary>
+    public void AcceptAppliedValues(
+        IReadOnlyList<string> values)
+    {
+        AcceptAppliedValuesState(values);
+        NotifyAppliedValuesAccepted();
+    }
+
+    internal void AcceptAppliedValuesState(
+        IReadOnlyList<string> values)
+    {
+        ImmutableArray<string> appliedValues =
+        [
+            .. values
+                .Where(value =>
+                    !string.IsNullOrEmpty(value))
+                .Distinct(StringComparer.Ordinal),
+        ];
+        string? currentValue = Value;
+
+        _loadedValue = appliedValues.Length == 0
+            ? null
+            : LibraryMetadataValueMap
+                .FormatEditorValues(
+                    appliedValues);
+        _loadedMixed = false;
+#pragma warning disable MVVMTK0034
+        _verification =
+            FieldValueVerification.Exact;
+        _isMixed = false;
+        _isModified = !LibraryMetadataValueMap
+            .ParseEditorValues(
+                currentValue ?? "")
+            .SequenceEqual(
+                appliedValues,
+                StringComparer.Ordinal);
+#pragma warning restore MVVMTK0034
+    }
+
+    internal void NotifyAppliedValuesAccepted()
+    {
+        var errors = new List<Exception>();
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(Verification)),
+            errors);
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(IsUnverified)),
+            errors);
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(IsMixed)),
+            errors);
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(IsModified)),
+            errors);
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(OriginalDisplayValue)),
+            errors);
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(PlaceholderText)),
+            errors);
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(VerificationMessage)),
+            errors);
+        if (errors.Count > 0)
+            throw new AggregateException(errors);
+    }
+
+    internal void SetEditReservation(
+        bool reserved) =>
+        _isEditReserved = reserved;
+
+    private static void TryNotify(
+        Action notification,
+        ICollection<Exception> errors)
+    {
+        try
+        {
+            notification();
+        }
+        catch (Exception error)
+        {
+            errors.Add(error);
+        }
+    }
+
+    private void EnsureEditIsNotReserved()
+    {
+        if (_isEditReserved &&
+            !_bypassEditReservation)
+            throw new InvalidOperationException(
+                LocalizedText.Get(
+                    "Workbench.Status.PendingChangesBlocked"));
+    }
+
+    partial void OnValueChanging(
+        string? value) =>
+        EnsureEditIsNotReserved();
 
     partial void OnIsMixedChanged(bool value) => OnPropertyChanged(nameof(PlaceholderText));
 
@@ -1567,6 +1962,7 @@ public partial class ArtworkPreviewItem : ObservableObject
     private string _technicalSummary;
     private Func<ID3v2Util.APICType, string>
         _formatType = FormatType;
+    private bool _isEditReserved;
 
     public ArtworkPreviewItem(
         object? source,
@@ -1606,11 +2002,25 @@ public partial class ArtworkPreviewItem : ObservableObject
 
     public void AcceptChanges()
     {
-        if (!IsModified)
+        if (!AcceptChangesState())
             return;
-        IsModified = false;
-        OnPropertyChanged(nameof(IsModified));
+        NotifyChangesAccepted();
     }
+
+    internal bool AcceptChangesState()
+    {
+        if (!IsModified)
+            return false;
+        IsModified = false;
+        return true;
+    }
+
+    internal void NotifyChangesAccepted() =>
+        OnPropertyChanged(nameof(IsModified));
+
+    internal void SetEditReservation(
+        bool reserved) =>
+        _isEditReserved = reserved;
 
     public void ReplaceContent(
         object? source,
@@ -1618,6 +2028,7 @@ public partial class ArtworkPreviewItem : ObservableObject
         byte[] data,
         string technicalSummary)
     {
+        EnsureEditIsNotReserved();
         Source = source;
         MimeType = mimeType;
         Data = data;
@@ -1659,6 +2070,21 @@ public partial class ArtworkPreviewItem : ObservableObject
         IsModified = true;
         OnPropertyChanged(nameof(IsModified));
     }
+
+    private void EnsureEditIsNotReserved()
+    {
+        if (_isEditReserved)
+            throw new InvalidOperationException(
+                LocalizedText.Get(
+                    "Workbench.Status.PendingChangesBlocked"));
+    }
+
+    partial void OnTypeChanging(
+        ID3v2Util.APICType value) =>
+        EnsureEditIsNotReserved();
+    partial void OnDescriptionChanging(
+        string? value) =>
+        EnsureEditIsNotReserved();
 
     private static string FormatType(ID3v2Util.APICType value)
     {

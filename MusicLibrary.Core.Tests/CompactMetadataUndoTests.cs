@@ -875,7 +875,7 @@ public sealed class CompactMetadataUndoTests
     }
 
     [Fact]
-    public async Task CleanupFailureAfterCommitRetainsHistoryAndRetriesWithoutRestoringAgain()
+    public async Task CleanupFailureAfterCommitConsumesUndoAndRetainsRepairTransition()
     {
         using var workspace = new TempDirectory();
         RestartScenario scenario = await CreateRestartScenarioAsync(
@@ -914,8 +914,14 @@ public sealed class CompactMetadataUndoTests
             new AppSettings(scenario.SettingsPath),
             new OperationJournalService(new FileMutationCoordinator()));
 
-        Assert.True(blockedRestart.CanUndo);
-        Assert.Empty(blockedRestart.RedoEntries);
+        Assert.False(blockedRestart.CanUndo);
+        Assert.Equal(
+            scenario.HistoryEntry.Id,
+            Assert.Single(blockedRestart.RedoEntries).Id);
+        Assert.Contains(
+            blockedRestart.LastUndoIssues,
+            issue => issue.Code ==
+                "restore.recovery-cleanup-failed");
         Assert.True(File.Exists(action.SourcePath));
         Assert.True(Directory.Exists(action.CollisionBackupPath));
         Assert.Equal(

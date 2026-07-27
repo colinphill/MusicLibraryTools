@@ -89,6 +89,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         CommittedLibraryRowOverlay>
         _committedRowOverlays =
             new(PathComparer);
+    private readonly HashSet<string>
+        _workbenchReservedFileOperationPaths =
+            new(PathComparer);
+    private bool _workbenchFileOperationReservationActive;
+    private bool
+        _workbenchReservationOwnsOperationBusy;
+    private long _operationGeneration;
+    private long _activeOperationGeneration;
     private HashSet<string> _healthFilterPaths = new(PathComparer);
     private IReadOnlyList<string> _selectedPaths = [];
     private CancellationTokenSource? _loadCancellation;
@@ -356,6 +364,15 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _navigation = navigation;
         _thumbnails = thumbnails;
         _workbench = workbench;
+        if (_workbench is not null)
+        {
+            _workbench.FileOperationsPreflight +=
+                OnWorkbenchFileOperationsPreflightAsync;
+            _workbench.FileOperationsCommitted +=
+                OnWorkbenchFileOperationsCommittedAsync;
+            _workbench.FileOperationsApplyFinished +=
+                OnWorkbenchFileOperationsApplyFinishedAsync;
+        }
         _metadataOperations = metadataOperations;
         _audioDiscovery = audioDiscovery;
         _musicBrainz = musicBrainz;
@@ -589,9 +606,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         !IsDirectPendingPreviewBusy &&
         _metadataOperations is not null;
     public bool CanEditPendingChanges =>
-        !IsBusy && !IsOperationBusy;
+        !IsBusy &&
+        !IsOperationBusy &&
+        !_workbenchFileOperationReservationActive;
     public bool IsPendingEditReadOnly =>
-        IsBusy || IsOperationBusy;
+        IsBusy ||
+        IsOperationBusy ||
+        _workbenchFileOperationReservationActive;
     public bool CanApplyPendingChanges =>
         CanApplyLibraryOperation();
     public bool HasUnsavedChanges =>
@@ -920,6 +941,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                          inspectorPaths.Contains(
                              row.Path)))
         {
+            if (IsWorkbenchFileOperationPathReserved(
+                    draft.Path))
+                continue;
             if (loaded.TryGetValue(
                     draft.Path,
                     out int index))
@@ -947,6 +971,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     path,
                     out int index))
             {
+                if (!File.Exists(path))
+                {
+                    _committedRowOverlays.Remove(
+                        path);
+                    continue;
+                }
                 loaded[path] = rows.Count;
                 rows.Add(overlay.Row);
                 continue;
@@ -973,6 +1003,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _inlinePendingRows.Clear();
         foreach (LibraryRow row in _allRows)
         {
+            row.SetEditReservation(
+                IsWorkbenchFileOperationPathReserved(
+                    row.Path));
             row.PendingChangesChanged +=
                 _inlineRowChangedHandler;
             if (row.HasChanges)
@@ -1131,6 +1164,278 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         first.SequenceEqual(
             second,
             PathComparer);
+
+    private async Task
+        OnWorkbenchFileOperationsCommittedAsync(
+            IReadOnlyList<
+                ReviewedFileOperationPlan> plans)
+    {
+        var replacements = new Dictionary<
+            string,
+            string?>(
+            PathComparer);
+        foreach (ReviewedFileOperationItem item in
+                 plans.SelectMany(plan =>
+                     plan.Items)
+                     .Where(item =>
+                         item.CanApply))
+        {
+            string sourcePath =
+                NormalizeFileOperationPath(
+                    item.SourcePath);
+            switch (item.MutationKind)
+            {
+                case FileMutationKind.Move:
+                    replacements[sourcePath] =
+                        item.DestinationPath;
+                    break;
+                case FileMutationKind.Quarantine:
+                case FileMutationKind.Delete:
+                    replacements[sourcePath] =
+                        null;
+                    break;
+            }
+
+            if (item.MutationKind is
+                FileMutationKind.Move or
+                FileMutationKind.Quarantine or
+                FileMutationKind.Delete)
+                _committedRowOverlays.Remove(
+                    sourcePath);
+        }
+
+        var postCommitErrors =
+            new List<Exception>();
+        if (replacements.Count > 0)
+        {
+            try
+            {
+                SetSelectedPaths(
+                [
+                    .. _selectedPaths
+                        .Select(path =>
+                            replacements.TryGetValue(
+                                NormalizeFileOperationPath(
+                                    path),
+                                out string? replacement)
+                                ? replacement
+                                : path)
+                        .Where(path =>
+                            !string.IsNullOrWhiteSpace(
+                                path))
+                        .Cast<string>(),
+                ]);
+            }
+            catch (Exception error)
+            {
+                postCommitErrors.Add(error);
+            }
+        }
+
+        try
+        {
+            await ReloadAsync();
+        }
+        catch (Exception error)
+        {
+            postCommitErrors.Add(error);
+        }
+        if (postCommitErrors.Count > 0)
+            throw new AggregateException(
+                postCommitErrors);
+    }
+
+    private Task<string?>
+        OnWorkbenchFileOperationsPreflightAsync(
+            IReadOnlyList<
+                ReviewedFileOperationPlan> plans)
+    {
+        ArgumentNullException.ThrowIfNull(plans);
+        HashSet<string> affectedPaths =
+            FileOperationPathChanges(plans);
+        if (affectedPaths.Count == 0)
+            return Task.FromResult<string?>(null);
+
+        bool unavailable =
+            IsBusy ||
+            IsOperationBusy ||
+            _workbenchFileOperationReservationActive;
+        if (unavailable ||
+            HasWorkbenchFileOperationConflict(
+                affectedPaths))
+            return Task.FromResult<string?>(
+                L(
+                    "Library.FileOperation.MetadataEditsPending"));
+
+        _workbenchReservedFileOperationPaths.Clear();
+        _workbenchReservedFileOperationPaths.UnionWith(
+            affectedPaths);
+        _workbenchFileOperationReservationActive = true;
+        foreach (LibraryRow row in _allRows)
+            row.SetEditReservation(
+                IsWorkbenchFileOperationPathReserved(
+                    row.Path));
+
+        try
+        {
+            _inspector.SetPathEditReservation(
+                affectedPaths,
+                reserved: true);
+            if (HasWorkbenchFileOperationConflict(
+                    affectedPaths))
+            {
+                ReleaseWorkbenchFileOperationReservation();
+                return Task.FromResult<string?>(
+                    L(
+                        "Library.FileOperation.MetadataEditsPending"));
+            }
+
+            // The model reservation is established before publishing the
+            // global busy state. Re-entrant observers therefore cannot create
+            // a draft for an affected path during the preflight-to-apply gap.
+            _workbenchReservationOwnsOperationBusy =
+                true;
+            IsOperationBusy = true;
+            if (HasWorkbenchFileOperationConflict(
+                    affectedPaths))
+            {
+                ReleaseWorkbenchFileOperationReservation();
+                return Task.FromResult<string?>(
+                    L(
+                        "Library.FileOperation.MetadataEditsPending"));
+            }
+        }
+        catch
+        {
+            ReleaseWorkbenchFileOperationReservation();
+            throw;
+        }
+        return Task.FromResult<string?>(null);
+    }
+
+    private bool HasWorkbenchFileOperationConflict(
+        IReadOnlySet<string> affectedPaths) =>
+            _inlinePendingRows.Any(row =>
+                affectedPaths.Contains(
+                    NormalizeFileOperationPath(
+                        row.Path))) ||
+            _inspector.HasUnsavedChanges &&
+            _inspector.Selection.Paths.Any(
+                path => affectedPaths.Contains(
+                    NormalizeFileOperationPath(
+                        path))) ||
+            _libraryOperationPlan?.Files.Any(file =>
+                affectedPaths.Contains(
+                    NormalizeFileOperationPath(
+                        file.Path)) &&
+                (!file.Edits.IsDefaultOrEmpty ||
+                 file.ArtworkDifference is not null)) ==
+            true;
+
+    private Task
+        OnWorkbenchFileOperationsApplyFinishedAsync(
+            IReadOnlyList<
+                ReviewedFileOperationPlan> plans)
+    {
+        ArgumentNullException.ThrowIfNull(plans);
+        if (!_workbenchFileOperationReservationActive)
+            return Task.CompletedTask;
+        HashSet<string> finishedPaths =
+            FileOperationPathChanges(plans);
+        if (!_workbenchReservedFileOperationPaths
+                .SetEquals(finishedPaths))
+            return Task.CompletedTask;
+
+        ReleaseWorkbenchFileOperationReservation();
+        return Task.CompletedTask;
+    }
+
+    private void
+        ReleaseWorkbenchFileOperationReservation()
+    {
+        string[] paths =
+        [
+            .. _workbenchReservedFileOperationPaths,
+        ];
+        bool clearOperationBusy =
+            _workbenchReservationOwnsOperationBusy &&
+            _operationCancellation is null;
+
+        // Release semantic guards before invoking any fallible observer. A
+        // subscriber failure may become a Workbench warning, but it cannot
+        // leave the Library model permanently reserved.
+        _workbenchReservedFileOperationPaths.Clear();
+        _workbenchFileOperationReservationActive =
+            false;
+        _workbenchReservationOwnsOperationBusy =
+            false;
+        foreach (LibraryRow row in _allRows)
+            row.SetEditReservation(false);
+
+        var errors = new List<Exception>();
+        try
+        {
+            _inspector.SetPathEditReservation(
+                paths,
+                reserved: false);
+        }
+        catch (Exception error)
+        {
+            errors.Add(error);
+        }
+        if (clearOperationBusy)
+        {
+            try
+            {
+                IsOperationBusy = false;
+            }
+            catch (Exception error)
+            {
+                errors.Add(error);
+            }
+        }
+        if (errors.Count > 0)
+            throw new AggregateException(errors);
+    }
+
+    private bool
+        IsWorkbenchFileOperationPathReserved(
+            string path) =>
+        _workbenchFileOperationReservationActive &&
+        _workbenchReservedFileOperationPaths.Contains(
+            NormalizeFileOperationPath(path));
+
+    private static HashSet<string>
+        FileOperationPathChanges(
+            IEnumerable<
+                ReviewedFileOperationPlan> plans) =>
+        plans.SelectMany(plan => plan.Items)
+            .Where(item =>
+                item.CanApply &&
+                item.MutationKind is
+                    FileMutationKind.Move or
+                    FileMutationKind.Quarantine or
+                    FileMutationKind.Delete)
+            .Select(item =>
+                NormalizeFileOperationPath(
+                    item.SourcePath))
+            .ToHashSet(PathComparer);
+
+    private static string NormalizeFileOperationPath(
+        string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return "";
+        try
+        {
+            return Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(path));
+        }
+        catch
+        {
+            return path.Trim();
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanOpenInWorkbench))]
     private async Task OpenInWorkbenchAsync()
@@ -1635,6 +1940,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
         BeginLibraryOperation(
             "Library.Progress.ApplyingMetadataChanges");
+        bool durableCommit = false;
+        int changedFiles = 0;
+        var postCommitDiagnostics =
+            new List<string>();
         try
         {
             MetadataOperationPlan? directPlan =
@@ -1671,8 +1980,6 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             }
             SelectionContext inspectorSelection =
                 _inspector.Selection;
-            int inspectorVersion =
-                _inspector.PendingChangesVersion;
             bool refreshInspector =
                 effectivePlan.Files.Any(file =>
                     file.CanApply &&
@@ -1684,52 +1991,303 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     effectivePlan,
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
+            durableCommit = true;
+            changedFiles = result.ChangedFiles;
+
+            // ApplyAsync returning means the filesystem transaction is
+            // durable. Retire every semantic retry handle before any fallible
+            // collection or property observer. A terminal publication failure
+            // is diagnostic-only and can never expose this transaction for a
+            // second apply.
             _suppressDirectPendingPreview = true;
-            _directPendingPreviewCancellation
-                ?.Cancel();
-            await ApplyCommittedPlanToRowsAsync(
-                effectivePlan,
-                _operationCancellation!.Token);
+            CancellationTokenSource?
+                retiredPreviewCancellation =
+                    _directPendingPreviewCancellation;
+            _directPendingPreviewCancellation =
+                null;
+            _directPendingPreviewTask = null;
+            _directPendingPreviewGeneration++;
             _libraryOperationPlan = null;
-            OperationPreviewChanges.Clear();
             _directPendingPreview = null;
+            _directPendingPreviewFailed = false;
+#pragma warning disable MVVMTK0034
+            _hasApplicableOperationPreview = false;
+#pragma warning restore MVVMTK0034
+            try
+            {
+                postCommitDiagnostics.AddRange(
+                    result.Issues
+                        .Select(issue =>
+                            issue.Path is null
+                                ? issue.Message
+                                : $"{issue.Path}: {issue.Message}")
+                        .Where(message =>
+                            !string.IsNullOrWhiteSpace(
+                                message)));
+            }
+            catch (Exception error)
+            {
+                postCommitDiagnostics.Add(
+                    error.Message);
+            }
+
+            SelectionInspectorViewModel
+                .PendingChangesAcceptance?
+                inspectorAcceptance = null;
+            try
+            {
+                if (directPreview is
+                        { HadInspectorChanges: true } &&
+                    SelectionPathsEqual(
+                        inspectorSelection.Paths,
+                        _inspector.Selection.Paths))
+                {
+                    IReadOnlyDictionary<string, string>
+                        appliedArtworkFingerprints =
+                            effectivePlan.Files
+                                .Where(file =>
+                                    file.CanApply &&
+                                    file.ArtworkEdit is
+                                        not null)
+                                .GroupBy(
+                                    file => file.Path,
+                                    PathComparer)
+                                .ToDictionary(
+                                    group => group.Key,
+                                    group =>
+                                        SelectionInspectorViewModel
+                                            .CreateArtworkFingerprint(
+                                                group.Last()
+                                                    .ArtworkEdit!
+                                                    .Images),
+                                    PathComparer);
+                    inspectorAcceptance =
+                        _inspector
+                            .AcceptPendingChangesState(
+                        directPreview
+                            .InspectorValueEdits,
+                        directPreview
+                            .InspectorArtworkEdits,
+                        appliedArtworkFingerprints);
+                }
+            }
+            catch (Exception error)
+            {
+                postCommitDiagnostics.Add(
+                    error.Message);
+            }
+            CommittedLibraryRowBatch rowBatch =
+                new([], []);
+            try
+            {
+                rowBatch =
+                    await ApplyCommittedPlanToRowsStateAsync(
+                        effectivePlan);
+                postCommitDiagnostics.AddRange(
+                    rowBatch.Diagnostics);
+            }
+            catch (Exception error)
+            {
+                postCommitDiagnostics.Add(
+                    error.Message);
+            }
+
+            // From this point forward all retryable model state has advanced.
+            // Notifications, cache work, and selection refreshes are
+            // deliberately best-effort.
+            try
+            {
+                retiredPreviewCancellation
+                    ?.Cancel();
+            }
+            catch (Exception error)
+            {
+                postCommitDiagnostics.Add(
+                    error.Message);
+            }
+            try
+            {
+                OperationPreviewChanges.Clear();
+            }
+            catch (Exception error)
+            {
+                postCommitDiagnostics.Add(
+                    error.Message);
+            }
+            try
+            {
+                OnPropertyChanged(
+                    nameof(
+                        HasApplicableOperationPreview));
+            }
+            catch (Exception error)
+            {
+                postCommitDiagnostics.Add(
+                    error.Message);
+            }
+            if (inspectorAcceptance is not null)
+            {
+                try
+                {
+                    _inspector
+                        .PublishPendingChangesAcceptance(
+                            inspectorAcceptance);
+                }
+                catch (Exception error)
+                {
+                    postCommitDiagnostics.Add(
+                        error.Message);
+                }
+            }
+            int acceptedInspectorVersion =
+                _inspector.PendingChangesVersion;
+            postCommitDiagnostics.AddRange(
+                PublishCommittedPlanToRows(
+                    rowBatch));
+            try
+            {
+                RebuildPendingChanges();
+            }
+            catch (Exception error)
+            {
+                postCommitDiagnostics.Add(
+                    error.Message);
+            }
+
             if (refreshInspector &&
-                inspectorVersion ==
+                inspectorAcceptance is null &&
+                !_inspector.HasUnsavedChanges &&
+                acceptedInspectorVersion ==
                 _inspector.PendingChangesVersion &&
                 SelectionPathsEqual(
                     inspectorSelection.Paths,
                     _inspector.Selection.Paths))
-                await RefreshInspectorSelectionAsync(
-                    inspectorSelection);
-            await ApplyFilterAsync(
-                immediate: true,
-                _operationCancellation.Token);
-            RebuildPendingChanges();
-            HasApplicableOperationPreview = false;
-            SetCountOperationStatus(
-                "Library.Operation.Apply.Complete",
-                result.ChangedFiles);
+            {
+                try
+                {
+                    await RefreshInspectorSelectionAsync(
+                        inspectorSelection);
+                }
+                catch (Exception error)
+                {
+                    postCommitDiagnostics.Add(
+                        error.Message);
+                }
+            }
+            try
+            {
+                await ApplyFilterAsync(
+                    immediate: true,
+                    CancellationToken.None,
+                    refreshInspectorSelection:
+                        inspectorAcceptance is null);
+            }
+            catch (Exception error)
+            {
+                postCommitDiagnostics.Add(
+                    error.Message);
+            }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (
+            !durableCommit)
         {
             SetOperationStatus(
                 "Library.Operation.Apply.Cancelled");
         }
-        catch (Exception error)
+        catch (Exception error) when (
+            !durableCommit)
         {
             SetOperationFailure(
                 "Library.Operation.Apply.Failed",
                 error.Message);
         }
+        catch (Exception error)
+        {
+            postCommitDiagnostics.Add(
+                error.Message);
+        }
         finally
         {
             _suppressDirectPendingPreview = false;
-            EndLibraryOperation();
-            if (HasDirectPendingDrafts)
-                InvalidateDirectPendingPreview(
-                    schedule: true);
-            NotifyHistoryCommands();
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            try
+            {
+                EndLibraryOperation();
+            }
+            catch (Exception error)
+            {
+                if (durableCommit)
+                    postCommitDiagnostics.Add(
+                        error.Message);
+            }
+            if (durableCommit)
+            {
+                try
+                {
+                    SetCountOperationStatus(
+                        "Library.Operation.Apply.Complete",
+                        changedFiles);
+                }
+                catch (Exception error)
+                {
+                    postCommitDiagnostics.Add(
+                        error.Message);
+                }
+            }
+            try
+            {
+                if (HasDirectPendingDrafts)
+                    InvalidateDirectPendingPreview(
+                        schedule: true);
+            }
+            catch (Exception error)
+            {
+                if (durableCommit)
+                    postCommitDiagnostics.Add(
+                        error.Message);
+            }
+            try
+            {
+                NotifyHistoryCommands();
+            }
+            catch (Exception error)
+            {
+                if (durableCommit)
+                    postCommitDiagnostics.Add(
+                        error.Message);
+            }
+            try
+            {
+                OnPropertyChanged(
+                    nameof(HasUnsavedChanges));
+            }
+            catch (Exception error)
+            {
+                if (durableCommit)
+                    postCommitDiagnostics.Add(
+                        error.Message);
+            }
+            if (durableCommit &&
+                postCommitDiagnostics.Count > 0)
+            {
+                string diagnostic = string.Join(
+                    Environment.NewLine,
+                    postCommitDiagnostics
+                        .Where(message =>
+                            !string.IsNullOrWhiteSpace(
+                                message))
+                        .Distinct(
+                            StringComparer.Ordinal));
+                try
+                {
+                    OperationDiagnosticDetail =
+                        diagnostic;
+                }
+                catch
+                {
+                    // Terminal diagnostic publication is itself best-effort;
+                    // the durable operation remains successful.
+                }
+            }
         }
     }
 
@@ -1777,8 +2335,16 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             "Library.Progress.RestoringMetadataOperation");
         try
         {
+            long operationGeneration =
+                Volatile.Read(
+                    ref _activeOperationGeneration);
             var progress = new Progress<int>(completed =>
             {
+                if (operationGeneration == 0 ||
+                    Volatile.Read(
+                        ref _activeOperationGeneration) !=
+                    operationGeneration)
+                    return;
                 IsOperationProgressIndeterminate = false;
                 OperationProgressMaximum =
                     Math.Max(1, candidate.Paths.Length);
@@ -1795,14 +2361,43 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 await _history.UndoLatestAsync(
                     progress,
                     _operationCancellation!.Token);
-            foreach (string path in candidate.Paths)
-                await _reindex.ReindexFileAsync(
-                    path,
-                    _operationCancellation.Token);
+            var diagnostics = _history.LastUndoIssues
+                .Select(issue => issue.Path is null
+                    ? issue.Message
+                    : $"{issue.Path}: {issue.Message}")
+                .Where(message =>
+                    !string.IsNullOrWhiteSpace(
+                        message))
+                .ToList();
+            if (!_history
+                    .ReconcilesInternalCatalogOnUndo)
+            {
+                foreach (string path in candidate.Paths)
+                {
+                    try
+                    {
+                        await _reindex
+                            .ReindexFileAsync(
+                                path,
+                                CancellationToken.None);
+                    }
+                    catch (Exception error)
+                    {
+                        diagnostics.Add(
+                            $"{path}: {error.Message}");
+                    }
+                }
+            }
             await ReloadAsync();
             SetCountOperationStatus(
                 "Library.Operation.Restore.Complete",
                 restored);
+            if (diagnostics.Count > 0)
+                OperationDiagnosticDetail =
+                    string.Join(
+                        Environment.NewLine,
+                        diagnostics.Distinct(
+                            StringComparer.Ordinal));
         }
         catch (OperationCanceledException)
         {
@@ -3152,6 +3747,11 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string messageKey,
         params object?[] arguments)
     {
+        long generation = Interlocked.Increment(
+            ref _operationGeneration);
+        Volatile.Write(
+            ref _activeOperationGeneration,
+            generation);
         _operationCancellation?.Dispose();
         _operationCancellation = new();
         OperationProgressText = LF(
@@ -3165,6 +3765,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     private void EndLibraryOperation()
     {
+        // Progress<T> may have queued callbacks on the captured UI context.
+        // Retire this generation before publishing terminal state so an old
+        // callback cannot resurrect progress or overwrite a later operation.
+        Volatile.Write(
+            ref _activeOperationGeneration,
+            0);
         IsOperationBusy = false;
         _operationCancellation?.Dispose();
         _operationCancellation = null;
@@ -3174,9 +3780,18 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         OperationProgressText = "";
     }
 
-    private IProgress<OperationProgress> CreateOperationProgress() =>
-        new Progress<OperationProgress>(progress =>
+    private IProgress<OperationProgress> CreateOperationProgress()
+    {
+        long operationGeneration =
+            Volatile.Read(
+                ref _activeOperationGeneration);
+        return new Progress<OperationProgress>(progress =>
         {
+            if (operationGeneration == 0 ||
+                Volatile.Read(
+                    ref _activeOperationGeneration) !=
+                operationGeneration)
+                return;
             if (progress.Total is > 0)
             {
                 IsOperationProgressIndeterminate = false;
@@ -3191,6 +3806,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             if (!string.IsNullOrWhiteSpace(progress.Message))
                 OperationProgressText = progress.Message;
         });
+    }
 
     private string[] ResolveOperationPaths()
     {
@@ -3561,6 +4177,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _inspector.PendingChangesVersion;
         bool hadInspectorChanges =
             _inspector.HasUnsavedChanges;
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyList<MetadataValueEdit>>?
+            inspectorValueEdits = null;
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest>?
+            inspectorArtworkEdits = null;
         var editsByPath = new Dictionary<
             string,
             Dictionary<string, MetadataValueEdit>>(
@@ -3601,6 +4225,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         {
             var inspectorInputs =
                 _inspector.CreatePendingOperationInputs();
+            inspectorValueEdits =
+                inspectorInputs.ValueEdits;
+            inspectorArtworkEdits =
+                inspectorInputs.ArtworkEdits;
             foreach ((string path,
                          MetadataEditSourceExpectation
                              expectation) in
@@ -3755,7 +4383,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             plan,
             inlineDrafts,
             inspectorVersion,
-            hadInspectorChanges);
+            hadInspectorChanges,
+            inspectorValueEdits,
+            inspectorArtworkEdits);
 
         Dictionary<string, MetadataValueEdit>
             GetOrCreate(string path)
@@ -4053,10 +4683,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             : "";
     }
 
-    private async Task ApplyCommittedPlanToRowsAsync(
-        MetadataOperationPlan plan,
-        CancellationToken cancellationToken)
+    private async Task<CommittedLibraryRowBatch>
+        ApplyCommittedPlanToRowsStateAsync(
+            MetadataOperationPlan plan)
     {
+        var diagnostics = new List<string>();
+        var notifications = new List<
+            CommittedLibraryRowNotification>();
         foreach (MetadataFilePlan file in
                  plan.Files.Where(file =>
                      file.CanApply &&
@@ -4064,8 +4697,6 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                       file.ArtworkDifference is not
                           null)))
         {
-            cancellationToken
-                .ThrowIfCancellationRequested();
             LibraryRow? row = _allRows
                 .FirstOrDefault(candidate =>
                     PathComparer.Equals(
@@ -4078,26 +4709,90 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             DateTime preLastWriteTimeUtc =
                 NormalizeUtc(
                     row.Record.LastWriteTime);
-            (long? length,
-                DateTime? lastWriteTimeUtc) =
-                await ReadFileIdentityAsync(
-                    file.Path,
-                    cancellationToken);
-            row.AcceptAppliedEdits(
-                file.Edits,
-                length,
-                lastWriteTimeUtc);
-            if (file.ArtworkDifference is not null)
-                InvalidateThumbnail(
-                    row);
-            _committedRowOverlays[
-                file.Path] = new(
-                row,
-                preLength,
-                preLastWriteTimeUtc,
-                length,
-                lastWriteTimeUtc);
+            long? length = null;
+            DateTime? lastWriteTimeUtc = null;
+            try
+            {
+                (length, lastWriteTimeUtc) =
+                    await ReadFileIdentityAsync(
+                        file.Path,
+                        CancellationToken.None);
+            }
+            catch (Exception error)
+            {
+                diagnostics.Add(
+                    $"{file.Path}: {error.Message}");
+            }
+            try
+            {
+                LibraryRow.AppliedEditNotification
+                    notification =
+                        row.AcceptAppliedEditsState(
+                            file.Edits,
+                            length,
+                            lastWriteTimeUtc);
+                if (row.HasChanges)
+                    _inlinePendingRows.Add(row);
+                else
+                    _inlinePendingRows.Remove(row);
+                _committedRowOverlays[
+                    file.Path] = new(
+                    row,
+                    preLength,
+                    preLastWriteTimeUtc,
+                    length,
+                    lastWriteTimeUtc);
+                notifications.Add(
+                    new(
+                        row,
+                        notification,
+                        file.ArtworkDifference is
+                            not null));
+            }
+            catch (Exception error)
+            {
+                diagnostics.Add(
+                    $"{file.Path}: {error.Message}");
+            }
         }
+        return new(
+            [.. notifications],
+            [.. diagnostics]);
+    }
+
+    private IReadOnlyList<string>
+        PublishCommittedPlanToRows(
+            CommittedLibraryRowBatch batch)
+    {
+        var diagnostics = new List<string>();
+        foreach (CommittedLibraryRowNotification item
+                 in batch.Notifications)
+        {
+            try
+            {
+                item.Row.NotifyAppliedEdits(
+                    item.Notification);
+            }
+            catch (Exception error)
+            {
+                diagnostics.Add(
+                    $"{item.Row.Path}: {error.Message}");
+            }
+            if (item.InvalidateArtwork)
+            {
+                try
+                {
+                    InvalidateThumbnail(
+                        item.Row);
+                }
+                catch (Exception error)
+                {
+                    diagnostics.Add(
+                        $"{item.Row.Path}: {error.Message}");
+                }
+            }
+        }
+        return diagnostics;
     }
 
     private void InvalidateThumbnail(
@@ -4225,6 +4920,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             nameof(CanRetryDirectPendingPreview));
         RetryDirectPendingPreviewCommand
             .NotifyCanExecuteChanged();
+        if (!value &&
+            HasDirectPendingDrafts)
+            InvalidateDirectPendingPreview(
+                schedule: true);
     }
 
     partial void OnRowsChanged(IReadOnlyList<LibraryRow> value)
@@ -4824,7 +5523,11 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
     }
 
-    private async Task ApplyFilterAsync(bool immediate, CancellationToken cancellationToken = default)
+    private async Task ApplyFilterAsync(
+        bool immediate,
+        CancellationToken cancellationToken =
+            default,
+        bool refreshInspectorSelection = true)
     {
         LibraryFilterQuery query = LibraryFilterQuery.Create(FilterText, FilterMode);
         var visual = new LibraryVisualFilter(
@@ -4951,7 +5654,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                         : LibraryPageState.NotIndexed;
         OnPropertyChanged(nameof(TotalCount));
         OnPropertyChanged(nameof(ResultCountText));
-        if (updatedSelection is not null)
+        if (refreshInspectorSelection &&
+            updatedSelection is not null)
             await _inspector.LoadAsync(updatedSelection);
     }
 
@@ -5327,7 +6031,15 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ImmutableArray<InlineDraftSnapshot>
             InlineDrafts,
         int InspectorVersion,
-        bool HadInspectorChanges);
+        bool HadInspectorChanges,
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyList<MetadataValueEdit>>?
+            InspectorValueEdits,
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest>?
+            InspectorArtworkEdits);
 
     private sealed record PendingEditConflict(
         string Path,
@@ -5357,6 +6069,19 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 record.LastWriteTime) ==
             lastWriteTimeUtc;
     }
+
+    private sealed record
+        CommittedLibraryRowNotification(
+            LibraryRow Row,
+            LibraryRow.AppliedEditNotification
+                Notification,
+            bool InvalidateArtwork);
+
+    private sealed record CommittedLibraryRowBatch(
+        ImmutableArray<
+            CommittedLibraryRowNotification>
+            Notifications,
+        ImmutableArray<string> Diagnostics);
 
     private sealed record LibraryWorkspaceSnapshot(
         string? Filter,

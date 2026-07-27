@@ -351,10 +351,18 @@ public sealed class OperationJournalServiceTests
         File.WriteAllText(destination, "new collision");
         var summary = Summary("IngestMusic", OperationJournalKind.Ingest, run);
         var entry = Entry(source, destination, OperationEntryKind.Quarantined);
-        var service = new OperationJournalService();
+        var reindex = new RecordingReindexService(
+            source);
+        var service = new OperationJournalService(
+            reindex: reindex);
 
         var plan = await service.PreviewRestoreAsync(summary, [entry]);
         var result = await service.ApplyRestoreAsync(plan);
+        IReadOnlyList<OperationIssue> postCommitIssues =
+            await Assert.IsType<
+                    PostCommitReconciliationHandle>(
+                    result.PostCommitReconciliation)
+                .Completion;
 
         Assert.Equal(1, plan.CollisionCount);
         Assert.Equal(1, result.RestoredCount);
@@ -363,6 +371,334 @@ public sealed class OperationJournalServiceTests
         var action = Assert.Single(plan.Actions);
         Assert.Equal("new collision", File.ReadAllText(action.CollisionBackupPath));
         Assert.Equal("CONSUMED\tRESTORE", File.ReadLines(plan.RestoreJournalPath).Last());
+        Assert.Equal([destination], reindex.ReindexedPaths);
+        Assert.Equal([source], reindex.RemovedPaths);
+        Assert.All(
+            reindex.Tokens,
+            token => Assert.False(token.CanBeCanceled));
+        Assert.Empty(result.Issues);
+        Assert.Empty(postCommitIssues);
+    }
+
+    [Fact]
+    public async Task CommittedRestoreReportsCacheFailuresAsWarnings()
+    {
+        using var temp = new TempDirectory();
+        string root = temp.Directory("incoming");
+        string run = temp.Directory(
+            "incoming.IngestMusic-quarantine",
+            "20260715-193000000");
+        string source = Path.Combine(run, "song.flac");
+        string destination = Path.Combine(root, "song.flac");
+        File.WriteAllText(source, "quarantined original");
+        var reindex = new RecordingReindexService(
+            source)
+        {
+            ReindexError =
+                new IOException("refresh failed"),
+            RemoveError =
+                new IOException("remove failed"),
+        };
+        var service = new OperationJournalService(
+            reindex: reindex);
+        OperationRestorePlan plan =
+            await service.PreviewRestoreAsync(
+                Summary(
+                    "IngestMusic",
+                    OperationJournalKind.Ingest,
+                    run),
+                [
+                    Entry(
+                        source,
+                        destination,
+                        OperationEntryKind.Quarantined),
+                ]);
+
+        OperationRestoreResult result =
+            await service.ApplyRestoreAsync(plan);
+        IReadOnlyList<OperationIssue> postCommitIssues =
+            await Assert.IsType<
+                    PostCommitReconciliationHandle>(
+                    result.PostCommitReconciliation)
+                .Completion;
+
+        Assert.Equal("quarantined original", File.ReadAllText(destination));
+        Assert.False(File.Exists(source));
+        // A failed destination refresh deliberately retains the old tracked
+        // source membership instead of removing the last known catalog row.
+        Assert.Single(postCommitIssues);
+        Assert.All(
+            postCommitIssues,
+            issue =>
+            {
+                Assert.Equal(
+                    "restore.catalog-refresh-failed",
+                    issue.Code);
+                Assert.Equal(
+                    OperationIssueSeverity.Warning,
+                    issue.Severity);
+            });
+    }
+
+    [Fact]
+    public async Task DirectRestorePreservesUntrackedCatalogMembership()
+    {
+        using var temp = new TempDirectory();
+        string root = temp.Directory("incoming");
+        string run = temp.Directory(
+            "incoming.IngestMusic-quarantine",
+            "20260715-194000000");
+        string source = Path.Combine(run, "session-only.flac");
+        string destination =
+            Path.Combine(root, "session-only.flac");
+        File.WriteAllText(source, "session audio");
+        var reindex = new RecordingReindexService();
+        var service = new OperationJournalService(
+            reindex: reindex);
+        OperationRestorePlan plan =
+            await service.PreviewRestoreAsync(
+                Summary(
+                    "IngestMusic",
+                    OperationJournalKind.Ingest,
+                    run),
+                [
+                    Entry(
+                        source,
+                        destination,
+                        OperationEntryKind.Quarantined),
+                ]);
+
+        OperationRestoreResult result =
+            await service.ApplyRestoreAsync(plan);
+
+        Assert.Equal("session audio", File.ReadAllText(destination));
+        Assert.Equal(
+            OperationRestoreTransitionState.Consumed,
+            result.TransitionState);
+        Assert.Null(result.PostCommitReconciliation);
+        Assert.Empty(result.Issues);
+        Assert.Empty(reindex.ReindexedPaths);
+        Assert.Empty(reindex.RemovedPaths);
+        Assert.Equal(
+            [source, destination],
+            reindex.IndexedQueries);
+    }
+
+    [Fact]
+    public async Task DirectoryRestoreReconcilesTrackedDescendantsWithoutScanningDirectory()
+    {
+        using var temp = new TempDirectory();
+        string root = temp.Directory("incoming");
+        string run = temp.Directory(
+            "incoming.IngestMusic-quarantine",
+            "20260715-195000000");
+        string sourceDirectory =
+            temp.Directory(
+                "incoming.IngestMusic-quarantine",
+                "20260715-195000000",
+                "album");
+        string destinationDirectory =
+            Path.Combine(root, "album");
+        string trackedSource =
+            Path.Combine(sourceDirectory, "tracked.flac");
+        string untrackedSource =
+            Path.Combine(sourceDirectory, "session-only.flac");
+        File.WriteAllText(trackedSource, "tracked");
+        File.WriteAllText(untrackedSource, "session");
+        var reindex = new RecordingReindexService(
+            trackedSource);
+        var service = new OperationJournalService(
+            reindex: reindex);
+        var entry = new OperationFileEntry(
+            destinationDirectory,
+            sourceDirectory,
+            "album",
+            OperationEntryKind.Quarantined,
+            true,
+            true);
+        OperationRestorePlan plan =
+            await service.PreviewRestoreAsync(
+                Summary(
+                    "IngestMusic",
+                    OperationJournalKind.Ingest,
+                    run),
+                [entry]);
+
+        OperationRestoreResult result =
+            await service.ApplyRestoreAsync(plan);
+        Assert.Empty(
+            await Assert.IsType<
+                    PostCommitReconciliationHandle>(
+                    result.PostCommitReconciliation)
+                .Completion);
+
+        string trackedDestination =
+            Path.Combine(destinationDirectory, "tracked.flac");
+        Assert.Equal(
+            [trackedDestination],
+            reindex.ReindexedPaths);
+        Assert.Equal(
+            [trackedSource],
+            reindex.RemovedPaths);
+        Assert.DoesNotContain(
+            destinationDirectory,
+            reindex.ReindexedPaths);
+        Assert.True(File.Exists(
+            Path.Combine(
+                destinationDirectory,
+                "session-only.flac")));
+    }
+
+    [Fact]
+    public async Task CommittedRestoreReturnsBeforeBlockedCatalogWorkAndIgnoresLaterCancellation()
+    {
+        using var temp = new TempDirectory();
+        string root = temp.Directory("incoming");
+        string run = temp.Directory(
+            "incoming.IngestMusic-quarantine",
+            "20260715-196000000");
+        string source = Path.Combine(run, "song.flac");
+        string destination = Path.Combine(root, "song.flac");
+        File.WriteAllText(source, "audio");
+        var reindex = new BlockingReindexService(source);
+        var service = new OperationJournalService(
+            reindex: reindex);
+        OperationRestorePlan plan =
+            await service.PreviewRestoreAsync(
+                Summary(
+                    "IngestMusic",
+                    OperationJournalKind.Ingest,
+                    run),
+                [
+                    Entry(
+                        source,
+                        destination,
+                        OperationEntryKind.Quarantined),
+                ]);
+        using var cts =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                TestContext.Current.CancellationToken);
+
+        Task<OperationRestoreResult> applying =
+            service.ApplyRestoreAsync(
+                plan,
+                ct: cts.Token);
+        await reindex.Started.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+        OperationRestoreResult result =
+            await applying.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            OperationRestoreTransitionState.Committed,
+            result.TransitionState);
+        Assert.False(
+            Assert.IsType<
+                    PostCommitReconciliationHandle>(
+                    result.PostCommitReconciliation)
+                .Completion.IsCompleted);
+        Assert.Equal("audio", File.ReadAllText(destination));
+        cts.Cancel();
+        reindex.Release.TrySetResult(true);
+        Assert.Empty(
+            await result.PostCommitReconciliation!
+                .Completion.WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current.CancellationToken));
+        Assert.Equal(
+            "CONSUMED\tRESTORE",
+            File.ReadLines(
+                    plan.RestoreJournalPath)
+                .Last());
+        Assert.All(
+            reindex.Tokens,
+            token => Assert.False(token.CanBeCanceled));
+    }
+
+    [Fact]
+    public async Task RestartReconciliationReturnsCatalogWarningsAndRetriesFromCommit()
+    {
+        using var temp = new TempDirectory();
+        string root = temp.Directory("incoming");
+        string run = temp.Directory(
+            "incoming.IngestMusic-quarantine",
+            "20260715-197000000");
+        string source = Path.Combine(run, "song.flac");
+        string destination = Path.Combine(root, "song.flac");
+        File.WriteAllText(source, "audio");
+        var firstReindex = new RecordingReindexService(source)
+        {
+            ReindexError = new IOException("index busy"),
+        };
+        var firstService = new OperationJournalService(
+            reindex: firstReindex);
+        OperationRestorePlan plan =
+            await firstService.PreviewRestoreAsync(
+                Summary(
+                    "IngestMusic",
+                    OperationJournalKind.Ingest,
+                    run),
+                [
+                    Entry(
+                        source,
+                        destination,
+                        OperationEntryKind.Quarantined),
+                ]);
+        OperationRestoreResult applied =
+            await firstService.ApplyRestoreAsync(plan);
+        OperationIssue firstIssue = Assert.Single(
+            await applied.PostCommitReconciliation!
+                .Completion);
+        Assert.Equal(
+            "restore.catalog-refresh-failed",
+            firstIssue.Code);
+        Assert.Equal(
+            "COMMIT\tRESTORE",
+            File.ReadLines(plan.RestoreJournalPath).Last());
+
+        var retryFailure = new RecordingReindexService(source)
+        {
+            ReindexError = new IOException("still busy"),
+        };
+        var restartService = new OperationJournalService(
+            reindex: retryFailure);
+        OperationRestoreReconciliationResult failedRetry =
+            await restartService
+                .ReconcileRestoreBatchDetailedAsync(
+                    [plan.RestoreJournalPath],
+                    ct: TestContext.Current
+                        .CancellationToken);
+
+        Assert.Equal(
+            OperationRestoreTransitionState.Committed,
+            failedRetry.State);
+        Assert.Single(failedRetry.Issues);
+        Assert.Equal(
+            "COMMIT\tRESTORE",
+            File.ReadLines(plan.RestoreJournalPath).Last());
+
+        var successfulReindex =
+            new RecordingReindexService(source);
+        var finalService = new OperationJournalService(
+            reindex: successfulReindex);
+        using var canceled = new CancellationTokenSource();
+        canceled.Cancel();
+        OperationRestoreReconciliationResult final =
+            await finalService
+                .ReconcileRestoreBatchDetailedAsync(
+                    [plan.RestoreJournalPath],
+                    ct: canceled.Token);
+
+        Assert.Equal(
+            OperationRestoreTransitionState.Consumed,
+            final.State);
+        Assert.Empty(final.Issues);
+        Assert.Equal([destination],
+            successfulReindex.ReindexedPaths);
+        Assert.Equal([source],
+            successfulReindex.RemovedPaths);
     }
 
     [Fact]
@@ -374,7 +710,10 @@ public sealed class OperationJournalServiceTests
         string source = Path.Combine(run, "song.flac");
         string destination = Path.Combine(root, "song.flac");
         File.WriteAllText(source, "original");
-        var service = new OperationJournalService();
+        var reindex = new RecordingReindexService(
+            source);
+        var service = new OperationJournalService(
+            reindex: reindex);
         var plan = await service.PreviewRestoreAsync(
             Summary("IngestMusic", OperationJournalKind.Ingest, run),
             [Entry(source, destination, OperationEntryKind.Quarantined)]);
@@ -386,6 +725,8 @@ public sealed class OperationJournalServiceTests
         Assert.True(File.Exists(source));
         Assert.False(File.Exists(destination));
         Assert.False(File.Exists(plan.RestoreJournalPath));
+        Assert.Empty(reindex.ReindexedPaths);
+        Assert.Empty(reindex.RemovedPaths);
     }
 
     [Fact]
@@ -444,12 +785,20 @@ public sealed class OperationJournalServiceTests
             journal,
             DateTimeOffset.UtcNow,
             1);
-        var service = new OperationJournalService();
+        var reindex = new RecordingReindexService(
+            output);
+        var service = new OperationJournalService(
+            reindex: reindex);
 
         OperationFileEntry entry = Assert.Single(
             (await service.BrowseAsync(summary)).Entries);
         OperationRestorePlan plan = await service.PreviewRestoreAsync(summary, [entry]);
         OperationRestoreResult result = await service.ApplyRestoreAsync(plan);
+        IReadOnlyList<OperationIssue> postCommitIssues =
+            await Assert.IsType<
+                    PostCommitReconciliationHandle>(
+                    result.PostCommitReconciliation)
+                .Completion;
 
         Assert.Equal(OperationEntryKind.Created, entry.Kind);
         Assert.Equal(
@@ -458,6 +807,69 @@ public sealed class OperationJournalServiceTests
         Assert.Equal(1, result.RestoredCount);
         Assert.False(File.Exists(output));
         Assert.Equal("CONSUMED\tRESTORE", File.ReadLines(plan.RestoreJournalPath).Last());
+        Assert.Empty(reindex.ReindexedPaths);
+        Assert.Equal([output], reindex.RemovedPaths);
+        Assert.All(
+            reindex.Tokens,
+            token => Assert.False(token.CanBeCanceled));
+        Assert.Empty(postCommitIssues);
+    }
+
+    [Fact]
+    public async Task EditHistorySurfacesRestoreCacheWarningsAndResetsThemPerAttempt()
+    {
+        using var temp = new TempDirectory();
+        string run = temp.Directory("history-recovery");
+        string output = Path.Combine(
+            temp.Path,
+            "history-output.flac");
+        File.WriteAllText(output, "generated audio");
+        string journal = WriteCreatedJournal(run, output);
+        var reindex = new RecordingReindexService(
+            output)
+        {
+            RemoveError =
+                new IOException("catalog removal failed"),
+        };
+        var journals = new OperationJournalService(
+            reindex: reindex);
+        var history = new EditHistoryService(
+            new AppSettings(
+                Path.Combine(temp.Path, "settings.json")),
+            journals);
+        history.Record(new(
+            Guid.NewGuid(),
+            "Generated output",
+            DateTimeOffset.UtcNow,
+            [journal],
+            [output],
+            null));
+
+        int restored = await history.UndoLatestAsync(
+            ct: TestContext.Current.CancellationToken);
+        _ = await history.LastUndoReconciliation;
+
+        Assert.Equal(1, restored);
+        Assert.True(history.ReconcilesInternalCatalogOnUndo);
+        OperationIssue warning =
+            Assert.Single(history.LastUndoIssues);
+        Assert.Equal(
+            "restore.catalog-refresh-failed",
+            warning.Code);
+        Assert.Equal(output, warning.Path);
+        Assert.Equal([output], reindex.RemovedPaths);
+
+        reindex.RemoveError = null;
+        Assert.Equal(
+            0,
+            await history.UndoLatestAsync(
+                ct: TestContext.Current.CancellationToken));
+        Assert.Empty(history.LastUndoIssues);
+        IEditHistoryService legacy =
+            new LegacyEditHistoryService();
+        Assert.False(
+            legacy.ReconcilesInternalCatalogOnUndo);
+        Assert.Empty(legacy.LastUndoIssues);
     }
 
     [Fact]
@@ -613,6 +1025,111 @@ public sealed class OperationJournalServiceTests
                 "COMMIT\ttranscode",
             ]);
         return journal;
+    }
+
+    private sealed class RecordingReindexService(
+        params string[] indexedPaths) :
+        IReindexService
+    {
+        public Exception? ReindexError { get; set; }
+        public Exception? RemoveError { get; set; }
+        public List<string> IndexedQueries { get; } = [];
+        public List<string> ReindexedPaths { get; } = [];
+        public List<string> RemovedPaths { get; } = [];
+        public List<CancellationToken> Tokens { get; } = [];
+        private readonly HashSet<string> _indexedPaths =
+            indexedPaths.ToHashSet(
+                OperatingSystem.IsWindows()
+                    ? StringComparer.OrdinalIgnoreCase
+                    : StringComparer.Ordinal);
+
+        public Task<bool> IsIndexedFileAsync(
+            string path,
+            CancellationToken ct = default)
+        {
+            IndexedQueries.Add(path);
+            return Task.FromResult(
+                _indexedPaths.Contains(path));
+        }
+
+        public Task ReindexFileAsync(
+            string path,
+            CancellationToken ct = default)
+        {
+            ReindexedPaths.Add(path);
+            Tokens.Add(ct);
+            return ReindexError is null
+                ? Task.CompletedTask
+                : Task.FromException(ReindexError);
+        }
+
+        public Task RemoveIndexedFileAsync(
+            string path,
+            CancellationToken ct = default)
+        {
+            RemovedPaths.Add(path);
+            Tokens.Add(ct);
+            return RemoveError is null
+                ? Task.CompletedTask
+                : Task.FromException(RemoveError);
+        }
+    }
+
+    private sealed class BlockingReindexService(
+        params string[] indexedPaths) :
+        IReindexService
+    {
+        private readonly HashSet<string> _indexedPaths =
+            indexedPaths.ToHashSet(
+                OperatingSystem.IsWindows()
+                    ? StringComparer.OrdinalIgnoreCase
+                    : StringComparer.Ordinal);
+
+        public TaskCompletionSource<bool> Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public List<CancellationToken> Tokens { get; } = [];
+
+        public Task<bool> IsIndexedFileAsync(
+            string path,
+            CancellationToken ct = default) =>
+            Task.FromResult(_indexedPaths.Contains(path));
+
+        public async Task ReindexFileAsync(
+            string path,
+            CancellationToken ct = default)
+        {
+            Tokens.Add(ct);
+            Started.TrySetResult(true);
+            await Release.Task.WaitAsync(ct);
+        }
+
+        public Task RemoveIndexedFileAsync(
+            string path,
+            CancellationToken ct = default)
+        {
+            Tokens.Add(ct);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class LegacyEditHistoryService :
+        IEditHistoryService
+    {
+        public IReadOnlyList<EditHistoryEntry> Entries => [];
+        public IReadOnlyList<EditHistoryEntry> RedoEntries => [];
+        public bool CanUndo => false;
+        public bool CanRedo => false;
+
+        public void Record(EditHistoryEntry entry)
+        {
+        }
+
+        public Task<int> UndoLatestAsync(
+            IProgress<int>? progress = null,
+            CancellationToken ct = default) =>
+            Task.FromResult(0);
     }
 
     private sealed class TempDirectory : IDisposable

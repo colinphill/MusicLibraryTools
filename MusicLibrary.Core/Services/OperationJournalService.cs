@@ -7,6 +7,13 @@ namespace MusicLibrary.Core.Services;
 
 public interface IOperationJournalService
 {
+    /// <summary>
+    /// Indicates that restore apply/reconciliation owns the post-commit
+    /// internal-catalog refresh. Older implementations retain the default
+    /// so higher-level history services can provide their legacy fallback.
+    /// </summary>
+    bool ReconcilesInternalCatalogOnRestore => false;
+
     Task<OperationJournalDiscoveryResult> DiscoverAsync(
         IReadOnlyList<string> searchRoots,
         CancellationToken ct = default);
@@ -37,21 +44,96 @@ public interface IOperationJournalService
     {
         int restored = 0, collisions = 0;
         var journals = new List<string>();
+        var issues = new List<OperationIssue>();
+        var reconciliations =
+            new List<PostCommitReconciliationHandle>();
+        OperationRestoreTransitionState transitionState =
+            OperationRestoreTransitionState.Consumed;
         foreach (OperationRestorePlan item in plan.Plans)
         {
             OperationRestoreResult result = await ApplyRestoreAsync(item, progress, ct)
                 .ConfigureAwait(false);
             restored += result.RestoredCount;
             collisions += result.CollisionBackupCount;
+            issues.AddRange(result.Issues);
+            if (result.TransitionState ==
+                OperationRestoreTransitionState.Committed)
+                transitionState =
+                    OperationRestoreTransitionState.Committed;
+            else if (result.TransitionState ==
+                         OperationRestoreTransitionState.Unapplied &&
+                     transitionState !=
+                         OperationRestoreTransitionState.Committed)
+                transitionState =
+                    OperationRestoreTransitionState.Unapplied;
+            if (result.PostCommitReconciliation is { } reconciliation)
+                reconciliations.Add(reconciliation);
             journals.Add(item.RestoreJournalPath);
         }
-        return new(restored, collisions, journals);
+        return new(restored, collisions, journals)
+        {
+            Issues = issues,
+            TransitionState = transitionState,
+            PostCommitReconciliation =
+                reconciliations.Count == 0
+                    ? null
+                    : new(
+                        AwaitReconciliationsAsync(
+                            reconciliations)),
+        };
+
+        static async Task<IReadOnlyList<OperationIssue>>
+            AwaitReconciliationsAsync(
+            IReadOnlyList<PostCommitReconciliationHandle> handles)
+        {
+            var combined = new List<OperationIssue>();
+            foreach (PostCommitReconciliationHandle handle in handles)
+            {
+                try
+                {
+                    combined.AddRange(
+                        await handle.Completion
+                            .ConfigureAwait(false));
+                }
+                catch (Exception error)
+                {
+                    combined.Add(new(
+                        "restore.postcommit-reconciliation-failed",
+                        OperationIssueSeverity.Warning,
+                        "A committed restore could not finish " +
+                        "post-commit reconciliation: " +
+                        error.Message));
+                }
+            }
+            return combined;
+        }
     }
 
     Task<OperationRestoreTransitionState> ReconcileRestoreBatchAsync(
         IReadOnlyList<string> restoreJournalPaths,
         CancellationToken ct = default) =>
         Task.FromResult(OperationRestoreTransitionState.Unapplied);
+
+    Task<OperationRestoreTransitionState> ReconcileRestoreBatchAsync(
+        IReadOnlyList<string> restoreJournalPaths,
+        bool reconcileInternalCatalog,
+        CancellationToken ct = default) =>
+        ReconcileRestoreBatchAsync(
+            restoreJournalPaths,
+            ct);
+
+    async Task<OperationRestoreReconciliationResult>
+        ReconcileRestoreBatchDetailedAsync(
+        IReadOnlyList<string> restoreJournalPaths,
+        bool reconcileInternalCatalog = true,
+        CancellationToken ct = default) =>
+        new(
+            await ReconcileRestoreBatchAsync(
+                    restoreJournalPaths,
+                    reconcileInternalCatalog,
+                    ct)
+                .ConfigureAwait(false),
+            []);
 
     Task<OperationPurgePlan> PreviewPurgeAsync(
         IReadOnlyList<OperationJournalSummary> runs,
@@ -77,16 +159,22 @@ public sealed class OperationJournalService : IOperationJournalService
     private readonly IFileMutationCoordinator _mutations;
     private readonly IItunesMediaMutationService? _itunes;
     private readonly IReverseDeltaService _reverseDelta;
+    private readonly IReindexService? _reindex;
 
     public OperationJournalService(
         IFileMutationCoordinator? mutations = null,
         IItunesMediaMutationService? itunes = null,
-        IReverseDeltaService? reverseDelta = null)
+        IReverseDeltaService? reverseDelta = null,
+        IReindexService? reindex = null)
     {
         _mutations = mutations ?? FileMutationCoordinator.Shared;
         _itunes = itunes;
         _reverseDelta = reverseDelta ?? new ReverseDeltaService();
+        _reindex = reindex;
     }
+
+    public bool ReconcilesInternalCatalogOnRestore =>
+        _reindex is not null;
 
     public Task<OperationJournalDiscoveryResult> DiscoverAsync(
         IReadOnlyList<string> searchRoots,
@@ -147,11 +235,38 @@ public sealed class OperationJournalService : IOperationJournalService
     public Task<OperationRestoreTransitionState> ReconcileRestoreBatchAsync(
         IReadOnlyList<string> restoreJournalPaths,
         CancellationToken ct = default)
+        => ReconcileRestoreBatchAsync(
+            restoreJournalPaths,
+            reconcileInternalCatalog: true,
+            ct: ct);
+
+    public Task<OperationRestoreTransitionState> ReconcileRestoreBatchAsync(
+        IReadOnlyList<string> restoreJournalPaths,
+        bool reconcileInternalCatalog,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(restoreJournalPaths);
         return Task.Run(
-            () => ReconcileRestoreBatchCoreAsync(restoreJournalPaths, ct),
-            ct);
+            () => ReconcileRestoreBatchCoreAsync(
+                restoreJournalPaths,
+                reconcileInternalCatalog,
+                ct),
+            CancellationToken.None);
+    }
+
+    public Task<OperationRestoreReconciliationResult>
+        ReconcileRestoreBatchDetailedAsync(
+        IReadOnlyList<string> restoreJournalPaths,
+        bool reconcileInternalCatalog = true,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(restoreJournalPaths);
+        return Task.Run(
+            () => ReconcileRestoreBatchCoreDetailedAsync(
+                restoreJournalPaths,
+                reconcileInternalCatalog,
+                ct),
+            CancellationToken.None);
     }
 
     private async Task<OperationRestoreResult> ApplyRestoreCoreAsync(
@@ -161,7 +276,15 @@ public sealed class OperationJournalService : IOperationJournalService
     {
         OperationRestoreBatchResult result = await ApplyRestoreBatchCoreAsync(
             new([plan]), progress, isBatchTransaction: false, ct).ConfigureAwait(false);
-        return new(result.RestoredCount, result.CollisionBackupCount);
+        return new(
+            result.RestoredCount,
+            result.CollisionBackupCount)
+        {
+            Issues = result.Issues,
+            TransitionState = result.TransitionState,
+            PostCommitReconciliation =
+                result.PostCommitReconciliation,
+        };
     }
 
     private async Task<OperationRestoreBatchResult> ApplyRestoreBatchCoreAsync(
@@ -206,6 +329,14 @@ public sealed class OperationJournalService : IOperationJournalService
                 throw new InvalidOperationException(
                     $"Restore collision backup already exists: {action.CollisionBackupPath}");
         }
+
+        RestoreCatalogPlan catalogPlan =
+            plan.ReconcileInternalCatalog
+                ? await CaptureRestoreCatalogPlanAsync(
+                        actions,
+                        ct)
+                    .ConfigureAwait(false)
+                : RestoreCatalogPlan.Empty;
 
         var preparedCompact = actions
             .Where(item => item.PayloadKind == RecoveryPayloadKind.ReverseDelta)
@@ -358,33 +489,107 @@ public sealed class OperationJournalService : IOperationJournalService
                         ? "COMMIT\tRESTORE_BATCH"
                         : "COMMIT\tRESTORE"]);
             reachedCommitPoint = true;
+            var postCommitIssues =
+                new List<OperationIssue>(
+                    catalogPlan.CaptureIssues);
             if (itunesSession is not null)
-                await itunesSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
-            foreach (OperationRestoreAction action in actions.Where(item =>
-                         item.PayloadKind == RecoveryPayloadKind.ReverseDelta))
             {
-                // The durable restore commit is the payload-consumption point. Recipe redo does
-                // not need either the reverse delta or the transient post-edit collision.
-                DeleteFileStrict(action.CollisionBackupPath);
-                DeleteFileStrict(action.SourcePath);
+                try
+                {
+                    await itunesSession.CompleteAsync(
+                            CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception error)
+                {
+                    postCommitIssues.Add(new(
+                        "restore.external-catalog-finalization-failed",
+                        OperationIssueSeverity.Warning,
+                        "The restore committed, but an external catalog " +
+                        "could not finish reconciliation: " +
+                        error.Message));
+                }
             }
-            foreach (OperationRestoreAction action in actions.Where(item =>
-                         item.Disposition ==
-                         OperationRestoreDisposition.RemoveCreatedOutput))
-                DeleteFileStrict(action.CollisionBackupPath);
-            foreach (OperationRestorePlan restorePlan in plan.Plans)
-                WriteRestoreJournal(
-                    restorePlan.RestoreJournalPath,
-                    [isBatchTransaction
-                        ? "CONSUMED\tRESTORE_BATCH"
-                        : "CONSUMED\tRESTORE"]);
+
+            PostCommitReconciliationHandle? reconciliation = null;
+            OperationRestoreTransitionState transitionState;
+            if (plan.ReconcileInternalCatalog &&
+                _reindex is not null &&
+                catalogPlan.RequiresReconciliation)
+            {
+                reconciliation =
+                    PostCommitReconciliationQueue.Shared.Enqueue(
+                        async () =>
+                        {
+                            OperationRestoreReconciliationResult
+                                finalization =
+                                await FinalizeCommittedRestoreAsync(
+                                        actions.Select(action =>
+                                                ToFinalizationAction(
+                                                    action,
+                                                    preparedCompact
+                                                        .GetValueOrDefault(
+                                                            action)))
+                                            .ToArray(),
+                                        plan.Plans
+                                            .Select(item => (
+                                                Path:
+                                                item.RestoreJournalPath,
+                                                IsBatch:
+                                                isBatchTransaction))
+                                            .ToArray(),
+                                        catalogPlan,
+                                        includeCaptureIssues:
+                                        true)
+                                    .ConfigureAwait(false);
+                            return finalization.Issues;
+                        },
+                        "restore.postcommit-reconciliation-failed",
+                        "The committed restore could not finish " +
+                        "post-commit reconciliation",
+                        plan.Plans.FirstOrDefault()?
+                            .RestoreJournalPath);
+                transitionState =
+                    OperationRestoreTransitionState.Committed;
+            }
+            else
+            {
+                OperationRestoreReconciliationResult finalization =
+                    await FinalizeCommittedRestoreAsync(
+                            actions.Select(action =>
+                                    ToFinalizationAction(
+                                        action,
+                                        preparedCompact
+                                            .GetValueOrDefault(action)))
+                                .ToArray(),
+                            plan.Plans
+                                .Select(item => (
+                                    Path:
+                                    item.RestoreJournalPath,
+                                    IsBatch:
+                                    isBatchTransaction))
+                                .ToArray(),
+                            catalogPlan,
+                            includeCaptureIssues:
+                            true)
+                        .ConfigureAwait(false);
+                postCommitIssues.AddRange(
+                    finalization.Issues);
+                transitionState = finalization.State;
+            }
+
             return new(
                 completed.Count,
                 completed.Count(item =>
                     item.Action.Disposition ==
                         OperationRestoreDisposition.RestoreOriginal &&
                     item.Action.DestinationSnapshot.Exists),
-                plan.Plans.Select(item => item.RestoreJournalPath).ToArray());
+                plan.Plans.Select(item => item.RestoreJournalPath).ToArray())
+            {
+                Issues = postCommitIssues,
+                TransitionState = transitionState,
+                PostCommitReconciliation = reconciliation,
+            };
         }
         catch
         {
@@ -436,8 +641,21 @@ public sealed class OperationJournalService : IOperationJournalService
         }
     }
 
-    private async Task<OperationRestoreTransitionState> ReconcileRestoreBatchCoreAsync(
+    private async Task<OperationRestoreTransitionState>
+        ReconcileRestoreBatchCoreAsync(
         IReadOnlyList<string> restoreJournalPaths,
+        bool reconcileInternalCatalog,
+        CancellationToken ct) =>
+        (await ReconcileRestoreBatchCoreDetailedAsync(
+                restoreJournalPaths,
+                reconcileInternalCatalog,
+                ct)
+            .ConfigureAwait(false)).State;
+
+    private async Task<OperationRestoreReconciliationResult>
+        ReconcileRestoreBatchCoreDetailedAsync(
+        IReadOnlyList<string> restoreJournalPaths,
+        bool reconcileInternalCatalog,
         CancellationToken ct)
     {
         RestoreJournalTransaction[] transactions = restoreJournalPaths
@@ -447,20 +665,48 @@ public sealed class OperationJournalService : IOperationJournalService
             .Select(ReadRestoreTransaction)
             .ToArray();
         if (transactions.Length == 0)
-            return OperationRestoreTransitionState.Unapplied;
+            return new(
+                OperationRestoreTransitionState.Unapplied,
+                []);
 
         if (transactions.Any(transaction =>
-                transaction.Terminal == RestoreJournalTerminal.RolledBack))
-            return OperationRestoreTransitionState.Unapplied;
+                transaction.Terminal ==
+                RestoreJournalTerminal.RolledBack))
+            return new(
+                OperationRestoreTransitionState.Unapplied,
+                []);
         if (transactions.All(transaction =>
-                transaction.Terminal == RestoreJournalTerminal.Consumed))
-            return OperationRestoreTransitionState.Consumed;
+                transaction.Terminal ==
+                RestoreJournalTerminal.Consumed))
+            return new(
+                OperationRestoreTransitionState.Consumed,
+                []);
 
+        bool reachedCommitPoint = transactions.Any(transaction =>
+            transaction.Terminal is
+                RestoreJournalTerminal.Committed or
+                RestoreJournalTerminal.Consumed);
         RestoreJournalAction[] actions = transactions
             .SelectMany(transaction => transaction.Actions)
             .ToArray();
-        foreach (RestoreJournalAction action in actions)
-            ValidateRestoreJournalAction(action);
+        try
+        {
+            foreach (RestoreJournalAction action in actions)
+                ValidateRestoreJournalAction(action);
+        }
+        catch (Exception error) when (reachedCommitPoint)
+        {
+            return new(
+                OperationRestoreTransitionState.Committed,
+                [
+                    PostCommitRestoreIssue(
+                        "restore.reconciliation-validation-failed",
+                        "The durable restore could not validate its " +
+                        "reconciliation journal",
+                        error,
+                        transactions[0].Path),
+                ]);
+        }
 
         var paths = actions
             .SelectMany(action => new[]
@@ -472,14 +718,17 @@ public sealed class OperationJournalService : IOperationJournalService
             })
             .Where(path => path is not null)
             .Select(path => path!)
-            .Concat(transactions.Select(transaction => transaction.Path))
+            .Concat(transactions.Select(transaction =>
+                transaction.Path))
             .ToArray();
-        using var lease = await _mutations.AcquireAsync(paths, ct).ConfigureAwait(false);
+        CancellationToken leaseToken = reachedCommitPoint
+            ? CancellationToken.None
+            : ct;
+        using var lease = await _mutations.AcquireAsync(
+                paths,
+                leaseToken)
+            .ConfigureAwait(false);
 
-        bool reachedCommitPoint = transactions.Any(transaction =>
-            transaction.Terminal is
-                RestoreJournalTerminal.Committed or
-                RestoreJournalTerminal.Consumed);
         if (!reachedCommitPoint)
         {
             try
@@ -489,25 +738,34 @@ public sealed class OperationJournalService : IOperationJournalService
                     ct.ThrowIfCancellationRequested();
                     if (action.Disposition ==
                         OperationRestoreDisposition.RemoveCreatedOutput)
-                        await RollBackInterruptedCreatedRemovalAsync(action, ct)
+                        await RollBackInterruptedCreatedRemovalAsync(
+                                action,
+                                ct)
                             .ConfigureAwait(false);
-                    else if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
-                        await RollBackInterruptedCompactRestoreAsync(action, ct)
+                    else if (action.PayloadKind ==
+                             RecoveryPayloadKind.ReverseDelta)
+                        await RollBackInterruptedCompactRestoreAsync(
+                                action,
+                                ct)
                             .ConfigureAwait(false);
                     else
                         RollBackInterruptedFullRestore(action);
                 }
-                foreach (RestoreJournalTransaction transaction in transactions)
+                foreach (RestoreJournalTransaction transaction in
+                         transactions)
                     WriteRestoreJournal(
                         transaction.Path,
                         [transaction.IsBatch
                             ? "ROLLBACK\tRESTORE_BATCH"
                             : "ROLLBACK\tRESTORE"]);
-                return OperationRestoreTransitionState.Unapplied;
+                return new(
+                    OperationRestoreTransitionState.Unapplied,
+                    []);
             }
             catch
             {
-                foreach (RestoreJournalTransaction transaction in transactions)
+                foreach (RestoreJournalTransaction transaction in
+                         transactions)
                     TryWriteRestoreJournal(
                         transaction.Path,
                         transaction.IsBatch
@@ -517,49 +775,564 @@ public sealed class OperationJournalService : IOperationJournalService
             }
         }
 
-        // Once APPLIED is durable, every live file has crossed the batch commit point. Complete
-        // the journal transition and idempotently consume only compact transient payloads.
-        foreach (RestoreJournalTransaction transaction in transactions.Where(
-                     transaction => transaction.Terminal is
+        // A durable COMMIT changes cancellation and exception semantics.
+        // From here onward reconciliation uses CancellationToken.None and
+        // reports warnings without replaying or rolling back live files.
+        var commitIssues = new List<OperationIssue>();
+        foreach (RestoreJournalTransaction transaction in
+                 transactions.Where(transaction =>
+                     transaction.Terminal is
                          RestoreJournalTerminal.None or
                          RestoreJournalTerminal.Applied))
         {
-            WriteRestoreJournal(
-                transaction.Path,
-                [transaction.IsBatch
-                    ? "COMMIT\tRESTORE_BATCH"
-                    : "COMMIT\tRESTORE"]);
-        }
-        foreach (RestoreJournalAction action in actions.Where(action =>
-                     action.PayloadKind == RecoveryPayloadKind.ReverseDelta))
-        {
-            ct.ThrowIfCancellationRequested();
-            await ValidateCommittedCompactRestoreAsync(action, ct)
-                .ConfigureAwait(false);
-            DeleteFileStrict(action.PreparedPath);
-            DeleteFileStrict(action.CollisionBackupPath);
-            DeleteFileStrict(action.SourcePath);
-        }
-        foreach (RestoreJournalAction action in actions.Where(action =>
-                     action.Disposition ==
-                     OperationRestoreDisposition.RemoveCreatedOutput))
-        {
-            ct.ThrowIfCancellationRequested();
-            await ValidateCommittedCreatedRemovalAsync(action, ct)
-                .ConfigureAwait(false);
-            DeleteFileStrict(action.CollisionBackupPath);
-        }
-        foreach (RestoreJournalTransaction transaction in transactions)
-        {
-            if (transaction.Terminal != RestoreJournalTerminal.Consumed)
+            try
+            {
                 WriteRestoreJournal(
                     transaction.Path,
                     [transaction.IsBatch
+                        ? "COMMIT\tRESTORE_BATCH"
+                        : "COMMIT\tRESTORE"]);
+            }
+            catch (Exception error)
+            {
+                commitIssues.Add(
+                    PostCommitRestoreIssue(
+                        "restore.commit-marker-failed",
+                        "The durable restore could not complete a commit " +
+                        "marker",
+                        error,
+                        transaction.Path));
+            }
+        }
+
+        RestoreCatalogPlan catalogPlan =
+            reconcileInternalCatalog
+                ? await CaptureRestoreCatalogPlanAsync(
+                        actions,
+                        CancellationToken.None)
+                    .ConfigureAwait(false)
+                : RestoreCatalogPlan.Empty;
+        OperationRestoreReconciliationResult finalization =
+            await FinalizeCommittedRestoreAsync(
+                    actions.Select(ToFinalizationAction)
+                        .ToArray(),
+                    transactions
+                        .Where(transaction =>
+                            transaction.Terminal !=
+                            RestoreJournalTerminal.Consumed)
+                        .Select(transaction => (
+                            transaction.Path,
+                            transaction.IsBatch))
+                        .ToArray(),
+                    catalogPlan,
+                    includeCaptureIssues: true)
+                .ConfigureAwait(false);
+        return new(
+            commitIssues.Count == 0
+                ? finalization.State
+                : OperationRestoreTransitionState.Committed,
+            [
+                .. commitIssues,
+                .. finalization.Issues,
+            ]);
+    }
+
+    private async Task<OperationRestoreReconciliationResult>
+        FinalizeCommittedRestoreAsync(
+        IReadOnlyList<RestoreFinalizationAction> actions,
+        IReadOnlyList<(string Path, bool IsBatch)> journals,
+        RestoreCatalogPlan catalogPlan,
+        bool includeCaptureIssues)
+    {
+        var issues = new List<OperationIssue>();
+        if (includeCaptureIssues)
+            issues.AddRange(catalogPlan.CaptureIssues);
+
+        foreach (RestoreFinalizationAction action in actions
+                     .Where(action =>
+                         action.PayloadKind ==
+                         RecoveryPayloadKind.ReverseDelta)
+                     .OrderBy(action =>
+                         action.DestinationPath,
+                         PathComparer))
+        {
+            try
+            {
+                await ValidateCommittedCompactRestoreAsync(
+                        ToRestoreJournalAction(action),
+                        CancellationToken.None)
+                    .ConfigureAwait(false);
+                DeleteFileStrict(action.PreparedPath);
+                DeleteFileStrict(action.CollisionBackupPath);
+                DeleteFileStrict(action.SourcePath);
+            }
+            catch (Exception error)
+            {
+                issues.Add(
+                    PostCommitRestoreIssue(
+                        "restore.recovery-cleanup-failed",
+                        "The durable compact restore could not consume its " +
+                        "temporary recovery payload",
+                        error,
+                        action.DestinationPath));
+            }
+        }
+
+        foreach (RestoreFinalizationAction action in actions
+                     .Where(action =>
+                         action.Disposition ==
+                         OperationRestoreDisposition.RemoveCreatedOutput)
+                     .OrderBy(action =>
+                         action.SourcePath,
+                         PathComparer))
+        {
+            try
+            {
+                await ValidateCommittedCreatedRemovalAsync(
+                        ToRestoreJournalAction(action),
+                        CancellationToken.None)
+                    .ConfigureAwait(false);
+                DeleteFileStrict(action.CollisionBackupPath);
+            }
+            catch (Exception error)
+            {
+                issues.Add(
+                    PostCommitRestoreIssue(
+                        "restore.recovery-cleanup-failed",
+                        "The durable generated-output restore could not " +
+                        "consume its temporary recovery payload",
+                        error,
+                        action.SourcePath));
+            }
+        }
+
+        issues.AddRange(
+            await ApplyRestoreCatalogPlanAsync(catalogPlan)
+                .ConfigureAwait(false));
+        if (issues.Count > 0)
+            return new(
+                OperationRestoreTransitionState.Committed,
+                issues);
+
+        foreach ((string path, bool isBatch) in journals)
+        {
+            try
+            {
+                WriteRestoreJournal(
+                    path,
+                    [isBatch
                         ? "CONSUMED\tRESTORE_BATCH"
                         : "CONSUMED\tRESTORE"]);
+            }
+            catch (Exception error)
+            {
+                issues.Add(
+                    PostCommitRestoreIssue(
+                        "restore.consume-marker-failed",
+                        "The durable restore could not record completion",
+                        error,
+                        path));
+            }
         }
-        return OperationRestoreTransitionState.Consumed;
+        return new(
+            issues.Count == 0
+                ? OperationRestoreTransitionState.Consumed
+                : OperationRestoreTransitionState.Committed,
+            issues);
     }
+
+    private Task<RestoreCatalogPlan>
+        CaptureRestoreCatalogPlanAsync(
+        IReadOnlyList<OperationRestoreAction> actions,
+        CancellationToken ct) =>
+        CaptureRestoreCatalogPlanAsync(
+            actions.Select(action =>
+                    ToFinalizationAction(action, null))
+                .ToArray(),
+            ct);
+
+    private Task<RestoreCatalogPlan>
+        CaptureRestoreCatalogPlanAsync(
+        IReadOnlyList<RestoreJournalAction> actions,
+        CancellationToken ct) =>
+        CaptureRestoreCatalogPlanAsync(
+            actions.Select(ToFinalizationAction)
+                .ToArray(),
+            ct);
+
+    private async Task<RestoreCatalogPlan>
+        CaptureRestoreCatalogPlanAsync(
+        IReadOnlyList<RestoreFinalizationAction> actions,
+        CancellationToken ct)
+    {
+        if (_reindex is null)
+            return RestoreCatalogPlan.Empty;
+
+        var membership =
+            new Dictionary<string, bool>(PathComparer);
+        var issues = new List<OperationIssue>();
+        var mutations =
+            new List<RestoreCatalogMutation>();
+        var mutationKeys =
+            new HashSet<string>(PathComparer);
+
+        async Task<bool> IsTrackedAsync(string path)
+        {
+            if (membership.TryGetValue(path, out bool tracked))
+                return tracked;
+            try
+            {
+                tracked = await _reindex.IsIndexedFileAsync(
+                        path,
+                        ct)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+                when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception error)
+            {
+                issues.Add(
+                    PostCommitRestoreIssue(
+                        "restore.catalog-membership-failed",
+                        "The restore could not determine whether this " +
+                        "path belongs to the loaded library",
+                        error,
+                        path));
+                tracked = false;
+            }
+            membership[path] = tracked;
+            return tracked;
+        }
+
+        void AddMutation(
+            string? reindexPath,
+            string? removePath)
+        {
+            if (reindexPath is null &&
+                removePath is null)
+                return;
+            string key = (reindexPath ?? "") +
+                "\0" + (removePath ?? "");
+            if (mutationKeys.Add(key))
+                mutations.Add(new(
+                    reindexPath,
+                    removePath));
+        }
+
+        async Task CaptureRestoredFileAsync(
+            string source,
+            string destination)
+        {
+            bool sourceTracked =
+                await IsTrackedAsync(source)
+                    .ConfigureAwait(false);
+            bool destinationTracked =
+                PathComparer.Equals(source, destination)
+                    ? sourceTracked
+                    : await IsTrackedAsync(destination)
+                        .ConfigureAwait(false);
+            if (!sourceTracked &&
+                !destinationTracked)
+                return;
+            AddMutation(
+                destination,
+                sourceTracked &&
+                !PathComparer.Equals(source, destination)
+                    ? source
+                    : null);
+        }
+
+        foreach (RestoreFinalizationAction action in actions
+                     .OrderBy(action =>
+                         action.DestinationPath,
+                         PathComparer)
+                     .ThenBy(action =>
+                         action.SourcePath,
+                         PathComparer))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (action.Disposition ==
+                OperationRestoreDisposition.RemoveCreatedOutput)
+            {
+                if (await IsTrackedAsync(action.SourcePath)
+                        .ConfigureAwait(false))
+                    AddMutation(null, action.SourcePath);
+                continue;
+            }
+
+            bool directory =
+                action.SourceIsDirectory ||
+                Directory.Exists(action.SourcePath) ||
+                Directory.Exists(action.DestinationPath);
+            if (!directory)
+            {
+                await CaptureRestoredFileAsync(
+                        action.SourcePath,
+                        action.DestinationPath)
+                    .ConfigureAwait(false);
+                continue;
+            }
+
+            try
+            {
+                if (Directory.Exists(action.SourcePath))
+                {
+                    string[] sourceFiles =
+                    [
+                        .. Directory.EnumerateFiles(
+                                action.SourcePath,
+                                "*",
+                                SearchOption.AllDirectories)
+                            .OrderBy(path =>
+                                path,
+                                PathComparer),
+                    ];
+                    var restoredRelativePaths =
+                        new HashSet<string>(
+                            PathComparer);
+                    foreach (string source in sourceFiles)
+                    {
+                        string relative =
+                            Path.GetRelativePath(
+                                action.SourcePath,
+                                source);
+                        restoredRelativePaths.Add(relative);
+                        await CaptureRestoredFileAsync(
+                                source,
+                                Path.Combine(
+                                    action.DestinationPath,
+                                    relative))
+                            .ConfigureAwait(false);
+                    }
+
+                    // Existing destination-only descendants are displaced
+                    // into the collision backup by the directory restore.
+                    // Remove only exact paths already known to the cache.
+                    if (Directory.Exists(
+                            action.DestinationPath))
+                    {
+                        foreach (string destination in
+                                 Directory.EnumerateFiles(
+                                         action.DestinationPath,
+                                         "*",
+                                         SearchOption.AllDirectories)
+                                     .OrderBy(path =>
+                                         path,
+                                         PathComparer))
+                        {
+                            string relative =
+                                Path.GetRelativePath(
+                                    action.DestinationPath,
+                                    destination);
+                            if (restoredRelativePaths.Contains(
+                                    relative))
+                                continue;
+                            if (await IsTrackedAsync(destination)
+                                    .ConfigureAwait(false))
+                                AddMutation(
+                                    null,
+                                    destination);
+                        }
+                    }
+                }
+                else if (Directory.Exists(
+                             action.DestinationPath))
+                {
+                    // Restart reconciliation observes the directory after
+                    // its durable move. Reconstruct each former source path
+                    // from the relative destination path; never reindex the
+                    // directory or trigger a scan.
+                    foreach (string destination in
+                             Directory.EnumerateFiles(
+                                     action.DestinationPath,
+                                     "*",
+                                     SearchOption.AllDirectories)
+                                 .OrderBy(path =>
+                                     path,
+                                     PathComparer))
+                    {
+                        string relative =
+                            Path.GetRelativePath(
+                                action.DestinationPath,
+                                destination);
+                        await CaptureRestoredFileAsync(
+                                Path.Combine(
+                                    action.SourcePath,
+                                    relative),
+                                destination)
+                            .ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+                when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception error)
+            {
+                issues.Add(
+                    PostCommitRestoreIssue(
+                        "restore.catalog-directory-enumeration-failed",
+                        "The restore could not enumerate affected " +
+                        "directory descendants for targeted catalog " +
+                        "reconciliation",
+                        error,
+                        action.DestinationPath));
+            }
+        }
+
+        return new(
+            [
+                .. mutations
+                    .OrderBy(mutation =>
+                        mutation.ReindexPath ?? "",
+                        PathComparer)
+                    .ThenBy(mutation =>
+                        mutation.RemovePath ?? "",
+                        PathComparer),
+            ],
+            issues);
+    }
+
+    private async Task<IReadOnlyList<OperationIssue>>
+        ApplyRestoreCatalogPlanAsync(
+        RestoreCatalogPlan plan)
+    {
+        if (_reindex is null ||
+            plan.Mutations.Count == 0)
+            return [];
+
+        var issues = new List<OperationIssue>();
+        var reindexed =
+            new HashSet<string>(PathComparer);
+        var failedReindex =
+            new HashSet<string>(PathComparer);
+        var removed =
+            new HashSet<string>(PathComparer);
+        HashSet<string> finalDestinations =
+            plan.Mutations
+                .Where(mutation =>
+                    mutation.ReindexPath is not null)
+                .Select(mutation =>
+                    mutation.ReindexPath!)
+                .ToHashSet(PathComparer);
+
+        foreach (RestoreCatalogMutation mutation in
+                 plan.Mutations)
+        {
+            bool destinationReady = true;
+            if (mutation.ReindexPath is { } destination &&
+                !reindexed.Contains(destination))
+            {
+                if (failedReindex.Contains(destination))
+                {
+                    destinationReady = false;
+                }
+                else
+                {
+                    try
+                    {
+                        await _reindex.ReindexFileAsync(
+                                destination,
+                                CancellationToken.None)
+                            .ConfigureAwait(false);
+                        reindexed.Add(destination);
+                    }
+                    catch (Exception error)
+                    {
+                        failedReindex.Add(destination);
+                        destinationReady = false;
+                        issues.Add(
+                            PostCommitRestoreIssue(
+                                "restore.catalog-refresh-failed",
+                                "The restored library file could not be " +
+                                "refreshed",
+                                error,
+                                destination));
+                    }
+                }
+            }
+
+            if (!destinationReady ||
+                mutation.RemovePath is not { } remove ||
+                finalDestinations.Contains(remove) ||
+                !removed.Add(remove))
+                continue;
+            try
+            {
+                await _reindex.RemoveIndexedFileAsync(
+                        remove,
+                        CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception error)
+            {
+                issues.Add(
+                    PostCommitRestoreIssue(
+                        "restore.catalog-refresh-failed",
+                        "The superseded library path could not be removed",
+                        error,
+                        remove));
+            }
+        }
+        return issues;
+    }
+
+    private static OperationIssue PostCommitRestoreIssue(
+        string code,
+        string message,
+        Exception error,
+        string? path) =>
+        new(
+            code,
+            OperationIssueSeverity.Warning,
+            message + ": " + error.Message,
+            path);
+
+    private static RestoreFinalizationAction ToFinalizationAction(
+        OperationRestoreAction action,
+        string? preparedPath) =>
+        new(
+            action.PayloadKind,
+            action.SourcePath,
+            action.DestinationPath,
+            action.CollisionBackupPath,
+            preparedPath,
+            action.Disposition,
+            action.PostEditLength,
+            action.PostEditSha256,
+            action.SourceSnapshot.IsDirectory);
+
+    private static RestoreFinalizationAction ToFinalizationAction(
+        RestoreJournalAction action) =>
+        new(
+            action.PayloadKind,
+            action.SourcePath,
+            action.DestinationPath,
+            action.CollisionBackupPath,
+            action.PreparedPath,
+            action.Disposition,
+            action.ExpectedLength,
+            action.ExpectedSha256,
+            Directory.Exists(action.SourcePath) ||
+            Directory.Exists(action.DestinationPath));
+
+    private static RestoreJournalAction ToRestoreJournalAction(
+        RestoreFinalizationAction action) =>
+        new(
+            action.PayloadKind,
+            action.SourcePath,
+            action.DestinationPath,
+            action.CollisionBackupPath,
+            action.PreparedPath,
+            "",
+            action.Disposition,
+            action.ExpectedLength,
+            action.ExpectedSha256);
 
     private static async Task RollBackInterruptedCreatedRemovalAsync(
         RestoreJournalAction action,
@@ -2220,4 +2993,31 @@ public sealed class OperationJournalService : IOperationJournalService
         bool IsBatch,
         IReadOnlyList<RestoreJournalAction> Actions,
         RestoreJournalTerminal Terminal);
+
+    private sealed record RestoreFinalizationAction(
+        RecoveryPayloadKind PayloadKind,
+        string SourcePath,
+        string DestinationPath,
+        string CollisionBackupPath,
+        string? PreparedPath,
+        OperationRestoreDisposition Disposition,
+        long ExpectedLength,
+        string? ExpectedSha256,
+        bool SourceIsDirectory);
+
+    private sealed record RestoreCatalogMutation(
+        string? ReindexPath,
+        string? RemovePath);
+
+    private sealed record RestoreCatalogPlan(
+        IReadOnlyList<RestoreCatalogMutation> Mutations,
+        IReadOnlyList<OperationIssue> CaptureIssues)
+    {
+        public bool RequiresReconciliation =>
+            Mutations.Count > 0 ||
+            CaptureIssues.Count > 0;
+
+        public static RestoreCatalogPlan Empty { get; } =
+            new([], []);
+    }
 }

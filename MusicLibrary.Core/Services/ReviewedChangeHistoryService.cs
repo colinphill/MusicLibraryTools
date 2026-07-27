@@ -8,6 +8,7 @@ public interface IReviewedChangeHistoryService
 {
     IReadOnlyList<ReviewedChangeHistoryEntry> Entries { get; }
     IReadOnlyList<ReviewedChangeHistoryEntry> RedoEntries { get; }
+    IReadOnlyList<OperationIssue> LastReconciliationIssues => [];
     bool CanUndo { get; }
     bool CanRedo { get; }
     void Record(ReviewedChangeHistoryEntry entry);
@@ -61,9 +62,20 @@ public sealed class ReviewedChangeHistoryService :
     public IReadOnlyList<ReviewedChangeHistoryEntry> RedoEntries =>
         _state.Redo;
 
-    public bool CanUndo => _state.Undo.Count > 0;
+    public IReadOnlyList<OperationIssue> LastReconciliationIssues
+    {
+        get;
+        private set;
+    } = [];
 
-    public bool CanRedo => _state.Redo.Count > 0;
+    public bool CanUndo =>
+        _state.Pending?.Stage !=
+            ReviewedHistoryTransitionStage.Committed &&
+        _state.Undo.Count > 0;
+
+    public bool CanRedo =>
+        _state.Pending is null &&
+        _state.Redo.Count > 0;
 
     public void Record(ReviewedChangeHistoryEntry entry)
     {
@@ -99,6 +111,7 @@ public sealed class ReviewedChangeHistoryService :
         IProgress<int>? progress = null,
         CancellationToken ct = default)
     {
+        LastReconciliationIssues = [];
         await ReconcilePendingAsync(ct).ConfigureAwait(false);
         if (_state.Pending is not null)
             throw new InvalidOperationException(
@@ -116,6 +129,10 @@ public sealed class ReviewedChangeHistoryService :
         OperationRestoreBatchPlan batch =
             await _journals.PreviewRestoreBatchAsync(plans, ct)
                 .ConfigureAwait(false);
+        batch = batch with
+        {
+            ReconcileInternalCatalog = false,
+        };
         _state.Pending = new(
             entry.Id,
             ReviewedHistoryTransitionStage.Prepared,
@@ -134,22 +151,41 @@ public sealed class ReviewedChangeHistoryService :
                 Stage = ReviewedHistoryTransitionStage.Committed,
             };
             PersistRequired();
-            await CompletePendingAsync(entry)
-                .ConfigureAwait(false);
+            IReadOnlyList<OperationIssue>
+                catalogIssues =
+                await CompletePendingAsync(
+                        entry,
+                        retainReconciliation:
+                            result.TransitionState ==
+                            OperationRestoreTransitionState
+                                .Committed)
+                    .ConfigureAwait(false);
+            LastReconciliationIssues =
+            [
+                .. result.Issues,
+                .. catalogIssues,
+            ];
             return new(
                 entry.Id,
                 result.RestoredCount,
-                result.RestoreJournalPaths.ToImmutableArray());
+                result.RestoreJournalPaths.ToImmutableArray())
+            {
+                Issues =
+                    LastReconciliationIssues,
+            };
         }
-        catch
+        catch (Exception applyError)
         {
+            ImmutableArray<string> restoreJournalPaths =
+                _state.Pending.RestoreJournalPaths;
             try
             {
-                OperationRestoreTransitionState state =
-                    await _journals.ReconcileRestoreBatchAsync(
-                        _state.Pending.RestoreJournalPaths,
-                        CancellationToken.None).ConfigureAwait(false);
-                if (state is
+                OperationRestoreReconciliationResult reconciliation =
+                    await _journals.ReconcileRestoreBatchDetailedAsync(
+                        restoreJournalPaths,
+                        reconcileInternalCatalog: false,
+                        ct: CancellationToken.None).ConfigureAwait(false);
+                if (reconciliation.State is
                     OperationRestoreTransitionState.Committed or
                     OperationRestoreTransitionState.Consumed)
                 {
@@ -158,8 +194,42 @@ public sealed class ReviewedChangeHistoryService :
                         Stage = ReviewedHistoryTransitionStage.Committed,
                     };
                     PersistRequired();
-                    await CompletePendingAsync(entry)
-                        .ConfigureAwait(false);
+                    var issues = new List<OperationIssue>(
+                        reconciliation.Issues)
+                    {
+                        new(
+                            "reviewed-history.undo-reconciled",
+                            OperationIssueSeverity.Warning,
+                            "Undo committed and required post-commit " +
+                            $"reconciliation: {applyError.Message}"),
+                    };
+                    try
+                    {
+                        issues.AddRange(
+                            await CompletePendingAsync(
+                                    entry,
+                                    retainReconciliation:
+                                        reconciliation.State ==
+                                        OperationRestoreTransitionState
+                                            .Committed)
+                                .ConfigureAwait(false));
+                    }
+                    catch (Exception completionError)
+                    {
+                        issues.Add(new(
+                            "reviewed-history.undo-finalization",
+                            OperationIssueSeverity.Warning,
+                            "Undo committed, but history finalization " +
+                            $"will be retried: {completionError.Message}"));
+                        TryPersist();
+                    }
+                    return new(
+                        entry.Id,
+                        batch.Actions.Count,
+                        restoreJournalPaths)
+                    {
+                        Issues = issues,
+                    };
                 }
                 else
                 {
@@ -177,35 +247,87 @@ public sealed class ReviewedChangeHistoryService :
 
     public async Task ReconcilePendingAsync(CancellationToken ct = default)
     {
+        LastReconciliationIssues = [];
         PendingTransition? pending = _state.Pending;
         if (pending is null)
             return;
         ReviewedChangeHistoryEntry? entry =
-            _state.Undo.FirstOrDefault(item => item.Id == pending.EntryId);
+            _state.Undo.FirstOrDefault(item =>
+                item.Id == pending.EntryId) ??
+            _state.Redo.FirstOrDefault(item =>
+                item.Id == pending.EntryId);
         if (entry is null)
         {
             _state.Pending = null;
             PersistRequired();
             return;
         }
-        OperationRestoreTransitionState state =
-            pending.Stage == ReviewedHistoryTransitionStage.Committed
-                ? OperationRestoreTransitionState.Committed
-                : await _journals.ReconcileRestoreBatchAsync(
+        OperationRestoreReconciliationResult reconciliation;
+        try
+        {
+            reconciliation =
+                await _journals.ReconcileRestoreBatchDetailedAsync(
                     pending.RestoreJournalPaths,
-                    ct).ConfigureAwait(false);
-        switch (state)
+                    reconcileInternalCatalog: false,
+                    ct: ct).ConfigureAwait(false);
+        }
+        catch (Exception error)
+            when (pending.Stage ==
+                  ReviewedHistoryTransitionStage.Committed)
+        {
+            var issues = new List<OperationIssue>
+            {
+                new(
+                    "reviewed-history.undo-reconciliation-failed",
+                    OperationIssueSeverity.Warning,
+                    "Reviewed-change Undo was already committed, but " +
+                    "restart reconciliation could not finish: " +
+                    error.Message),
+            };
+            try
+            {
+                issues.AddRange(
+                    await CompletePendingAsync(
+                            entry,
+                            retainReconciliation: true)
+                        .ConfigureAwait(false));
+            }
+            catch (Exception completionError)
+            {
+                issues.Add(new(
+                    "reviewed-history.undo-finalization",
+                    OperationIssueSeverity.Warning,
+                    "Reviewed-change Undo committed, but history " +
+                    "finalization will be retried: " +
+                    completionError.Message));
+            }
+            LastReconciliationIssues = issues;
+            return;
+        }
+
+        var reconciliationIssues =
+            new List<OperationIssue>(
+                reconciliation.Issues);
+        switch (reconciliation.State)
         {
             case OperationRestoreTransitionState.Committed:
             case OperationRestoreTransitionState.Consumed:
-                await CompletePendingAsync(entry)
-                    .ConfigureAwait(false);
+                reconciliationIssues.AddRange(
+                    await CompletePendingAsync(
+                            entry,
+                            retainReconciliation:
+                                reconciliation.State ==
+                                OperationRestoreTransitionState
+                                    .Committed)
+                        .ConfigureAwait(false));
                 break;
             case OperationRestoreTransitionState.Unapplied:
                 _state.Pending = null;
                 PersistRequired();
                 break;
         }
+        LastReconciliationIssues =
+            reconciliationIssues;
     }
 
     private async Task<List<OperationRestorePlan>> CreateRestorePlansAsync(
@@ -248,26 +370,45 @@ public sealed class ReviewedChangeHistoryService :
         return plans;
     }
 
-    private async Task CompletePendingAsync(
-        ReviewedChangeHistoryEntry entry)
+    private async Task<IReadOnlyList<OperationIssue>>
+        CompletePendingAsync(
+        ReviewedChangeHistoryEntry entry,
+        bool retainReconciliation = false)
     {
-        await RefreshInternalCatalogAfterUndoAsync(entry)
-            .ConfigureAwait(false);
+        PendingTransition? transition =
+            _state.Pending;
+        IReadOnlyList<OperationIssue> issues =
+            await RefreshInternalCatalogAfterUndoAsync(
+                    entry)
+                .ConfigureAwait(false);
         _state.Undo.RemoveAll(item => item.Id == entry.Id);
         if (_state.Redo.All(item => item.Id != entry.Id))
             _state.Redo.Insert(0, entry);
         if (_state.Redo.Count > 100)
             _state.Redo.RemoveRange(100, _state.Redo.Count - 100);
-        _state.Pending = null;
+        _state.Pending =
+            (!retainReconciliation &&
+             issues.Count == 0) ||
+            transition is null
+                ? null
+                : transition with
+                {
+                    Stage =
+                        ReviewedHistoryTransitionStage
+                            .Committed,
+                };
         PersistRequired();
+        return issues;
     }
 
-    private async Task RefreshInternalCatalogAfterUndoAsync(
+    private async Task<IReadOnlyList<OperationIssue>>
+        RefreshInternalCatalogAfterUndoAsync(
         ReviewedChangeHistoryEntry entry)
     {
         if (_reindex is null ||
             entry.IndexedSourcePaths.IsDefaultOrEmpty)
-            return;
+            return [];
+        var issues = new List<OperationIssue>();
         HashSet<string> sources =
             entry.SourcePaths.ToHashSet(PathComparer);
         foreach (string destination in
@@ -283,10 +424,15 @@ public sealed class ReviewedChangeHistoryService :
                         CancellationToken.None)
                     .ConfigureAwait(false);
             }
-            catch
+            catch (Exception error)
             {
-                // Filesystem recovery is already committed. A later targeted
-                // refresh or normal index pass can repair a stale cache row.
+                issues.Add(new(
+                    "reviewed-history.catalog-refresh-failed",
+                    OperationIssueSeverity.Warning,
+                    "The removed transcode output could not be " +
+                    "reconciled in the library catalog: " +
+                    error.Message,
+                    destination));
             }
         }
         foreach (string source in
@@ -301,12 +447,18 @@ public sealed class ReviewedChangeHistoryService :
                         CancellationToken.None)
                     .ConfigureAwait(false);
             }
-            catch
+            catch (Exception error)
             {
-                // The exact filesystem restore is already committed; a later
-                // targeted refresh or normal index pass can repair the cache.
+                issues.Add(new(
+                    "reviewed-history.catalog-refresh-failed",
+                    OperationIssueSeverity.Warning,
+                    "The restored transcode source could not be " +
+                    "refreshed in the library catalog: " +
+                    error.Message,
+                    source));
             }
         }
+        return issues;
     }
 
     private static State Load(IAppSettings settings)

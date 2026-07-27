@@ -266,6 +266,13 @@ public sealed record AudioTranscodeStageResult(
     AudioTranscodePlan Plan,
     ImmutableArray<AudioTranscodeStagedItem> Items)
 {
+    /// <summary>
+    /// Plan-specific staging directories owned by this result. Failed items
+    /// intentionally have no staged file path, so cleanup cannot infer this
+    /// ownership solely from <see cref="Items"/>.
+    /// </summary>
+    public ImmutableArray<string> OwnedStageDirectories { get; init; } = [];
+
     public ImmutableArray<AudioTranscodeStagedItem> ReadyItems =>
         [.. Items.Where(item =>
             item.State == AudioTranscodeStageState.Ready)];
@@ -280,4 +287,12 @@ public sealed record AudioTranscodeApplyResult(
     ImmutableArray<string> JournalPaths,
     ImmutableArray<string> SourcePaths,
     ImmutableArray<string> DestinationPaths,
-    ImmutableArray<OperationIssue> Issues);
+    ImmutableArray<OperationIssue> Issues)
+{
+    [System.Text.Json.Serialization.JsonIgnore]
+    public PostCommitReconciliationHandle? PostCommitReconciliation
+    {
+        get;
+        init;
+    }
+}

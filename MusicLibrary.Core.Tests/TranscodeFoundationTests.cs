@@ -1140,6 +1140,110 @@ public sealed class TranscodeFoundationTests
         Assert.Null(adapter.SourcePath);
     }
 
+    [Fact]
+    public async Task DiscardAllFailedStageRemovesItsOwnedDirectory()
+    {
+        using var source =
+            MediaFixtures.Copy("sample.flac");
+        string outputRoot = Path.Combine(
+            Path.GetDirectoryName(source.Path)!,
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputRoot);
+        var settings = new MemorySettings();
+        AudioTranscodeService service =
+            CreatePreviewService(
+                settings,
+                adapter: new ThrowingAdapter());
+        AudioTranscodePlan plan =
+            await service.PreviewAsync(
+                PreviewRequest(
+                    [source.Path],
+                    outputRoot,
+                    preserveLayout: false),
+                ct: TestContext.Current
+                    .CancellationToken);
+        Assert.True(plan.CanApply);
+
+        AudioTranscodeStageResult stage =
+            await service.StageAsync(
+                plan,
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        Assert.Single(stage.FailedItems);
+        Assert.Null(stage.FailedItems[0].StagedPath);
+        string stageDirectory =
+            Assert.Single(
+                stage.OwnedStageDirectories);
+        Assert.True(
+            Directory.Exists(stageDirectory));
+
+        await service.DiscardStageAsync(
+            stage,
+            TestContext.Current
+                .CancellationToken);
+
+        Assert.False(
+            Directory.Exists(stageDirectory));
+    }
+
+    [Fact]
+    public async Task CancelledStageRemovesItsOwnedDirectoryWithoutAResult()
+    {
+        using var source =
+            MediaFixtures.Copy("sample.flac");
+        string outputRoot = Path.Combine(
+            Path.GetDirectoryName(source.Path)!,
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputRoot);
+        var settings = new MemorySettings();
+        var adapter = new CancellableAdapter();
+        AudioTranscodeService service =
+            CreatePreviewService(
+                settings,
+                adapter: adapter);
+        AudioTranscodePlan plan =
+            await service.PreviewAsync(
+                PreviewRequest(
+                    [source.Path],
+                    outputRoot,
+                    preserveLayout: false),
+                ct: TestContext.Current
+                    .CancellationToken);
+        Assert.True(plan.CanApply);
+        using var cancellation =
+            CancellationTokenSource
+                .CreateLinkedTokenSource(
+                    TestContext.Current
+                        .CancellationToken);
+
+        Task<AudioTranscodeStageResult> staging =
+            service.StageAsync(
+                plan,
+                ct: cancellation.Token);
+        await adapter.Started.Task.WaitAsync(
+            TimeSpan.FromSeconds(10),
+            TestContext.Current
+                .CancellationToken);
+        string stageDirectory = Path.Combine(
+            Path.GetDirectoryName(
+                Assert.Single(plan.Items)
+                    .DestinationPath)!,
+            ".MusicLibraryManager-staging",
+            "transcode",
+            plan.Id.ToString("N"));
+        Assert.True(
+            Directory.Exists(stageDirectory));
+
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<
+            OperationCanceledException>(
+            () => staging);
+
+        Assert.False(
+            Directory.Exists(stageDirectory));
+    }
+
     [Theory]
     [InlineData(AudioTranscodeFormatIds.WavPack, ".wvc")]
     [InlineData(
@@ -2182,6 +2286,49 @@ public sealed class TranscodeFoundationTests
                 "encoding",
                 TimeSpan.FromHours(1)));
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ThrowingAdapter :
+        IAudioTranscodeAdapter
+    {
+        public Task EncodeAsync(
+            string sourcePath,
+            string destinationPath,
+            AudioTranscodeSettings settings,
+            AudioEncoderDescriptor encoder,
+            int threadCount,
+            IProgress<AudioTranscodeAdapterProgress>?
+                progress = null,
+            CancellationToken ct = default) =>
+            Task.FromException(
+                new InvalidOperationException(
+                    "Synthetic encoder failure."));
+    }
+
+    private sealed class CancellableAdapter :
+        IAudioTranscodeAdapter
+    {
+        public TaskCompletionSource Started { get; } =
+            new(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+
+        public async Task EncodeAsync(
+            string sourcePath,
+            string destinationPath,
+            AudioTranscodeSettings settings,
+            AudioEncoderDescriptor encoder,
+            int threadCount,
+            IProgress<AudioTranscodeAdapterProgress>?
+                progress = null,
+            CancellationToken ct = default)
+        {
+            Started.TrySetResult();
+            await Task.Delay(
+                    Timeout.InfiniteTimeSpan,
+                    ct)
+                .ConfigureAwait(false);
         }
     }
 

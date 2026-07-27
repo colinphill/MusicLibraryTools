@@ -452,10 +452,11 @@ public partial class IngestViewModel :
             L("Ingest.Activity.Preview.Starting"),
             ShellDestination.Ingest,
             Cancel);
+        DispatchingProgress<IngestProgress>? progress = null;
         try
         {
             SetStatus("Ingest.Status.PreviewScanning");
-            var progress = new DispatchingProgress<IngestProgress>(p =>
+            progress = new DispatchingProgress<IngestProgress>(p =>
             {
                 PreviewProgressMaximum = Math.Max(1, p.TotalItems);
                 PreviewProgress = Math.Min(
@@ -536,11 +537,13 @@ public partial class IngestViewModel :
         }
         catch (OperationCanceledException)
         {
+            await DrainProgressAsync(progress);
             SetStatus("Ingest.Status.PreviewCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
+            await DrainProgressAsync(progress);
             SetFailure(
                 "Ingest.Status.PreviewFailed",
                 ex);
@@ -619,6 +622,7 @@ public partial class IngestViewModel :
         foreach (var file in _allFiles) file.ResetProgress();
         DiagnosticDetail = null;
         Guid? activity = null;
+        DispatchingProgress<IngestProgress>? progress = null;
         try
         {
             var decisions = new List<IngestApprovalDecision>();
@@ -651,7 +655,7 @@ public partial class IngestViewModel :
                 L("Ingest.Activity.Apply.Starting"),
                 ShellDestination.Ingest,
                 Cancel);
-            var progress = new DispatchingProgress<IngestProgress>(p =>
+            progress = new DispatchingProgress<IngestProgress>(p =>
             {
                 ApplyProgressMaximum = Math.Max(1, p.TotalItems);
                 ApplyProgress = p.CompletedItems;
@@ -697,7 +701,7 @@ public partial class IngestViewModel :
                     indexed.Added,
                     indexed.Modified,
                     indexed.Removed);
-                IngestCompleted?.Invoke();
+                NotifyIngestCompleted();
             }
             else
             {
@@ -716,7 +720,8 @@ public partial class IngestViewModel :
                             : "Ingest.Status.ApplyResult",
                         result.Installed,
                         result.Failed);
-                if (!result.Cancelled) IngestCompleted?.Invoke();
+                if (!result.Cancelled)
+                    NotifyIngestCompleted();
             }
             HasApplicablePreview = false; _plan = null;
             if (!result.Cancelled && _journals is not null)
@@ -727,11 +732,13 @@ public partial class IngestViewModel :
         }
         catch (OperationCanceledException)
         {
+            await DrainProgressAsync(progress);
             SetStatus("Ingest.Status.ApplyCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
+            await DrainProgressAsync(progress);
             SetFailure(
                 "Ingest.Status.ApplyFailed",
                 ex);
@@ -739,6 +746,10 @@ public partial class IngestViewModel :
         }
         finally { FinishBusy(); }
     }
+
+    private static Task DrainProgressAsync<T>(
+        DispatchingProgress<T>? progress) =>
+        progress?.DrainAsync() ?? Task.CompletedTask;
 
     private bool CanCancel() => IsBusy && _cts is not null;
 
@@ -759,6 +770,38 @@ public partial class IngestViewModel :
         _cts?.Dispose(); _cts = null; IsBusy = false; IsPreviewing = false; IsApplying = false;
         PreviewCommand.NotifyCanExecuteChanged(); PreflightCommand.NotifyCanExecuteChanged();
         ApplyCommand.NotifyCanExecuteChanged();
+    }
+
+    private void NotifyIngestCompleted()
+    {
+        if (IngestCompleted is not { } subscribers)
+            return;
+        foreach (Action subscriber in
+                 subscribers.GetInvocationList())
+        {
+            try
+            {
+                subscriber();
+            }
+            catch (Exception error)
+            {
+                try
+                {
+                    DiagnosticDetail =
+                        string.IsNullOrWhiteSpace(
+                            DiagnosticDetail)
+                            ? error.Message
+                            : DiagnosticDetail +
+                              Environment.NewLine +
+                              error.Message;
+                }
+                catch
+                {
+                    // A refresh subscriber cannot change the committed ingest
+                    // result or prevent the activity from terminalizing.
+                }
+            }
+        }
     }
 
     private void RefilterFiles()

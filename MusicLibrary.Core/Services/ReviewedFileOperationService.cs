@@ -25,7 +25,8 @@ public interface IReviewedFileOperationService
 /// </summary>
 public sealed class ReviewedFileOperationService(
     IFileMutationPlanExecutor executor,
-    IAppSettings settings) : IReviewedFileOperationService
+    IAppSettings settings,
+    IReindexService? reindex = null) : IReviewedFileOperationService
 {
     private static readonly Regex TemplateToken = new(
         @"\{(?<name>[^{}]+)\}",
@@ -42,13 +43,227 @@ public sealed class ReviewedFileOperationService(
             ct);
     }
 
-    public Task<FileMutationSummary> ApplyAsync(
+    public async Task<FileMutationSummary> ApplyAsync(
         ReviewedFileOperationPlan plan,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        return executor.ApplyAsync(plan.MutationPlan, progress, ct);
+        (
+            IReadOnlyDictionary<string, bool> trackedSources,
+            IReadOnlyList<OperationIssue> membershipIssues) =
+            await CaptureInternalCatalogMembershipAsync(
+                    plan.MutationPlan.Actions,
+                    ct)
+                .ConfigureAwait(false);
+
+        FileMutationSummary result = await executor.ApplyAsync(
+                plan.MutationPlan,
+                progress,
+                ct)
+            .ConfigureAwait(false);
+        if (reindex is null)
+            return membershipIssues.Count == 0
+                ? result
+                : result with
+                {
+                    Issues =
+                    [
+                        .. result.Issues,
+                        .. membershipIssues,
+                    ],
+                };
+
+        PostCommitReconciliationHandle? reconciliation =
+            trackedSources.Values.Any(tracked => tracked)
+                ? PostCommitReconciliationQueue.Shared.Enqueue(
+                    () => ReconcileInternalCatalogAsync(
+                        plan.MutationPlan.Actions,
+                        trackedSources),
+                    "file-operation.catalog-refresh-failed",
+                    "The committed file-operation catalog refresh failed")
+                : null;
+        return result with
+        {
+            Issues =
+            [
+                .. result.Issues,
+                .. membershipIssues,
+            ],
+            PostCommitReconciliation = reconciliation,
+        };
+    }
+
+    private async Task<(
+        IReadOnlyDictionary<string, bool> TrackedSources,
+        IReadOnlyList<OperationIssue> Issues)>
+        CaptureInternalCatalogMembershipAsync(
+        IReadOnlyList<FileMutationAction> actions,
+        CancellationToken ct)
+    {
+        if (reindex is null)
+            return (
+                new Dictionary<string, bool>(PathComparer),
+                []);
+
+        var trackedSources =
+            new Dictionary<string, bool>(PathComparer);
+        var issues = new List<OperationIssue>();
+        foreach (string source in actions
+                     .Select(action => action.SourcePath)
+                     .Distinct(PathComparer)
+                     .OrderBy(path => path, PathComparer))
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                trackedSources[source] =
+                    await reindex.IsIndexedFileAsync(
+                            source,
+                            ct)
+                        .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception error)
+            {
+                issues.Add(new(
+                    "file-operation.catalog-membership-failed",
+                    OperationIssueSeverity.Warning,
+                    "The file operation could not determine whether the " +
+                    "source belongs to the loaded library. It will remain " +
+                    "session-only: " + error.Message,
+                    source));
+                trackedSources[source] = false;
+            }
+        }
+        return (trackedSources, issues);
+    }
+
+    private async Task<IReadOnlyList<OperationIssue>>
+        ReconcileInternalCatalogAsync(
+        IReadOnlyList<FileMutationAction> actions,
+        IReadOnlyDictionary<string, bool> trackedSources)
+    {
+        var reindexed =
+            new Dictionary<string, bool>(PathComparer);
+        var removed = new HashSet<string>(PathComparer);
+        var issues = new List<OperationIssue>();
+        foreach (FileMutationAction action in actions)
+        {
+            if (!trackedSources.TryGetValue(
+                    action.SourcePath,
+                    out bool tracked) ||
+                !tracked)
+                continue;
+            switch (action.Kind)
+            {
+                case FileMutationKind.Copy:
+                    _ = await TryReindexAsync(
+                            action.DestinationPath,
+                            reindexed,
+                            issues)
+                        .ConfigureAwait(false);
+                    break;
+                case FileMutationKind.Move:
+                    bool destinationReady =
+                        await TryReindexAsync(
+                            action.DestinationPath,
+                            reindexed,
+                            issues)
+                        .ConfigureAwait(false);
+                    if (destinationReady &&
+                        !PathComparer.Equals(
+                            action.SourcePath,
+                            action.DestinationPath))
+                        await TryRemoveAsync(
+                                action.SourcePath,
+                                removed,
+                                issues)
+                            .ConfigureAwait(false);
+                    break;
+                case FileMutationKind.Quarantine:
+                case FileMutationKind.Delete:
+                    await TryRemoveAsync(
+                            action.SourcePath,
+                            removed,
+                            issues)
+                        .ConfigureAwait(false);
+                    break;
+            }
+        }
+        return issues;
+    }
+
+    private async Task<bool> TryReindexAsync(
+        string path,
+        IDictionary<string, bool> reindexed,
+        ICollection<OperationIssue> issues)
+    {
+        if (reindexed.TryGetValue(
+                path,
+                out bool succeeded))
+            return succeeded;
+        try
+        {
+            await reindex!.ReindexFileAsync(
+                    path,
+                    CancellationToken.None)
+                .ConfigureAwait(false);
+            reindexed[path] = true;
+            return true;
+        }
+        catch (Exception error)
+        {
+            reindexed[path] = false;
+            AddCatalogRefreshIssue(
+                path,
+                "refresh",
+                error,
+                issues);
+            return false;
+        }
+    }
+
+    private async Task TryRemoveAsync(
+        string path,
+        ISet<string> removed,
+        ICollection<OperationIssue> issues)
+    {
+        if (!removed.Add(path))
+            return;
+        try
+        {
+            await reindex!.RemoveIndexedFileAsync(
+                    path,
+                    CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception error)
+        {
+            AddCatalogRefreshIssue(
+                path,
+                "remove",
+                error,
+                issues);
+        }
+    }
+
+    private static void AddCatalogRefreshIssue(
+        string path,
+        string operation,
+        Exception error,
+        ICollection<OperationIssue> issues,
+        string code = "file-operation.catalog-refresh-failed")
+    {
+        issues.Add(new(
+            code,
+            OperationIssueSeverity.Warning,
+            $"The committed file operation could not {operation} " +
+            $"the affected library path: {error.Message}",
+            path));
     }
 
     private ReviewedFileOperationPlan Preview(

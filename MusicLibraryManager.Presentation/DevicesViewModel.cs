@@ -677,7 +677,8 @@ public partial class DevicesViewModel : ViewModelBase
             L("Devices.Activity.Starting"),
             ShellDestination.Devices,
             Cancel);
-        var progress = new Progress<OperationProgress>(value =>
+        var progress =
+            new DispatchingProgress<OperationProgress>(value =>
         {
             UpdateActionStatus(value);
             if (value.Message is { } rawMessage &&
@@ -695,15 +696,34 @@ public partial class DevicesViewModel : ViewModelBase
         try
         {
             await operation(progress, _cts.Token);
+            string? terminalKey = _statusKey;
+            object?[] terminalArguments =
+            [
+                .. _statusArguments,
+            ];
+            string terminalText = StatusText;
+            string? terminalDiagnostic =
+                DiagnosticDetail;
+            await progress.DrainAsync();
+            if (terminalKey is not null)
+                SetStatus(
+                    terminalKey,
+                    terminalArguments);
+            else
+                StatusText = terminalText;
+            DiagnosticDetail =
+                terminalDiagnostic;
             _activities.Finish(activity, StatusText);
         }
         catch (OperationCanceledException)
         {
+            await progress.DrainAsync();
             SetStatus("Devices.Status.Cancelled");
             _activities.Finish(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception error)
         {
+            await progress.DrainAsync();
             SetFailure(error);
             _activities.Finish(
                 activity,

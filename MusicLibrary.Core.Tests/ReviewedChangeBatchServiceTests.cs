@@ -669,6 +669,124 @@ public sealed class ReviewedChangeBatchServiceTests
     }
 
     [Fact]
+    public async Task ReviewedHistoryDoesNotRepeatCapableJournalCacheReconciliation()
+    {
+        using var temp = new TempDirectory();
+        string library = temp.Directory("library");
+        string staged = temp.File(
+            "capable-journal.stage",
+            "encoded");
+        string output = Path.Combine(
+            library,
+            "capable-journal.flac");
+        FileMutationPlan mutation = Plan(
+            library,
+            temp.Directory(
+                "library.MusicLibraryManager-recovery",
+                "capable-journal"),
+            staged,
+            output);
+        var coordinator = new FileMutationCoordinator();
+        var reindex = new RecordingReindex(
+            Path.Combine(library, "unrelated.flac"))
+        {
+            RemoveError =
+                new IOException("catalog removal failed"),
+        };
+        var journals = new OperationJournalService(
+            coordinator,
+            reindex: reindex);
+        var batch = new ReviewedChangeBatchService(
+            new FileMutationPlanExecutor(coordinator),
+            journals);
+        ReviewedChangeBatchResult applied =
+            await batch.ApplyAsync(
+                batch.CreatePlan([mutation]),
+                ct: TestContext.Current
+                    .CancellationToken);
+        var history = new ReviewedChangeHistoryService(
+            new MemorySettings(),
+            journals,
+            reindex);
+        history.Record(new(
+            Guid.NewGuid(),
+            ReviewedChangeKindIds.AudioTranscode,
+            DateTimeOffset.UtcNow,
+            applied.JournalPaths,
+            [staged],
+            [output],
+            applied.CoordinatorManifestPath,
+            RedoRequest(staged),
+            IndexedSourcePaths: [staged]));
+
+        ReviewedChangeUndoResult undone =
+            await history.UndoLatestAsync(
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        Assert.Equal(1, undone.RestoredFiles);
+        Assert.False(File.Exists(output));
+        Assert.Equal([output], reindex.RemovedPaths);
+        Assert.Equal([staged], reindex.ReindexedPaths);
+        OperationIssue warning = Assert.Single(undone.Issues);
+        Assert.Equal(
+            "reviewed-history.catalog-refresh-failed",
+            warning.Code);
+        Assert.Equal(
+            OperationIssueSeverity.Warning,
+            warning.Severity);
+        Assert.Equal(output, warning.Path);
+    }
+
+    [Fact]
+    public async Task ReviewedHistoryReturnsSuccessWhenAThrownUndoIsDurablyReconciled()
+    {
+        using var temp = new TempDirectory();
+        string source = temp.File(
+            "source.flac",
+            "source");
+        string output = temp.File(
+            "output.flac",
+            "output");
+        string journal = temp.File(
+            "mutation.tsv",
+            "COMMIT\tMusicLibraryManager");
+        var journals =
+            new ReconciledPostCommitJournalService(
+                output);
+        var history =
+            new ReviewedChangeHistoryService(
+                new MemorySettings(),
+                journals);
+        history.Record(new(
+            Guid.NewGuid(),
+            ReviewedChangeKindIds.AudioTranscode,
+            DateTimeOffset.UtcNow,
+            [journal],
+            [source],
+            [output],
+            temp.File(
+                "coordinator.tsv",
+                "COMMIT"),
+            RedoRequest(source)));
+
+        ReviewedChangeUndoResult result =
+            await history.UndoLatestAsync(
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        Assert.Equal(1, result.RestoredFiles);
+        Assert.Equal(1, journals.ApplyCalls);
+        Assert.Equal(1, journals.ReconcileCalls);
+        Assert.Contains(
+            result.Issues,
+            issue => issue.Code ==
+                "reviewed-history.undo-reconciled");
+        Assert.False(history.CanUndo);
+        Assert.True(history.CanRedo);
+    }
+
+    [Fact]
     public async Task DurableHistorySpoolSurvivesSettingsFailureAfterCommit()
     {
         using var temp = new TempDirectory();
@@ -873,6 +991,11 @@ public sealed class ReviewedChangeBatchServiceTests
                 [metadataParticipant],
                 new HashSet<Guid> { item.Id },
                 ct: TestContext.Current.CancellationToken);
+        Assert.Empty(
+            await Assert.IsType<
+                    PostCommitReconciliationHandle>(
+                    applied.PostCommitReconciliation)
+                .Completion);
 
         Assert.Equal(2, applied.ChangedFiles);
         Assert.Equal(
@@ -906,6 +1029,111 @@ public sealed class ReviewedChangeBatchServiceTests
     }
 
     [Fact]
+    public async Task ReviewedTranscodeKeepsOutputSessionOnlyWhenSourceWasNotIndexed()
+    {
+        using var temp = new TempDirectory();
+        string library = temp.Directory("library");
+        string source = temp.File(
+            Path.Combine("external", "source.flac"),
+            "original");
+        string outputStage = temp.File(
+            "output-stage.flac",
+            "encoded");
+        string output = Path.Combine(
+            library,
+            "output.flac");
+        var settings = new MemorySettings();
+        var coordinator = new FileMutationCoordinator();
+        var reindex = new RecordingReindex(
+            temp.File(
+                Path.Combine("library", "different.flac"),
+                "already indexed"));
+        IOperationJournalService journals =
+            new OperationJournalService(
+                coordinator,
+                reindex: reindex);
+        var batch = new ReviewedChangeBatchService(
+            new FileMutationPlanExecutor(coordinator),
+            journals,
+            settings);
+        var history =
+            new ReviewedChangeHistoryService(
+                settings,
+                journals,
+                reindex);
+        var service = new AudioTranscodeService(
+            settings,
+            new UnusedCapabilityService(),
+            new AudioTranscodeAdapter(
+                settings,
+                new ManagedProcessRunner()),
+            new TranscodeMetadataProjectionService(),
+            new TranscodeWorkScheduler(
+                settings,
+                processorCount: 2),
+            batch,
+            history,
+            new UnusedDecodedVerifier(),
+            reindex: reindex);
+        AudioTranscodeRequest request =
+            RedoRequest(source);
+        var item = new AudioTranscodePlanItem(
+            Guid.NewGuid(),
+            source,
+            output,
+            Snapshot(source),
+            OperationPathSnapshot.Missing(output),
+            Hash(source),
+            request.Settings,
+            []);
+        var plan = new AudioTranscodePlan(
+            Guid.NewGuid(),
+            request,
+            [item],
+            [],
+            DateTimeOffset.UtcNow,
+            1);
+        var staged = new AudioTranscodeStageResult(
+            plan,
+            [
+                new(
+                    item,
+                    AudioTranscodeStageState.Ready,
+                    outputStage,
+                    Hash(outputStage),
+                    new FileInfo(outputStage).Length),
+            ]);
+
+        AudioTranscodeApplyResult applied =
+            await service.ApplyReviewedBatchAsync(
+                [staged],
+                [],
+                new HashSet<Guid> { item.Id },
+                ct: TestContext.Current.CancellationToken);
+        Assert.Null(applied.PostCommitReconciliation);
+
+        Assert.Equal(1, applied.ChangedFiles);
+        Assert.Equal(
+            [source],
+            reindex.IndexedQueries);
+        Assert.Empty(reindex.ReindexedPaths);
+        Assert.Empty(reindex.RemovedPaths);
+        Assert.Empty(
+            Assert.Single(history.Entries)
+                .IndexedSourcePaths);
+
+        ReviewedChangeUndoResult undone =
+            await history.UndoLatestAsync(
+                ct: TestContext.Current
+                    .CancellationToken);
+
+        Assert.Equal(1, undone.RestoredFiles);
+        Assert.Empty(reindex.ReindexedPaths);
+        Assert.Empty(reindex.RemovedPaths);
+        Assert.False(File.Exists(output));
+    }
+
+    [Fact]
     public async Task ReviewedTranscodeReplacementQuarantinesAndExactlyRestoresDifferentExtensionSource()
     {
         using var temp = new TempDirectory();
@@ -927,7 +1155,10 @@ public sealed class ReviewedChangeBatchServiceTests
             new FileMutationPlanExecutor(coordinator),
             journals,
             settings);
-        var reindex = new RecordingReindex(source);
+        var reindex = new RecordingReindex(source)
+        {
+            BlockReindex = true,
+        };
         var history =
             new ReviewedChangeHistoryService(
                 settings,
@@ -986,12 +1217,29 @@ public sealed class ReviewedChangeBatchServiceTests
                     new FileInfo(outputStage).Length),
             ]);
 
-        AudioTranscodeApplyResult applied =
-            await service.ApplyReviewedBatchAsync(
+        Task<AudioTranscodeApplyResult> applying =
+            service.ApplyReviewedBatchAsync(
                 [staged],
                 [],
                 new HashSet<Guid> { item.Id },
                 ct: TestContext.Current.CancellationToken);
+        await reindex.Started.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+        AudioTranscodeApplyResult applied =
+            await applying.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+        PostCommitReconciliationHandle reconciliation =
+            Assert.IsType<PostCommitReconciliationHandle>(
+                applied.PostCommitReconciliation);
+        Assert.False(reconciliation.Completion.IsCompleted);
+        Assert.Single(history.Entries);
+        reindex.Release.TrySetResult(true);
+        Assert.Empty(
+            await reconciliation.Completion.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken));
 
         Assert.Equal(1, applied.ChangedFiles);
         Assert.False(File.Exists(source));
@@ -1201,23 +1449,39 @@ public sealed class ReviewedChangeBatchServiceTests
     private sealed class RecordingReindex(
         string indexedSource) : IReindexService
     {
+        public Exception? ReindexError { get; init; }
+        public Exception? RemoveError { get; init; }
+        public bool BlockReindex { get; init; }
+        public List<string> IndexedQueries { get; } = [];
         public List<string> ReindexedPaths { get; } = [];
         public List<string> RemovedPaths { get; } = [];
+        public TaskCompletionSource<bool> Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task<bool> IsIndexedFileAsync(
             string path,
-            CancellationToken ct = default) =>
-            Task.FromResult(
+            CancellationToken ct = default)
+        {
+            IndexedQueries.Add(path);
+            return Task.FromResult(
                 StringComparer.OrdinalIgnoreCase.Equals(
                     path,
                     indexedSource));
+        }
 
         public Task ReindexFileAsync(
             string path,
             CancellationToken ct = default)
         {
             ReindexedPaths.Add(path);
-            return Task.CompletedTask;
+            if (ReindexError is not null)
+                return Task.FromException(ReindexError);
+            if (!BlockReindex)
+                return Task.CompletedTask;
+            Started.TrySetResult(true);
+            return Release.Task.WaitAsync(ct);
         }
 
         public Task RemoveIndexedFileAsync(
@@ -1225,8 +1489,172 @@ public sealed class ReviewedChangeBatchServiceTests
             CancellationToken ct = default)
         {
             RemovedPaths.Add(path);
-            return Task.CompletedTask;
+            return RemoveError is null
+                ? Task.CompletedTask
+                : Task.FromException(RemoveError);
         }
+    }
+
+    private sealed class LegacyOperationJournalService(
+        IOperationJournalService inner) :
+        IOperationJournalService
+    {
+        public Task<OperationJournalDiscoveryResult>
+            DiscoverAsync(
+                IReadOnlyList<string> searchRoots,
+                CancellationToken ct = default) =>
+            inner.DiscoverAsync(searchRoots, ct);
+
+        public Task<OperationBrowseResult> BrowseAsync(
+            OperationJournalSummary run,
+            CancellationToken ct = default) =>
+            inner.BrowseAsync(run, ct);
+
+        public Task<OperationRestorePlan> PreviewRestoreAsync(
+            OperationJournalSummary run,
+            IReadOnlyList<OperationFileEntry> entries,
+            CancellationToken ct = default) =>
+            inner.PreviewRestoreAsync(run, entries, ct);
+
+        public Task<OperationRestoreResult> ApplyRestoreAsync(
+            OperationRestorePlan plan,
+            IProgress<int>? progress = null,
+            CancellationToken ct = default) =>
+            inner.ApplyRestoreAsync(plan, progress, ct);
+
+        public Task<OperationPurgePlan> PreviewPurgeAsync(
+            IReadOnlyList<OperationJournalSummary> runs,
+            int retentionDays,
+            DateTimeOffset? nowUtc = null,
+            CancellationToken ct = default) =>
+            inner.PreviewPurgeAsync(
+                runs,
+                retentionDays,
+                nowUtc,
+                ct);
+
+        public Task<OperationPurgeResult> ApplyPurgeAsync(
+            OperationPurgePlan plan,
+            IProgress<int>? progress = null,
+            CancellationToken ct = default) =>
+            inner.ApplyPurgeAsync(plan, progress, ct);
+    }
+
+    private sealed class
+        ReconciledPostCommitJournalService(
+            string outputPath) :
+        IOperationJournalService
+    {
+        public int ApplyCalls { get; private set; }
+        public int ReconcileCalls { get; private set; }
+
+        public Task<OperationJournalDiscoveryResult>
+            DiscoverAsync(
+                IReadOnlyList<string> searchRoots,
+                CancellationToken ct = default) =>
+            Task.FromResult(
+                new OperationJournalDiscoveryResult(
+                    [],
+                    []));
+
+        public Task<OperationBrowseResult> BrowseAsync(
+            OperationJournalSummary run,
+            CancellationToken ct = default) =>
+            Task.FromResult(
+                new OperationBrowseResult(
+                    run.RunPath,
+                    [
+                        new(
+                            outputPath,
+                            outputPath,
+                            Path.GetFileName(
+                                outputPath),
+                            OperationEntryKind.Created,
+                            true,
+                            false,
+                            PostEditSha256: "hash"),
+                    ],
+                    []));
+
+        public Task<OperationRestorePlan>
+            PreviewRestoreAsync(
+                OperationJournalSummary run,
+                IReadOnlyList<
+                    OperationFileEntry> entries,
+                CancellationToken ct = default)
+        {
+            string restoreJournal =
+                Path.Combine(
+                    run.RunPath,
+                    "restore.tsv");
+            return Task.FromResult(
+                new OperationRestorePlan(
+                    run,
+                    restoreJournal,
+                    [
+                        new(
+                            outputPath,
+                            outputPath,
+                            restoreJournal + ".backup",
+                            OperationPathSnapshot
+                                .Missing(
+                                    outputPath),
+                            OperationPathSnapshot
+                                .Missing(
+                                    outputPath),
+                            OperationEntryKind.Created,
+                            Disposition:
+                                OperationRestoreDisposition
+                                    .RemoveCreatedOutput),
+                    ],
+                    0));
+        }
+
+        public Task<OperationRestoreResult>
+            ApplyRestoreAsync(
+                OperationRestorePlan plan,
+                IProgress<int>? progress = null,
+                CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<OperationRestoreBatchResult>
+            ApplyRestoreBatchAsync(
+                OperationRestoreBatchPlan plan,
+                IProgress<int>? progress = null,
+                CancellationToken ct = default)
+        {
+            ApplyCalls++;
+            throw new IOException(
+                "Injected failure after restore commit.");
+        }
+
+        public Task<OperationRestoreTransitionState>
+            ReconcileRestoreBatchAsync(
+                IReadOnlyList<string>
+                    restoreJournalPaths,
+                CancellationToken ct = default)
+        {
+            ReconcileCalls++;
+            return Task.FromResult(
+                OperationRestoreTransitionState
+                    .Consumed);
+        }
+
+        public Task<OperationPurgePlan>
+            PreviewPurgeAsync(
+                IReadOnlyList<
+                    OperationJournalSummary> runs,
+                int retentionDays,
+                DateTimeOffset? nowUtc = null,
+                CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<OperationPurgeResult>
+            ApplyPurgeAsync(
+                OperationPurgePlan plan,
+                IProgress<int>? progress = null,
+                CancellationToken ct = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class TempDirectory : IDisposable

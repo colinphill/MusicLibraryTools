@@ -29,4 +29,7 @@ public sealed record ReviewedChangeHistoryEntry(
 public sealed record ReviewedChangeUndoResult(
     Guid EntryId,
     int RestoredFiles,
-    ImmutableArray<string> RestoreJournalPaths);
+    ImmutableArray<string> RestoreJournalPaths)
+{
+    public IReadOnlyList<OperationIssue> Issues { get; init; } = [];
+}

@@ -94,7 +94,8 @@ public partial class IndexingViewModel : ObservableObject
             Text("Index.Activity.Preparing"),
             ShellDestination.Library,
             () => _cancellation?.Cancel());
-        var progress = new Progress<IndexProgress>(item =>
+        var progress =
+            new DispatchingProgress<IndexProgress>(item =>
         {
             _statusResourceKey = null;
             _statusArguments = [];
@@ -106,6 +107,7 @@ public partial class IndexingViewModel : ObservableObject
         try
         {
             var result = await _library.IndexAsync(progress, _cancellation.Token);
+            await progress.DrainAsync();
             SetStatus(
                 "Index.Status.CompleteFormat",
                 result.Added,
@@ -118,11 +120,13 @@ public partial class IndexingViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+            await progress.DrainAsync();
             SetStatus("Index.Status.Cancelled");
             _activities.Finish(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception error)
         {
+            await progress.DrainAsync();
             SetStatus("Index.Status.Failed");
             DiagnosticDetail = error.Message;
             _activities.Finish(activity, StatusText, AppActivityState.Failed);
@@ -133,7 +137,7 @@ public partial class IndexingViewModel : ObservableObject
             _cancellation.Dispose();
             _cancellation = null;
             IsIndexing = false;
-            IndexCompleted?.Invoke();
+            NotifyIndexCompleted();
         }
     }
 
@@ -231,4 +235,36 @@ public partial class IndexingViewModel : ObservableObject
         IndexPhase.Completed => 1,
         _ => 0,
     };
+
+    private void NotifyIndexCompleted()
+    {
+        if (IndexCompleted is not { } subscribers)
+            return;
+        foreach (Action subscriber in
+                 subscribers.GetInvocationList())
+        {
+            try
+            {
+                subscriber();
+            }
+            catch (Exception error)
+            {
+                try
+                {
+                    DiagnosticDetail =
+                        string.IsNullOrWhiteSpace(
+                            DiagnosticDetail)
+                            ? error.Message
+                            : DiagnosticDetail +
+                              Environment.NewLine +
+                              error.Message;
+                }
+                catch
+                {
+                    // Completion observers cannot reopen or fail the finished
+                    // indexing activity.
+                }
+            }
+        }
+    }
 }

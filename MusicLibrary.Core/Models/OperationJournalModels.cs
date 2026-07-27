@@ -129,7 +129,31 @@ public sealed record OperationRestorePlan(
     public bool CanApply => Actions.Count > 0;
 }
 
-public sealed record OperationRestoreResult(int RestoredCount, int CollisionBackupCount);
+public sealed record OperationRestoreResult(
+    int RestoredCount,
+    int CollisionBackupCount)
+{
+    public IReadOnlyList<OperationIssue> Issues { get; init; } = [];
+
+    /// <summary>
+    /// Reports the durable restore state at the point the caller regains
+    /// control. A committed result is successful even when post-commit
+    /// cleanup or catalog reconciliation is still pending.
+    /// </summary>
+    public OperationRestoreTransitionState TransitionState { get; init; } =
+        OperationRestoreTransitionState.Consumed;
+
+    /// <summary>
+    /// Completes after best-effort post-commit cleanup and targeted catalog
+    /// reconciliation. It never faults; failures are returned as issues.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public PostCommitReconciliationHandle? PostCommitReconciliation
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>
 /// A restore transaction spanning one or more recovery runs. All sources and destinations are
@@ -138,6 +162,14 @@ public sealed record OperationRestoreResult(int RestoredCount, int CollisionBack
 public sealed record OperationRestoreBatchPlan(
     IReadOnlyList<OperationRestorePlan> Plans)
 {
+    /// <summary>
+    /// Allows a caller with richer membership information to defer catalog
+    /// reconciliation until its own durable history transition completes.
+    /// Operations recovery and legacy callers retain the default behavior.
+    /// </summary>
+    public bool ReconcileInternalCatalog { get; init; } =
+        true;
+
     public IReadOnlyList<OperationRestoreAction> Actions =>
         Plans.SelectMany(plan => plan.Actions).ToArray();
 
@@ -147,7 +179,20 @@ public sealed record OperationRestoreBatchPlan(
 public sealed record OperationRestoreBatchResult(
     int RestoredCount,
     int CollisionBackupCount,
-    IReadOnlyList<string> RestoreJournalPaths);
+    IReadOnlyList<string> RestoreJournalPaths)
+{
+    public IReadOnlyList<OperationIssue> Issues { get; init; } = [];
+
+    public OperationRestoreTransitionState TransitionState { get; init; } =
+        OperationRestoreTransitionState.Consumed;
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public PostCommitReconciliationHandle? PostCommitReconciliation
+    {
+        get;
+        init;
+    }
+}
 
 /// <summary>
 /// Durable state of an interrupted restore transaction. Unapplied means that any work observed
@@ -159,6 +204,33 @@ public enum OperationRestoreTransitionState
     Unapplied = 0,
     Committed = 1,
     Consumed = 2,
+}
+
+/// <summary>
+/// Rich result for restart reconciliation. Unlike the legacy state-only
+/// result, this preserves deterministic cleanup and catalog warnings.
+/// </summary>
+public sealed record OperationRestoreReconciliationResult(
+    OperationRestoreTransitionState State,
+    IReadOnlyList<OperationIssue> Issues);
+
+/// <summary>
+/// Observable completion for work that is deliberately moved beyond a
+/// durable filesystem commit. The completion task always returns issues
+/// rather than faulting or becoming canceled.
+/// </summary>
+public sealed class PostCommitReconciliationHandle
+{
+    public PostCommitReconciliationHandle(
+        Task<IReadOnlyList<OperationIssue>> completion)
+    {
+        Completion = completion ??
+            throw new ArgumentNullException(nameof(completion));
+    }
+
+    public Task<IReadOnlyList<OperationIssue>> Completion { get; }
+
+    public bool IsCompleted => Completion.IsCompleted;
 }
 
 /// <summary>One filesystem item captured by an explicit operation-retention preview.</summary>

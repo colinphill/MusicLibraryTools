@@ -214,6 +214,8 @@ public partial class ReviewedFileOperationEditorViewModel :
             LF(
                 "ReviewedFileOperation.Activity.Planning",
                 KindLabel(SelectedKind)));
+        DispatchingProgress<OperationProgress> progress =
+            CreateProgress();
         try
         {
             ReviewedFileOperationPlan plan =
@@ -225,8 +227,9 @@ public partial class ReviewedFileOperationEditorViewModel :
                         FileNameTemplate,
                         PreserveRelativeLayout,
                         SelectedCollisionPolicy),
-                    CreateProgress(),
+                    progress,
                     _cancellation!.Token);
+            await progress.DrainAsync();
             _plan = plan;
             PreviewItems.Clear();
             foreach (ReviewedFileOperationItem item in
@@ -262,18 +265,18 @@ public partial class ReviewedFileOperationEditorViewModel :
                 SetCountStatus(
                     "ReviewedFileOperation.Status.AddedToReview",
                     plan.MutationPlan.Actions.Count);
-                PreviewAddedToReview?.Invoke(
-                    this,
-                    EventArgs.Empty);
+                NotifyPreviewAddedToReview();
             }
         }
         catch (OperationCanceledException)
         {
+            await progress.DrainAsync();
             SetStatus(
                 "ReviewedFileOperation.Status.PreviewCancelled");
         }
         catch (Exception error)
         {
+            await progress.DrainAsync();
             _plan = null;
             HasApplicablePreview = false;
             SetFailure(
@@ -287,9 +290,13 @@ public partial class ReviewedFileOperationEditorViewModel :
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() =>
         _cancellation?.Cancel();
+
+    private bool CanCancel() =>
+        IsBusy &&
+        _cancellation is not null;
 
     private bool CanBrowseDestination() =>
         !IsBusy && NeedsDestination;
@@ -351,9 +358,9 @@ public partial class ReviewedFileOperationEditorViewModel :
         PreviewCommand.NotifyCanExecuteChanged();
     }
 
-    private IProgress<OperationProgress>
+    private DispatchingProgress<OperationProgress>
         CreateProgress() =>
-        new Progress<OperationProgress>(
+        new(
             progress =>
             {
                 if (progress.Total is > 0)
@@ -442,6 +449,41 @@ public partial class ReviewedFileOperationEditorViewModel :
         SetStatus(key);
         StatusDiagnosticDetail =
             diagnosticDetail;
+    }
+
+    private void NotifyPreviewAddedToReview()
+    {
+        if (PreviewAddedToReview is not { } subscribers)
+            return;
+        foreach (EventHandler subscriber in
+                 subscribers.GetInvocationList())
+        {
+            try
+            {
+                subscriber(
+                    this,
+                    EventArgs.Empty);
+            }
+            catch (Exception error)
+            {
+                try
+                {
+                    StatusDiagnosticDetail =
+                        string.IsNullOrWhiteSpace(
+                            StatusDiagnosticDetail)
+                            ? error.Message
+                            : StatusDiagnosticDetail +
+                              Environment.NewLine +
+                              error.Message;
+                }
+                catch
+                {
+                    // The pending intent is already accepted. A presentation
+                    // subscriber cannot turn that semantic success into a
+                    // failed preview.
+                }
+            }
+        }
     }
 
     private void RefreshLocalizedChoices()

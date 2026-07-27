@@ -1681,8 +1681,21 @@ public sealed class AudioTranscodeService(
                     schedulerState = value;
                     ReportAggregate();
                 });
+        ImmutableArray<string> ownedStageDirectories =
+        [
+            .. workerItems
+                .Select(item =>
+                    Path.GetDirectoryName(
+                        StagePath(
+                            plan.Id,
+                            item.Value))!)
+                .Distinct(PathComparer),
+        ];
         IReadOnlyList<
                 TranscodeWorkResult<AudioTranscodePlanItem>>
+            results;
+        try
+        {
             results = await scheduler.RunAsync(
                 workerItems,
                 async (item, threads, cancellationToken) =>
@@ -1903,6 +1916,13 @@ public sealed class AudioTranscodeService(
                 item => item.SourcePath,
                 schedulerProgress,
                 ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            CleanupStageDirectories(
+                ownedStageDirectories);
+            throw;
+        }
         foreach (TranscodeWorkResult<
                      AudioTranscodePlanItem> result in results)
         {
@@ -1938,7 +1958,11 @@ public sealed class AudioTranscodeService(
             [
                 .. plan.Items.Select(item =>
                     staged[item.Id]),
-            ]);
+            ])
+        {
+            OwnedStageDirectories =
+                ownedStageDirectories,
+        };
     }
 
     public Task<AudioTranscodeApplyResult> ApplyAsync(
@@ -2146,30 +2170,6 @@ public sealed class AudioTranscodeService(
             participantPlans.Add(mutationPlan);
         }
 
-        ReviewedChangeBatchPlan batch =
-            reviewedChanges.CreatePlan(participantPlans);
-        ReviewedChangeBatchResult batchResult =
-            await reviewedChanges.ApplyAsync(
-                batch,
-                progress,
-                ct).ConfigureAwait(false);
-        foreach (FileMutationSummary summary in
-                 batchResult.ParticipantResults)
-            issues.AddRange(summary.Issues);
-        ImmutableArray<string> indexedSources =
-            await RefreshInternalCatalogAsync(
-                ready,
-                issues)
-            .ConfigureAwait(false);
-        foreach (var row in ready)
-        {
-            TryDelete(row.Item.StagedPath);
-            foreach (AudioTranscodeStagedSidecar sidecar in
-                     SidecarsOrEmpty(row.Item.Sidecars))
-                TryDelete(sidecar.StagedPath);
-        }
-        foreach (AudioTranscodeStageResult stage in stages)
-            CleanupStageDirectories(stage);
         ImmutableArray<AudioTranscodeRequest> redoRequests =
         [
             .. stages
@@ -2228,33 +2228,94 @@ public sealed class AudioTranscodeService(
                         action.DestinationPath))
             .Distinct(PathComparer)
             .Count();
-        history.Record(new(
-            Guid.NewGuid(),
-            ReviewedChangeKindIds.AudioTranscode,
-            DateTimeOffset.UtcNow,
-            batchResult.JournalPaths,
-            [.. reviewedSources],
-            [.. ready.Select(row =>
+        ImmutableArray<string> destinationPaths =
+        [
+            .. ready.Select(row =>
                     row.Item.PlanItem.DestinationPath)
                 .Concat(ready.SelectMany(row =>
                     SidecarsOrEmpty(row.Item.Sidecars)
                         .Select(sidecar =>
-                            sidecar.DestinationPath)))],
-            batchResult.CoordinatorManifestPath,
-            redoRequests[0],
-            redoRequests,
-            indexedSources));
+                            sidecar.DestinationPath))),
+        ];
+
+        // Membership is captured before the filesystem commit. An active
+        // index may delay or cancel this read, but it can no longer turn a
+        // durable transcode into an apparent failed/cancelled operation.
+        (
+            ImmutableArray<string> indexedSources,
+            IReadOnlyList<OperationIssue> membershipIssues) =
+            await CaptureInternalCatalogMembershipAsync(
+                    ready,
+                    ct)
+                .ConfigureAwait(false);
+        issues.AddRange(membershipIssues);
+
+        ReviewedChangeBatchPlan batch =
+            reviewedChanges.CreatePlan(participantPlans);
+        ReviewedChangeBatchResult batchResult =
+            await reviewedChanges.ApplyAsync(
+                batch,
+                progress,
+                ct).ConfigureAwait(false);
+        foreach (FileMutationSummary summary in
+                 batchResult.ParticipantResults)
+            issues.AddRange(summary.Issues);
+
+        // Record semantic history immediately after the durable batch commit
+        // and before any cache gate or staging cleanup can delay the caller.
+        try
+        {
+            history.Record(new(
+                Guid.NewGuid(),
+                ReviewedChangeKindIds.AudioTranscode,
+                DateTimeOffset.UtcNow,
+                batchResult.JournalPaths,
+                [.. reviewedSources],
+                destinationPaths,
+                batchResult.CoordinatorManifestPath,
+                redoRequests[0],
+                redoRequests,
+                indexedSources));
+        }
+        catch (Exception error)
+        {
+            issues.Add(new(
+                "transcode.history-record-failed",
+                OperationIssueSeverity.Warning,
+                "The transcode committed, but its Undo history could not " +
+                "be recorded: " + error.Message));
+        }
+
+        PostCommitReconciliationHandle? reconciliation =
+            reindex is null ||
+            indexedSources.IsDefaultOrEmpty
+                ? null
+                : PostCommitReconciliationQueue.Shared.Enqueue(
+                    () => RefreshInternalCatalogAsync(
+                        ready,
+                        indexedSources),
+                    "transcode.catalog-refresh-failed",
+                    "The committed transcode catalog refresh failed");
+
+        foreach (var row in ready)
+        {
+            TryDelete(row.Item.StagedPath);
+            foreach (AudioTranscodeStagedSidecar sidecar in
+                     SidecarsOrEmpty(row.Item.Sidecars))
+                TryDelete(sidecar.StagedPath);
+        }
+        foreach (AudioTranscodeStageResult stage in stages)
+            CleanupStageDirectories(stage);
+
         return new(
             changedFiles,
             batchResult.JournalPaths,
             [.. reviewedSources],
-            [.. ready.Select(row =>
-                    row.Item.PlanItem.DestinationPath)
-                .Concat(ready.SelectMany(row =>
-                    SidecarsOrEmpty(row.Item.Sidecars)
-                        .Select(sidecar =>
-                            sidecar.DestinationPath)))],
-            [.. issues]);
+            destinationPaths,
+            [.. issues])
+        {
+            PostCommitReconciliation = reconciliation,
+        };
     }
 
     public Task DiscardStageAsync(
@@ -2439,66 +2500,141 @@ public sealed class AudioTranscodeService(
             destinationPath));
     }
 
-    private async Task<ImmutableArray<string>>
+    private async Task<(
+        ImmutableArray<string> IndexedSources,
+        IReadOnlyList<OperationIssue> Issues)>
+        CaptureInternalCatalogMembershipAsync(
+        IReadOnlyList<(
+            AudioTranscodeStageResult Stage,
+            AudioTranscodeStagedItem Item)> ready,
+        CancellationToken ct)
+    {
+        if (reindex is null)
+            return ([], []);
+
+        var indexedSources =
+            new HashSet<string>(PathComparer);
+        var issues = new List<OperationIssue>();
+        foreach (string source in ready
+                     .Select(row =>
+                         row.Item.PlanItem.SourcePath)
+                     .Distinct(PathComparer)
+                     .OrderBy(path => path, PathComparer))
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                if (await reindex.IsIndexedFileAsync(
+                            source,
+                            ct)
+                        .ConfigureAwait(false))
+                    indexedSources.Add(source);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception error)
+            {
+                issues.Add(new(
+                    "transcode.catalog-membership-failed",
+                    OperationIssueSeverity.Warning,
+                    "The transcode could not determine whether the source " +
+                    "belongs to the loaded library. It will remain " +
+                    "session-only: " + error.Message,
+                    source));
+            }
+        }
+        return (
+            [.. indexedSources.OrderBy(
+                path => path,
+                PathComparer)],
+            issues);
+    }
+
+    private async Task<IReadOnlyList<OperationIssue>>
         RefreshInternalCatalogAsync(
         IReadOnlyList<(
             AudioTranscodeStageResult Stage,
             AudioTranscodeStagedItem Item)> ready,
-        ICollection<OperationIssue> issues)
+        ImmutableArray<string> indexedSources)
     {
-        if (reindex is null)
+        if (reindex is null ||
+            indexedSources.IsDefaultOrEmpty)
             return [];
-        var indexedSources =
-            new HashSet<string>(PathComparer);
-        foreach (var row in ready.OrderBy(
-                     row =>
-                         row.Item.PlanItem.SourcePath,
-                     PathComparer))
+
+        HashSet<string> tracked =
+            indexedSources.ToHashSet(PathComparer);
+        var issues = new List<OperationIssue>();
+        var reindexed =
+            new Dictionary<string, bool>(PathComparer);
+        var removed = new HashSet<string>(PathComparer);
+        foreach (var row in ready
+                     .Where(row =>
+                         tracked.Contains(
+                             row.Item.PlanItem.SourcePath))
+                     .OrderBy(row =>
+                         row.Item.PlanItem.DestinationPath,
+                         PathComparer))
         {
             string source =
                 row.Item.PlanItem.SourcePath;
             string destination =
                 row.Item.PlanItem.DestinationPath;
+            bool destinationReady;
+            if (!reindexed.TryGetValue(
+                    destination,
+                    out destinationReady))
+            {
+                try
+                {
+                    await reindex.ReindexFileAsync(
+                            destination,
+                            CancellationToken.None)
+                        .ConfigureAwait(false);
+                    reindexed[destination] = true;
+                    destinationReady = true;
+                }
+                catch (Exception error)
+                {
+                    reindexed[destination] = false;
+                    destinationReady = false;
+                    issues.Add(new(
+                        "transcode.catalog-refresh-failed",
+                        OperationIssueSeverity.Warning,
+                        "The committed transcode output could not be " +
+                        "refreshed in the library catalog: " +
+                        error.Message,
+                        destination));
+                }
+            }
+
+            bool replace =
+                row.Stage.Plan.Request.Destination.Mode ==
+                AudioTranscodeDestinationMode.ReplaceOriginal;
+            if (!destinationReady ||
+                !replace ||
+                PathComparer.Equals(source, destination) ||
+                !removed.Add(source))
+                continue;
             try
             {
-                bool sourceTracked =
-                    await reindex.IsIndexedFileAsync(
-                            source,
-                            CancellationToken.None)
-                        .ConfigureAwait(false);
-                if (!sourceTracked)
-                    continue;
-                indexedSources.Add(source);
-                await reindex.ReindexFileAsync(
-                        destination,
+                await reindex.RemoveIndexedFileAsync(
+                        source,
                         CancellationToken.None)
                     .ConfigureAwait(false);
-                bool replace =
-                    row.Stage.Plan.Request.Destination.Mode ==
-                    AudioTranscodeDestinationMode
-                        .ReplaceOriginal;
-                if (replace &&
-                    !PathComparer.Equals(
-                        source,
-                        destination))
-                    await reindex.RemoveIndexedFileAsync(
-                            source,
-                            CancellationToken.None)
-                        .ConfigureAwait(false);
             }
             catch (Exception error)
             {
                 issues.Add(new(
                     "transcode.catalog-refresh-failed",
                     OperationIssueSeverity.Warning,
-                    "The affected library paths could not be " +
-                    "refreshed: " + error.Message,
-                    destination));
+                    "The replaced transcode source could not be removed " +
+                    "from the library catalog: " + error.Message,
+                    source));
             }
         }
-        return [.. indexedSources.OrderBy(
-            path => path,
-            PathComparer)];
+        return issues;
     }
 
     private static void ValidateApplyCapacity(
@@ -3016,20 +3152,30 @@ public sealed class AudioTranscodeService(
     private static void CleanupStageDirectories(
         AudioTranscodeStageResult stage)
     {
-        foreach (string? directory in stage.Items
-                     .Select(item =>
-                         item.StagedPath is null
-                             ? null
-                             : Path.GetDirectoryName(
-                                 item.StagedPath))
-                     .Where(directory =>
-                         directory is not null)
+        CleanupStageDirectories(
+            stage.OwnedStageDirectories
+                .Concat(
+                    stage.Items.Select(item =>
+                        item.StagedPath is null
+                            ? null
+                            : Path.GetDirectoryName(
+                                item.StagedPath)))
+                .Where(directory =>
+                    directory is not null)
+                .Select(directory =>
+                    directory!)
+                .Distinct(PathComparer));
+    }
+
+    private static void CleanupStageDirectories(
+        IEnumerable<string> directories)
+    {
+        foreach (string directory in directories
                      .Distinct(PathComparer))
         {
             try
             {
-                if (directory is not null &&
-                    Directory.Exists(directory) &&
+                if (Directory.Exists(directory) &&
                     !Directory.EnumerateFileSystemEntries(
                             directory)
                         .Any())

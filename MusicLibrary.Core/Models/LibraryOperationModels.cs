@@ -99,6 +99,13 @@ public sealed record FileMutationSummary(
 {
     public int Moved { get; init; }
     public RecoveryStorageSummary? RecoveryStorage { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public PostCommitReconciliationHandle? PostCommitReconciliation
+    {
+        get;
+        init;
+    }
 }
 
 public sealed record FileInventory(

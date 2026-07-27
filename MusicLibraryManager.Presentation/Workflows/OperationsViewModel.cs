@@ -204,6 +204,9 @@ public partial class OperationsViewModel : ViewModelBase
     private Func<string>? _purgePreviewTextRefresh;
     private Func<string>? _jobOutputRefresh;
     private bool _synchronizingSelectedJob;
+    private long _statusRevision;
+    private Task _restorePostCommitObservation =
+        Task.CompletedTask;
 
     public event Action<IReadOnlyList<string>>? ArtworkNormalized;
 
@@ -324,6 +327,9 @@ public partial class OperationsViewModel : ViewModelBase
     public bool UsesActiveLibraryContext =>
         JobIs("playlist-sync", "cross-library-sync", "car-card") ||
         IsConfiguredExportJob(SelectedJob?.Id);
+    internal Task RestorePostCommitObservation =>
+        Volatile.Read(
+            ref _restorePostCommitObservation);
 
     public OperationsViewModel(
         IOperationJournalService journals,
@@ -490,6 +496,8 @@ public partial class OperationsViewModel : ViewModelBase
         string key,
         params object?[] arguments)
     {
+        Interlocked.Increment(
+            ref _statusRevision);
         object?[] captured = [.. arguments];
         _statusTextRefresh =
             () => LF(key, captured);
@@ -502,6 +510,8 @@ public partial class OperationsViewModel : ViewModelBase
         long count,
         params object?[] arguments)
     {
+        Interlocked.Increment(
+            ref _statusRevision);
         object?[] captured = [.. arguments];
         _statusTextRefresh =
             () => LC(key, count, captured);
@@ -674,16 +684,18 @@ public partial class OperationsViewModel : ViewModelBase
         SetJobStatus(
             "Operations.Job.Status.Previewing",
             jobName);
+        DispatchingProgress<OperationProgress>?
+            jobProgress = null;
         try
         {
             if (TryGetConfiguredExportProfileId(SelectedJob.Id, out string exportProfileId) &&
                 _configuredExport is not null)
             {
                 IReadOnlyList<string> parsed = [];
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 _configuredExportPlan = await Task.Run(() => _configuredExport.PreviewAsync(
-                    new(exportProfileId), typedProgress, _cts.Token), _cts.Token);
+                    new(exportProfileId), jobProgress, _cts.Token), _cts.Token);
                 int exitCode = _configuredExportPlan.CanApply ? 0 : 4;
                 ConfiguredExportPlan renderedPlan =
                     _configuredExportPlan;
@@ -701,10 +713,10 @@ public partial class OperationsViewModel : ViewModelBase
                 CrossLibrarySyncRequest request = new(
                     ConfigurationPath: null,
                     ItunesLibraryPath: null);
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 _crossLibrarySyncPlan = await Task.Run(() => _crossLibrarySync.PreviewAsync(
-                    request, typedProgress, _cts.Token), _cts.Token);
+                    request, jobProgress, _cts.Token), _cts.Token);
                 int exitCode = _crossLibrarySyncPlan.CanApply ? 0 : 4;
                 CrossLibrarySyncPlan renderedPlan =
                     _crossLibrarySyncPlan;
@@ -722,10 +734,10 @@ public partial class OperationsViewModel : ViewModelBase
                 PlaylistExportRequest request = new(
                     ConfigurationPath: null,
                     ItunesLibraryPath: null);
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 _playlistExportPlan = await Task.Run(() => _playlistExport.PreviewAsync(
-                    request, typedProgress, _cts.Token), _cts.Token);
+                    request, jobProgress, _cts.Token), _cts.Token);
                 int exitCode = _playlistExportPlan.CanApply ? 0 : 4;
                 PlaylistExportPlan renderedPlan =
                     _playlistExportPlan;
@@ -743,10 +755,10 @@ public partial class OperationsViewModel : ViewModelBase
                 ArtworkNormalizationRequest request = new(Required(JobPlaylistName,
                     "Operations.Validation.PlaylistNameRequired"),
                     ConfiguredLibraryPath());
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 _artworkNormalizationPlan = await Task.Run(() => _artworkNormalization.PreviewAsync(
-                    request, typedProgress, _cts.Token), _cts.Token);
+                    request, jobProgress, _cts.Token), _cts.Token);
                 int exitCode = _artworkNormalizationPlan.CanApply ? 0 : 4;
                 ArtworkNormalizationPlan renderedPlan =
                     _artworkNormalizationPlan;
@@ -766,10 +778,10 @@ public partial class OperationsViewModel : ViewModelBase
                     JobInitialize,
                     JobMaxRemovals,
                     ConfiguredLibraryPath());
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 _smartStoragePlan = await Task.Run(() => _smartStorage.PreviewAsync(
-                    request, typedProgress, _cts.Token), _cts.Token);
+                    request, jobProgress, _cts.Token), _cts.Token);
                 int exitCode = _smartStoragePlan.CanApply ? 0 : 4;
                 SmartStoragePlan renderedPlan =
                     _smartStoragePlan;
@@ -786,10 +798,10 @@ public partial class OperationsViewModel : ViewModelBase
                 IReadOnlyList<string> parsed = [];
                 CarCardRequest request = new(null, JobRebalance, JobFixErrors,
                     JobInitialize, JobMaxRemovals, null);
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 _carCardPlan = await Task.Run(() =>
-                    _carCard.PreviewAsync(request, typedProgress, _cts.Token), _cts.Token);
+                    _carCard.PreviewAsync(request, jobProgress, _cts.Token), _cts.Token);
                 int exitCode = _carCardPlan.CanApply ? 0 : 4;
                 CarCardPlan renderedPlan =
                     _carCardPlan;
@@ -805,11 +817,11 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 IReadOnlyList<string> parsed = [];
                 string? library = ConfiguredLibraryPath();
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 RedundancyAnalysisResult result = await Task.Run(() =>
                     _redundancyAnalysis.AnalyzeAsync(
-                        library, typedProgress, _cts.Token), _cts.Token);
+                        library, jobProgress, _cts.Token), _cts.Token);
                 string output = await Task.Run(
                     () => RenderRedundancyResult(result), _cts.Token);
                 _jobOutputRefresh =
@@ -823,11 +835,11 @@ public partial class OperationsViewModel : ViewModelBase
                 IReadOnlyList<string> parsed = [];
                 string validationPath = Required(JobValidationPath,
                     "Operations.Validation.ItunesLibraryRequired");
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 ItunesValidationResult result = await Task.Run(() =>
                     _itunesValidation.ValidateAsync(
-                        validationPath, typedProgress, _cts.Token), _cts.Token);
+                        validationPath, jobProgress, _cts.Token), _cts.Token);
                 string output = await Task.Run(
                     () => RenderValidationResult(result), _cts.Token);
                 _jobOutputRefresh =
@@ -843,6 +855,7 @@ public partial class OperationsViewModel : ViewModelBase
                         "Operations.Diagnostic.NoPreviewService",
                         SelectedJob.Id));
             }
+            await DrainProgressAsync(jobProgress);
             HasJobPreview = true;
             JobOutput = _jobOutputRefresh?.Invoke() ??
                 _jobPlan.PreviewOutput;
@@ -860,12 +873,14 @@ public partial class OperationsViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
+            await DrainProgressAsync(jobProgress);
             SetJobStatus(
                 "Operations.Job.Status.PreviewCancelled");
             FinishActivity(activity, JobStatus, AppActivityState.Cancelled);
         }
         catch (OperationsValidationException ex)
         {
+            await DrainProgressAsync(jobProgress);
             SetJobStatus(ex.ResourceKey);
             FinishActivity(
                 activity,
@@ -874,6 +889,7 @@ public partial class OperationsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            await DrainProgressAsync(jobProgress);
             SetJobStatusFailure(
                 "Operations.Job.Status.PreviewFailed",
                 ex.Message);
@@ -913,6 +929,8 @@ public partial class OperationsViewModel : ViewModelBase
             L("Operations.Activity.Apply.Starting"),
             ShellDestination.Operations,
             Cancel);
+        DispatchingProgress<OperationProgress>?
+            jobProgress = null;
         try
         {
             UnifiedJobResult result;
@@ -920,11 +938,11 @@ public partial class OperationsViewModel : ViewModelBase
                 _configuredExportPlan is { CanApply: true } exportPlan)
             {
                 var clock = Stopwatch.StartNew();
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 ConfiguredExportResult typedResult = await Task.Run(() =>
                     _configuredExport.ApplyAsync(
-                        exportPlan, typedProgress, _cts.Token), _cts.Token);
+                        exportPlan, jobProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 _jobOutputRefresh =
                     () => RenderConfiguredExportResult(
@@ -935,11 +953,11 @@ public partial class OperationsViewModel : ViewModelBase
                 _crossLibrarySyncPlan is { CanApply: true } typedPlan)
             {
                 var clock = Stopwatch.StartNew();
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 CrossLibrarySyncResult typedResult = await Task.Run(() =>
                     _crossLibrarySync.ApplyAsync(
-                        typedPlan, typedProgress, _cts.Token), _cts.Token);
+                        typedPlan, jobProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 string output = RenderCrossLibrarySyncResult(typedResult);
                 _jobOutputRefresh =
@@ -951,11 +969,11 @@ public partial class OperationsViewModel : ViewModelBase
                      _playlistExportPlan is { CanApply: true } playlistPlan)
             {
                 var clock = Stopwatch.StartNew();
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 PlaylistExportResult typedResult = await Task.Run(() =>
                     _playlistExport.ApplyAsync(
-                        playlistPlan, typedProgress, _cts.Token), _cts.Token);
+                        playlistPlan, jobProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 _jobOutputRefresh =
                     () => RenderPlaylistExportResult(
@@ -966,14 +984,15 @@ public partial class OperationsViewModel : ViewModelBase
                      _artworkNormalizationPlan is { CanApply: true } artworkPlan)
             {
                 var clock = Stopwatch.StartNew();
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 ArtworkNormalizationResult typedResult = await Task.Run(() =>
                     _artworkNormalization.ApplyAsync(
-                        artworkPlan, typedProgress, _cts.Token), _cts.Token);
+                        artworkPlan, jobProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 if (typedResult.UpdatedPaths.Count > 0)
-                    ArtworkNormalized?.Invoke(typedResult.UpdatedPaths);
+                    NotifyArtworkNormalized(
+                        typedResult.UpdatedPaths);
                 _jobOutputRefresh =
                     () => RenderArtworkNormalizationResult(
                         typedResult);
@@ -983,11 +1002,11 @@ public partial class OperationsViewModel : ViewModelBase
                      _smartStoragePlan is { CanApply: true } smartPlan)
             {
                 var clock = Stopwatch.StartNew();
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 SmartStorageResult typedResult = await Task.Run(() =>
                     _smartStorage.ApplyAsync(
-                        smartPlan, typedProgress, _cts.Token), _cts.Token);
+                        smartPlan, jobProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 _jobOutputRefresh =
                     () => RenderSmartStorageResult(
@@ -998,11 +1017,11 @@ public partial class OperationsViewModel : ViewModelBase
                      _carCardPlan is { CanApply: true } carCardPlan)
             {
                 var clock = Stopwatch.StartNew();
-                var typedProgress = new Progress<OperationProgress>(value =>
+                jobProgress = new DispatchingProgress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 CarCardResult typedResult = await Task.Run(() =>
                     _carCard.ApplyAsync(
-                        carCardPlan, typedProgress, _cts.Token), _cts.Token);
+                        carCardPlan, jobProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 _jobOutputRefresh =
                     () => RenderCarCardResult(
@@ -1016,6 +1035,7 @@ public partial class OperationsViewModel : ViewModelBase
                         "Operations.Diagnostic.NoApplyService",
                         plan.Job.Id));
             }
+            await DrainProgressAsync(jobProgress);
             JobOutput = result.Output;
             if (result.Success)
                 SetJobStatus(
@@ -1033,12 +1053,14 @@ public partial class OperationsViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
+            await DrainProgressAsync(jobProgress);
             SetJobStatus(
                 "Operations.Job.Status.ApplyCancelled");
             FinishActivity(activity, JobStatus, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
+            await DrainProgressAsync(jobProgress);
             SetJobStatusFailure(
                 "Operations.Job.Status.ApplyFailed",
                 ex.Message);
@@ -1551,6 +1573,11 @@ public partial class OperationsViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() => _cts?.Cancel();
 
+    private static Task DrainProgressAsync<T>(
+        DispatchingProgress<T>? progress) =>
+        progress?.DrainAsync() ??
+        Task.CompletedTask;
+
     private void ReportJobProgress(Guid? activity, OperationProgress progress)
     {
         string phase = L(
@@ -1577,6 +1604,39 @@ public partial class OperationsViewModel : ViewModelBase
         if (activity is { } id)
             _activities?.Report(id, JobStatus,
                 progress.Total is > 0 ? (double)progress.Completed / progress.Total.Value : null);
+    }
+
+    private void NotifyArtworkNormalized(
+        IReadOnlyList<string> paths)
+    {
+        if (ArtworkNormalized is not { } subscribers)
+            return;
+        foreach (Action<IReadOnlyList<string>> subscriber in
+                 subscribers.GetInvocationList())
+        {
+            try
+            {
+                subscriber(paths);
+            }
+            catch (Exception error)
+            {
+                try
+                {
+                    JobStatusDiagnosticDetail =
+                        string.IsNullOrWhiteSpace(
+                            JobStatusDiagnosticDetail)
+                            ? error.Message
+                            : JobStatusDiagnosticDetail +
+                              Environment.NewLine +
+                              error.Message;
+                }
+                catch
+                {
+                    // The mutation has committed. Refresh subscribers cannot
+                    // reclassify the job as failed.
+                }
+            }
+        }
     }
 
     private void FinishActivity(
@@ -1757,6 +1817,8 @@ public partial class OperationsViewModel : ViewModelBase
             else
                 SetRestorePreview(
                     "Operations.RestorePreview.None");
+            Interlocked.Increment(
+                ref _statusRevision);
             _statusTextRefresh =
                 _restorePreviewTextRefresh;
             StatusDiagnosticDetail = null;
@@ -1792,6 +1854,8 @@ public partial class OperationsViewModel : ViewModelBase
         if (_restorePlan is not { } plan || SelectedRun is null ||
             !await _dialogs.ConfirmRestoreAsync(plan))
             return;
+        OperationJournalSummary restoredRun =
+            SelectedRun.Summary;
         IsBusy = true;
         _cts = new CancellationTokenSource();
         Guid? activity = _activities?.Start(
@@ -1801,9 +1865,13 @@ public partial class OperationsViewModel : ViewModelBase
                 plan.Actions.Count),
             ShellDestination.Operations,
             Cancel);
+        DispatchingProgress<int>? restoreProgress =
+            null;
+        bool busyEnded = false;
         try
         {
-            var progress = new Progress<int>(count =>
+            restoreProgress =
+                new DispatchingProgress<int>(count =>
             {
                 SetStatus(
                     "Operations.Status.Restoring",
@@ -1813,29 +1881,31 @@ public partial class OperationsViewModel : ViewModelBase
                     _activities?.Report(id, StatusText,
                         plan.Actions.Count == 0 ? null : (double)count / plan.Actions.Count);
             });
-            var result = await _journals.ApplyRestoreAsync(plan, progress, _cts.Token);
-            var browse = await _journals.BrowseAsync(SelectedRun.Summary, CancellationToken.None);
-            RootNodes.Clear();
-            var root = OperationEntryNodeViewModel.Build(
-                browse,
-                _localization);
-            root.SelectionChanged += OnRestoreSelectionChanged;
-            RootNodes.Add(root);
-            InvalidateRestorePreview();
-            SetCountStatus(
-                "Operations.Status.RestoreCompleted",
-                result.RestoredCount,
-                result.CollisionBackupCount);
-            FinishActivity(activity, StatusText);
+            OperationRestoreResult result =
+                await _journals.ApplyRestoreAsync(
+                    plan,
+                    restoreProgress,
+                    _cts.Token);
+            await restoreProgress.DrainAsync();
+
+            PresentCommittedRestore(
+                result,
+                restoredRun,
+                activity);
+            busyEnded = true;
         }
         catch (OperationCanceledException)
         {
+            await DrainProgressAsync(
+                restoreProgress);
             SetStatus(
                 "Operations.Status.RestoreCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
+            await DrainProgressAsync(
+                restoreProgress);
             SetStatusFailure(
                 "Operations.Status.RestoreFailed",
                 ex.Message);
@@ -1843,10 +1913,219 @@ public partial class OperationsViewModel : ViewModelBase
         }
         finally
         {
-            _cts?.Dispose(); _cts = null; IsBusy = false;
-            PreviewRestoreCommand.NotifyCanExecuteChanged();
-            ApplyRestoreCommand.NotifyCanExecuteChanged();
+            if (!busyEnded)
+                EndRestoreBusy();
         }
+    }
+
+    private void PresentCommittedRestore(
+        OperationRestoreResult result,
+        OperationJournalSummary restoredRun,
+        Guid? activity)
+    {
+        var diagnostics =
+            FormatIssues(
+                result.Issues);
+
+        // Everything below is presentation-only. ApplyRestoreAsync has
+        // returned after the durable commit point, so a binding or activity
+        // observer must not reclassify it as a failed restore.
+        try
+        {
+            InvalidateRestorePreview();
+        }
+        catch (Exception error)
+        {
+            diagnostics.Add(
+                error.Message);
+            _restorePlan = null;
+        }
+
+        try
+        {
+            SetCountStatus(
+                "Operations.Status.RestoreCompleted",
+                result.RestoredCount,
+                result.CollisionBackupCount);
+        }
+        catch (Exception error)
+        {
+            diagnostics.Add(
+                error.Message);
+        }
+
+        long terminalRevision =
+            Volatile.Read(
+                ref _statusRevision);
+        try
+        {
+            if (diagnostics.Count > 0)
+                StatusDiagnosticDetail =
+                    string.Join(
+                        Environment.NewLine,
+                        diagnostics.Distinct(
+                            StringComparer.Ordinal));
+        }
+        catch
+        {
+            // Diagnostic observers are outside the durable transaction.
+        }
+
+        try
+        {
+            FinishActivity(
+                activity,
+                StatusText);
+        }
+        catch (Exception error)
+        {
+            diagnostics.Add(
+                error.Message);
+        }
+
+        try
+        {
+            EndRestoreBusy();
+        }
+        catch (Exception error)
+        {
+            diagnostics.Add(
+                error.Message);
+            _cts?.Dispose();
+            _cts = null;
+        }
+
+        // Files and the restore/history transition are already durable.
+        // Presentation refresh and catalog reconciliation continue without
+        // the caller's cancellation token and cannot keep Cancel enabled or
+        // reclassify this successful restore as failed.
+        Task observation =
+            ObserveCommittedRestoreAsync(
+                restoredRun,
+                result.PostCommitReconciliation,
+                terminalRevision);
+        Volatile.Write(
+            ref _restorePostCommitObservation,
+            observation);
+    }
+
+    private async Task ObserveCommittedRestoreAsync(
+        OperationJournalSummary restoredRun,
+        PostCommitReconciliationHandle? reconciliation,
+        long terminalRevision)
+    {
+        var diagnostics =
+            new List<string>();
+        try
+        {
+            OperationBrowseResult browse =
+                await _journals.BrowseAsync(
+                    restoredRun,
+                    CancellationToken.None);
+            if (terminalRevision ==
+                Volatile.Read(
+                    ref _statusRevision))
+            {
+                try
+                {
+                    RootNodes.Clear();
+                    var root =
+                        OperationEntryNodeViewModel.Build(
+                            browse,
+                            _localization);
+                    root.SelectionChanged +=
+                        OnRestoreSelectionChanged;
+                    RootNodes.Add(root);
+                }
+                catch (Exception error)
+                {
+                    diagnostics.Add(
+                        error.Message);
+                }
+            }
+            diagnostics.AddRange(
+                browse.Warnings.Where(message =>
+                    !string.IsNullOrWhiteSpace(
+                        message)));
+        }
+        catch (Exception error)
+        {
+            diagnostics.Add(
+                error.Message);
+        }
+
+        if (reconciliation is not null)
+        {
+            try
+            {
+                diagnostics.AddRange(
+                    FormatIssues(
+                        await reconciliation.Completion));
+            }
+            catch (Exception error)
+            {
+                // The Core contract returns warnings instead of faulting, but
+                // a third-party implementation must still not turn a durable
+                // restore into a failed operation.
+                diagnostics.Add(
+                    error.Message);
+            }
+        }
+
+        if (diagnostics.Count == 0 ||
+            terminalRevision !=
+            Volatile.Read(
+                ref _statusRevision))
+            return;
+
+        try
+        {
+            string[] existing =
+                string.IsNullOrWhiteSpace(
+                    StatusDiagnosticDetail)
+                    ? []
+                    : StatusDiagnosticDetail.Split(
+                        Environment.NewLine,
+                        StringSplitOptions.RemoveEmptyEntries |
+                        StringSplitOptions.TrimEntries);
+            StatusDiagnosticDetail =
+                string.Join(
+                    Environment.NewLine,
+                    existing.Concat(
+                            diagnostics)
+                        .Where(message =>
+                            !string.IsNullOrWhiteSpace(
+                                message))
+                        .Distinct(
+                            StringComparer.Ordinal));
+        }
+        catch
+        {
+            // A diagnostic observer is outside the restore transaction. Its
+            // failure cannot alter or fault the committed operation.
+        }
+    }
+
+    private static List<string> FormatIssues(
+        IEnumerable<OperationIssue> issues) =>
+        issues.Select(issue =>
+                issue.Path is null
+                    ? issue.Message
+                    : $"{issue.Path}: {issue.Message}")
+            .Where(message =>
+                !string.IsNullOrWhiteSpace(
+                    message))
+            .ToList();
+
+    private void EndRestoreBusy()
+    {
+        _cts?.Dispose();
+        _cts = null;
+        IsBusy = false;
+        PreviewRestoreCommand
+            .NotifyCanExecuteChanged();
+        ApplyRestoreCommand
+            .NotifyCanExecuteChanged();
     }
 
     private void InvalidateRestorePreview()
@@ -1885,6 +2164,8 @@ public partial class OperationsViewModel : ViewModelBase
             SetPurgePreview(
                 () => DescribePurgePlan(
                     renderedPlan));
+            Interlocked.Increment(
+                ref _statusRevision);
             _statusTextRefresh =
                 _purgePreviewTextRefresh;
             StatusDiagnosticDetail = null;
@@ -1929,9 +2210,12 @@ public partial class OperationsViewModel : ViewModelBase
                 plan.Runs.Count),
             ShellDestination.Operations,
             Cancel);
+        DispatchingProgress<int>? purgeProgress =
+            null;
         try
         {
-            var progress = new Progress<int>(count =>
+            purgeProgress =
+                new DispatchingProgress<int>(count =>
             {
                 SetCountStatus(
                     "Operations.Status.Purging",
@@ -1941,7 +2225,11 @@ public partial class OperationsViewModel : ViewModelBase
                     _activities?.Report(id, StatusText,
                         plan.Runs.Count == 0 ? null : (double)count / plan.Runs.Count);
             });
-            var result = await _journals.ApplyPurgeAsync(plan, progress, _cts.Token);
+            var result = await _journals.ApplyPurgeAsync(
+                plan,
+                purgeProgress,
+                _cts.Token);
+            await purgeProgress.DrainAsync();
             var deleted = plan.Runs.Select(run => run.Run.RunPath)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var run in Runs.Where(run => deleted.Contains(run.RunPath)).ToList())
@@ -1959,12 +2247,16 @@ public partial class OperationsViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
+            await DrainProgressAsync(
+                purgeProgress);
             SetStatus(
                 "Operations.Status.PurgeCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
+            await DrainProgressAsync(
+                purgeProgress);
             SetStatusFailure(
                 "Operations.Status.PurgeFailed",
                 ex.Message);

@@ -875,6 +875,8 @@ public sealed class MetadataWorkbenchServicesTests
             File.Copy(
                 MediaFixtures.Path_("sample.flac"),
                 mediaPath);
+            byte[] artwork = CreatePngBytes(32, 32);
+            SetFrontCover(mediaPath, artwork);
             var settings = new AppSettings(statePath);
             var reindex = new RecordingReindexService();
             var service = new MetadataOperationService(
@@ -910,6 +912,12 @@ public sealed class MetadataWorkbenchServicesTests
                     .First(value =>
                         value.Key == TagFields.Title)
                     .Value);
+            Assert.Equal(
+                artwork,
+                Assert.Single(
+                    reindex.SavedFile.Tags.SelectMany(
+                        tag => tag.GetImageMetadata()))
+                    .Data);
         }
         finally
         {
@@ -2780,15 +2788,19 @@ public sealed class MetadataWorkbenchServicesTests
                 MediaFile.GetFile(mediaPath, readOnly: false));
             seed.SetField(TagFields.Title, "Layer title");
             seed.SaveTags();
+            byte[] artwork = CreatePngBytes(36, 36);
+            SetFrontCover(mediaPath, artwork);
             byte[] original = await File.ReadAllBytesAsync(mediaPath);
             var settings = new AppSettings(statePath);
             var history = new EditHistoryService(
                 settings, new OperationJournalService());
+            var reindex = new RecordingReindexService();
             var service = new MetadataOperationService(
                 _documents,
                 MediaFormatRegistry.Default,
                 new FileMutationPlanExecutor(settings: settings),
                 settings,
+                reindex,
                 history: history);
 
             MetadataOperationPlan plan =
@@ -2815,6 +2827,9 @@ public sealed class MetadataWorkbenchServicesTests
             Assert.Equal(original, await File.ReadAllBytesAsync(mediaPath));
 
             MetadataApplyResult result = await service.ApplyAsync(plan);
+            await reindex.Completed.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
 
             Assert.Equal(1, result.ChangedFiles);
             var applied = Assert.IsType<AACFile>(
@@ -2824,6 +2839,15 @@ public sealed class MetadataWorkbenchServicesTests
             Assert.Equal(
                 ["Layer title", "Layer title"],
                 applied.Tags.Select(tag => tag.Title));
+            IMetadataImage[] cachedArtwork =
+            [
+                .. reindex.SavedFile!.Tags.SelectMany(
+                    tag => tag.GetImageMetadata()),
+            ];
+            Assert.Equal(2, cachedArtwork.Length);
+            Assert.All(
+                cachedArtwork,
+                image => Assert.Equal(artwork, image.Data));
 
             Assert.Equal(1, await history.UndoLatestAsync());
             Assert.Equal(original, await File.ReadAllBytesAsync(mediaPath));
@@ -3741,11 +3765,13 @@ public sealed class MetadataWorkbenchServicesTests
             var settings = new AppSettings(statePath);
             var journals = new OperationJournalService();
             var history = new EditHistoryService(settings, journals);
+            var reindex = new RecordingReindexService();
             var service = new MetadataOperationService(
                 _documents,
                 MediaFormatRegistry.Default,
                 new FileMutationPlanExecutor(settings: settings),
                 settings,
+                reindex,
                 history: history);
             byte[] originalFile = await File.ReadAllBytesAsync(mediaPath);
             byte[] imageBytes = CreatePngBytes(48, 48);
@@ -3775,6 +3801,9 @@ public sealed class MetadataWorkbenchServicesTests
             Assert.Equal(originalFile, await File.ReadAllBytesAsync(mediaPath));
 
             MetadataApplyResult result = await service.ApplyAsync(plan);
+            await reindex.Completed.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
 
             Assert.Equal(1, result.ChangedFiles);
             MediaDocument applied = await _documents.LoadAsync(mediaPath);
@@ -3782,6 +3811,12 @@ public sealed class MetadataWorkbenchServicesTests
             Assert.Contains(
                 "Front", cover.Category, StringComparison.OrdinalIgnoreCase);
             Assert.Equal("image/jpeg", cover.ImageType);
+            Assert.Equal(
+                cover.Data,
+                Assert.Single(
+                    reindex.SavedFile!.Tags.SelectMany(
+                        tag => tag.GetImageMetadata()))
+                    .Data);
             Assert.True(history.CanUndo);
 
             int restored = await history.UndoLatestAsync();
@@ -4018,6 +4053,28 @@ public sealed class MetadataWorkbenchServicesTests
                 24,
                 96,
                 192));
+
+    private static void SetFrontCover(
+        string path,
+        byte[] artwork)
+    {
+        IMediaFile media = MediaFile.GetFile(
+            path,
+            readOnly: false,
+            readArtwork: true);
+        IArtworkWriter writer =
+            media as IArtworkWriter ??
+            media.Tags.OfType<IArtworkWriter>().First();
+        writer.SetImages(
+        [
+            new(
+                ID3v2Util.APICType.FrontCover,
+                "image/png",
+                "front",
+                artwork),
+        ]);
+        media.SaveTags();
+    }
 
     private sealed class RecordingReindexService :
         IReindexService

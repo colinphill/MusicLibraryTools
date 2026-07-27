@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.Security.Cryptography;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicFileUtilities;
@@ -45,6 +46,10 @@ public partial class SelectionInspectorViewModel : ObservableObject
     private object?[] _statusMessageArguments = [];
     private long? _statusMessageCount;
     private Func<string>? _overviewFactory;
+    private readonly HashSet<string>
+        _reservedEditPaths =
+            new(PathComparer);
+    private bool _isEditReserved;
 
     [ObservableProperty] private SelectionContext _selection = SelectionContext.Empty;
     [ObservableProperty] private bool _isBusy;
@@ -158,6 +163,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
     public bool HasUnsavedChanges =>
         HasUnsavedMetadataChanges ||
         HasUnsavedArtworkChanges;
+    internal bool IsEditReserved =>
+        _isEditReserved;
     public string UnsavedChangesSummary
     {
         get
@@ -245,6 +252,207 @@ public partial class SelectionInspectorViewModel : ObservableObject
             ? LoadAsync(Selection)
             : Task.CompletedTask;
 
+    /// <summary>
+    /// Advances the editor baseline after the reviewed mutation service has
+    /// durably committed the current draft. This intentionally performs no
+    /// I/O: a presentation refresh is best-effort after the commit boundary
+    /// and must not leave the same edits available to apply a second time.
+    /// </summary>
+    public void AcceptPendingChanges()
+    {
+        if (!HasUnsavedChanges)
+            return;
+
+        var captured =
+            CreatePendingOperationInputs();
+        AcceptPendingChanges(
+            captured.ValueEdits,
+            captured.ArtworkEdits);
+    }
+
+    /// <summary>
+    /// Advances only the exact inspector draft captured before a durable apply.
+    /// Values entered while the apply was running remain modified against the
+    /// newly committed baseline.
+    /// </summary>
+    public void AcceptPendingChanges(
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyList<MetadataValueEdit>>?
+            capturedValueEdits,
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest>?
+            capturedArtworkEdits) =>
+        AcceptPendingChanges(
+            capturedValueEdits,
+            capturedArtworkEdits,
+            appliedArtworkFingerprints: null);
+
+    internal void AcceptPendingChanges(
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyList<MetadataValueEdit>>?
+            capturedValueEdits,
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest>?
+            capturedArtworkEdits,
+        IReadOnlyDictionary<string, string>?
+            appliedArtworkFingerprints)
+    {
+        PendingChangesAcceptance? acceptance =
+            AcceptPendingChangesState(
+                capturedValueEdits,
+                capturedArtworkEdits,
+                appliedArtworkFingerprints);
+        if (acceptance is null)
+            return;
+        PublishPendingChangesAcceptance(
+            acceptance);
+    }
+
+    internal PendingChangesAcceptance?
+        AcceptPendingChangesState(
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MetadataValueEdit>>?
+                capturedValueEdits,
+            IReadOnlyDictionary<
+                string,
+                ArtworkSetPreviewRequest>?
+                capturedArtworkEdits,
+            IReadOnlyDictionary<string, string>?
+                appliedArtworkFingerprints = null)
+    {
+        if (capturedValueEdits is null &&
+            capturedArtworkEdits is null)
+            return null;
+
+        Dictionary<MetadataFieldKey,
+            ImmutableArray<string>>
+            commonAppliedValues = [];
+        if (capturedValueEdits is not null)
+        {
+            foreach (IGrouping<
+                         MetadataFieldKey,
+                         MetadataValueEdit> group in
+                     capturedValueEdits.Values
+                         .SelectMany(edits => edits)
+                         .GroupBy(edit =>
+                             edit.Field))
+            {
+                ImmutableArray<string>[] values =
+                    [.. group.Select(edit =>
+                        edit.Values)];
+                if (values.Length > 0 &&
+                    values.Skip(1).All(value =>
+                        value.SequenceEqual(
+                            values[0],
+                            StringComparer.Ordinal)))
+                    commonAppliedValues[group.Key] =
+                        values[0];
+            }
+        }
+
+        var acceptedFields =
+            new List<EditableTagField>();
+        foreach (EditableTagField field in Fields)
+        {
+            MetadataFieldKey fieldKey =
+                MetadataFieldKey.Known(
+                    field.Field);
+            if (commonAppliedValues.TryGetValue(
+                    fieldKey,
+                    out ImmutableArray<string>
+                        appliedValues))
+            {
+                field.AcceptAppliedValuesState(
+                    appliedValues);
+                acceptedFields.Add(field);
+            }
+        }
+
+        var acceptedArtworkItems =
+            new List<ArtworkPreviewItem>();
+        bool artworkDraftUnchanged =
+            capturedArtworkEdits is not null &&
+            ArtworkRequestsEqual(
+                capturedArtworkEdits,
+                CurrentPendingArtworkRequests());
+        if (capturedArtworkEdits is not null)
+        {
+            ArtworkSetPreviewRequest[] requests =
+            [
+                .. capturedArtworkEdits.Values,
+            ];
+            if (requests.Length > 0 &&
+                requests.Skip(1).All(request =>
+                    ArtworkSetsEqual(
+                        request.Images,
+                        requests[0].Images)))
+                _loadedArtworkInputs =
+                    requests[0].Images;
+
+            if (artworkDraftUnchanged)
+            {
+                foreach (ArtworkPreviewItem item in
+                         ArtworkItems)
+                {
+                    if (item.AcceptChangesState())
+                        acceptedArtworkItems.Add(
+                            item);
+                }
+                _loadedArtworkInputs =
+                    [.. CurrentArtworkInputs()];
+                _pendingArtworkRequests = null;
+            }
+        }
+
+        RebaseSourceExpectations(
+            capturedValueEdits,
+            capturedArtworkEdits,
+            appliedArtworkFingerprints);
+        // This is the semantic phase of a durable commit. Publish the
+        // observable changes only after every field and artwork baseline has
+        // advanced so a fallible observer cannot leave half the draft
+        // retryable.
+#pragma warning disable MVVMTK0034
+        _hasPendingArtworkChanges =
+            HasArtworkSetEdits();
+#pragma warning restore MVVMTK0034
+        return new(
+            [.. acceptedFields],
+            [.. acceptedArtworkItems]);
+    }
+
+    internal void PublishPendingChangesAcceptance(
+        PendingChangesAcceptance acceptance)
+    {
+        var errors = new List<Exception>();
+        foreach (EditableTagField field in
+                 acceptance.Fields)
+            TryNotify(
+                field.NotifyAppliedValuesAccepted,
+                errors);
+        foreach (ArtworkPreviewItem item in
+                 acceptance.ArtworkItems)
+            TryNotify(
+                item.NotifyChangesAccepted,
+                errors);
+        TryNotify(
+            NotifyPendingChangeRowsChanged,
+            errors);
+        TryNotify(
+            NotifyUnsavedChangesChanged,
+            errors);
+        TryNotify(
+            NotifyCommands,
+            errors);
+        if (errors.Count > 0)
+            throw new AggregateException(errors);
+    }
+
     internal (
         IReadOnlyDictionary<
             string,
@@ -318,6 +526,58 @@ public partial class SelectionInspectorViewModel : ObservableObject
             };
         }
         return result;
+    }
+
+    internal void SetPathEditReservation(
+        IEnumerable<string> paths,
+        bool reserved)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        foreach (string path in paths.Where(path =>
+                     !string.IsNullOrWhiteSpace(
+                         path)))
+        {
+            string normalized =
+                NormalizePath(path);
+            if (reserved)
+                _reservedEditPaths.Add(
+                    normalized);
+            else
+                _reservedEditPaths.Remove(
+                    normalized);
+        }
+        RefreshEditReservation();
+    }
+
+    private void RefreshEditReservation()
+    {
+        bool reserved =
+            Selection.Paths.Any(path =>
+                _reservedEditPaths.Contains(
+                    NormalizePath(path)));
+        bool changed =
+            _isEditReserved != reserved;
+        _isEditReserved = reserved;
+        foreach (EditableTagField field in Fields)
+            field.SetEditReservation(
+                reserved);
+        foreach (ArtworkPreviewItem item in
+                 ArtworkItems)
+            item.SetEditReservation(
+                reserved);
+        if (!changed)
+            return;
+
+        var errors = new List<Exception>();
+        TryNotify(
+            () => OnPropertyChanged(
+                nameof(IsEditReserved)),
+            errors);
+        TryNotify(
+            NotifyCommands,
+            errors);
+        if (errors.Count > 0)
+            throw new AggregateException(errors);
     }
 
     private string PendingArtworkSummary()
@@ -407,6 +667,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         var cancellation = new CancellationTokenSource();
         _cancellation = cancellation;
         Selection = selection;
+        RefreshEditReservation();
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(SelectionSummary));
         ClearStatus();
@@ -676,6 +937,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     image.Data,
                     ArtworkDetails(image),
                     image.Description);
+                preview.SetEditReservation(
+                    _isEditReserved);
                 preview.RefreshLocalizedText(
                     ArtworkTypeLabel);
                 _artworkSummaryFactories[preview] =
@@ -1326,7 +1589,10 @@ public partial class SelectionInspectorViewModel : ObservableObject
         return string.IsNullOrEmpty(value) ? [] : [value];
     }
 
-    private bool CanEdit() => HasSelection && !IsBusy;
+    private bool CanEdit() =>
+        HasSelection &&
+        !IsBusy &&
+        !_isEditReserved;
     private bool CanRevert() => HasUnsavedChanges && !IsBusy;
     private bool CanEditArtworkSet() => CanEdit() && !IsArtworkMixed;
     private bool HasArtworkSetEdits() =>
@@ -1341,6 +1607,172 @@ public partial class SelectionInspectorViewModel : ObservableObject
             : !ArtworkSetsEqual(
                 CurrentArtworkInputs(),
                 _loadedArtworkInputs);
+
+    private IReadOnlyDictionary<
+        string,
+        ArtworkSetPreviewRequest>?
+        CurrentPendingArtworkRequests()
+    {
+        if (!HasArtworkSetEdits())
+            return null;
+        if (_pendingArtworkRequests is not null)
+            return _pendingArtworkRequests;
+        if (IsArtworkMixed)
+            return null;
+
+        ArtworkSetPreviewRequest request =
+            new([.. CurrentArtworkInputs()]);
+        return Selection.Paths.ToDictionary(
+            path => path,
+            _ => request,
+            PathComparer);
+    }
+
+    private static bool ArtworkRequestsEqual(
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest> left,
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest>? right)
+    {
+        if (right is null ||
+            left.Count != right.Count)
+            return false;
+        foreach ((string path,
+                     ArtworkSetPreviewRequest request)
+                 in left)
+        {
+            if (!right.TryGetValue(
+                    path,
+                    out ArtworkSetPreviewRequest?
+                        candidate) ||
+                request.MaxDimension !=
+                    candidate.MaxDimension ||
+                !ArtworkSetsEqual(
+                    request.Images,
+                    candidate.Images))
+                return false;
+        }
+        return true;
+    }
+
+    private void RebaseSourceExpectations(
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyList<MetadataValueEdit>>?
+            capturedValueEdits,
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest>?
+            capturedArtworkEdits,
+        IReadOnlyDictionary<string, string>?
+            appliedArtworkFingerprints)
+    {
+        string[] paths =
+        [
+            .. (capturedValueEdits?.Keys ?? [])
+                .Concat(
+                    capturedArtworkEdits?.Keys ??
+                    [])
+                .Distinct(PathComparer),
+        ];
+        if (paths.Length == 0)
+            return;
+
+        var updated = _sourceExpectations
+            .ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value,
+                PathComparer);
+        foreach (string path in paths)
+        {
+            updated.TryGetValue(
+                path,
+                out MetadataEditSourceExpectation?
+                    existing);
+            existing ??= new(
+                null,
+                null,
+                ImmutableDictionary<
+                    MetadataFieldKey,
+                    ImmutableArray<string>>
+                    .Empty);
+            var originals =
+                existing.OriginalValues
+                    .ToDictionary(
+                        pair => pair.Key,
+                        pair => pair.Value);
+            IReadOnlyList<MetadataValueEdit>?
+                edits = null;
+            bool valuesChanged =
+                capturedValueEdits is not null &&
+                capturedValueEdits.TryGetValue(
+                    path,
+                    out edits);
+            if (valuesChanged)
+            {
+                foreach (MetadataValueEdit edit in
+                         edits!)
+                    originals[edit.Field] =
+                        edit.Values;
+            }
+            bool artworkChanged =
+                capturedArtworkEdits?.ContainsKey(
+                    path) == true;
+            string? artworkFingerprint =
+                existing.ArtworkFingerprint;
+            if (artworkChanged)
+            {
+                if (appliedArtworkFingerprints
+                        ?.TryGetValue(
+                            path,
+                            out string? applied) ==
+                    true)
+                    artworkFingerprint = applied;
+                else if (capturedArtworkEdits!
+                             .TryGetValue(
+                                 path,
+                                 out ArtworkSetPreviewRequest?
+                                     captured))
+                    artworkFingerprint =
+                        CreateArtworkFingerprint(
+                            captured.Images);
+            }
+            updated[path] = existing with
+            {
+                Length = null,
+                LastWriteTimeUtc = null,
+                OriginalValues =
+                    originals.ToImmutableDictionary(),
+                MetadataHash = valuesChanged
+                    ? null
+                    : existing.MetadataHash,
+                ArtworkFingerprint =
+                    artworkChanged
+                        ? artworkFingerprint
+                        : existing
+                            .ArtworkFingerprint,
+            };
+        }
+        _sourceExpectations = updated;
+    }
+
+    internal static string
+        CreateArtworkFingerprint(
+            IReadOnlyList<ArtworkInput> artwork)
+    {
+        ArgumentNullException.ThrowIfNull(artwork);
+        return string.Join(
+            "|",
+            artwork.Select(image =>
+                    Convert.ToBase64String(
+                        SHA256.HashData(
+                            image.Data)))
+                .OrderBy(
+                    hash => hash,
+                    StringComparer.Ordinal));
+    }
 
     private static bool ArtworkSetsEqual(
         IReadOnlyList<ArtworkInput> left,
@@ -1587,6 +2019,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 prepared.Data,
                 PreparedArtworkDetails(prepared),
                 null);
+            item.SetEditReservation(
+                _isEditReserved);
             item.RefreshLocalizedText(
                 ArtworkTypeLabel);
             _artworkSummaryFactories[item] =
@@ -2335,6 +2769,34 @@ public partial class SelectionInspectorViewModel : ObservableObject
         StatusTone = MessageTone.Info;
     }
 
+    private static void TryNotify(
+        Action notification,
+        ICollection<Exception> errors)
+    {
+        try
+        {
+            notification();
+        }
+        catch (Exception error)
+        {
+            errors.Add(error);
+        }
+    }
+
+    private static string NormalizePath(
+        string path)
+    {
+        try
+        {
+            return Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(path));
+        }
+        catch
+        {
+            return path.Trim();
+        }
+    }
+
     private void RefreshLocalizedChoices()
     {
         foreach (ID3v2Util.APICType value in
@@ -2406,6 +2868,12 @@ public partial class SelectionInspectorViewModel : ObservableObject
         int Generation,
         ImmutableArray<string> Paths,
         CancellationTokenSource Cancellation);
+
+    internal sealed record
+        PendingChangesAcceptance(
+            ImmutableArray<EditableTagField> Fields,
+            ImmutableArray<ArtworkPreviewItem>
+                ArtworkItems);
 
     private static readonly StringComparer PathComparer =
         OperatingSystem.IsWindows()
