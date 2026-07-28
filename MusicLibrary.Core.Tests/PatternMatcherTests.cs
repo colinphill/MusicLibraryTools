@@ -1,4 +1,5 @@
 using MusicLibrary.Core.Services;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -26,9 +27,23 @@ public class PatternMatcherTests
     }
 
     [Fact]
+    public void Glob_NonBacktrackingMatcherHasNoWallClockTimeout()
+    {
+        var m = PatternMatcher.Create("track0?", FilterMode.Glob);
+
+        Assert.Equal(
+            Regex.InfiniteMatchTimeout,
+            m.RegexMatchTimeout);
+        Assert.True(m.IsMatch("track09"));
+    }
+
+    [Fact]
     public void Regex_Matches()
     {
         var m = PatternMatcher.Create(@"^\d{2}\s", FilterMode.Regex);
+        Assert.Equal(
+            TimeSpan.FromMilliseconds(250),
+            m.RegexMatchTimeout);
         Assert.True(m.IsMatch("01 Intro"));
         Assert.False(m.IsMatch("Intro"));
     }

@@ -16,6 +16,7 @@ public sealed class PatternMatcher
     private readonly string? _substring;
     public bool IsValid { get; }
     public bool IsEmpty { get; }
+    internal TimeSpan? RegexMatchTimeout => _regex?.MatchTimeout;
 
     private PatternMatcher(Regex? regex, string? substring, bool isValid, bool isEmpty)
     {
@@ -38,7 +39,7 @@ public sealed class PatternMatcher
                 FilterMode.Glob => new PatternMatcher(
                     new Regex(GlobToRegex(pattern),
                         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking,
-                        MatchTimeout), null, true, false),
+                        Regex.InfiniteMatchTimeout), null, true, false),
                 _ => new PatternMatcher(
                     new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, MatchTimeout), null, true, false),
             };
