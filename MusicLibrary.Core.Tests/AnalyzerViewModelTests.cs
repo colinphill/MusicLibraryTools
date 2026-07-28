@@ -933,13 +933,17 @@ public sealed class AnalyzerViewModelTests
             var viewModel = new AnalyzerViewModel(
                 new StubLibrary([Track("one.mp3", "AA", "Album", CodecType.Lossy)]),
                 new StubReconciler(), new StubRepairs(), settings);
+            var progressContext =
+                new DeferredProgressSynchronizationContext<
+                    AnalysisProgress>();
 
-            await viewModel.RunLossyCommand.ExecuteAsync(null);
-            // Progress<T> posts callbacks asynchronously. Give any callbacks
-            // already queued by the completed analysis an opportunity to run;
-            // they must not replace the final retained-run summary.
-            await Task.Yield();
-            await Task.Delay(25);
+            await ExecuteWithProgressContextAsync(
+                progressContext,
+                () => viewModel.RunLossyCommand
+                    .ExecuteAsync(null));
+            Assert.True(
+                progressContext.DeferredCount > 0);
+            progressContext.DeliverDeferred();
 
             Assert.Empty(viewModel.FindingGroups);
             Assert.Contains("No lossy files", viewModel.StatusText);

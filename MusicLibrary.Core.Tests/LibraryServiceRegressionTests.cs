@@ -85,8 +85,10 @@ public sealed class LibraryServiceRegressionTests
         {
             Assert.True(blocker.Entered.Wait(TimeSpan.FromSeconds(5)), "first index never reached final progress");
             load = Task.Run(() => settings.LoadConfig(configB));
-            Assert.Same(load, await Task.WhenAny(load, Task.Delay(TimeSpan.FromSeconds(2))));
-            await load;
+            await load.WaitAsync(
+                TimeSpan.FromSeconds(10),
+                TestContext.Current
+                    .CancellationToken);
         }
         finally
         {

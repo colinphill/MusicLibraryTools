@@ -3505,21 +3505,62 @@ public sealed class PresentationTests
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync([viewModel.Rows.Single()]);
         viewModel.OperationEditor.OperationValue = "Reviewed";
+        var progressObserved =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+        void ObserveProgress(
+            object? sender,
+            System.ComponentModel
+                .PropertyChangedEventArgs args)
+        {
+            if (args.PropertyName ==
+                    nameof(
+                        LibraryViewModel
+                            .OperationProgressText) &&
+                viewModel.OperationProgressText ==
+                    "Reading metadata")
+                progressObserved.TrySetResult(
+                    true);
+        }
+        viewModel.PropertyChanged +=
+            ObserveProgress;
 
-        Task preview = viewModel.PreviewLibraryOperationCommand.ExecuteAsync(null);
-        await operations.PreviewStarted.Task.WaitAsync(
-            TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
-        await Task.Delay(20, TestContext.Current.CancellationToken);
+        try
+        {
+            Task preview =
+                viewModel
+                    .PreviewLibraryOperationCommand
+                    .ExecuteAsync(null);
+            await Task.WhenAll(
+                    operations.PreviewStarted.Task,
+                    progressObserved.Task)
+                .WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current
+                        .CancellationToken);
 
-        Assert.True(viewModel.IsOperationBusy);
-        Assert.Equal("Reading metadata", viewModel.OperationProgressText);
-        viewModel.CancelLibraryOperationCommand.Execute(null);
-        await preview;
+            Assert.True(viewModel.IsOperationBusy);
+            Assert.Equal(
+                "Reading metadata",
+                viewModel.OperationProgressText);
+            viewModel.CancelLibraryOperationCommand
+                .Execute(null);
+            await preview;
 
-        Assert.True(operations.CancellationObserved);
-        Assert.False(viewModel.IsOperationBusy);
-        Assert.Contains("cancelled", viewModel.OperationStatus,
-            StringComparison.OrdinalIgnoreCase);
+            Assert.True(
+                operations.CancellationObserved);
+            Assert.False(viewModel.IsOperationBusy);
+            Assert.Contains(
+                "cancelled",
+                viewModel.OperationStatus,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            viewModel.PropertyChanged -=
+                ObserveProgress;
+        }
     }
 
     [Fact]

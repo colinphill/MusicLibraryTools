@@ -271,6 +271,23 @@ public sealed class IngestViewModelTests
             await viewModel.PreviewCommand.ExecuteAsync(null);
             viewModel.SelectedPreviewFilter = IngestPreviewFilter.Outputs;
             await viewModel.ApplyCommand.ExecuteAsync(null);
+            using var progressTimeout =
+                CancellationTokenSource
+                    .CreateLinkedTokenSource(
+                        TestContext.Current
+                            .CancellationToken);
+            progressTimeout.CancelAfter(
+                TimeSpan.FromSeconds(5));
+            while (!viewModel.Files.All(
+                       item => item.ProgressText
+                           ?.Contains(
+                               "Encoding",
+                               StringComparison
+                                   .Ordinal) ==
+                           true))
+                await Task.Delay(
+                    10,
+                    progressTimeout.Token);
 
             Assert.Equal(2, viewModel.Files.Count);
             Assert.All(viewModel.Files, item => Assert.Contains("Encoding", item.ProgressText));
@@ -384,17 +401,15 @@ public sealed class IngestViewModelTests
                 progress?.Report(update);
             return PreviewAsync(request, ct);
         }
-        public async Task<IngestResult> ApplyAsync(IngestPlan plan,
+        public Task<IngestResult> ApplyAsync(IngestPlan plan,
             IReadOnlyList<IngestApprovalDecision> approvals, IProgress<IngestProgress>? progress = null,
             CancellationToken ct = default)
         {
             ApplyCalls++;
             if (ApplyProgress is { } update)
-            {
                 progress?.Report(update);
-                await Task.Delay(20, ct);
-            }
-            return new IngestResult([], false);
+            return Task.FromResult(
+                new IngestResult([], false));
         }
     }
 

@@ -1590,18 +1590,41 @@ public sealed class TranscodeFoundationTests
                     $"volume-{index}",
                     AudioEncoderThreadingMode.SingleThreaded)),
         ];
+        var overlapping =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+        var release =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
 
-        IReadOnlyList<TranscodeWorkResult<int>> results =
-            await scheduler.RunAsync(
+        Task<IReadOnlyList<
+            TranscodeWorkResult<int>>> run =
+            scheduler.RunAsync(
                 items,
                 async (_, _, ct) =>
                 {
                     int now = Interlocked.Increment(ref active);
                     UpdateMaximum(ref maximumActive, now);
-                    await Task.Delay(40, ct);
-                    Interlocked.Decrement(ref active);
+                    if (now >= 2)
+                        overlapping.TrySetResult(true);
+                    try
+                    {
+                        await release.Task.WaitAsync(ct);
+                    }
+                    finally
+                    {
+                        Interlocked.Decrement(ref active);
+                    }
                 },
                 ct: TestContext.Current.CancellationToken);
+        await overlapping.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+        release.TrySetResult(true);
+        IReadOnlyList<TranscodeWorkResult<int>>
+            results = await run;
 
         Assert.InRange(maximumActive, 2, 4);
         Assert.All(results, result => Assert.True(result.Succeeded));
@@ -1631,17 +1654,38 @@ public sealed class TranscodeFoundationTests
                     "same-volume",
                     AudioEncoderThreadingMode.SingleThreaded)),
         ];
+        var gateFilled =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+        var release =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
 
-        await scheduler.RunAsync(
+        Task run = scheduler.RunAsync(
             items,
             async (_, _, ct) =>
             {
                 int now = Interlocked.Increment(ref active);
                 UpdateMaximum(ref maximumActive, now);
-                await Task.Delay(30, ct);
-                Interlocked.Decrement(ref active);
+                if (now >= 2)
+                    gateFilled.TrySetResult(true);
+                try
+                {
+                    await release.Task.WaitAsync(ct);
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref active);
+                }
             },
             ct: TestContext.Current.CancellationToken);
+        await gateFilled.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+        release.TrySetResult(true);
+        await run;
 
         Assert.Equal(2, maximumActive);
     }
@@ -1708,9 +1752,18 @@ public sealed class TranscodeFoundationTests
                     AudioEncoderThreadingMode
                         .SingleThreaded)),
         ];
+        var bothVolumesActive =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+        var release =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
 
-        IReadOnlyList<TranscodeWorkResult<int>> results =
-            await scheduler.RunAsync(
+        Task<IReadOnlyList<
+            TranscodeWorkResult<int>>> run =
+            scheduler.RunAsync(
                 items,
                 async (value, _, ct) =>
                 {
@@ -1728,14 +1781,30 @@ public sealed class TranscodeFoundationTests
                     UpdateMaximum(
                         ref maximumGlobal,
                         currentGlobal);
-                    await Task.Delay(10, ct);
-                    Interlocked.Decrement(
-                        ref globalActive);
-                    Interlocked.Decrement(
-                        ref activeByVolume[volume]);
+                    if (currentGlobal >= 2)
+                        bothVolumesActive
+                            .TrySetResult(true);
+                    try
+                    {
+                        await release.Task.WaitAsync(
+                            ct);
+                    }
+                    finally
+                    {
+                        Interlocked.Decrement(
+                            ref globalActive);
+                        Interlocked.Decrement(
+                            ref activeByVolume[volume]);
+                    }
                 },
                 ct: TestContext.Current
                     .CancellationToken);
+        await bothVolumesActive.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+        release.TrySetResult(true);
+        IReadOnlyList<TranscodeWorkResult<int>>
+            results = await run;
 
         Assert.Equal(1, maximumByVolume[0]);
         Assert.Equal(1, maximumByVolume[1]);

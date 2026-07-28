@@ -1923,7 +1923,22 @@ public sealed class WorkbenchReviewedMutationCompositionTests
                     Path.GetFullPath(
                         "progress-generation-first-copy.flac"))),
             TestContext.Current.CancellationToken));
-        await workbench.ApplyCommand.ExecuteAsync(null);
+        var progressContext =
+            new QueuedSynchronizationContext();
+        SynchronizationContext? previousContext =
+            SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(
+            progressContext);
+        try
+        {
+            await workbench.ApplyCommand
+                .ExecuteAsync(null);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(
+                previousContext);
+        }
         IProgress<OperationProgress> staleProgress =
             Assert.IsAssignableFrom<
                 IProgress<OperationProgress>>(
@@ -1941,17 +1956,13 @@ public sealed class WorkbenchReviewedMutationCompositionTests
         await files.PreviewPaused.Task.WaitAsync(
             TimeSpan.FromSeconds(5),
             TestContext.Current.CancellationToken);
-        await Task.Run(
-            () => staleProgress.Report(
-                new(
-                    OperationPhase.Applying,
-                    1,
-                    1,
-                    Message: "STALE APPLY PROGRESS")),
-            TestContext.Current.CancellationToken);
-        await Task.Delay(
-            25,
-            TestContext.Current.CancellationToken);
+        staleProgress.Report(
+            new(
+                OperationPhase.Applying,
+                1,
+                1,
+                Message: "STALE APPLY PROGRESS"));
+        progressContext.RunAll();
 
         Assert.NotEqual(
             "STALE APPLY PROGRESS",
@@ -1981,17 +1992,28 @@ public sealed class WorkbenchReviewedMutationCompositionTests
             new RecordingTranscodeService([]),
             history: history);
         await workbench.AddSourcesAsync([source]);
-        await workbench.UndoCommand.ExecuteAsync(null);
+        var progressContext =
+            new QueuedSynchronizationContext();
+        SynchronizationContext? previousContext =
+            SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(
+            progressContext);
+        try
+        {
+            await workbench.UndoCommand
+                .ExecuteAsync(null);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(
+                previousContext);
+        }
         IProgress<int> staleProgress =
             Assert.IsAssignableFrom<IProgress<int>>(
                 history.LastProgress);
 
-        await Task.Run(
-            () => staleProgress.Report(99),
-            TestContext.Current.CancellationToken);
-        await Task.Delay(
-            25,
-            TestContext.Current.CancellationToken);
+        staleProgress.Report(99);
+        progressContext.RunAll();
 
         Assert.Equal("", workbench.ProgressText);
         Assert.Equal(0, workbench.ProgressValue);

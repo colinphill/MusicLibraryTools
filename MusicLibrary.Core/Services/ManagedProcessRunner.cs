@@ -91,6 +91,11 @@ public sealed class ManagedProcessRunner(
                 .ConfigureAwait(false);
             await Task.WhenAll(stdoutTask, stderrTask)
                 .ConfigureAwait(false);
+            // Cancellation can kill the process quickly enough for
+            // WaitForExitAsync and both stream drains to observe a normal EOF
+            // before their cancellation registrations run. The operation was
+            // still cancelled and must not report a successful process result.
+            ct.ThrowIfCancellationRequested();
         }
         catch (OperationCanceledException)
         {

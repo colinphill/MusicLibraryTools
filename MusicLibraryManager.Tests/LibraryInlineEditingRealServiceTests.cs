@@ -100,10 +100,16 @@ public sealed class LibraryInlineEditingRealServiceTests
         await context.ViewModel.ReloadAsync();
         LibraryRow row = Assert.Single(context.ViewModel.Rows);
 
-        row.Title = "Unapplied reviewed title";
+        row.Title = "Initial unapplied reviewed title";
         WriteTitle(
             media.MediaPath,
             "Externally changed title with a different size");
+        // The first edit starts a debounced preview. Under a heavily loaded
+        // test runner that preview can finish before this test thread performs
+        // the external write. A second edit invalidates that generation while
+        // retaining the original edit-time source snapshot, guaranteeing that
+        // the awaited preview was created after the external mutation.
+        row.Title = "Unapplied reviewed title";
         await WaitForAuthoritativePreviewAsync(
             context.ViewModel);
 
