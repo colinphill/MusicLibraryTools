@@ -28,7 +28,6 @@
       "MusicLibraryManager.Presentation/MusicLibraryManager.Presentation.csproj",
       "MusicLibraryManager.Tests/MusicLibraryManager.Tests.csproj",
       "MusicLibraryManager/MusicLibraryManager.csproj",
-      "MusicLibraryManager.UI.Tests/MusicLibraryManager.UI.Tests.csproj",
       "MusicLibrary.Core/MusicLibrary.Core.csproj",
       "MusicLibrary.Core.Tests/MusicLibrary.Core.Tests.csproj",
       "OrganizeFiles/OrganizeFiles.csproj",

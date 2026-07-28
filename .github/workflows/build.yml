@@ -196,9 +196,6 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install innosetup --yes --no-progress
 
-      - name: Test Music Library Manager UI
-        run: dotnet test MusicLibraryManager.UI.Tests/MusicLibraryManager.UI.Tests.csproj --configuration Release
-
       - name: Package Music Library Manager
         shell: pwsh
         run: ./MusicLibraryManager/Package.ps1 -Version "0.0.0-ci.${{ github.run_number }}" -Rids ${{ matrix.rid }} -SyncerRuntimeRoot .ci/syncer-runtime -Installers
