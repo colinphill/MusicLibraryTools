@@ -45,4 +45,14 @@
     <ProjectReference Include="..\MusicLibrary.Core\MusicLibrary.Core.csproj" />
     <ProjectReference Include="..\MusicLibraryManager.Presentation\MusicLibraryManager.Presentation.csproj" />
   </ItemGroup>
+
+  <!-- CopyDebugSymbolFilesFromPackages only covers managed lib/ symbol files. Native runtime
+       packages (SkiaSharp, HarfBuzzSharp) ship their .pdb next to the .dll under
+       runtimes/<rid>/native/, which the publish pipeline copies unconditionally. Strip any
+       leftover .pdb from the Release publish output. -->
+  <Target Name="RemoveNativeDebugSymbolsFromRelease" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
 </Project>
