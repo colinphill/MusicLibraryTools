@@ -116,6 +116,7 @@
                           BorderBrush="Transparent"
                           BorderThickness="2"
                           ClipToBounds="True"
+                          controls:RoundedClip.Enforce="True"
                           Focusable="True"
                           Cursor="Hand"
                           Tag="{Binding}"

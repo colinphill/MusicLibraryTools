@@ -77,6 +77,7 @@
                 CornerRadius="12"
                 Padding="24"
                 ClipToBounds="True"
+                controls:RoundedClip.Enforce="True"
                 Background="{DynamicResource AppHeroBrush}">
           <Grid>
             <Canvas IsHitTestVisible="False"

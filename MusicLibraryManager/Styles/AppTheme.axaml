@@ -224,6 +224,7 @@
     <Setter Property="CornerRadius" Value="{DynamicResource AppRadiusLarge}" />
     <Setter Property="Padding" Value="{DynamicResource AppPaddingLarge}" />
     <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="controls:RoundedClip.Enforce" Value="True" />
   </Style>
   <Style Selector="Border.card.selected">
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
@@ -240,6 +241,7 @@
     <Setter Property="CornerRadius" Value="{DynamicResource AppRadiusLarge}" />
     <Setter Property="Padding" Value="{DynamicResource AppPaddingLarge}" />
     <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="controls:RoundedClip.Enforce" Value="True" />
   </Style>
   <Style Selector="Border.inset-card">
     <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />

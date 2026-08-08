@@ -43,7 +43,7 @@
         </StackPanel>
       </Border>
     </UniformGrid>
-    <ListBox Grid.Row="1" ItemsSource="{Binding Rows}" Background="Transparent" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+    <ListBox Grid.Row="1" ItemsSource="{Binding Rows}" Background="Transparent" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8" ClipToBounds="True" controls:RoundedClip.Enforce="True">
       <ListBox.ItemTemplate>
         <DataTemplate>
           <Grid Classes="field"
