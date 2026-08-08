@@ -76,17 +76,17 @@
           </Grid>
         </Border>
 
-        <UniformGrid x:Name="MetricGrid" Columns="4" IsVisible="{Binding HasConfiguration}">
-          <Border Classes="card" Margin="4">
+        <UniformGrid x:Name="MetricGrid" Columns="4" Margin="-8" IsVisible="{Binding HasConfiguration}">
+          <Border Classes="card" Margin="8">
             <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.Tracks}" FontWeight="SemiBold" /><TextBlock Text="{Binding TrackCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
-          <Border Classes="card" Margin="4">
+          <Border Classes="card" Margin="8">
             <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.Albums}" FontWeight="SemiBold" /><TextBlock Text="{Binding AlbumCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
-          <Border Classes="card" Margin="4">
+          <Border Classes="card" Margin="8">
             <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.AlbumArtists}" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtistCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
-          <Border Classes="card" Margin="4">
+          <Border Classes="card" Margin="8">
             <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.ArtworkCached}" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtworkCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
         </UniformGrid>

@@ -8,9 +8,8 @@
           ColumnDefinitions="*,Auto"
           ColumnSpacing="8">
       <StackPanel Spacing="4">
-        <TextBlock Text="{DynamicResource Loc.Workbench.Columns.Title}"
-                   FontSize="16"
-                   FontWeight="SemiBold" />
+        <TextBlock Classes="subsection-title"
+                   Text="{DynamicResource Loc.Workbench.Columns.Title}" />
         <TextBlock Classes="supporting"
                    Text="{DynamicResource Loc.Workbench.Columns.Description}"
                    TextWrapping="Wrap" />

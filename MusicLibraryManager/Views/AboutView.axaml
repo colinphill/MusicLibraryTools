@@ -76,18 +76,8 @@
         <Border x:Name="AboutHero"
                 CornerRadius="12"
                 Padding="24"
-                ClipToBounds="True">
-          <Border.Background>
-            <LinearGradientBrush StartPoint="0,0"
-                                 EndPoint="1,1">
-              <GradientStop Color="#087F8C"
-                            Offset="0" />
-              <GradientStop Color="#0B6875"
-                            Offset="0.52" />
-              <GradientStop Color="#173C57"
-                            Offset="1" />
-            </LinearGradientBrush>
-          </Border.Background>
+                ClipToBounds="True"
+                Background="{DynamicResource AppHeroBrush}">
           <Grid>
             <Canvas IsHitTestVisible="False"
                     Opacity="0.5">

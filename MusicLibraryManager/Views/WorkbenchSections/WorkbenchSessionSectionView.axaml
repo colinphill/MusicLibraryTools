@@ -105,9 +105,8 @@
               IsVisible="{Binding !HasFiles}"
               MaxWidth="430">
         <StackPanel Spacing="8">
-          <TextBlock HorizontalAlignment="Center"
-                     FontSize="18"
-                     FontWeight="SemiBold"
+          <TextBlock Classes="section-title"
+                     HorizontalAlignment="Center"
                      Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
           <TextBlock x:Name="EmptyStateSupportingText"
                      Classes="supporting"

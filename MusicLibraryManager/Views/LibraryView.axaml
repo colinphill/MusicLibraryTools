@@ -133,7 +133,7 @@
                       Classes="empty-state"
                       IsVisible="{Binding HasEmptyState}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="390" Spacing="12">
-                  <TextBlock Classes="section-title" FontSize="18" Text="{Binding EmptyStateTitle}"
+                  <TextBlock Classes="section-title" Text="{Binding EmptyStateTitle}"
                              TextAlignment="Center" TextWrapping="Wrap" />
                   <TextBlock Classes="muted" Text="{Binding EmptyStateMessage}"
                              TextAlignment="Center" TextWrapping="Wrap" />
@@ -142,10 +142,10 @@
                 </StackPanel>
               </Border>
 
-              <Border IsVisible="{Binding IsBusy}" Background="#990D1417" Padding="24">
+              <Border IsVisible="{Binding IsBusy}" Background="{DynamicResource AppScrimBrush}" Padding="24">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
                   <ProgressBar IsIndeterminate="True" Width="220" Height="4" />
-                  <TextBlock Foreground="White" Text="{DynamicResource Loc.Library.Loading}"
+                  <TextBlock Text="{DynamicResource Loc.Library.Loading}"
                              AutomationProperties.LiveSetting="Polite" />
                 </StackPanel>
               </Border>
@@ -174,7 +174,7 @@
                 RowSpacing="8" ColumnSpacing="16">
             <Grid Grid.ColumnSpan="2"
                   ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <TextBlock VerticalAlignment="Center" Text="{DynamicResource Loc.Library.Columns.Title}" FontSize="14" FontWeight="SemiBold" />
+              <TextBlock VerticalAlignment="Center" Classes="field-label" Text="{DynamicResource Loc.Library.Columns.Title}" />
               <Button x:Name="CloseColumnsButton" Grid.Column="1" Classes="app quiet icon"
                       ToolTip.Tip="{DynamicResource Loc.Library.Columns.CloseTooltip}"
                       AutomationProperties.Name="{DynamicResource Loc.Library.Columns.CloseTooltip}" Click="OnColumnsClose">
@@ -303,7 +303,7 @@
                 BorderThickness="1" CornerRadius="8" Padding="16" BoxShadow="0 14 40 0 #77000000">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="{DynamicResource Loc.Library.SavedViews.Title}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Library.SavedViews.Title}" VerticalAlignment="Center" />
               <Button Grid.Column="1" Classes="app quiet icon"
                       Click="OnViewsClose" ToolTip.Tip="{DynamicResource Loc.Library.SavedViews.CloseTooltip}"
                       AutomationProperties.Name="{DynamicResource Loc.Library.SavedViews.CloseTooltip}">
@@ -354,8 +354,7 @@
             <Grid x:Name="LibraryVisualFilterHeader"
                   Grid.ColumnSpan="2"
                   ColumnDefinitions="*,Auto">
-              <TextBlock Text="{DynamicResource Loc.Library.VisualFilter.Title}" FontSize="14"
-                         FontWeight="SemiBold" />
+              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Library.VisualFilter.Title}" />
               <Button x:Name="CloseVisualFilterButton"
                       Grid.Column="1" Classes="app quiet icon"
                       Click="OnVisualFilterClose"
@@ -504,7 +503,7 @@
                 BorderBrush="{DynamicResource AppBorderStrongBrush}" BorderThickness="1"
                 CornerRadius="8" Padding="16" BoxShadow="0 14 40 0 #77000000">
           <StackPanel Spacing="8">
-            <TextBlock Text="{DynamicResource Loc.Library.FilterHelp.Title}" FontSize="14" FontWeight="SemiBold" />
+            <TextBlock Classes="field-label" Text="{DynamicResource Loc.Library.FilterHelp.Title}" />
             <TextBlock Classes="muted" TextWrapping="Wrap"
                        Text="{DynamicResource Loc.Library.FilterHelp.Description}" />
             <TextBlock FontFamily="Consolas" Text="Artist:Miles AND NOT Codec:MP3" />
@@ -528,8 +527,7 @@
                 RowSpacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="4">
-                <TextBlock Text="{DynamicResource Loc.Library.PendingChanges.Title}"
-                           FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Library.PendingChanges.Title}" />
                 <TextBlock Classes="muted"
                            Text="{DynamicResource Loc.Library.PendingChanges.Description}" />
               </StackPanel>

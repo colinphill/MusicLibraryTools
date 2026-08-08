@@ -46,8 +46,7 @@
                        HorizontalAlignment="Center"
                        Text="{DynamicResource Loc.Workbench.AllFields.Title}" />
             <TextBlock x:Name="AllFieldsEmptyTitle"
-                       FontSize="17"
-                       FontWeight="SemiBold"
+                       Classes="section-title"
                        HorizontalAlignment="Center"
                        Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
             <TextBlock x:Name="AllFieldsEmptyDescription"

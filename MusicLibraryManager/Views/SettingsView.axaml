@@ -94,7 +94,7 @@
       </Border>
     </StackPanel>
 
-    <Border Grid.Row="2" Classes="card" Padding="0">
+    <Border Grid.Row="2" Classes="card" Padding="0" ClipToBounds="True">
       <Grid x:Name="SettingsNavigationLayout"
             ColumnDefinitions="230,*" RowDefinitions="Auto,*">
         <Border x:Name="SettingsCategoryRail" Grid.RowSpan="2"
@@ -911,7 +911,7 @@
                 <StackPanel Grid.Column="3" Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.CompletePathLimit}" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding CompletePathLengthLimit, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.CompletePathLimit}" /></StackPanel>
               </Grid>
 
-              <TextBlock FontSize="16" FontWeight="SemiBold" Text="{DynamicResource Loc.Settings.RootPolicy.DiscIdentityTitle}" />
+              <TextBlock Classes="subsection-title" Text="{DynamicResource Loc.Settings.RootPolicy.DiscIdentityTitle}" />
               <Grid Classes="responsive-form" ColumnDefinitions="*,*" ColumnSpacing="12">
                 <StackPanel Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.DiscStrategy}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.DiscStrategyChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibraryDiscStrategy" local:LocalizedChoiceSelection.Value="{Binding DiscStrategy, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.DiscStrategy}" /></StackPanel>
                 <StackPanel Grid.Column="1" Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.TrackTotalScope}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.TrackTotalScopeChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibraryTrackTotalScope" local:LocalizedChoiceSelection.Value="{Binding TrackTotalScope, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.TrackTotalScope}" /></StackPanel>
@@ -925,7 +925,7 @@
                 <CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Settings.RootPolicy.IdentityIncludesYear}" IsChecked="{Binding IdentityIncludesReleaseYear, Mode=TwoWay}" />
               </WrapPanel>
 
-              <TextBlock FontSize="16" FontWeight="SemiBold" Text="{DynamicResource Loc.Settings.RootPolicy.MetadataTitle}" />
+              <TextBlock Classes="subsection-title" Text="{DynamicResource Loc.Settings.RootPolicy.MetadataTitle}" />
               <WrapPanel>
                 <CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Settings.RootPolicy.PreserveReplayGain}" IsChecked="{Binding PreserveReplayGain, Mode=TwoWay}" />
                 <CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Settings.RootPolicy.PreserveMusicBrainz}" IsChecked="{Binding PreserveMusicBrainzIdentifiers, Mode=TwoWay}" />
@@ -933,13 +933,13 @@
                 <CheckBox Margin="0,0,16,8" Content="{DynamicResource Loc.Settings.RootPolicy.PreserveCompilation}" IsChecked="{Binding PreserveCompilationSemantics, Mode=TwoWay}" />
               </WrapPanel>
 
-              <TextBlock FontSize="16" FontWeight="SemiBold" Text="{DynamicResource Loc.Settings.RootPolicy.QualityTitle}" />
+              <TextBlock Classes="subsection-title" Text="{DynamicResource Loc.Settings.RootPolicy.QualityTitle}" />
               <Grid Classes="responsive-form" ColumnDefinitions="*,*" ColumnSpacing="12">
                 <StackPanel Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.HighResolutionSampleRate}" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding HighResolutionMinimumSampleRateHz, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.HighResolutionSampleRate}" /></StackPanel>
                 <StackPanel Grid.Column="1" Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.HighResolutionBitDepth}" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding HighResolutionMinimumBitsPerSample, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.HighResolutionBitDepth}" /></StackPanel>
               </Grid>
 
-              <TextBlock FontSize="16" FontWeight="SemiBold" Text="{DynamicResource Loc.Settings.Common.Artwork}" />
+              <TextBlock Classes="subsection-title" Text="{DynamicResource Loc.Settings.Common.Artwork}" />
               <Grid Classes="responsive-form" ColumnDefinitions="*,*,*" ColumnSpacing="12">
                 <StackPanel Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.ArtworkStorage}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ArtworkStorageLocalizedChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibraryArtworkStorage" local:LocalizedChoiceSelection.Value="{Binding ArtworkStorage, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.ArtworkStorage}" /></StackPanel>
                 <StackPanel Grid.Column="1" Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.ArtworkRoles}" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ArtworkRoleLocalizedChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibraryArtworkRoleSelection" local:LocalizedChoiceSelection.Value="{Binding ArtworkRoles, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.ArtworkRoles}" /></StackPanel>
@@ -957,7 +957,7 @@
                          Text="{DynamicResource Loc.Settings.RootPolicy.ReadArtworkDescription}"
                          TextWrapping="Wrap" />
 
-              <TextBlock FontSize="16" FontWeight="SemiBold" Text="{DynamicResource Loc.Settings.RootPolicy.HealthRules}" />
+              <TextBlock Classes="subsection-title" Text="{DynamicResource Loc.Settings.RootPolicy.HealthRules}" />
               <ItemsControl ItemsSource="{Binding HealthRules}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
@@ -977,7 +977,7 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
 
-              <Grid ColumnDefinitions="*,Auto"><TextBlock FontSize="16" FontWeight="SemiBold" Text="{DynamicResource Loc.Settings.RootPolicy.SidecarRules}" /><Button x:Name="AddSidecarRuleButton" Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.RootPolicy.AddSidecarRule}" Command="{Binding DataContext.AddSidecarRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" /></Grid>
+              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="subsection-title" Text="{DynamicResource Loc.Settings.RootPolicy.SidecarRules}" /><Button x:Name="AddSidecarRuleButton" Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Settings.RootPolicy.AddSidecarRule}" Command="{Binding DataContext.AddSidecarRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" /></Grid>
               <StackPanel Classes="field"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.RootPolicy.UnknownFileDisposition}" /><ComboBox MaxWidth="260" HorizontalAlignment="Stretch" Classes="app" ItemsSource="{Binding DataContext.SidecarDispositionChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" local:LocalizedChoiceSelection.Group="LibrarySidecarDisposition" local:LocalizedChoiceSelection.Value="{Binding UnknownSidecarDisposition, Mode=TwoWay}" DisplayMemberBinding="{Binding Label}" AutomationProperties.Name="{DynamicResource Loc.Settings.RootPolicy.UnknownFileDisposition}" /></StackPanel>
               <ItemsControl ItemsSource="{Binding SidecarRules}">
                 <ItemsControl.ItemTemplate>

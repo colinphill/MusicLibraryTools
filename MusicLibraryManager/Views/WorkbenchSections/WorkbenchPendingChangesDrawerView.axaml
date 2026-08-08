@@ -8,9 +8,8 @@
         RowSpacing="12">
     <Grid ColumnDefinitions="*,Auto">
       <StackPanel Spacing="4">
-        <TextBlock Text="{DynamicResource Loc.Workbench.PendingChanges.Title}"
-                   FontSize="16"
-                   FontWeight="SemiBold" />
+        <TextBlock Classes="subsection-title"
+                   Text="{DynamicResource Loc.Workbench.PendingChanges.Title}" />
         <TextBlock x:Name="SupportingText"
                    Classes="supporting"
                    Text="{DynamicResource Loc.Workbench.PendingChanges.Description}"

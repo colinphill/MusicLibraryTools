@@ -71,8 +71,7 @@
                     Padding="12"
                     Background="{DynamicResource AppPanelBrush}">
               <StackPanel Spacing="8">
-                <TextBlock FontSize="16"
-                           FontWeight="SemiBold"
+                <TextBlock Classes="subsection-title"
                            Text="{DynamicResource Loc.Workbench.Source.Title}" />
                 <TextBlock Classes="muted"
                            Text="{DynamicResource Loc.Workbench.Source.Description}"

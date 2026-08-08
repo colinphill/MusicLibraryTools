@@ -262,8 +262,7 @@
                    FontWeight="SemiBold"
                    HorizontalAlignment="Center"
                    Text="{DynamicResource Loc.Workbench.Section.ReportsAutomation}" />
-        <TextBlock FontSize="17"
-                   FontWeight="SemiBold"
+        <TextBlock Classes="section-title"
                    HorizontalAlignment="Center"
                    Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
         <TextBlock Classes="muted"

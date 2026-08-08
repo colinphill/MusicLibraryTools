@@ -21,8 +21,7 @@
                    HorizontalAlignment="Center"
                    Text="{DynamicResource Loc.Workbench.Section.FilesAutomation}" />
         <TextBlock x:Name="FileOperationsEmptyTitle"
-                   FontSize="17"
-                   FontWeight="SemiBold"
+                   Classes="section-title"
                    HorizontalAlignment="Center"
                    Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
         <TextBlock x:Name="FileOperationsEmptyDescription"

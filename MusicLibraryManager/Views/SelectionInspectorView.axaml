@@ -31,7 +31,7 @@
             Classes="empty-state"
             IsVisible="{Binding !HasSelection}">
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" MaxWidth="240">
-        <TextBlock Text="{DynamicResource Loc.Inspector.View.EmptyTitle}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+        <TextBlock Classes="section-title" Text="{DynamicResource Loc.Inspector.View.EmptyTitle}" HorizontalAlignment="Center" />
         <TextBlock Classes="muted" Text="{DynamicResource Loc.Inspector.View.EmptyDescription}"
                    TextAlignment="Center" TextWrapping="Wrap" />
       </StackPanel>
