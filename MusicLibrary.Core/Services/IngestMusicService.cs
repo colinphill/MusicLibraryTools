@@ -1374,11 +1374,14 @@ public sealed class IngestMusicService : IIngestMusicService
                 else if (output.Metadata.IsAlac)
                     await _ffmpeg.ConvertAlacToFlacAsync(plan.Configuration.FfmpegPath, output.SourcePath, stage, token);
                 else
-                    File.Copy(output.SourcePath, stage);
+                    await RetryFileOperationAsync(
+                            () => File.Copy(output.SourcePath, stage), token)
+                        .ConfigureAwait(false);
                 if (output.Kind != IngestOutputKind.Recipe)
-                    Normalize(stage, output.Metadata, output.SourcePath,
-                        plan.Configuration.Profile.Disc,
-                        plan.Configuration.Profile.Metadata, copyArtwork: true);
+                    await RetryFileOperationAsync(() => Normalize(stage, output.Metadata,
+                            output.SourcePath, plan.Configuration.Profile.Disc,
+                            plan.Configuration.Profile.Metadata, copyArtwork: true), token)
+                        .ConfigureAwait(false);
                 Validate(stage, output);
                 staged[output] = stage;
                 if (output.Kind == IngestOutputKind.CdFlac)
@@ -1395,9 +1398,10 @@ public sealed class IngestMusicService : IIngestMusicService
                 string stage = Path.Combine(stageRoot, Guid.NewGuid().ToString("N") + ".m4a");
                 await _ffmpeg.EncodeAacAsync(plan.Configuration.FfmpegPath, plan.Configuration.AacEncoder,
                     plan.Configuration.AacBitrateKbps, cdStages[output.Identity], stage, token);
-                Normalize(stage, output.Metadata, output.SourcePath,
-                    plan.Configuration.Profile.Disc,
-                    plan.Configuration.Profile.Metadata, copyArtwork: true);
+                await RetryFileOperationAsync(() => Normalize(stage, output.Metadata,
+                        output.SourcePath, plan.Configuration.Profile.Disc,
+                        plan.Configuration.Profile.Metadata, copyArtwork: true), token)
+                    .ConfigureAwait(false);
                 Validate(stage, output);
                 staged[output] = stage;
                 outputProgress(output, true);
@@ -1460,17 +1464,25 @@ public sealed class IngestMusicService : IIngestMusicService
                 string stage = staged[output];
                 if (File.Exists(output.DestinationPath))
                 {
-                    File.Delete(stage);
+                    // exactPreservingCopy staging skips Normalize, so a read-only source
+                    // (common on read-only media/network shares) leaves the staged copy
+                    // read-only too; clear it or the delete throws access-denied.
+                    ClearReadOnly(stage);
+                    await RetryFileOperationAsync(() => File.Delete(stage), ct)
+                        .ConfigureAwait(false);
                     continue;
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(output.DestinationPath)!);
-                File.Move(stage, output.DestinationPath);
+                await RetryFileOperationAsync(
+                        () => File.Move(stage, output.DestinationPath), ct)
+                    .ConfigureAwait(false);
                 installed.Add(output.DestinationPath);
             }
             foreach ((string destination, string stage) in stagedSidecars)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                File.Move(stage, destination);
+                await RetryFileOperationAsync(() => File.Move(stage, destination), ct)
+                    .ConfigureAwait(false);
                 installed.Add(destination);
             }
 
@@ -1478,7 +1490,8 @@ public sealed class IngestMusicService : IIngestMusicService
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(move.Quarantine)!);
                 if (File.Exists(move.Quarantine)) throw new IOException($"Quarantine collision: {move.Quarantine}");
-                File.Move(move.Original, move.Quarantine);
+                await RetryFileOperationAsync(() => File.Move(move.Original, move.Quarantine), ct)
+                    .ConfigureAwait(false);
                 quarantined.Add(move);
             }
 
@@ -1581,7 +1594,8 @@ public sealed class IngestMusicService : IIngestMusicService
                     throw new InvalidDataException(
                         $"Copy recipe '{output.RecipeId}' cannot change {sourceExtension} to " +
                         $"{destinationExtension}; choose a transcode action.");
-                File.Copy(output.SourcePath, stage);
+                await RetryFileOperationAsync(() => File.Copy(output.SourcePath, stage), ct)
+                    .ConfigureAwait(false);
                 break;
 
             case LibraryIngestAction.Remux:
@@ -1721,6 +1735,38 @@ public sealed class IngestMusicService : IIngestMusicService
             result.Add(new(stagePath, destination));
         }
         return result;
+    }
+
+    private static void ClearReadOnly(string path)
+    {
+        FileAttributes attributes = File.GetAttributes(path);
+        if (attributes.HasFlag(FileAttributes.ReadOnly))
+            File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
+    }
+
+    // Windows Defender / the search indexer can hold a brief exclusive lock on a file
+    // immediately after it is created, copied into, or moved, which surfaces as
+    // UnauthorizedAccessException or a "file in use" IOException. Retry with backoff
+    // rather than failing the whole album on a transient lock.
+    private static async Task RetryFileOperationAsync(
+        Action operation, CancellationToken ct, int maxAttempts = 5)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                operation();
+                return;
+            }
+            catch (Exception ex) when (
+                attempt < maxAttempts &&
+                ex is UnauthorizedAccessException or IOException)
+            {
+                await Task.Delay(
+                        TimeSpan.FromMilliseconds(50 * (1 << (attempt - 1))), ct)
+                    .ConfigureAwait(false);
+            }
+        }
     }
 
     private static void CleanupStageDirectories(string albumStageRoot)
@@ -1962,9 +2008,7 @@ public sealed class IngestMusicService : IIngestMusicService
         // produces a read-only staging file, even though staging is intentionally mutable while
         // destination metadata and artwork are projected. Never alter the source; only clear the
         // attribute on the private staged copy immediately before saving its tags.
-        FileAttributes attributes = File.GetAttributes(path);
-        if (attributes.HasFlag(FileAttributes.ReadOnly))
-            File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
+        ClearReadOnly(path);
         var media = MediaFile.GetFile(path);
         IMetadataWriter writer = media as IMetadataWriter
             ?? media.Tags.FirstOrDefault() as IMetadataWriter
