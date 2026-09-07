@@ -20,26 +20,39 @@ public sealed record ItunesMediaMutation(
     string? CurrentPath,
     string? ReferencePath = null)
 {
+    /// <summary>
+    /// The Album Artist to link and tag with, overriding whatever this file's own tag resolves
+    /// to. Ingest passes the one value already resolved for the whole album group here so that
+    /// tracks lacking an explicit Album Artist tag (common on partially-tagged compilations)
+    /// cannot fall back to their own individual Artist and split the album across multiple
+    /// catalog Album/Artist records.
+    /// </summary>
+    public string? AlbumArtistOverride { get; init; }
+
     public static ItunesMediaMutation Refresh(
         string path,
-        string? referencePath = null) =>
+        string? referencePath = null,
+        string? albumArtistOverride = null) =>
         new(
             ItunesMediaMutationKind.Refresh,
             path,
             path,
-            referencePath);
+            referencePath)
+        { AlbumArtistOverride = albumArtistOverride };
 
     public static ItunesMediaMutation Relocate(string originalPath, string currentPath) =>
         new(ItunesMediaMutationKind.Relocate, originalPath, currentPath);
 
     public static ItunesMediaMutation Add(
         string path,
-        string? referencePath = null) =>
+        string? referencePath = null,
+        string? albumArtistOverride = null) =>
         new(
             ItunesMediaMutationKind.Add,
             null,
             path,
-            referencePath);
+            referencePath)
+        { AlbumArtistOverride = albumArtistOverride };
 
     public static ItunesMediaMutation Remove(string path) =>
         new(ItunesMediaMutationKind.Remove, path, null);
@@ -426,7 +439,8 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
                                 !_owner.IsMusicPath(path))
                                 break;
                             IReadOnlyList<ItlRecord> matches = _document.FindTracksByPath(path);
-                            ItlLocalTrackMetadata metadata = ReadMetadata(path);
+                            ItlLocalTrackMetadata metadata = ApplyAlbumArtistOverride(
+                                ReadMetadata(path), mutation.AlbumArtistOverride);
                             FileInfo file = new(path);
                             if (matches.Count > 0)
                             {
@@ -479,7 +493,8 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
                                 break;
                             IReadOnlyList<ItlRecord> existing = _document.FindTracksByPath(path);
                             FileInfo file = new(path);
-                            ItlLocalTrackMetadata metadata = ReadMetadata(path);
+                            ItlLocalTrackMetadata metadata = ApplyAlbumArtistOverride(
+                                ReadMetadata(path), mutation.AlbumArtistOverride);
                             if (existing.Count == 0)
                             {
                                 _document.ImportLocalTrack(path, metadata, file.Length,
@@ -644,6 +659,13 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
+
+    private static ItlLocalTrackMetadata ApplyAlbumArtistOverride(
+        ItlLocalTrackMetadata metadata,
+        string? albumArtistOverride) =>
+        string.IsNullOrWhiteSpace(albumArtistOverride)
+            ? metadata
+            : metadata with { AlbumArtist = albumArtistOverride.Trim() };
 
     private static ItlLocalTrackMetadata ReadMetadata(string path)
     {

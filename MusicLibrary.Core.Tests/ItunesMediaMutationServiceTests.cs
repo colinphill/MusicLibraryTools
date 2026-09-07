@@ -142,6 +142,60 @@ public sealed class ItunesMediaMutationServiceTests
                 untrackedOutput));
     }
 
+    [Fact]
+    public async Task AlbumArtistOverrideLinksPartiallyTaggedCompilationToOneAlbum()
+    {
+        using var fixture = CreateFixture();
+        string trackA = Path.Combine(fixture.MediaFolder, "track-a.mp3");
+        string trackB = Path.Combine(fixture.MediaFolder, "track-b.mp3");
+        File.Copy(MediaFixtures.Path_("sample.mp3"), trackA);
+        File.Copy(MediaFixtures.Path_("sample.mp3"), trackB);
+        // Mirrors a real-world partially-tagged compilation: one rip carries an explicit Album
+        // Artist, the other has none and would otherwise fall back to its own individual Artist.
+        await new TagWriteService().ApplyAsync(
+            [trackA],
+            [
+                new TagEdit(TagFields.Artist, "Radiohead"),
+                new TagEdit(TagFields.Album, "Big Chill Compilation"),
+                new TagEdit(TagFields.AlbumArtist, null),
+            ]);
+        await new TagWriteService().ApplyAsync(
+            [trackB],
+            [
+                new TagEdit(TagFields.Artist, "Pixies"),
+                new TagEdit(TagFields.Album, "Big Chill Compilation"),
+                new TagEdit(TagFields.AlbumArtist, "Various Artists"),
+            ]);
+
+        var service = new ItunesMediaMutationService(
+            new CommandLineAppSettings(fixture.ConfigurationPath));
+
+        await using (IItunesMediaMutationSession session =
+                     await service.BeginAsync(
+                         [trackA, trackB],
+                         backupFiles: false,
+                         TestContext.Current.CancellationToken))
+        {
+            await session.CommitAsync(
+                [
+                    ItunesMediaMutation.Add(trackA, albumArtistOverride: "Various Artists"),
+                    ItunesMediaMutation.Add(trackB, albumArtistOverride: "Various Artists"),
+                ],
+                TestContext.Current.CancellationToken);
+            await session.CompleteAsync(TestContext.Current.CancellationToken);
+        }
+
+        ItlLibrary library = ItlLibrary.Load(fixture.LibraryPath);
+        ItlTrack a = library.Tracks.Single(t => PathComparer.Equals(t.LocalPath, trackA));
+        ItlTrack b = library.Tracks.Single(t => PathComparer.Equals(t.LocalPath, trackB));
+
+        Assert.Equal(a.AlbumId, b.AlbumId);
+        Assert.Equal(a.ArtistId, b.ArtistId);
+        ItlAlbum album = Assert.Single(
+            library.Albums, candidate => candidate.Name == "Big Chill Compilation");
+        Assert.Equal("Various Artists", album.Artist);
+    }
+
     private static ItunesMediaIndexedFile Snapshot(string path)
     {
         var file = new FileInfo(path);

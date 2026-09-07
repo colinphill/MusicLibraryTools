@@ -1503,11 +1503,17 @@ public sealed class IngestMusicService : IIngestMusicService
                   $"COMMIT\t{album.Key}"];
             if (!string.IsNullOrWhiteSpace(plan.Configuration.ItunesLibraryPath))
             {
+                // One resolved value for the whole album group, not each track's own tag: a
+                // partially-tagged compilation (Album Artist set on some rips, absent on others)
+                // would otherwise let untagged tracks fall back to their individual Artist and
+                // split the album across multiple catalog Album/Artist records.
+                string? albumArtist = album.Tracks.FirstOrDefault()?.EffectiveAlbumArtist;
                 await itunesSession.CommitAsync(
                 [
                     .. album.Outputs
                         .Where(output => output.AddToMediaCatalog)
-                        .Select(output => ItunesMediaMutation.Add(output.DestinationPath)),
+                        .Select(output => ItunesMediaMutation.Add(
+                            output.DestinationPath, albumArtistOverride: albumArtist)),
                     .. quarantined.Select(move =>
                         ItunesMediaMutation.Remove(move.Original)),
                 ], CancellationToken.None);
