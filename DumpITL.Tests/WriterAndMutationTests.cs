@@ -374,6 +374,34 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
+    public void SortArtistAndSortAlbumArtistDrawFromTheSharedArtistKeyDomain()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+
+        // Two distinct artist-domain values claim keys 1 and 2. Sort Artist and Sort Album Artist
+        // are each the first field of their own type in the document, so if they still drew their
+        // key from an independent per-type counter (the bug this guards against) they would also be
+        // minted key 1 -- silently colliding with "First artist" even though the fields name
+        // different things.
+        document.SetTrackString(track, ItlDataType.Artist, "First artist");
+        document.SetTrackString(track, ItlDataType.AlbumArtist, "Second artist");
+        document.SetTrackString(track, ItlDataType.SortArtist, "Sort artist value");
+        document.SetTrackString(track, ItlDataType.SortAlbumArtist, "Sort album artist value");
+
+        IEnumerable<ItlField> artistDomain = document.Tracks.SelectMany(record => record.Fields)
+            .Where(field => field.Type is (int)ItlDataType.Artist or (int)ItlDataType.AlbumArtist or
+                (int)ItlDataType.SortArtist or (int)ItlDataType.SortAlbumArtist);
+        Assert.DoesNotContain(artistDomain.GroupBy(Key), group =>
+            group.Select(field => field.Text).Distinct(StringComparer.Ordinal).Count() > 1);
+        Assert.DoesNotContain(document.Validate(), issue =>
+            issue.Severity == ItlValidationSeverity.Error);
+
+        static uint Key(ItlField field) =>
+            BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16));
+    }
+
+    [Fact]
     public void ValidationRejectsSharedMetadataKeysThatNameDifferentValues()
     {
         ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));

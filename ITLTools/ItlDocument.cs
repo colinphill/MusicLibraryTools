@@ -190,7 +190,8 @@ public sealed partial class ItlDocument
         uint? sharedKey = type switch
         {
             ItlDataType.Album => SharedAlbumNameKey(value),
-            ItlDataType.Artist or ItlDataType.AlbumArtist => SharedArtistNameKey(value),
+            ItlDataType.Artist or ItlDataType.AlbumArtist
+                or ItlDataType.SortArtist or ItlDataType.SortAlbumArtist => SharedArtistNameKey(value),
             _ => null,
         };
         if (sharedKey.HasValue)
@@ -215,7 +216,18 @@ public sealed partial class ItlDocument
         .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
             field.Type == (int)ItlDataType.Artist)))
         .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
-            field.Type == (int)ItlDataType.AlbumArtist))));
+            field.Type == (int)ItlDataType.AlbumArtist)))
+        // Sort Artist and Sort Album Artist name the same real-world artist as the fields above,
+        // so they must draw from and be checked against the same key pool. Keeping them on their
+        // own per-type counter (the generic SetInternedField path) let that counter and this one
+        // mint the same key number for two different artists, which ValidateSharedStringKeys never
+        // caught because it did not scan these two types -- a real, observed source of tracks
+        // (including ones untouched by the current edit) getting the wrong artist after iTunes
+        // next rewrote the library.
+        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
+            field.Type == (int)ItlDataType.SortArtist)))
+        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
+            field.Type == (int)ItlDataType.SortAlbumArtist))));
 
     private static uint SharedStringKey(string value, IEnumerable<ItlField> domain)
     {

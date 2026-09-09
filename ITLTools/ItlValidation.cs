@@ -166,7 +166,9 @@ public sealed partial class ItlDocument
                     field.Type == (int)ItlDataType.AlbumRecordSortArtist)))
                 .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
                     field.Type == (int)ItlDataType.Artist ||
-                    field.Type == (int)ItlDataType.AlbumArtist))));
+                    field.Type == (int)ItlDataType.AlbumArtist ||
+                    field.Type == (int)ItlDataType.SortArtist ||
+                    field.Type == (int)ItlDataType.SortAlbumArtist))));
 
             void CheckDomain(string name, IEnumerable<ItlField> fields)
             {

@@ -1,5 +1,3 @@
-using System.Buffers.Binary;
-
 namespace iTunes.Binary;
 
 /// <summary>
@@ -237,14 +235,22 @@ public sealed partial class ItlDocument
         return imported;
     }
 
+    /// <summary>
+    /// Resolves and points a track at its Album and Artist entity records. The track's own Artist,
+    /// AlbumArtist, SortArtist, SortAlbumArtist and Album fields are keyed correctly by
+    /// <see cref="SetTrackString"/> before this runs (see <see cref="RefreshLocalTrack"/> and
+    /// <see cref="RepairLocalTrackFromCache"/>), and <see cref="AddAlbum"/>/<see cref="AddArtist"/>
+    /// key any newly created entity record the same way, so no separate key bookkeeping is needed
+    /// here -- doing it twice, with two different notions of "the same name", is what let a track's
+    /// own Artist field end up with a key that collided with an unrelated one elsewhere in the file.
+    /// </summary>
     private void LinkAlbumAndArtist(ItlRecord track, ItlLocalTrackMetadata metadata)
     {
         string? album = Clean(metadata.Album);
         string? artist = Clean(metadata.AlbumArtist) ?? Clean(metadata.Artist);
-        ItlRecord? albumRecord = null;
         if (album is not null && artist is not null)
         {
-            albumRecord = Albums.FirstOrDefault(candidate =>
+            ItlRecord albumRecord = Albums.FirstOrDefault(candidate =>
                 string.Equals(candidate.Field((int)ItlDataType.AlbumRecordName)?.Text, album,
                     StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(candidate.Field((int)ItlDataType.AlbumRecordArtist)?.Text, artist,
@@ -264,27 +270,6 @@ public sealed partial class ItlDocument
                     ?? throw new InvalidOperationException(
                         "The library has no artist record template."));
             track.SetArtistId(RecordIdOf(artistRecord));
-
-            // These fields share one native string-key domain. Keeping their payload text equal is
-            // insufficient: a reused key causes iTunes to substitute that key's unrelated value
-            // across every track when it next rewrites the library.
-            ItlField artistName = artistRecord.Field((int)ItlDataType.ArtistRecordName)!;
-            SynchronizeKey(artistName, track.Field((int)ItlDataType.AlbumArtist));
-            SynchronizeKey(artistName, track.Field((int)ItlDataType.Artist));
-            SynchronizeKey(artistName, albumRecord?.Field((int)ItlDataType.AlbumRecordArtist));
-            SynchronizeKey(artistName, albumRecord?.Field((int)ItlDataType.AlbumRecordSortArtist));
-        }
-
-        if (albumRecord is not null)
-            SynchronizeKey(albumRecord.Field((int)ItlDataType.AlbumRecordName),
-                track.Field((int)ItlDataType.Album));
-
-        static void SynchronizeKey(ItlField? source, ItlField? target)
-        {
-            if (source is null || target is null || source.Text != target.Text)
-                return;
-            BinaryPrimitives.WriteUInt32LittleEndian(target.Header.AsSpan(16),
-                BinaryPrimitives.ReadUInt32LittleEndian(source.Header.AsSpan(16)));
         }
     }
 
