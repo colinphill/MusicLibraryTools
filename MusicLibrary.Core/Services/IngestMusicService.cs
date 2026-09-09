@@ -243,11 +243,30 @@ public sealed class IngestMusicService : IIngestMusicService
         var claimed = new HashSet<string>(PathComparer);
         var claimedSidecars = new Dictionary<string, string>(PathComparer);
 
-        foreach (var group in scanned.GroupBy(t => AlbumKey(t.EffectiveAlbumArtist, t.BaseAlbum)))
+        // A partially-tagged compilation -- an explicit Album Artist tag on some rips, absent on
+        // others -- must not let the untagged tracks fall back to their own individual performer
+        // and fragment one physical album into several catalog albums here, before an ingested
+        // album group even exists for AlbumArtistOverride (see ApplyAlbumAsync) to resolve. Resolve
+        // one explicit Album Artist per source folder and album, and prefer it over each track's own
+        // fallback when grouping. Tracks are scoped by folder as well as album so that two unrelated,
+        // identically-titled albums by different artists in different folders still stay distinct.
+        Dictionary<(string Folder, string Album), string> resolvedAlbumArtists = scanned
+            .Where(t => !string.IsNullOrWhiteSpace(t.AlbumArtist))
+            .GroupBy(t => (Path.GetDirectoryName(t.Path) ?? "", NormalizeKey(t.BaseAlbum)))
+            .Where(g => g.Select(t => NormalizeKey(t.AlbumArtist!)).Distinct().Count() == 1)
+            .ToDictionary(g => g.Key, g => g.First().AlbumArtist!);
+        string GroupArtist(ScannedTrack t) =>
+            resolvedAlbumArtists.TryGetValue(
+                (Path.GetDirectoryName(t.Path) ?? "", NormalizeKey(t.BaseAlbum)),
+                out string? explicitArtist)
+                ? explicitArtist
+                : t.EffectiveAlbumArtist;
+
+        foreach (var group in scanned.GroupBy(t => AlbumKey(GroupArtist(t), t.BaseAlbum)))
         {
             ct.ThrowIfCancellationRequested();
             var sourceTracks = group.ToList();
-            string display = $"{sourceTracks[0].EffectiveAlbumArtist} — {sourceTracks[0].BaseAlbum}";
+            string display = $"{GroupArtist(sourceTracks[0])} — {sourceTracks[0].BaseAlbum}";
             int before = conflicts.Count;
             var discs = sourceTracks.Where(t => t.DiscNumber.HasValue).Select(t => t.DiscNumber!.Value).Distinct().Order().ToArray();
             bool multiDisc = discs.Length > 1;
@@ -1506,8 +1525,15 @@ public sealed class IngestMusicService : IIngestMusicService
                 // One resolved value for the whole album group, not each track's own tag: a
                 // partially-tagged compilation (Album Artist set on some rips, absent on others)
                 // would otherwise let untagged tracks fall back to their individual Artist and
-                // split the album across multiple catalog Album/Artist records.
-                string? albumArtist = album.Tracks.FirstOrDefault()?.EffectiveAlbumArtist;
+                // split the album across multiple catalog Album/Artist records. Preview already
+                // grouped every track of such a compilation into this one album (see the
+                // resolvedAlbumArtists pass above), but album.Tracks is ordered by disc/track
+                // number, not by which rip happens to carry the tag -- prefer any track's explicit
+                // Album Artist over FirstOrDefault()'s track, which may be one of the untagged ones.
+                string? albumArtist = album.Tracks
+                    .Select(track => track.AlbumArtist)
+                    .FirstOrDefault(albumArtistTag => !string.IsNullOrWhiteSpace(albumArtistTag))
+                    ?? album.Tracks.FirstOrDefault()?.EffectiveAlbumArtist;
                 await itunesSession.CommitAsync(
                 [
                     .. album.Outputs

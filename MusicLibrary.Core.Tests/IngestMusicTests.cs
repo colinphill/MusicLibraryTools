@@ -133,6 +133,38 @@ public class IngestMusicTests
         });
     }
 
+    [Fact]
+    public async Task Preview_GroupsPartiallyTaggedCompilationIntoOneAlbum()
+    {
+        using var tree = new TempTree();
+        string source = tree.Dir("incoming");
+        string config = tree.Config();
+        string fixture = Path.Combine(AppContext.BaseDirectory, "TestFiles", "sample.flac");
+        // A real-world tagging inconsistency: only the first rip carries an explicit Album Artist
+        // tag; the rest were tagged with just their own individual performer. Grouping by each
+        // track's own Effective Album Artist (Album Artist, falling back to Artist) would otherwise
+        // split this one physical compilation into three separate album plans.
+        foreach (var item in new[]
+        {
+            (File: "t1", Track: 1, Artist: "Performer One", AlbumArtist: "Various Artists"),
+            (File: "t2", Track: 2, Artist: "Performer Two", AlbumArtist: (string?)null),
+            (File: "t3", Track: 3, Artist: "Performer Three", AlbumArtist: (string?)null),
+        })
+        {
+            string path = Path.Combine(source, item.File + ".flac");
+            File.Copy(fixture, path);
+            WriteTags(path, "Compilation Album", item.File, item.Track, disc: 1);
+            WriteArtistTags(path, item.Artist, item.AlbumArtist);
+        }
+
+        IngestPlan plan = await new IngestMusicService(new FakeFfmpeg()).PreviewAsync(new(source, config));
+
+        Assert.Empty(plan.Conflicts);
+        IngestAlbumPlan album = Assert.Single(plan.Albums);
+        Assert.Equal(3, album.Tracks.Count);
+        Assert.Equal("Various Artists — Compilation Album", album.Display);
+    }
+
     private sealed class InlineProgress<T>(Action<T> report) :
         IProgress<T>
     {
@@ -316,6 +348,48 @@ public class IngestMusicTests
             mutation.Kind == ItunesMediaMutationKind.Remove &&
             mutation.OriginalPath == source);
         Assert.True(itunes.Completed);
+    }
+
+    [Fact]
+    public async Task Apply_PrefersAnyTracksExplicitAlbumArtistOverTheFirstTracksFallback()
+    {
+        using var tree = new TempTree();
+        string sourceOne = tree.FileFromFixture("incoming", "one.flac", "sample.flac");
+        string sourceTwo = tree.FileFromFixture("incoming", "two.flac", "sample.flac");
+        string libraryPath = tree.Path("legacy-selected.itl");
+        IngestPlan original = ManualPlan(tree, [sourceOne, sourceTwo], requireApproval: false);
+        // The first track (the one ApplyAlbumAsync used to take unconditionally via
+        // Tracks.FirstOrDefault()) has no explicit Album Artist tag and would fall back to its own
+        // individual performer; a later track in the same album does carry one. The resolved
+        // catalog override must prefer that explicit tag over the first track's fallback.
+        List<IngestTrackPlan> tracks =
+        [
+            original.Albums.Single().Tracks[0] with { Artist = "Performer One", AlbumArtist = null },
+            original.Albums.Single().Tracks[1] with { Artist = "Performer Two", AlbumArtist = "Various Artists" },
+        ];
+        Dictionary<string, IngestTrackPlan> tracksByIdentity = tracks.ToDictionary(track => track.Identity);
+        IngestAlbumPlan album = original.Albums.Single() with
+        {
+            Tracks = tracks,
+            Outputs = original.Albums.Single().Outputs
+                .Select(output => output with { Metadata = tracksByIdentity[output.Identity] })
+                .ToList(),
+        };
+        IngestPlan plan = original with
+        {
+            Albums = [album],
+            Configuration = original.Configuration with { ItunesLibraryPath = libraryPath },
+        };
+        var itunes = new RecordingItunesMutationService();
+
+        IngestResult result = await new IngestMusicService(
+            new FakeFfmpeg(), itunes: itunes).ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        IReadOnlyList<ItunesMediaMutation> addMutations =
+            [.. itunes.Mutations.Where(mutation => mutation.Kind == ItunesMediaMutationKind.Add)];
+        Assert.Equal(2, addMutations.Count);
+        Assert.All(addMutations, mutation => Assert.Equal("Various Artists", mutation.AlbumArtistOverride));
     }
 
     [Fact]
@@ -1403,6 +1477,18 @@ public class IngestMusicTests
         writer.SetField(TagFields.Title, title);
         writer.SetField(TagFields.TrackNumber, track.ToString());
         writer.SetField(TagFields.DiscNumber, disc.ToString());
+        writer.Save();
+    }
+
+    private static void WriteArtistTags(string path, string artist, string? albumArtist)
+    {
+        var media = MediaFile.GetFile(path);
+        var writer = Assert.IsAssignableFrom<IMetadataWriter>(media);
+        writer.SetField(TagFields.Artist, artist);
+        if (albumArtist is null)
+            writer.RemoveField(TagFields.AlbumArtist);
+        else
+            writer.SetField(TagFields.AlbumArtist, albumArtist);
         writer.Save();
     }
 
