@@ -1340,6 +1340,8 @@ static async Task<int> RepairFromCacheAsync(string configurationPath, string[] o
     ItlMetadataRepairApplyResult result = await service.ApplyAsync(
         plan, plan.Items.Select(item => item.Id).ToArray());
     Console.WriteLine($"\nApplied {result.Applied:N0}; skipped {result.Skipped:N0}; failed {result.Failed:N0}.");
+    if (result.InternedKeyFieldsRepaired > 0)
+        Console.WriteLine($"Re-interned {result.InternedKeyFieldsRepaired:N0} shared string-key field(s).");
     foreach (ItlMetadataRepairItemResult failed in result.Items.Where(item =>
                  item.Outcome == ItlMetadataRepairOutcome.Failed))
         Console.Error.WriteLine($"  [{failed.Item.TrackId}] {failed.Error}");

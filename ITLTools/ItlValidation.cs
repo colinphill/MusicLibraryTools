@@ -155,20 +155,14 @@ public sealed partial class ItlDocument
 
         void ValidateSharedStringKeys()
         {
-            CheckDomain("album", Albums.SelectMany(record => record.Fields.Where(field =>
-                    field.Type == (int)ItlDataType.AlbumRecordName))
-                .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
-                    field.Type == (int)ItlDataType.Album))));
-            CheckDomain("artist", Artists.SelectMany(record => record.Fields.Where(field =>
-                    field.Type == (int)ItlDataType.ArtistRecordName))
-                .Concat(Albums.SelectMany(record => record.Fields.Where(field =>
-                    field.Type == (int)ItlDataType.AlbumRecordArtist ||
-                    field.Type == (int)ItlDataType.AlbumRecordSortArtist)))
-                .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
-                    field.Type == (int)ItlDataType.Artist ||
-                    field.Type == (int)ItlDataType.AlbumArtist ||
-                    field.Type == (int)ItlDataType.SortArtist ||
-                    field.Type == (int)ItlDataType.SortAlbumArtist))));
+            // The domain definitions live beside the key-minting code in ItlDocument.cs so that
+            // writing, validating, and repairing always agree on what shares a pool. Track
+            // sort-artist fields intern in their own shared pool, separate from the artist names;
+            // native libraries legitimately reuse the same key numbers across the two pools for
+            // unrelated text, so merging them here rejects every healthy library.
+            CheckDomain("album", AlbumNameKeyDomain().Select(pair => pair.Field));
+            CheckDomain("artist", ArtistNameKeyDomain().Select(pair => pair.Field));
+            CheckDomain("sort-artist", SortArtistNameKeyDomain().Select(pair => pair.Field));
 
             void CheckDomain(string name, IEnumerable<ItlField> fields)
             {

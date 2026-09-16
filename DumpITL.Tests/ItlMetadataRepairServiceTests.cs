@@ -247,6 +247,107 @@ public sealed class ItlMetadataRepairServiceTests
             overrideLibraryPath, TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task PreviewAndApplyRepairInternedKeyCollisionsWhenTagTextAlreadyMatches()
+    {
+        using var workspace = new TemporaryDirectory();
+        string mediaPath = Path.Combine(workspace.Path, "Track.m4a");
+        string libraryPath = Path.Combine(workspace.Path, "Library.itl");
+        ItlDocument source = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord sourceTrack = source.Tracks.Single();
+        source.SetTrackString(sourceTrack, ItlDataType.Location, mediaPath);
+        source.RepairLocalTrackFromCache(sourceTrack, CachedMetadata(), DateTime.UtcNow);
+        SeedSortArtistKeyCollision(source, sourceTrack);
+        source.Save(libraryPath);
+
+        var service = new ItlMetadataRepairService(new StubContextFactory(
+            CreateContext(workspace.Path, mediaPath, libraryPath)));
+        ItlMetadataRepairPlan plan = await service.PreviewAsync(
+            ct: TestContext.Current.CancellationToken);
+
+        ItlMetadataRepairItem item = Assert.Single(plan.Items);
+        Assert.True(item.RepairsInternedKeysOnly);
+        ItlMetadataDifference difference = Assert.Single(item.Differences);
+        Assert.Contains("interned key", difference.Field);
+        Assert.Contains("shares key", difference.Before);
+
+        ItlMetadataRepairApplyResult result = await service.ApplyAsync(
+            plan, [item.Id], ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.Applied);
+        Assert.Equal(1, result.InternedKeyFieldsRepaired);
+        ItlDocument repaired = ItlDocument.Load(libraryPath);
+        ItlRecord repairedTrack = repaired.Tracks.Single();
+        Assert.Equal("Sort artist value", repairedTrack.GetString(ItlDataType.SortArtist));
+        Assert.Equal("Sort album artist value", repairedTrack.GetString(ItlDataType.SortAlbumArtist));
+        Assert.DoesNotContain(repaired.Validate(), issue =>
+            issue.Severity == ItlValidationSeverity.Error);
+        Assert.Empty(repaired.PreviewSharedStringKeyRepairs());
+    }
+
+    [Fact]
+    public async Task ApplyRepairsInternedKeysTogetherWithCacheDifferencesOnTheSameTrack()
+    {
+        using var workspace = new TemporaryDirectory();
+        string mediaPath = Path.Combine(workspace.Path, "Track.m4a");
+        string libraryPath = Path.Combine(workspace.Path, "Library.itl");
+        ItlDocument source = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord sourceTrack = source.Tracks.Single();
+        source.SetTrackString(sourceTrack, ItlDataType.Location, mediaPath);
+        source.RepairLocalTrackFromCache(sourceTrack, CachedMetadata(), DateTime.UtcNow);
+        source.SetTrackString(sourceTrack, ItlDataType.Title, "Wrong title");
+        SeedSortArtistKeyCollision(source, sourceTrack);
+        source.Save(libraryPath);
+
+        var service = new ItlMetadataRepairService(new StubContextFactory(
+            CreateContext(workspace.Path, mediaPath, libraryPath)));
+        ItlMetadataRepairPlan plan = await service.PreviewAsync(
+            ct: TestContext.Current.CancellationToken);
+
+        ItlMetadataRepairItem item = Assert.Single(plan.Items);
+        Assert.False(item.RepairsInternedKeysOnly);
+        Assert.Contains(item.Differences, value => value.Field == "Title");
+        Assert.Contains(item.Differences, value => value.Field.Contains("interned key"));
+
+        ItlMetadataRepairApplyResult result = await service.ApplyAsync(
+            plan, [item.Id], ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.Applied);
+        Assert.Equal(1, result.InternedKeyFieldsRepaired);
+        ItlDocument repaired = ItlDocument.Load(libraryPath);
+        Assert.Equal("Cached title", repaired.Tracks.Single().GetString(ItlDataType.Title));
+        Assert.DoesNotContain(repaired.Validate(), issue =>
+            issue.Severity == ItlValidationSeverity.Error);
+    }
+
+    private static ItlCachedTrackMetadata CachedMetadata() => new()
+    {
+        Title = "Cached title",
+        Artist = "Cached artist",
+        AlbumArtist = "Cached album artist",
+        HasExplicitAlbumArtist = true,
+        Album = "Cached album",
+        TrackNumber = 7,
+        TrackCount = 12,
+        DiscNumber = 1,
+        DiscCount = 1,
+        Year = 2026,
+        Compilation = false,
+    };
+
+    // Forges the collision the pre-2026-09 per-type counters could mint: two different sort names
+    // carrying one key inside the shared track sort-artist pool. SaveValidated rejects this state,
+    // so tests persist it with the unvalidated ItlDocument.Save.
+    private static void SeedSortArtistKeyCollision(ItlDocument document, ItlRecord track)
+    {
+        document.SetTrackString(track, ItlDataType.SortArtist, "Sort artist value");
+        document.SetTrackString(track, ItlDataType.SortAlbumArtist, "Sort album artist value");
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(
+            track.Field((int)ItlDataType.SortAlbumArtist)!.Header.AsSpan(16),
+            System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(
+                track.Field((int)ItlDataType.SortArtist)!.Header.AsSpan(16)));
+    }
+
     private static LibraryOperationContext CreateContext(
         string workspace,
         string mediaPath,

@@ -190,8 +190,8 @@ public sealed partial class ItlDocument
         uint? sharedKey = type switch
         {
             ItlDataType.Album => SharedAlbumNameKey(value),
-            ItlDataType.Artist or ItlDataType.AlbumArtist
-                or ItlDataType.SortArtist or ItlDataType.SortAlbumArtist => SharedArtistNameKey(value),
+            ItlDataType.Artist or ItlDataType.AlbumArtist => SharedArtistNameKey(value),
+            ItlDataType.SortArtist or ItlDataType.SortAlbumArtist => SharedSortArtistNameKey(value),
             _ => null,
         };
         if (sharedKey.HasValue)
@@ -201,33 +201,44 @@ public sealed partial class ItlDocument
         track.SetDateModified(DateTime.UtcNow);
     }
 
-    private uint SharedAlbumNameKey(string value) => SharedStringKey(value,
-        Albums.SelectMany(record => record.Fields.Where(field =>
-            field.Type == (int)ItlDataType.AlbumRecordName))
-        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
-            field.Type == (int)ItlDataType.Album))));
+    private uint SharedAlbumNameKey(string value) =>
+        SharedStringKey(value, AlbumNameKeyDomain().Select(pair => pair.Field));
 
-    private uint SharedArtistNameKey(string value) => SharedStringKey(value,
-        Artists.SelectMany(record => record.Fields.Where(field =>
-            field.Type == (int)ItlDataType.ArtistRecordName))
-        .Concat(Albums.SelectMany(record => record.Fields.Where(field =>
-            field.Type is (int)ItlDataType.AlbumRecordArtist or
-                (int)ItlDataType.AlbumRecordSortArtist)))
-        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
-            field.Type == (int)ItlDataType.Artist)))
-        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
-            field.Type == (int)ItlDataType.AlbumArtist)))
-        // Sort Artist and Sort Album Artist name the same real-world artist as the fields above,
-        // so they must draw from and be checked against the same key pool. Keeping them on their
-        // own per-type counter (the generic SetInternedField path) let that counter and this one
-        // mint the same key number for two different artists, which ValidateSharedStringKeys never
-        // caught because it did not scan these two types -- a real, observed source of tracks
-        // (including ones untouched by the current edit) getting the wrong artist after iTunes
-        // next rewrote the library.
-        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
-            field.Type == (int)ItlDataType.SortArtist)))
-        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
-            field.Type == (int)ItlDataType.SortAlbumArtist))));
+    private uint SharedArtistNameKey(string value) =>
+        SharedStringKey(value, ArtistNameKeyDomain().Select(pair => pair.Field));
+
+    private uint SharedSortArtistNameKey(string value) =>
+        SharedStringKey(value, SortArtistNameKeyDomain().Select(pair => pair.Field));
+
+    // The three shared string-interning key domains, proven empirically against a native-maintained
+    // library by merge-testing every candidate grouping for the "one key names one text" invariant.
+    // Track Sort Artist and Sort Album Artist share one pool with each other but NOT with the
+    // artist-name domain: native files reuse the same low key numbers in both pools for unrelated
+    // text (e.g. artist key 1 'Blackstreet' vs sort key 1 'La's'), while the two sort types merged
+    // show zero conflicts and interleave one counter. The album record's own sort-artist field is
+    // the exception -- native files key it from the artist-name domain. Minting the two track sort
+    // types from independent per-type counters (the old SetInternedField path) was the real
+    // collision bug: two different sort names could claim the same key within one shared pool.
+    // These enumerations are the single source of truth for key minting (above), validation
+    // (ValidateSharedStringKeys), and repair (PreviewSharedStringKeyRepairs).
+    private IEnumerable<(ItlRecord Record, ItlField Field)> AlbumNameKeyDomain() =>
+        DomainFields(Albums, ItlDataType.AlbumRecordName)
+        .Concat(DomainFields(Tracks, ItlDataType.Album));
+
+    private IEnumerable<(ItlRecord Record, ItlField Field)> ArtistNameKeyDomain() =>
+        DomainFields(Artists, ItlDataType.ArtistRecordName)
+        .Concat(DomainFields(Albums, ItlDataType.AlbumRecordArtist, ItlDataType.AlbumRecordSortArtist))
+        .Concat(DomainFields(Tracks, ItlDataType.Artist))
+        .Concat(DomainFields(Tracks, ItlDataType.AlbumArtist));
+
+    private IEnumerable<(ItlRecord Record, ItlField Field)> SortArtistNameKeyDomain() =>
+        DomainFields(Tracks, ItlDataType.SortArtist, ItlDataType.SortAlbumArtist);
+
+    private static IEnumerable<(ItlRecord Record, ItlField Field)> DomainFields(
+        IEnumerable<ItlRecord> records, params ItlDataType[] types) =>
+        records.SelectMany(record => record.Fields
+            .Where(field => types.Contains((ItlDataType)field.Type))
+            .Select(field => (record, field)));
 
     private static uint SharedStringKey(string value, IEnumerable<ItlField> domain)
     {
@@ -236,6 +247,71 @@ public sealed partial class ItlDocument
         if (existing is not null)
             return FieldKey(existing);
         return checked(fields.Select(FieldKey).DefaultIfEmpty(0u).Max() + 1);
+    }
+
+    /// <summary>
+    /// Computes, without modifying the document, the key rewrites needed to restore the invariant
+    /// that one interning key names one text within each shared string-key domain. Collisions
+    /// come from historic writers that keyed fields against the wrong pool (for example minting
+    /// track SortArtist/SortAlbumArtist keys from independent per-type counters inside what is
+    /// natively one shared pool). Within a colliding key the text carried by the most fields keeps
+    /// it; every other text moves to an existing key that already cleanly names that text, or to a
+    /// freshly minted key above the domain maximum.
+    /// </summary>
+    public IReadOnlyList<ItlSharedKeyRepair> PreviewSharedStringKeyRepairs()
+    {
+        var repairs = new List<ItlSharedKeyRepair>();
+        CollectSharedKeyRepairs("album", AlbumNameKeyDomain(), repairs);
+        CollectSharedKeyRepairs("artist", ArtistNameKeyDomain(), repairs);
+        CollectSharedKeyRepairs("sort-artist", SortArtistNameKeyDomain(), repairs);
+        return repairs;
+    }
+
+    /// <summary>Applies <see cref="PreviewSharedStringKeyRepairs"/>; returns the rewritten field count.</summary>
+    public int RepairSharedStringKeys()
+    {
+        IReadOnlyList<ItlSharedKeyRepair> repairs = PreviewSharedStringKeyRepairs();
+        foreach (ItlSharedKeyRepair repair in repairs)
+            BinaryPrimitives.WriteUInt32LittleEndian(repair.Field.Header.AsSpan(16), repair.NewKey);
+        return repairs.Count;
+    }
+
+    private static void CollectSharedKeyRepairs(
+        string domain,
+        IEnumerable<(ItlRecord Record, ItlField Field)> fields,
+        List<ItlSharedKeyRepair> repairs)
+    {
+        (ItlRecord Record, ItlField Field)[] carriers = [.. fields.Where(pair => pair.Field.Text is not null)];
+        var byKey = carriers.GroupBy(pair => FieldKey(pair.Field)).OrderBy(group => group.Key).ToArray();
+
+        var cleanKeyByText = new Dictionary<string, uint>(StringComparer.Ordinal);
+        foreach (var group in byKey)
+        {
+            string[] texts = [.. group.Select(pair => pair.Field.Text!).Distinct(StringComparer.Ordinal)];
+            if (texts.Length == 1)
+                cleanKeyByText.TryAdd(texts[0], group.Key);
+        }
+
+        uint nextKey = checked(carriers.Select(pair => FieldKey(pair.Field)).DefaultIfEmpty(0u).Max() + 1);
+        var mintedKeyByText = new Dictionary<string, uint>(StringComparer.Ordinal);
+        foreach (var group in byKey)
+        {
+            var textGroups = group.GroupBy(pair => pair.Field.Text!, StringComparer.Ordinal)
+                .OrderByDescending(text => text.Count())
+                .ThenBy(text => text.Key, StringComparer.Ordinal)
+                .ToArray();
+            if (textGroups.Length < 2)
+                continue;
+            string retained = textGroups[0].Key;
+            foreach (var displaced in textGroups.Skip(1))
+            {
+                if (!cleanKeyByText.TryGetValue(displaced.Key, out uint newKey) &&
+                    !mintedKeyByText.TryGetValue(displaced.Key, out newKey))
+                    mintedKeyByText[displaced.Key] = newKey = checked(nextKey++);
+                foreach ((ItlRecord record, ItlField field) in displaced)
+                    repairs.Add(new(record, field, domain, group.Key, newKey, displaced.Key, retained));
+            }
+        }
     }
 
     private static uint FieldKey(ItlField field) =>
@@ -581,3 +657,18 @@ public sealed partial class ItlDocument
         return BinaryPrimitives.ReadUInt64LittleEndian(bytes);
     }
 }
+
+/// <summary>
+/// One field whose interning key must change to restore a shared string-key domain's
+/// one-key-one-text invariant. <paramref name="Text"/> is the field's own value, which moves from
+/// <paramref name="OldKey"/> to <paramref name="NewKey"/>; <paramref name="RetainedText"/> is the
+/// value that keeps the old key.
+/// </summary>
+public sealed record ItlSharedKeyRepair(
+    ItlRecord Record,
+    ItlField Field,
+    string Domain,
+    uint OldKey,
+    uint NewKey,
+    string Text,
+    string RetainedText);

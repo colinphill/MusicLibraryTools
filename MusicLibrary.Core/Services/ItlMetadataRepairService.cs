@@ -15,7 +15,15 @@ public sealed record ItlMetadataRepairItem(
     string Path,
     ItlCachedTrackMetadata Metadata,
     DateTime CacheLastWriteTimeUtc,
-    IReadOnlyList<ItlMetadataDifference> Differences);
+    IReadOnlyList<ItlMetadataDifference> Differences)
+{
+    /// <summary>
+    /// True when the track's text is already correct and only its shared string-interning keys
+    /// collide with other text. Applying rewrites catalog key bookkeeping document-wide instead of
+    /// writing this track's tag fields, so the item is exempt from per-path metadata-write policy.
+    /// </summary>
+    public bool RepairsInternedKeysOnly { get; init; }
+}
 
 public sealed record ItlMetadataRepairPlan(
     string LibraryPath,
@@ -47,6 +55,9 @@ public sealed record ItlMetadataRepairApplyResult(
     public int Applied => Items.Count(item => item.Outcome == ItlMetadataRepairOutcome.Applied);
     public int Skipped => Items.Count(item => item.Outcome == ItlMetadataRepairOutcome.Skipped);
     public int Failed => Items.Count(item => item.Outcome == ItlMetadataRepairOutcome.Failed);
+
+    /// <summary>Shared string-interning key fields rewritten alongside the selected repairs.</summary>
+    public int InternedKeyFieldsRepaired { get; init; }
 }
 
 public interface IItlMetadataRepairService
@@ -148,6 +159,8 @@ public sealed class ItlMetadataRepairService : IItlMetadataRepairService
                 differences));
         }
 
+        AppendSharedKeyRepairs(document, items);
+
         return new(context.ItunesLibraryPath, hash, DateTimeOffset.UtcNow, items)
         {
             LibraryId = configuration.LibraryId,
@@ -206,8 +219,9 @@ public sealed class ItlMetadataRepairService : IItlMetadataRepairService
                 continue;
             }
             string? currentPath = ItlLocation.ToLocalPath(track.GetString(ItlDataType.Location));
-            if (currentPath is null || !TryNormalizePath(currentPath, out string normalized) ||
-                !PathComparer.Equals(normalized, item.Path))
+            if (!item.RepairsInternedKeysOnly &&
+                (currentPath is null || !TryNormalizePath(currentPath, out string normalized) ||
+                 !PathComparer.Equals(normalized, item.Path)))
             {
                 results.Add(new(item, ItlMetadataRepairOutcome.Failed,
                     "The track path changed after preview."));
@@ -222,8 +236,15 @@ public sealed class ItlMetadataRepairService : IItlMetadataRepairService
         foreach ((ItlMetadataRepairItem item, ItlRecord track) in pending)
         {
             ct.ThrowIfCancellationRequested();
-            document.RepairLocalTrackFromCache(track, item.Metadata, item.CacheLastWriteTimeUtc);
+            if (!item.RepairsInternedKeysOnly)
+                document.RepairLocalTrackFromCache(track, item.Metadata, item.CacheLastWriteTimeUtc);
         }
+
+        // A shared-key collision anywhere in the catalog fails SaveValidated, and the per-track
+        // repairs above can only be written together with a consistent key state, so restore the
+        // one-key-one-text invariant document-wide before saving regardless of which key-only
+        // items were selected.
+        int internedKeyFieldsRepaired = document.RepairSharedStringKeys();
 
         await Task.Run(() => ItlFileEditor.SaveValidated(document, plan.LibraryPath), ct)
             .ConfigureAwait(false);
@@ -233,7 +254,10 @@ public sealed class ItlMetadataRepairService : IItlMetadataRepairService
             results.Add(new(item, ItlMetadataRepairOutcome.Applied));
             progress?.Report(++completed);
         }
-        return new(plan.LibraryPath, results);
+        return new(plan.LibraryPath, results)
+        {
+            InternedKeyFieldsRepaired = internedKeyFieldsRepaired,
+        };
     }
 
     private async Task<LibraryConfiguration> LoadCurrentConfigurationAsync(
@@ -269,7 +293,9 @@ public sealed class ItlMetadataRepairService : IItlMetadataRepairService
                 "The library policy changed after this preview. Preview the repairs again before applying them.");
 
         EnsureAnyMetadataWriteRoot(configuration);
-        foreach (ItlMetadataRepairItem item in items)
+        // Key-only items rewrite catalog interning bookkeeping, not tag metadata, so they are not
+        // gated by the per-path metadata-write policy (and their paths may lie outside every root).
+        foreach (ItlMetadataRepairItem item in items.Where(item => !item.RepairsInternedKeysOnly))
             EnsureMetadataWriteAllowed(configuration, item.Path);
     }
 
@@ -305,6 +331,87 @@ public sealed class ItlMetadataRepairService : IItlMetadataRepairService
             throw new InvalidOperationException(
                 "The reviewed iTunes library is not the catalog configured by the active library policy.");
     }
+
+    /// <summary>
+    /// Surfaces pending shared string-interning key repairs for review. Text stays untouched;
+    /// only the mhoh interning keys change, so tracks whose tags already match the cache appear
+    /// as key-only items. A collision anywhere blocks every validated save of the catalog, so
+    /// apply performs the repair document-wide; these items are the reviewable evidence of it.
+    /// </summary>
+    private static void AppendSharedKeyRepairs(ItlDocument document, List<ItlMetadataRepairItem> items)
+    {
+        IReadOnlyList<ItlSharedKeyRepair> repairs = document.PreviewSharedStringKeyRepairs();
+        if (repairs.Count == 0)
+            return;
+
+        var tracks = document.Tracks.ToHashSet();
+        Dictionary<int, int> itemIndexByTrackId = items
+            .Select((item, index) => (item.TrackId, index))
+            .ToDictionary(pair => pair.TrackId, pair => pair.index);
+        foreach (IGrouping<ItlRecord, ItlSharedKeyRepair> group in repairs
+                     .Where(repair => tracks.Contains(repair.Record))
+                     .GroupBy(repair => repair.Record))
+        {
+            ItlRecord track = group.Key;
+            ItlMetadataDifference[] differences = [.. group.Select(repair => new ItlMetadataDifference(
+                $"{KeyFieldLabel(repair.Field.Type)} interned key",
+                $"'{repair.Text}' shares key {repair.OldKey} with '{repair.RetainedText}'",
+                $"'{repair.Text}' interned under its own key"))];
+
+            int trackId = track.GetTrackId();
+            if (itemIndexByTrackId.TryGetValue(trackId, out int index))
+            {
+                ItlMetadataRepairItem existing = items[index];
+                items[index] = existing with
+                {
+                    Differences = [.. existing.Differences, .. differences],
+                };
+                continue;
+            }
+
+            string? localPath = ItlLocation.ToLocalPath(track.GetString(ItlDataType.Location));
+            string path = localPath is not null && TryNormalizePath(localPath, out string normalized)
+                ? normalized
+                : $"(track {trackId})";
+            items.Add(new(
+                Guid.NewGuid(),
+                trackId,
+                track.GetPersistentId(),
+                path,
+                CurrentTrackMetadata(track),
+                DateTime.UtcNow,
+                differences)
+            {
+                RepairsInternedKeysOnly = true,
+            });
+        }
+    }
+
+    /// <summary>The track's current text, used so key-only items group naturally for review.</summary>
+    private static ItlCachedTrackMetadata CurrentTrackMetadata(ItlRecord track) => new()
+    {
+        Title = track.GetString(ItlDataType.Title),
+        Artist = track.GetString(ItlDataType.Artist),
+        AlbumArtist = track.GetString(ItlDataType.AlbumArtist),
+        HasExplicitAlbumArtist = track.GetString(ItlDataType.AlbumArtist) is not null,
+        Album = track.GetString(ItlDataType.Album),
+        TrackNumber = track.GetTrackNumber(),
+        TrackCount = track.GetTrackCount(),
+        DiscNumber = track.GetDiscNumber(),
+        DiscCount = track.GetDiscCount(),
+        Year = track.GetYear(),
+        Compilation = track.GetCompilation(),
+    };
+
+    private static string KeyFieldLabel(int type) => (ItlDataType)type switch
+    {
+        ItlDataType.Album => "Album",
+        ItlDataType.Artist => "Artist",
+        ItlDataType.AlbumArtist => "Album artist",
+        ItlDataType.SortArtist => "Sort artist",
+        ItlDataType.SortAlbumArtist => "Sort album artist",
+        _ => $"Field {type}",
+    };
 
     private static Dictionary<string, MetadataCacheEntry> BuildPathIndex(MetadataCache cache)
     {

@@ -374,31 +374,107 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
-    public void SortArtistAndSortAlbumArtistDrawFromTheSharedArtistKeyDomain()
+    public void SortArtistAndSortAlbumArtistShareOneKeyPoolSeparateFromArtistNames()
     {
         ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
         ItlRecord track = document.Tracks.Single();
 
-        // Two distinct artist-domain values claim keys 1 and 2. Sort Artist and Sort Album Artist
-        // are each the first field of their own type in the document, so if they still drew their
-        // key from an independent per-type counter (the bug this guards against) they would also be
-        // minted key 1 -- silently colliding with "First artist" even though the fields name
-        // different things.
+        // Native libraries intern the two track sort-artist types in one pool of their own:
+        // distinct sort names must get distinct keys even across the two types (the old per-type
+        // counters would mint key 1 for both), equal text must reuse one key, and the pool is
+        // independent of the artist-name domain, whose numbering restarts at 1 for unrelated text.
         document.SetTrackString(track, ItlDataType.Artist, "First artist");
         document.SetTrackString(track, ItlDataType.AlbumArtist, "Second artist");
         document.SetTrackString(track, ItlDataType.SortArtist, "Sort artist value");
         document.SetTrackString(track, ItlDataType.SortAlbumArtist, "Sort album artist value");
 
-        IEnumerable<ItlField> artistDomain = document.Tracks.SelectMany(record => record.Fields)
-            .Where(field => field.Type is (int)ItlDataType.Artist or (int)ItlDataType.AlbumArtist or
-                (int)ItlDataType.SortArtist or (int)ItlDataType.SortAlbumArtist);
-        Assert.DoesNotContain(artistDomain.GroupBy(Key), group =>
-            group.Select(field => field.Text).Distinct(StringComparer.Ordinal).Count() > 1);
+        uint sortArtistKey = Key(track.Field((int)ItlDataType.SortArtist)!);
+        uint sortAlbumArtistKey = Key(track.Field((int)ItlDataType.SortAlbumArtist)!);
+        Assert.NotEqual(sortArtistKey, sortAlbumArtistKey);
+
+        document.SetTrackString(track, ItlDataType.SortAlbumArtist, "Sort artist value");
+        Assert.Equal(sortArtistKey, Key(track.Field((int)ItlDataType.SortAlbumArtist)!));
+
         Assert.DoesNotContain(document.Validate(), issue =>
             issue.Severity == ItlValidationSeverity.Error);
 
         static uint Key(ItlField field) =>
             BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16));
+    }
+
+    [Fact]
+    public void ValidationRejectsSortArtistKeysThatNameDifferentValues()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+        document.SetTrackString(track, ItlDataType.SortArtist, "Sort artist value");
+        document.SetTrackString(track, ItlDataType.SortAlbumArtist, "Sort album artist value");
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            track.Field((int)ItlDataType.SortAlbumArtist)!.Header.AsSpan(16),
+            BinaryPrimitives.ReadUInt32LittleEndian(
+                track.Field((int)ItlDataType.SortArtist)!.Header.AsSpan(16)));
+
+        ItlValidationIssue issue = Assert.Single(document.Validate(), item =>
+            item.Code == "metadata.sort-artist-key-collision");
+        Assert.Equal(ItlValidationSeverity.Error, issue.Severity);
+    }
+
+    [Fact]
+    public void RepairSharedStringKeysReinternsCollidedSortArtistFields()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+        document.SetTrackString(track, ItlDataType.SortArtist, "Sort artist value");
+        document.SetTrackString(track, ItlDataType.SortAlbumArtist, "Sort album artist value");
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            track.Field((int)ItlDataType.SortAlbumArtist)!.Header.AsSpan(16),
+            BinaryPrimitives.ReadUInt32LittleEndian(
+                track.Field((int)ItlDataType.SortArtist)!.Header.AsSpan(16)));
+
+        ItlSharedKeyRepair repair = Assert.Single(document.PreviewSharedStringKeyRepairs());
+        Assert.Equal("sort-artist", repair.Domain);
+        Assert.Equal(1, document.RepairSharedStringKeys());
+
+        Assert.Equal("Sort artist value", track.GetString(ItlDataType.SortArtist));
+        Assert.Equal("Sort album artist value", track.GetString(ItlDataType.SortAlbumArtist));
+        Assert.NotEqual(
+            BinaryPrimitives.ReadUInt32LittleEndian(
+                track.Field((int)ItlDataType.SortArtist)!.Header.AsSpan(16)),
+            BinaryPrimitives.ReadUInt32LittleEndian(
+                track.Field((int)ItlDataType.SortAlbumArtist)!.Header.AsSpan(16)));
+        Assert.DoesNotContain(document.Validate(), issue =>
+            issue.Severity == ItlValidationSeverity.Error);
+        Assert.Empty(document.PreviewSharedStringKeyRepairs());
+    }
+
+    [Fact]
+    public void RepairSharedStringKeysPrefersAnExistingCleanKeyForTheDisplacedText()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+        document.SetTrackString(track, ItlDataType.Artist, "Keeper");
+        document.SetTrackString(track, ItlDataType.AlbumArtist, "Mover");
+        ItlRecord moverEntity = document.AddArtist("Mover", document.Artists.First());
+
+        uint keeperKey = BinaryPrimitives.ReadUInt32LittleEndian(
+            track.Field((int)ItlDataType.Artist)!.Header.AsSpan(16));
+        uint moverKey = BinaryPrimitives.ReadUInt32LittleEndian(
+            moverEntity.Field((int)ItlDataType.ArtistRecordName)!.Header.AsSpan(16));
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            track.Field((int)ItlDataType.AlbumArtist)!.Header.AsSpan(16), keeperKey);
+
+        ItlSharedKeyRepair repair = Assert.Single(document.PreviewSharedStringKeyRepairs());
+        Assert.Equal("artist", repair.Domain);
+        Assert.Equal("Mover", repair.Text);
+        Assert.Equal("Keeper", repair.RetainedText);
+        Assert.Equal(keeperKey, repair.OldKey);
+        Assert.Equal(moverKey, repair.NewKey);
+
+        Assert.Equal(1, document.RepairSharedStringKeys());
+        Assert.Equal(moverKey, BinaryPrimitives.ReadUInt32LittleEndian(
+            track.Field((int)ItlDataType.AlbumArtist)!.Header.AsSpan(16)));
+        Assert.DoesNotContain(document.Validate(), issue =>
+            issue.Severity == ItlValidationSeverity.Error);
     }
 
     [Fact]
