@@ -123,7 +123,15 @@ namespace MusicLibraryTools
     public sealed record LibraryDiscPolicy(
         LibraryDiscStrategy Strategy,
         LibraryTrackTotalScope TrackTotalScope,
-        bool InferAlbumSuffix);
+        bool InferAlbumSuffix)
+    {
+        /// <summary>
+        /// With <see cref="LibraryTrackTotalScope.PerDisc"/>, always project the track total
+        /// inferred from the disc's own tracks, correcting a source total that disagrees.
+        /// When false, a positive source total is preserved and inference only fills gaps.
+        /// </summary>
+        public bool InferTrackTotals { get; init; }
+    }
 
     /// <summary>Controls exact album grouping without collapsing edition qualifiers.</summary>
     public sealed record LibraryAlbumIdentityPolicy(
@@ -437,7 +445,8 @@ namespace MusicLibraryTools
                     new(DefaultDirectoryTemplate, DefaultFileTemplate, 2, 1,
                         LibraryPathCollisionPolicy.Suffix, true, "_", false, true, true),
                     new(LibraryDiscStrategy.AlbumSuffix, LibraryTrackTotalScope.PerDisc,
-                        true),
+                        true)
+                    { InferTrackTotals = true },
                     LegacyHealth(),
                     new(44_101, 17),
                     new(true, LibrarySourceDisposition.Quarantine, false, LegacyRecipes()),
@@ -802,6 +811,8 @@ namespace MusicLibraryTools
                     discElement, "TrackTotalScope", fallback.Disc.TrackTotalScope),
                 InferAlbumSuffix = ParseBoolean(
                     discElement, "InferAlbumSuffix", fallback.Disc.InferAlbumSuffix),
+                InferTrackTotals = ParseBoolean(
+                    discElement, "InferTrackTotals", fallback.Disc.InferTrackTotals),
             };
 
             XElement? identityElement = element.Element("AlbumIdentity");
@@ -947,7 +958,8 @@ namespace MusicLibraryTools
                 new XElement("Disc",
                     new XAttribute("Strategy", profile.Disc.Strategy),
                     new XAttribute("TrackTotalScope", profile.Disc.TrackTotalScope),
-                    new XAttribute("InferAlbumSuffix", profile.Disc.InferAlbumSuffix)),
+                    new XAttribute("InferAlbumSuffix", profile.Disc.InferAlbumSuffix),
+                    new XAttribute("InferTrackTotals", profile.Disc.InferTrackTotals)),
                 new XElement("AlbumIdentity",
                     new XAttribute("UseAlbumArtist", profile.AlbumIdentity.UseAlbumArtist),
                     new XAttribute("StripFormatSuffixes",
@@ -2067,6 +2079,7 @@ namespace MusicLibraryTools
                     .Append(profile.Disc.Strategy).Append('|')
                     .Append(profile.Disc.TrackTotalScope).Append('|')
                     .Append(profile.Disc.InferAlbumSuffix).Append('|')
+                    .Append(profile.Disc.InferTrackTotals).Append('|')
                     .Append(profile.AlbumIdentity.UseAlbumArtist).Append('|')
                     .Append(profile.AlbumIdentity.StripFormatSuffixes).Append('|')
                     .Append(profile.AlbumIdentity.StripDiscSuffixes).Append('|')

@@ -134,6 +134,54 @@ public class IngestMusicTests
     }
 
     [Fact]
+    public async Task Preview_CorrectsWrongStoredTrackTotalsOnLegacyOutputs()
+    {
+        using var tree = new TempTree();
+        string source = tree.Dir("incoming");
+        string config = tree.Config();
+        string fixture = Path.Combine(AppContext.BaseDirectory, "TestFiles", "sample.flac");
+        foreach (var item in new[] { ("d1t1", 1, 1), ("d1t2", 2, 1), ("d2t1", 1, 2), ("d2t2", 2, 2) })
+        {
+            string path = Path.Combine(source, item.Item1 + ".flac");
+            File.Copy(fixture, path);
+            WriteTags(path, "Album", item.Item1, item.Item2, item.Item3);
+            WriteTrackTotal(path, 24);
+        }
+
+        var plan = await new IngestMusicService(new FakeFfmpeg()).PreviewAsync(new(source, config));
+
+        Assert.Empty(plan.Conflicts);
+        var album = Assert.Single(plan.Albums);
+        Assert.All(album.Tracks, track => Assert.Equal(2, track.TrackTotal));
+        Assert.All(album.Outputs, output => Assert.Equal(2, output.Metadata.TrackTotal));
+    }
+
+    [Theory]
+    [InlineData(false, 24)]
+    [InlineData(true, 2)]
+    public async Task RecipeOutputsInferPerDiscTrackTotalsOnlyWhenThePolicyAsks(
+        bool inferTrackTotals, int expectedTotal)
+    {
+        using var tree = new TempTree();
+        foreach (var item in new[] { ("d1t1", 1, 1), ("d1t2", 2, 1), ("d2t1", 1, 2), ("d2t2", 2, 2) })
+        {
+            string path = tree.FileFromFixture("incoming", item.Item1 + ".flac", "sample.flac");
+            WriteTags(path, "Album", item.Item1, item.Item2, item.Item3);
+            WriteTrackTotal(path, 24);
+        }
+        string configPath = CreateCustomDiscPolicyLibrary(tree, inferTrackTotals);
+
+        IngestPlan plan = await new IngestMusicService(new FakeFfmpeg())
+            .PreviewAsync(new(tree.Path("incoming"), configPath));
+
+        Assert.Empty(plan.Conflicts);
+        IngestAlbumPlan album = Assert.Single(plan.Albums);
+        Assert.Equal(4, album.Outputs.Count);
+        Assert.All(album.Outputs, output =>
+            Assert.Equal(expectedTotal, output.Metadata.TrackTotal));
+    }
+
+    [Fact]
     public async Task Preview_GroupsPartiallyTaggedCompilationIntoOneAlbum()
     {
         using var tree = new TempTree();
@@ -1392,6 +1440,37 @@ public class IngestMusicTests
         return (configPath, destination);
     }
 
+    private static string CreateCustomDiscPolicyLibrary(TempTree tree, bool inferTrackTotals)
+    {
+        var editable = EditableLibraryConfig.CreateNew();
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "custom-disc-ingest", "Custom disc ingest") with
+        {
+            Disc = new(LibraryDiscStrategy.AlbumSuffix, LibraryTrackTotalScope.PerDisc, true)
+            { InferTrackTotals = inferTrackTotals },
+        };
+        var root = new IndexTargetEntry
+        {
+            Target = tree.Path("custom-output"),
+            ProfileId = profile.Id,
+            Permissions = LibraryRootPermissions.IngestOutput,
+            Organize = false,
+        };
+        LibraryIngestRecipe recipe = CreateRecipe(
+            "custom-copy", root.Id, LibraryChannelSelection.Stereo,
+            LibraryChannelSelection.Stereo);
+        editable.Profiles.Add(profile);
+        editable.ActiveProfileId = profile.Id;
+        editable.IngestProfiles.Add(new LibraryIngestProfile(
+            profile.Id, profile.Name,
+            new(true, LibrarySourceDisposition.Preserve, true, [recipe])));
+        editable.ActiveIngestProfileId = profile.Id;
+        editable.IndexTargets.Add(root);
+        string configPath = tree.Path("custom-library.xml");
+        editable.Save(configPath);
+        return configPath;
+    }
+
     private static LibraryIngestRecipe CreateRecipe(
         string id,
         Guid destinationRootId,
@@ -1477,6 +1556,14 @@ public class IngestMusicTests
         writer.SetField(TagFields.Title, title);
         writer.SetField(TagFields.TrackNumber, track.ToString());
         writer.SetField(TagFields.DiscNumber, disc.ToString());
+        writer.Save();
+    }
+
+    private static void WriteTrackTotal(string path, int total)
+    {
+        var media = MediaFile.GetFile(path);
+        var writer = Assert.IsAssignableFrom<IMetadataWriter>(media);
+        writer.SetField(TagFields.TotalTracks, total.ToString());
         writer.Save();
     }
 

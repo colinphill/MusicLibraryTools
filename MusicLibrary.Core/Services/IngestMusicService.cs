@@ -433,7 +433,7 @@ public sealed class IngestMusicService : IIngestMusicService
                     : track.HadTrackNumber ? track.TrackNumber - legacyOffset : 0;
                 int projectedTotal = profile.Disc.TrackTotalScope == LibraryTrackTotalScope.Album
                     ? albumTotal
-                    : profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools
+                    : profile.Disc.InferTrackTotals
                         ? inferredDiscTotal
                         : track.TrackTotal is > 0 ? track.TrackTotal.Value : inferredDiscTotal;
                 string projectedAlbum = profile.Disc.Strategy == LibraryDiscStrategy.AlbumSuffix &&
@@ -569,7 +569,7 @@ public sealed class IngestMusicService : IIngestMusicService
             : hadOriginalTrack ? originalTrack - legacyOffset : 0;
         int projectedTotal = profile.Disc.TrackTotalScope == LibraryTrackTotalScope.Album
             ? flattened.Count
-            : legacy
+            : profile.Disc.InferTrackTotals
                 ? inferredDiscTrackTotal
                 : selected.OriginalTrackTotal is > 0
                     ? selected.OriginalTrackTotal.Value
@@ -2285,8 +2285,12 @@ public sealed class IngestMusicService : IIngestMusicService
             : track.HadTrackNumber
                 ? track.TrackNumber
                 : null;
+        // A source with no track total stays exactly preservable; only a stored total that
+        // disagrees with the projection forces normalization of an otherwise identical copy.
         return Same(track.Album, sourceAlbum) &&
                ExpectedTrackNumber(track) == originalTrack &&
+               (track.OriginalTrackTotal is null ||
+                ExpectedTrackTotal(track) == track.OriginalTrackTotal) &&
                ExpectedDiscNumber(track, policy) == track.TaggedDiscNumber &&
                ExpectedDiscTotal(track, policy) == track.OriginalDiscTotal;
     }
