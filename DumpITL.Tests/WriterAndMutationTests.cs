@@ -403,6 +403,78 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
+    public void ComposerInternsInTheArtistNameKeyDomainAndSortComposerInTheSortPool()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+
+        // Native libraries intern track Composer in the artist-name domain (598 shared keys with
+        // zero text conflicts in an iTunes-normalized library) and Sort Composer in the shared
+        // sort pool. Minting composers from an independent counter let the composer side of the
+        // pool run ahead of the visible artist maximum, so freshly minted artist keys landed on
+        // existing composer keys and iTunes rewrote those artists with the composer text.
+        document.SetTrackString(track, ItlDataType.Composer, "Shared person");
+        document.SetTrackString(track, ItlDataType.Artist, "Shared person");
+        Assert.Equal(
+            Key(track.Field((int)ItlDataType.Composer)!),
+            Key(track.Field((int)ItlDataType.Artist)!));
+
+        document.SetTrackString(track, ItlDataType.Composer, "Composer only");
+        document.SetTrackString(track, ItlDataType.AlbumArtist, "Artist only");
+        Assert.NotEqual(
+            Key(track.Field((int)ItlDataType.Composer)!),
+            Key(track.Field((int)ItlDataType.AlbumArtist)!));
+
+        document.SetTrackString(track, ItlDataType.SortComposer, "Shared sort name");
+        document.SetTrackString(track, ItlDataType.SortArtist, "Shared sort name");
+        Assert.Equal(
+            Key(track.Field((int)ItlDataType.SortComposer)!),
+            Key(track.Field((int)ItlDataType.SortArtist)!));
+        document.SetTrackString(track, ItlDataType.SortComposer, "Sort composer only");
+        Assert.NotEqual(
+            Key(track.Field((int)ItlDataType.SortComposer)!),
+            Key(track.Field((int)ItlDataType.SortArtist)!));
+
+        Assert.DoesNotContain(document.Validate(), issue =>
+            issue.Severity == ItlValidationSeverity.Error);
+
+        static uint Key(ItlField field) =>
+            BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16));
+    }
+
+    [Fact]
+    public void RepairSharedStringKeysReinternsComposerKeysThatCollideWithArtistNames()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+        document.SetTrackString(track, ItlDataType.Composer, "Composer name");
+        document.SetTrackString(track, ItlDataType.Artist, "Artist name");
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            track.Field((int)ItlDataType.Artist)!.Header.AsSpan(16),
+            BinaryPrimitives.ReadUInt32LittleEndian(
+                track.Field((int)ItlDataType.Composer)!.Header.AsSpan(16)));
+
+        ItlValidationIssue issue = Assert.Single(document.Validate(), item =>
+            item.Code == "metadata.artist-key-collision");
+        Assert.Equal(ItlValidationSeverity.Error, issue.Severity);
+
+        ItlSharedKeyRepair repair = Assert.Single(document.PreviewSharedStringKeyRepairs());
+        Assert.Equal("artist", repair.Domain);
+        Assert.True(document.RepairSharedStringKeys() >= 1);
+
+        Assert.Equal("Composer name", track.GetString(ItlDataType.Composer));
+        Assert.Equal("Artist name", track.GetString(ItlDataType.Artist));
+        Assert.NotEqual(
+            BinaryPrimitives.ReadUInt32LittleEndian(
+                track.Field((int)ItlDataType.Composer)!.Header.AsSpan(16)),
+            BinaryPrimitives.ReadUInt32LittleEndian(
+                track.Field((int)ItlDataType.Artist)!.Header.AsSpan(16)));
+        Assert.DoesNotContain(document.Validate(), issue =>
+            issue.Severity == ItlValidationSeverity.Error);
+        Assert.Empty(document.PreviewSharedStringKeyRepairs());
+    }
+
+    [Fact]
     public void ValidationRejectsSortArtistKeysThatNameDifferentValues()
     {
         ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));

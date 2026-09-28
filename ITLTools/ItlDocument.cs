@@ -190,8 +190,10 @@ public sealed partial class ItlDocument
         uint? sharedKey = type switch
         {
             ItlDataType.Album => SharedAlbumNameKey(value),
-            ItlDataType.Artist or ItlDataType.AlbumArtist => SharedArtistNameKey(value),
-            ItlDataType.SortArtist or ItlDataType.SortAlbumArtist => SharedSortArtistNameKey(value),
+            ItlDataType.Artist or ItlDataType.AlbumArtist or ItlDataType.Composer =>
+                SharedArtistNameKey(value),
+            ItlDataType.SortArtist or ItlDataType.SortAlbumArtist or ItlDataType.SortComposer =>
+                SharedSortArtistNameKey(value),
             _ => null,
         };
         if (sharedKey.HasValue)
@@ -219,6 +221,15 @@ public sealed partial class ItlDocument
     // the exception -- native files key it from the artist-name domain. Minting the two track sort
     // types from independent per-type counters (the old SetInternedField path) was the real
     // collision bug: two different sort names could claim the same key within one shared pool.
+    //
+    // Track Composer belongs to the artist-name domain, and Sort Composer to the sort-artist pool
+    // (merge-tested against an iTunes-normalized library: 598 artist/composer key overlaps with
+    // zero text conflicts, 21 sort-artist/sort-composer overlaps with zero conflicts, while every
+    // genuinely separate pair conflicts on nearly every overlap). Minting composers from an
+    // independent counter let the composer side of the pool run ahead of the visible artist
+    // maximum, so every newly minted artist key landed on an existing composer key; on its next
+    // rewrite iTunes resolved those keys through the shared pool and replaced the artist text with
+    // the composer text -- deterministically corrupting the same tracks after every ingest.
     // These enumerations are the single source of truth for key minting (above), validation
     // (ValidateSharedStringKeys), and repair (PreviewSharedStringKeyRepairs).
     private IEnumerable<(ItlRecord Record, ItlField Field)> AlbumNameKeyDomain() =>
@@ -229,10 +240,12 @@ public sealed partial class ItlDocument
         DomainFields(Artists, ItlDataType.ArtistRecordName)
         .Concat(DomainFields(Albums, ItlDataType.AlbumRecordArtist, ItlDataType.AlbumRecordSortArtist))
         .Concat(DomainFields(Tracks, ItlDataType.Artist))
-        .Concat(DomainFields(Tracks, ItlDataType.AlbumArtist));
+        .Concat(DomainFields(Tracks, ItlDataType.AlbumArtist))
+        .Concat(DomainFields(Tracks, ItlDataType.Composer));
 
     private IEnumerable<(ItlRecord Record, ItlField Field)> SortArtistNameKeyDomain() =>
-        DomainFields(Tracks, ItlDataType.SortArtist, ItlDataType.SortAlbumArtist);
+        DomainFields(Tracks, ItlDataType.SortArtist, ItlDataType.SortAlbumArtist,
+            ItlDataType.SortComposer);
 
     private static IEnumerable<(ItlRecord Record, ItlField Field)> DomainFields(
         IEnumerable<ItlRecord> records, params ItlDataType[] types) =>
