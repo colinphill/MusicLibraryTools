@@ -403,6 +403,39 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
+    public void NewWideStringFieldsAreUtf16NeverUtf8()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+
+        // iTunes stores wide display text as UTF-16LE (encoding marker 1); UTF-8 (marker 2) is
+        // only ever used for structural fields like FileUrl. Writing display text as UTF-8 made
+        // iTunes rewrite the marker to 1 over the verbatim UTF-8 bytes, which mangled the two
+        // affected titles for every reader ('Petal′s Song' became CJK mojibake; 'H₂O', with an
+        // odd UTF-8 byte count, stopped decoding at all).
+        foreach ((string value, int expectedEncoding) in new[]
+        {
+            ("Petal′s Song", 1),
+            ("H₂O", 1),
+            ("Plain Ascii", 3),
+        })
+        {
+            track.RemoveField((int)ItlDataType.Title);
+            document.SetTrackString(track, ItlDataType.Title, value);
+            ItlField field = track.Field((int)ItlDataType.Title)!;
+            int encoding = BinaryPrimitives.ReadInt32LittleEndian(field.Payload);
+            int byteLength = BinaryPrimitives.ReadInt32LittleEndian(field.Payload.AsSpan(4));
+            Assert.Equal(expectedEncoding, encoding);
+            byte[] expectedBytes = expectedEncoding == 1
+                ? System.Text.Encoding.Unicode.GetBytes(value)
+                : System.Text.Encoding.Latin1.GetBytes(value);
+            Assert.Equal(expectedBytes.Length, byteLength);
+            Assert.Equal(expectedBytes, field.Payload.AsSpan(16, byteLength).ToArray());
+            Assert.Equal(value, field.Text);
+        }
+    }
+
+    [Fact]
     public void ComposerInternsInTheArtistNameKeyDomainAndSortComposerInTheSortPool()
     {
         ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));

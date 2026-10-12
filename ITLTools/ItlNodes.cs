@@ -40,7 +40,13 @@ public sealed class ItlField : ItlNode
 
     public ItlField Clone() => new((byte[])Header.Clone(), (byte[])Payload.Clone());
 
-    /// <summary>Creates a string field of the given type, encoded the way iTunes would.</summary>
+    /// <summary>
+    /// Creates a string field of the given type, encoded the way iTunes would: Latin-1 (3) for
+    /// narrow text and UTF-16LE (1) for anything wider. UTF-8 (2) is reserved for structural
+    /// fields (FileUrl, asset plists) and must never carry display text: iTunes rewrites such a
+    /// field's marker to 1 while keeping the UTF-8 bytes verbatim, mangling the text for every
+    /// reader (mojibake for even byte counts, an unreadable string for odd ones).
+    /// </summary>
     public static ItlField CreateString(int type, string value)
     {
         byte[] header = new byte[HeaderLength];
@@ -49,7 +55,7 @@ public sealed class ItlField : ItlNode
         BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(12), type);
 
         var field = new ItlField(header, new byte[PreambleLength]);
-        field.SetText(value, preferred: value.Any(c => c > 0xFF) ? 2 : 3);
+        field.SetText(value, preferred: value.Any(c => c > 0xFF) ? 1 : 3);
         return field;
     }
 
