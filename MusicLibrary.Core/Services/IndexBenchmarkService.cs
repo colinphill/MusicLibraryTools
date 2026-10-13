@@ -32,14 +32,15 @@ public sealed class IndexBenchmarkService(IAppSettings settings) : IIndexBenchma
         if (snapshot.Configuration is null)
             throw new InvalidOperationException("No library configuration is loaded.");
         var roots = snapshot.Configuration.IndexLocations
-            .Select(location => Path.TrimEndingDirectorySeparator(Path.GetFullPath(location.Target)))
-            .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+            .Select(location => location with { Target = Path.TrimEndingDirectorySeparator(Path.GetFullPath(location.Target)) })
+            .GroupBy(location => location.Target, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+            .Select(group => group.First())
             .ToList();
         return Task.Run(() => Benchmark(roots, Math.Clamp(currentParallelism, 1, 64), progress, ct), ct);
     }
 
     private static IndexBenchmarkResult Benchmark(
-        IReadOnlyList<string> roots,
+        IReadOnlyList<LibraryIndexLocation> roots,
         int currentParallelism,
         IProgress<IndexBenchmarkProgress>? progress,
         CancellationToken ct)
@@ -56,14 +57,19 @@ public sealed class IndexBenchmarkService(IAppSettings settings) : IIndexBenchma
         for (int rootIndex = 0; rootIndex < roots.Count; rootIndex++)
         {
             ct.ThrowIfCancellationRequested();
-            string root = roots[rootIndex];
+            LibraryIndexLocation location = roots[rootIndex];
+            string root = location.Target;
             var enumerationClock = Stopwatch.StartNew();
             Report(new(root, rootIndex + 1, roots.Count, 0, 0,
                 MaximumSampleFiles, TimeSpan.Zero, "Collecting sample"));
             var sample = new List<string>(MaximumSampleFiles);
             try
             {
-                foreach (var entry in new MusicFileEnumerator(root))
+                IEnumerable<(string Name, DateTime Modified, long Size, MFEType FileType)> entries =
+                    location.EverythingHttp is { } http
+                        ? EverythingHttpEnumerator.Enumerate(root, http, ct)
+                        : new MusicFileEnumerator(root);
+                foreach (var entry in entries)
                 {
                     ct.ThrowIfCancellationRequested();
                     if (entry.FileType == MFEType.MusicFile)

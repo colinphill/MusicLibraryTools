@@ -6426,4 +6426,10 @@
   <data name="Library.Metadata.Loading" xml:space="preserve"><value>Loading…</value></data>
   <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>Unavailable</value></data>
   <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>Wait for the exact metadata value to load before editing it.</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttp" xml:space="preserve"><value>Enumerate with Everything HTTP</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpDescription" xml:space="preserve"><value>Uses the server index to find files. Music files must remain accessible through the root path. Leave the server root blank when both paths are the same.</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUrl" xml:space="preserve"><value>Everything server URL</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpRoot" xml:space="preserve"><value>Root path in the server index (optional)</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUsername" xml:space="preserve"><value>HTTP username (optional)</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpPasswordVariable" xml:space="preserve"><value>Password environment variable (optional)</value></data>
 </root>

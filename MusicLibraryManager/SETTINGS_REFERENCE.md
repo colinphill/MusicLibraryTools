@@ -47,6 +47,11 @@ Library roots define where music is indexed, what each root may be used for, and
 | Formats to index | Comma-separated registered extensions to index. Leave blank to use all supported formats. This affects catalog indexing. | .flac, .m4a |
 | Include patterns | Optional semicolon-separated simple glob patterns. A pattern containing a slash matches the root-relative path; otherwise it matches the filename. Matching is case-insensitive on Windows and case-sensitive on macOS/Linux. | Music/**; *.flac |
 | Exclude patterns | Optional glob patterns using the same rules as includes. Exclusions win over inclusions. | Temp/**; *.tmp |
+| Enumerate with Everything HTTP | Uses an Everything HTTP server's index to discover files in this root. Other roots continue to use filesystem enumeration. Format and include/exclude filters still apply. | Enable for a large indexed network share. |
+| Everything server URL | Absolute HTTP(S) server URL, without a query, fragment, or embedded credentials. | http://localhost:8080/ |
+| Root path in the server index | Optional absolute Windows path as indexed by Everything. Files below this prefix map to the configured root path. Leave blank when both paths match. | D:\Music on the server maps to \\server\Music in the root path. |
+| HTTP username | Optional HTTP Basic authentication username. | music-reader |
+| Password environment variable | Optional name of an environment variable containing the HTTP password. The password itself is not stored in the configuration. The variable must be available to the running app or CLI. | EVERYTHING_HTTP_PASSWORD |
 | Cross-set comparison extensions | Extensions used by cross-set comparison workflows. Commas, semicolons, and pipes are accepted. This is separate from the index format filter. | .flac, .m4a |
 | Metadata | Grants permission to write audio metadata in this root. | Enable on a curated library where tag corrections are allowed. |
 | Artwork | Grants permission to change embedded or sidecar artwork. | Enable when repairing oversized cover art. |
@@ -55,6 +60,8 @@ Library roots define where music is indexed, what each root may be used for, and
 | Sync output | Allows sync or export operations to mutate this root. | Enable on a mirrored portable-device library. |
 
 Permissions are deny-by-default. A path outside configured roots cannot be written, and when roots overlap, the most restrictive applicable root controls the operation.
+
+Everything supplies file discovery, sizes, and modification times; the app still opens music files through the root path to read tags and artwork. Keep the server index complete and current: a successful scan treats files absent from its results as removed. HTTP errors, malformed responses, interrupted pagination, and cancellation preserve cached tracks for the affected root. There is no automatic filesystem fallback. File downloading may be disabled in Everything. See the [Everything HTTP server documentation](https://www.voidtools.com/support/everything/http/) for server setup.
 
 ### Root sets and memberships
 

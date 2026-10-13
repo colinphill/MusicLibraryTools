@@ -1438,6 +1438,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             .Select(location => new ScanRootDefinition(location.Target, location.Sets)
             {
                 Formats = location.IndexFormats,
+                EverythingHttp = location.EverythingHttp,
                 IncludePatterns = location.IndexIncludePatterns,
                 ExcludePatterns = location.IndexExcludePatterns,
                 ReadArtworkAtIndexTime =

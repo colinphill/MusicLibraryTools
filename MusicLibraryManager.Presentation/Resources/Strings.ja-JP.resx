@@ -6426,4 +6426,10 @@
   <data name="Library.Metadata.Loading" xml:space="preserve"><value>読み込み中…</value></data>
   <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>利用できません</value></data>
   <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>正確なメタデータ値の読み込みが完了してから編集してください。</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttp" xml:space="preserve"><value>Everything HTTP で列挙</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpDescription" xml:space="preserve"><value>サーバーのインデックスでファイルを検索します。音楽ファイルにはルートパスからアクセスできる必要があります。両方のパスが同じ場合、サーバーのルートは空欄にしてください。</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUrl" xml:space="preserve"><value>Everything サーバーの URL</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpRoot" xml:space="preserve"><value>サーバーのインデックス内のルートパス（任意）</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUsername" xml:space="preserve"><value>HTTP ユーザー名（任意）</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpPasswordVariable" xml:space="preserve"><value>パスワードの環境変数（任意）</value></data>
 </root>

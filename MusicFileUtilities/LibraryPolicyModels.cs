@@ -2155,6 +2155,7 @@ namespace MusicLibraryTools
                 value.Append("export|").Append(exportProfile.Id).Append('|')
                     .Append(exportProfile.Fingerprint).AppendLine();
             foreach (LibraryIndexLocation location in locations.OrderBy(item => item.RootId))
+            {
                 value.Append(location.RootId.ToString("D")).Append('|')
                     .Append(location.Target).Append('|')
                     .Append(location.ProfileId).Append('|')
@@ -2173,6 +2174,11 @@ namespace MusicLibraryTools
                         .OrderBy(item => item.Name, LibraryConfiguration.ScanSetComparer)
                     .Select(item => item.Name + "=" + item.Offset)))
                     .AppendLine();
+                if (location.EverythingHttp is { } http)
+                    value.Append("everything-http|").Append(http.Url).Append('|')
+                        .Append(http.Root).Append('|').Append(http.Username).Append('|')
+                        .Append(http.PasswordEnvironmentVariable).AppendLine();
+            }
             foreach (LibraryPlaylistSource source in configuration.PlaylistSources
                          .OrderBy(item => item.Type, StringComparer.OrdinalIgnoreCase)
                          .ThenBy(item => item.Location, StringComparer.OrdinalIgnoreCase))

@@ -19,6 +19,7 @@ public sealed class IndexTargetEntry
     public string? DefaultOffset { get; set; }
     public List<IndexTargetSetEntry> Memberships { get; set; } = [];
     public List<string> IndexFormats { get; set; } = [];
+    public EverythingHttpSettings? EverythingHttp { get; set; }
     public List<string> IndexIncludePatterns { get; set; } = [];
     public List<string> IndexExcludePatterns { get; set; } = [];
     public LibraryRepresentationRole RepresentationRole { get; set; } =
@@ -291,6 +292,7 @@ public sealed class EditableLibraryConfig
                     Offset = membership.Offset,
                 }).ToList(),
                 IndexFormats = [.. location.IndexFormats],
+                EverythingHttp = location.EverythingHttp,
                 IndexIncludePatterns = [.. location.IndexIncludePatterns],
                 IndexExcludePatterns = [.. location.IndexExcludePatterns],
                 RepresentationRole = location.RepresentationRole,
@@ -490,6 +492,14 @@ public sealed class EditableLibraryConfig
                 LibraryConfiguration.NormalizeIndexPatterns(t.IndexExcludePatterns);
             if (indexFormats.Count > 0)
                 e.SetAttributeValue("IndexFormats", string.Join(',', indexFormats));
+            if (t.EverythingHttp is { } http)
+            {
+                http.Validate();
+                e.SetAttributeValue("EverythingHttpUrl", http.Url);
+                e.SetAttributeValue("EverythingHttpRoot", http.Root);
+                e.SetAttributeValue("EverythingHttpUsername", http.Username);
+                e.SetAttributeValue("EverythingHttpPasswordEnvironmentVariable", http.PasswordEnvironmentVariable);
+            }
             if (indexIncludes.Count > 0)
                 e.SetAttributeValue("IndexInclude", string.Join(';', indexIncludes));
             if (indexExcludes.Count > 0)
@@ -768,6 +778,7 @@ public sealed class EditableLibraryConfig
             try
             {
                 _ = LibraryConfiguration.NormalizeIndexFormats(target.IndexFormats);
+                target.EverythingHttp?.Validate();
                 _ = LibraryConfiguration.NormalizeIndexPatterns(
                     target.IndexIncludePatterns);
                 _ = LibraryConfiguration.NormalizeIndexPatterns(
@@ -839,13 +850,14 @@ public sealed class EditableLibraryConfig
         {
             IndexTargetEntry first = duplicatePath.First();
             bool conflict = duplicatePath.Skip(1).Any(target =>
+                first.EverythingHttp != target.EverythingHttp ||
                 !SetEquals(first.IndexFormats, target.IndexFormats) ||
                 !SetEquals(first.IndexIncludePatterns, target.IndexIncludePatterns) ||
                 !SetEquals(first.IndexExcludePatterns, target.IndexExcludePatterns));
             if (conflict)
                 Error("root-index-policy-conflict",
                     $"Duplicate index target '{duplicatePath.Key}' must use the same formats, " +
-                    "include patterns, and exclude patterns on every declaration.");
+                    "include patterns, exclude patterns, and enumeration source on every declaration.");
         }
 
         var profileIds = Profiles.Select(profile => profile.Id)
@@ -1373,7 +1385,9 @@ public sealed class EditableLibraryConfig
                 "CollisionPolicy", "RepresentationRole"],
             ("IndexTarget", _) => ["Id", "ProfileId", "Permissions", "Path", "Offset", "Filter",
                 "Organize", "ItunesCanonicalNaming", "IngestRole", "SyncTarget", "Set",
-                "IndexFormats", "IndexInclude", "IndexExclude", "RepresentationRole"],
+                "IndexFormats", "IndexInclude", "IndexExclude", "RepresentationRole",
+                "EverythingHttpUrl", "EverythingHttpRoot", "EverythingHttpUsername",
+                "EverythingHttpPasswordEnvironmentVariable"],
             ("Set", _) => ["Name", "Offset"],
             ("PlaylistSource", _) => ["Type", "Recursive"],
             ("PlaylistTarget", _) => ["Type", "Set", "PathStyle", "Encoding", "Bom",

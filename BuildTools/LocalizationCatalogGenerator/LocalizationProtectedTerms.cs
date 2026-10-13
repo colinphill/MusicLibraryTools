@@ -14,6 +14,8 @@ public static class LocalizationProtectedTerms
         "MusicLibraryManager",
         "MusicLibraryTools",
         "MusicBrainz",
+        "Everything",
+        "HTTP",
         "Cover Art Archive",
         "Discogs",
         "AcoustID",

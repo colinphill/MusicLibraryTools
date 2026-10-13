@@ -102,6 +102,7 @@ public sealed class LibraryOperationContextFactory : ILibraryOperationContextFac
                         location.Target, location.Sets)
                     {
                         Formats = location.IndexFormats,
+                        EverythingHttp = location.EverythingHttp,
                         IncludePatterns = location.IndexIncludePatterns,
                         ExcludePatterns = location.IndexExcludePatterns,
                         ReadArtworkAtIndexTime = configuration

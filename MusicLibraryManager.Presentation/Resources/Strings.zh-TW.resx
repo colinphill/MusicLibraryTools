@@ -6426,4 +6426,10 @@
   <data name="Library.Metadata.Loading" xml:space="preserve"><value>正在載入…</value></data>
   <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>無法使用</value></data>
   <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>請等待確切的中繼資料值載入完成後再進行編輯。</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttp" xml:space="preserve"><value>使用 Everything HTTP 列舉</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpDescription" xml:space="preserve"><value>使用伺服器索引尋找檔案。音樂檔案必須仍可透過根路徑存取。如果兩個路徑相同，請將伺服器根路徑留空。</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUrl" xml:space="preserve"><value>Everything 伺服器 URL</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpRoot" xml:space="preserve"><value>伺服器索引中的根路徑（選用）</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUsername" xml:space="preserve"><value>HTTP 使用者名稱（選用）</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpPasswordVariable" xml:space="preserve"><value>密碼環境變數（選用）</value></data>
 </root>

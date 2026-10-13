@@ -69,6 +69,9 @@ namespace MetadataCaching
     /// </summary>
     public sealed record ScanRootDefinition(string Path, IReadOnlyList<string> Sets)
     {
+        /// <summary>When set, discover files through this server instead of walking directories.</summary>
+        public EverythingHttpSettings EverythingHttp { get; init; }
+
         /// <summary>
         /// Registered media extensions to index. Empty means every format that advertises the
         /// LibraryIndex capability.
@@ -1277,7 +1280,7 @@ namespace MetadataCaching
             ScanRootDefinition first = group.First();
             if (group.Skip(1).Any(candidate => !HaveSameIndexPolicy(first, candidate)))
                 throw new InvalidDataException(
-                    $"Duplicate scan root '{first.Path}' has conflicting format or pattern policies.");
+                    $"Duplicate scan root '{first.Path}' has conflicting format, pattern, or enumeration policies.");
             return new ScanRootDefinition(
                 first.Path,
                 group.SelectMany(root => root.Sets)
@@ -1285,6 +1288,7 @@ namespace MetadataCaching
                     .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray())
             {
                 Formats = first.Formats,
+                EverythingHttp = first.EverythingHttp,
                 IncludePatterns = first.IncludePatterns,
                 ExcludePatterns = first.ExcludePatterns,
                 ReadArtworkAtIndexTime = first.ReadArtworkAtIndexTime,
@@ -1300,7 +1304,8 @@ namespace MetadataCaching
                 .SetEquals(right.IncludePatterns) &&
             new HashSet<string>(left.ExcludePatterns, StringComparer.OrdinalIgnoreCase)
                 .SetEquals(right.ExcludePatterns) &&
-            left.ReadArtworkAtIndexTime == right.ReadArtworkAtIndexTime;
+            left.ReadArtworkAtIndexTime == right.ReadArtworkAtIndexTime &&
+            left.EverythingHttp == right.EverythingHttp;
 
         private static bool IsIncludedByRootPolicy(
             ScanRootDefinition root,
@@ -1409,6 +1414,7 @@ namespace MetadataCaching
                         ExcludePatterns = LibraryConfiguration.NormalizeIndexPatterns(
                             root.ExcludePatterns ?? []),
                         ReadArtworkAtIndexTime = root.ReadArtworkAtIndexTime,
+                        EverythingHttp = root.EverythingHttp,
                     })
                     .GroupBy(root => root.Path, FilePathComparer)
                     .Select(MergeDuplicateRootDefinitions)
@@ -1586,8 +1592,21 @@ namespace MetadataCaching
                     $"Discovering {sets.Count:N0} configured root(s)");
                 Parallel.ForEach(sets, scanParallelOptions, scanpath =>
                 {
+                    bool httpHadResults = false;
                     try
                     {
+                        if (rootDefinitions[scanpath.ID].EverythingHttp is { } http)
+                        {
+                            // HTTP already gives us a flat listing. Retain its snapshots so files
+                            // share the global metadata-reader cap instead of serializing an entire
+                            // HTTP root behind one worker. No filesystem discovery is performed.
+                            foreach (var entry in EverythingHttpEnumerator.Enumerate(scanpath.Path, http, ct))
+                            {
+                                httpHadResults = true;
+                                discoveredRootFiles.Add((scanpath.Path, scanpath.ID, entry.Name, entry.Modified, entry.Size));
+                            }
+                            return;
+                        }
                         foreach (var entry in new MusicFileEnumerator(scanpath.Path, recurse: false))
                         {
                             // Skip .itlp packages here too: a recursive unit rooted INSIDE the package
@@ -1600,7 +1619,8 @@ namespace MetadataCaching
                     }
                     catch (Exception ex)
                     {
-                        MarkRootError(scanpath.ID, ScanRootState.Unavailable, ex.Message, removalUnsafe: true);
+                        MarkRootError(scanpath.ID, httpHadResults ? ScanRootState.Degraded : ScanRootState.Unavailable,
+                            ex.Message, removalUnsafe: true);
                     }
                 });
                 var units = discoveredUnits.ToArray();

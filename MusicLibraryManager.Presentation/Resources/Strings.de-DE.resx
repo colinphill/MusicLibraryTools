@@ -6426,4 +6426,10 @@
   <data name="Library.Metadata.Loading" xml:space="preserve"><value>Wird geladen…</value></data>
   <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>Nicht verfügbar</value></data>
   <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>Warten Sie, bis der genaue Metadatenwert geladen wurde, bevor Sie ihn bearbeiten.</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttp" xml:space="preserve"><value>Mit Everything HTTP auflisten</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpDescription" xml:space="preserve"><value>Verwendet den Serverindex, um Dateien zu finden. Musikdateien müssen über den Stammpfad zugänglich bleiben. Lassen Sie den Server-Stammpfad leer, wenn beide Pfade identisch sind.</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUrl" xml:space="preserve"><value>URL des Everything-Servers</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpRoot" xml:space="preserve"><value>Stammpfad im Serverindex (optional)</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUsername" xml:space="preserve"><value>HTTP-Benutzername (optional)</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpPasswordVariable" xml:space="preserve"><value>Umgebungsvariable für das Passwort (optional)</value></data>
 </root>

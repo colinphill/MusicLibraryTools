@@ -2854,6 +2854,7 @@ public sealed class PresentationTests
                         Target = @"Z:\Lossless",
                         Filter = "*.flac",
                         IndexFormats = [".flac", ".m4a"],
+                        EverythingHttp = new("http://localhost:8080/", @"D:\Music", "reader", "EVERYTHING_PASSWORD"),
                         IndexIncludePatterns = ["Music/**", "*.flac"],
                         IndexExcludePatterns = ["Temp/**", "*.tmp"],
                         DefaultOffset = "/Music",
@@ -2941,6 +2942,11 @@ public sealed class PresentationTests
             Assert.True(root.IsSyncTarget);
             Assert.Equal(root.Id, viewModel.SelectedSyncTargetRoot?.Id);
             Assert.Equal(".flac, .m4a", root.IndexFormats);
+            Assert.True(root.UseEverythingHttp);
+            Assert.Equal("http://localhost:8080/", root.EverythingHttpUrl);
+            Assert.Equal(@"D:\Music", root.EverythingHttpRoot);
+            Assert.Equal("reader", root.EverythingHttpUsername);
+            Assert.Equal("EVERYTHING_PASSWORD", root.EverythingHttpPasswordEnvironmentVariable);
             Assert.Equal("Music/**; *.flac", root.IndexIncludePatterns);
             Assert.Equal("Temp/**; *.tmp", root.IndexExcludePatterns);
             Assert.Equal(2, root.Memberships.Count);
@@ -2973,6 +2979,7 @@ public sealed class PresentationTests
             root.Memberships[0].Name = "Lossless, Mobile, Portable";
             root.Memberships[0].Offset = "/Portable/FLAC";
             root.IndexFormats = ".flac";
+            root.EverythingHttpUrl = "http://localhost:8081/";
             root.IndexExcludePatterns = "Temp/**; Drafts/**";
             Assert.NotNull(viewModel.AdvancedProfile);
             viewModel.AdvancedProfile!.CollisionPolicy = LibraryPathCollisionPolicy.Hash;
@@ -3028,6 +3035,7 @@ public sealed class PresentationTests
             Assert.Equal(LibraryRepresentationRole.Ignore,
                 savedRoot.RepresentationRole);
             Assert.Equal([".flac"], savedRoot.IndexFormats);
+            Assert.Equal(new EverythingHttpSettings("http://localhost:8081/", @"D:\Music", "reader", "EVERYTHING_PASSWORD"), savedRoot.EverythingHttp);
             Assert.Equal(["Music/**", "*.flac"], savedRoot.IndexIncludePatterns);
             Assert.Equal(["Temp/**", "Drafts/**"], savedRoot.IndexExcludePatterns);
             Assert.Equal(LibraryPathCollisionPolicy.Hash,

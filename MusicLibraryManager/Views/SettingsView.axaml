@@ -174,6 +174,18 @@
                           <StackPanel Grid.Column="1" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.IncludePatterns}" /><TextBox Classes="app" Text="{Binding IndexIncludePatterns, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.IncludePatternsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.IncludePatternsAutomation}" /></StackPanel>
                           <StackPanel Grid.Column="2" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.ExcludePatterns}" /><TextBox Classes="app" Text="{Binding IndexExcludePatterns, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.ExcludePatternsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.ExcludePatternsAutomation}" /></StackPanel>
                         </Grid>
+                        <CheckBox Content="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttp}" IsChecked="{Binding UseEverythingHttp, Mode=TwoWay}" />
+                        <StackPanel IsVisible="{Binding UseEverythingHttp}" Spacing="8">
+                          <TextBlock Text="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttpDescription}" TextWrapping="Wrap" />
+                          <Grid Classes="responsive-form" ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <StackPanel Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttpUrl}" /><TextBox Classes="app" Text="{Binding EverythingHttpUrl, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttpUrl}" /></StackPanel>
+                            <StackPanel Grid.Column="1" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttpRoot}" /><TextBox Classes="app" Text="{Binding EverythingHttpRoot, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttpRoot}" /></StackPanel>
+                          </Grid>
+                          <Grid Classes="responsive-form" ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <StackPanel Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttpUsername}" /><TextBox Classes="app" Text="{Binding EverythingHttpUsername, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttpUsername}" /></StackPanel>
+                            <StackPanel Grid.Column="1" Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttpPasswordVariable}" /><TextBox Classes="app" Text="{Binding EverythingHttpPasswordEnvironmentVariable, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.EverythingHttpPasswordVariable}" /></StackPanel>
+                          </Grid>
+                        </StackPanel>
                         <StackPanel Classes="field" Spacing="4"><TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.CrossSetExtensions}" /><TextBox Classes="app" Text="{Binding Filter, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Settings.LibraryRoots.CrossSetExtensionsPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Settings.LibraryRoots.CrossSetExtensions}" /></StackPanel>
                         <StackPanel Spacing="8">
                           <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.LibraryRoots.WritePermissions}" />

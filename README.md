@@ -126,6 +126,28 @@ library root(s), index locations, sync targets, playlist targets, the cache data
 (default `cache.db`), the iTunes `.itl` and ffmpeg paths, and length limits. See `LibraryConfiguration` in MusicFileUtilities
 for the schema.
 
+Selected index roots can enumerate through an [Everything HTTP server](https://www.voidtools.com/support/everything/http/)
+instead of walking directories. Enable **Enumerate with Everything HTTP** on the root's Settings
+card, or add these attributes to its existing `IndexTarget`:
+
+```xml
+<IndexTarget Path="\\server\Music"
+             EverythingHttpUrl="http://localhost:8080/"
+             EverythingHttpRoot="D:\Music"
+             EverythingHttpUsername="reader"
+             EverythingHttpPasswordEnvironmentVariable="EVERYTHING_HTTP_PASSWORD">
+  <Set Name="Archive"/>
+</IndexTarget>
+```
+
+Only `EverythingHttpUrl` is required. Omit `EverythingHttpRoot` when the server indexes the same
+path the app uses; omit the authentication attributes for an unauthenticated server. These attributes
+also work with schema v2 roots alongside their existing ID, profile, and permission attributes.
+The server supplies discovery and file properties; file contents remain accessible through `Path`.
+Existing format, include/exclude, and `.itlp` filters still apply. Keep Everything's index current
+and complete, since a successful scan reconciles the cache against that index. Failed or incomplete
+HTTP scans preserve cached tracks for the affected root.
+
 Playlist exports are repeatable and select their source library by logical scan set. Set names are
 case-insensitive ASCII letters and digits. Every target requires both a `Type` (`m3u` or `wpl`) and
 at least one `Set`; multiple sets form a union:

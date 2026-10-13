@@ -2449,6 +2449,29 @@ public partial class IndexTargetEditorRow : ObservableObject
     private string? _indexFormats;
 
     [ObservableProperty]
+    private bool _useEverythingHttp;
+
+    [ObservableProperty]
+    private string _everythingHttpUrl = "http://localhost:8080/";
+
+    [ObservableProperty]
+    private string? _everythingHttpRoot;
+
+    [ObservableProperty]
+    private string? _everythingHttpUsername;
+
+    [ObservableProperty]
+    private string? _everythingHttpPasswordEnvironmentVariable;
+
+    public EverythingHttpSettings? BuildEverythingHttpSettings() => UseEverythingHttp
+        ? new((EverythingHttpUrl ?? "").Trim(), CleanEverythingValue(EverythingHttpRoot),
+            CleanEverythingValue(EverythingHttpUsername), CleanEverythingValue(EverythingHttpPasswordEnvironmentVariable))
+        : null;
+
+    private static string? CleanEverythingValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    [ObservableProperty]
     private string? _indexIncludePatterns;
 
     [ObservableProperty]

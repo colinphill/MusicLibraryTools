@@ -1184,6 +1184,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             try
             {
                 _ = LibraryConfiguration.ParseIndexFormats(target.IndexFormats);
+                target.BuildEverythingHttpSettings()?.Validate();
                 _ = LibraryConfiguration.ParseIndexPatterns(target.IndexIncludePatterns);
                 _ = LibraryConfiguration.ParseIndexPatterns(target.IndexExcludePatterns);
             }
@@ -2256,6 +2257,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                     target.ProfileId = CleanOptional(row.ProfileId) ?? _editing.ActiveProfileId;
                     target.Permissions = row.Permissions;
                     target.DefaultOffset = null;
+                    target.EverythingHttp = row.BuildEverythingHttpSettings();
                     target.IndexFormats = [.. LibraryConfiguration.ParseIndexFormats(
                         row.IndexFormats)];
                     target.IndexIncludePatterns = [.. LibraryConfiguration.ParseIndexPatterns(
@@ -2589,6 +2591,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             Path = target.Target,
             ProfileId = profileId,
             Filter = target.Filter,
+            UseEverythingHttp = target.EverythingHttp is not null,
+            EverythingHttpUrl = target.EverythingHttp?.Url ?? "http://localhost:8080/",
+            EverythingHttpRoot = target.EverythingHttp?.Root,
+            EverythingHttpUsername = target.EverythingHttp?.Username,
+            EverythingHttpPasswordEnvironmentVariable = target.EverythingHttp?.PasswordEnvironmentVariable,
             IndexFormats = target.IndexFormats.Count == 0
                 ? null : string.Join(", ", target.IndexFormats),
             IndexIncludePatterns = target.IndexIncludePatterns.Count == 0

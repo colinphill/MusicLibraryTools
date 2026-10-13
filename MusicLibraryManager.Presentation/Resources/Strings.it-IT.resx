@@ -6426,4 +6426,10 @@
   <data name="Library.Metadata.Loading" xml:space="preserve"><value>Caricamento…</value></data>
   <data name="Library.Metadata.Unavailable" xml:space="preserve"><value>Non disponibile</value></data>
   <data name="Library.Metadata.ExactValueRequired" xml:space="preserve"><value>Attendi il caricamento del valore esatto dei metadati prima di modificarlo.</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttp" xml:space="preserve"><value>Elenca con Everything HTTP</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpDescription" xml:space="preserve"><value>Usa l’indice del server per trovare i file. I file musicali devono restare accessibili dal percorso radice. Lascia vuota la radice del server se i due percorsi coincidono.</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUrl" xml:space="preserve"><value>URL del server Everything</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpRoot" xml:space="preserve"><value>Percorso radice nell’indice del server (facoltativo)</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpUsername" xml:space="preserve"><value>Nome utente HTTP (facoltativo)</value></data>
+  <data name="Settings.LibraryRoots.EverythingHttpPasswordVariable" xml:space="preserve"><value>Variabile d’ambiente della password (facoltativa)</value></data>
 </root>

@@ -78,6 +78,7 @@ namespace MusicLibraryTools
         LibraryRootPermissions Permissions = LibraryRootPermissions.All)
     {
         public IReadOnlyList<string> IndexFormats { get; init; } = [];
+        public EverythingHttpSettings? EverythingHttp { get; init; }
         public IReadOnlyList<string> IndexIncludePatterns { get; init; } = [];
         public IReadOnlyList<string> IndexExcludePatterns { get; init; } = [];
         public LibraryRepresentationRole RepresentationRole { get; init; } =
@@ -591,12 +592,30 @@ namespace MusicLibraryTools
             {
                 IndexFormats = ParseIndexFormats(
                     (string?)element.Attribute("IndexFormats")),
+                EverythingHttp = ParseEverythingHttp(element),
                 IndexIncludePatterns = ParseIndexPatterns(
                     (string?)element.Attribute("IndexInclude")),
                 IndexExcludePatterns = ParseIndexPatterns(
                     (string?)element.Attribute("IndexExclude")),
                 RepresentationRole = representationRole,
             };
+        }
+
+        private static EverythingHttpSettings? ParseEverythingHttp(XElement element)
+        {
+            string? url = CleanOptional((string?)element.Attribute("EverythingHttpUrl"));
+            string? root = CleanOptional((string?)element.Attribute("EverythingHttpRoot"));
+            string? username = CleanOptional((string?)element.Attribute("EverythingHttpUsername"));
+            string? passwordVariable = CleanOptional((string?)element.Attribute("EverythingHttpPasswordEnvironmentVariable"));
+            if (url is null)
+            {
+                if (root is not null || username is not null || passwordVariable is not null)
+                    throw new InvalidDataException("Everything HTTP settings require EverythingHttpUrl.");
+                return null;
+            }
+            var settings = new EverythingHttpSettings(url, root, username, passwordVariable);
+            settings.Validate();
+            return settings;
         }
 
         private static LibraryRepresentationRole ParseRepresentationRole(
